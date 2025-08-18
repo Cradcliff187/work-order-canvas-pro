@@ -64,8 +64,8 @@ export function FloatingProgress({
     return null;
   }
 
-  const config = stageConfig[stage];
-  const Icon = config.icon;
+  const config = stageConfig[stage] || stageConfig.error;
+  const Icon = config?.icon || AlertCircle;
 
   return (
     <div className={cn(

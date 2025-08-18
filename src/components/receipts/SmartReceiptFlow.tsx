@@ -32,6 +32,7 @@ import { DebugPanel } from "./DebugPanel";
 import { FileUploadSection } from "./FileUploadSection";
 import { CameraCapture } from "./CameraCapture";
 import { FilePreview } from "./FilePreview";
+import { ReceiptFormFields } from "./ReceiptFormFields";
 import { useOCRProcessor } from '@/hooks/useOCRProcessor';
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { EnhancedAllocationPanel } from "./EnhancedAllocationPanel";
@@ -129,8 +130,6 @@ const COMMON_VENDORS = [
   'Circle K', 'McDonald\'s', 'Subway', 'Jimmy Johns'
 ];
 
-// Quick amount buttons for mobile
-const QUICK_AMOUNTS = [20, 50, 100, 200, 500];
 
 // File size limit (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -786,146 +785,12 @@ export function SmartReceiptFlow() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-tour="form-section">
             
-            {/* Essential Details - Vendor, Amount, Date */}
-            <FieldGroup
-              title="Essential Details"
-              icon={<DollarSign className="h-4 w-4" />}
-              badge={
-                ocrConfidence && Object.keys(ocrConfidence).length > 0 ? (
-                  <Badge variant="outline" className="ml-2">
-                    OCR Data Available
-                  </Badge>
-                ) : undefined
-              }
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Vendor Name Field */}
-                <FormField
-                  control={form.control}
-                  name="vendor_name"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <FormLabel className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        Vendor Name
-                        <ConfidenceBadge 
-                          confidence={getFieldConfidence(ocrConfidence, 'vendor_name') || 0}
-                        />
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter vendor name..."
-                          className="font-medium"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Amount Field */}
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <FormLabel className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Amount
-                        <ConfidenceBadge 
-                          confidence={getFieldConfidence(ocrConfidence, 'amount') || 0}
-                        />
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                            $
-                          </span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            className="pl-8 font-mono text-lg"
-                            {...field}
-                            value={field.value || ''}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                      
-                      {/* Quick amount buttons for mobile */}
-                      {isMobile && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {QUICK_AMOUNTS.map(amount => (
-                            <Button
-                              key={amount}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => form.setValue('amount', amount, { shouldValidate: true })}
-                              className="text-xs"
-                            >
-                              ${amount}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Receipt Date Field - Full width */}
-              <FormField
-                control={form.control}
-                name="receipt_date"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Receipt Date
-                      <ConfidenceBadge 
-                        confidence={getFieldConfidence(ocrConfidence, 'receipt_date') || 0}
-                      />
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        className="font-mono"
-                        max={format(new Date(), "yyyy-MM-dd")}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Optional Description Field */}
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Description (Optional)
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Brief description of purchase..."
-                        className="min-h-[80px] resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </FieldGroup>
+            {/* Main Receipt Details */}
+            <ReceiptFormFields
+              form={form}
+              ocrConfidence={ocrConfidence}
+              isMobile={isMobile}
+            />
 
             {/* Enhanced Work Order Assignment */}
             {availableWorkOrders.data && availableWorkOrders.data.length > 0 && (
@@ -1053,34 +918,6 @@ export function SmartReceiptFlow() {
               </FieldGroup>
             )}
 
-            {/* Additional Details */}
-            <FieldGroup
-              title="Additional Details"
-              icon={<PenTool className="h-4 w-4" />}
-              badge={form.watch('notes') && (
-                <Badge variant="secondary" className="ml-2">
-                  Notes added
-                </Badge>
-              )}
-            >
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Additional notes about this receipt..."
-                        className="min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </FieldGroup>
 
             {/* Bottom padding to account for FloatingActionBar */}
             <div className="pb-32" />
