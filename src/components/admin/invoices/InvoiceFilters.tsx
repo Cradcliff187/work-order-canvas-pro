@@ -24,6 +24,7 @@ interface InvoiceFiltersProps {
   value: InvoiceFiltersValue;
   onChange: (value: InvoiceFiltersValue) => void;
   onClear: () => void;
+  filterCount: number;
 }
 
 // Status options matching WorkOrderPipelineTable exactly
@@ -59,7 +60,7 @@ const partnerBillingStatusOptions = [
   { value: 'billed', label: 'Partner Billed' },
 ];
 
-export function InvoiceFilters({ value, onChange, onClear }: InvoiceFiltersProps) {
+export function InvoiceFilters({ value, onChange, onClear, filterCount }: InvoiceFiltersProps) {
   // Get partner locations for the selected partner organization
   const { data: partnerLocations } = usePartnerLocations(value.partner_organization_id);
 
@@ -78,13 +79,6 @@ export function InvoiceFilters({ value, onChange, onClear }: InvoiceFiltersProps
     onChange({ ...value, [key]: newValue });
   };
 
-  // Calculate active filter count for clear button
-  const filterCount = Object.values(value).filter(v => {
-    if (Array.isArray(v)) return v.length > 0;
-    if (typeof v === 'string') return v.trim() !== '';
-    if (typeof v === 'boolean') return v;
-    return false;
-  }).length;
 
   return (
     <AdminFilterBar
