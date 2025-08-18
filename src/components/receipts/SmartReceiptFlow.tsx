@@ -463,6 +463,16 @@ export function SmartReceiptFlow() {
         if (ocrResult.date) form.setValue('receipt_date', ocrResult.date);
         
         const mappedConfidence = mapOCRConfidenceToForm(ocrResult.confidence || {});
+        
+        // Debug OCR confidence mapping
+        console.log('🔄 OCR Confidence Mapping Debug:', {
+          rawOCRConfidence: ocrResult.confidence,
+          mappedConfidence,
+          vendor: `${ocrResult.confidence?.vendor || 0} → ${mappedConfidence.vendor_name || 0}`,
+          total: `${ocrResult.confidence?.total || 0} → ${mappedConfidence.amount || 0}`,
+          date: `${ocrResult.confidence?.date || 0} → ${mappedConfidence.receipt_date || 0}`
+        });
+        
         actions.setOCRSuccess(ocrResult, mappedConfidence);
         
         const successMessage = `Found ${ocrResult.vendor || 'vendor'} - $${ocrResult.total || 0}`;
@@ -1366,6 +1376,32 @@ export function SmartReceiptFlow() {
               icon={<FileText className="h-4 w-4" />}
               defaultOpen={true}
             >
+              {/* Debug logging for confidence data flow - using useEffect to avoid TSX issues */}
+              {(() => {
+                console.log('🐛 Essential Details Debug:', {
+                  ocrConfidence,
+                  ocrConfidenceKeys: Object.keys(ocrConfidence || {}),
+                  vendorConfidence: ocrConfidence?.vendor_name,
+                  amountConfidence: ocrConfidence?.amount,
+                  dateConfidence: ocrConfidence?.receipt_date,
+                  mappingTest: ocrConfidence ? 'Mapped object exists' : 'No mapped object'
+                });
+                return null;
+              })()}
+              
+              {/* Development-only debug section */}
+              {process.env.NODE_ENV === 'development' && ocrConfidence && (
+                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                  <h4 className="text-sm font-bold text-yellow-800 dark:text-yellow-200 mb-2">🔍 Confidence Debug</h4>
+                  <div className="text-xs space-y-1">
+                    <div><strong>Raw ocrConfidence object:</strong> {JSON.stringify(ocrConfidence, null, 2)}</div>
+                    <div><strong>vendor_name:</strong> {ocrConfidence.vendor_name} → {ocrConfidence.vendor_name ? `${Math.round(ocrConfidence.vendor_name * 100)}%` : 'undefined'}</div>
+                    <div><strong>amount:</strong> {ocrConfidence.amount} → {ocrConfidence.amount ? `${Math.round(ocrConfidence.amount * 100)}%` : 'undefined'}</div>
+                    <div><strong>receipt_date:</strong> {ocrConfidence.receipt_date} → {ocrConfidence.receipt_date ? `${Math.round(ocrConfidence.receipt_date * 100)}%` : 'undefined'}</div>
+                  </div>
+                </div>
+              )}
+              
               <div className="space-y-4">
                 <InlineEditField
                   value={form.watch('vendor_name') || ''}
