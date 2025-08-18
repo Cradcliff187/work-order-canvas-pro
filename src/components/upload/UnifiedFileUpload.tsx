@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X, File, ImageIcon, AlertCircle, Loader2, Info, FileText, Image as ImageIconSolid } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -57,6 +57,12 @@ export function UnifiedFileUpload({
   const isMobile = useIsMobile();
   const [previews, setPreviews] = useState<FilePreview[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  
+  // Track object URLs for proper cleanup
+  const objectURLsRef = useRef<Set<string>>(new Set());
+  
+  // Track the last file list sent to parent to prevent unnecessary calls
+  const lastNotifiedFilesRef = useRef<File[]>([]);
 
   const getFileType = (file: File): 'image' | 'document' => {
     return file.type.startsWith('image/') ? 'image' : 'document';
@@ -141,9 +147,32 @@ export function UnifiedFileUpload({
     return { valid, errors };
   }, [previews, maxFiles, maxSizeBytes, acceptedTypes]);
 
+  // Centralized function to update file list and notify parent
+  const updateFileList = useCallback((newPreviews: FilePreview[], reason: string) => {
+    console.log(`[UnifiedFileUpload] File list updated: ${reason}`, newPreviews.length);
+    
+    setPreviews(newPreviews);
+    
+    // Only notify parent if the file list actually changed
+    const currentFiles = newPreviews.map(p => p.file);
+    const lastFiles = lastNotifiedFilesRef.current;
+    
+    const hasChanged = currentFiles.length !== lastFiles.length || 
+      currentFiles.some((file, index) => file !== lastFiles[index]);
+    
+    if (hasChanged) {
+      console.log(`[UnifiedFileUpload] Notifying parent: ${reason}`, currentFiles.length);
+      lastNotifiedFilesRef.current = currentFiles;
+      onFilesSelected(currentFiles);
+    }
+  }, [onFilesSelected]);
+
   const handleFilesSelected = useCallback((newFiles: File[]) => {
+    console.log(`[UnifiedFileUpload] Processing ${newFiles.length} new files`);
+    
     const { valid, errors } = validateFiles(newFiles);
     
+    // Update validation errors
     setValidationErrors(errors);
     
     if (valid.length > 0) {
@@ -151,64 +180,82 @@ export function UnifiedFileUpload({
         const id = `${Date.now()}_${Math.random()}`;
         const fileType = getFileType(file);
         
+        let previewUrl: string | undefined;
+        if (fileType === 'image') {
+          previewUrl = URL.createObjectURL(file);
+          objectURLsRef.current.add(previewUrl);
+        }
+        
         return {
           file,
           id,
           fileType,
-          previewUrl: fileType === 'image' ? URL.createObjectURL(file) : undefined
+          previewUrl
         };
       });
 
-      setPreviews(prev => [...prev, ...newPreviews]);
-      onFilesSelected(valid);
+      // Update file list with new previews
+      setPreviews(prev => {
+        const updated = [...prev, ...newPreviews];
+        updateFileList(updated, `added ${valid.length} files`);
+        return updated;
+      });
     }
-  }, [validateFiles, onFilesSelected]);
+  }, [validateFiles, updateFileList]);
 
   const removeFile = useCallback((id: string) => {
+    console.log(`[UnifiedFileUpload] Removing file with id: ${id}`);
+    
     setPreviews(prev => {
-      const updated = prev.filter(p => p.id !== id);
       const fileToRemove = prev.find(p => p.id === id);
+      const updated = prev.filter(p => p.id !== id);
       
-      // Revoke object URL to prevent memory leaks
+      // Clean up object URL to prevent memory leaks
       if (fileToRemove?.previewUrl) {
+        console.log(`[UnifiedFileUpload] Revoking object URL for: ${fileToRemove.file.name}`);
         URL.revokeObjectURL(fileToRemove.previewUrl);
+        objectURLsRef.current.delete(fileToRemove.previewUrl);
       }
       
-      // Auto-clear related validation errors
+      // Auto-clear related validation errors when file is removed
       if (fileToRemove) {
-        setValidationErrors(currentErrors => 
-          currentErrors.filter(error => 
+        setValidationErrors(currentErrors => {
+          const filteredErrors = currentErrors.filter(error => 
             error.fileName !== fileToRemove.file.name
-          )
-        );
-        
-        // Clear max files error if we're now under the limit
-        const newCount = updated.length;
-        if (newCount < maxFiles) {
-          setValidationErrors(currentErrors => 
-            currentErrors.filter(error => error.type !== 'maxFiles')
           );
-        }
+          
+          // Clear max files error if we're now under the limit
+          const newCount = updated.length;
+          if (newCount < maxFiles) {
+            return filteredErrors.filter(error => error.type !== 'maxFiles');
+          }
+          
+          return filteredErrors;
+        });
       }
       
-      // Update parent with remaining files
-      onFilesSelected(updated.map(p => p.file));
+      // Update file list and notify parent
+      updateFileList(updated, `removed file: ${fileToRemove?.file.name || id}`);
       return updated;
     });
-  }, [maxFiles, onFilesSelected]);
+  }, [maxFiles, updateFileList]);
 
   const clearAll = useCallback(() => {
-    // Revoke all object URLs
+    console.log(`[UnifiedFileUpload] Clearing all ${previews.length} files`);
+    
+    // Clean up all object URLs to prevent memory leaks
     previews.forEach(preview => {
       if (preview.previewUrl) {
+        console.log(`[UnifiedFileUpload] Revoking object URL for: ${preview.file.name}`);
         URL.revokeObjectURL(preview.previewUrl);
+        objectURLsRef.current.delete(preview.previewUrl);
       }
     });
     
     setPreviews([]);
     setValidationErrors([]);
-    onFilesSelected([]);
-  }, [previews, onFilesSelected]);
+    updateFileList([], 'cleared all files');
+  }, [previews, updateFileList]);
 
   const dismissError = useCallback((errorId: string) => {
     setValidationErrors(prev => prev.filter(error => error.id !== errorId));
@@ -237,16 +284,37 @@ export function UnifiedFileUpload({
     return uploadProgress[fileName] || { progress: 0, status: 'pending' as const };
   };
 
-  // Cleanup object URLs on unmount
+  // Cleanup all object URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
-      previews.forEach(preview => {
-        if (preview.previewUrl) {
-          URL.revokeObjectURL(preview.previewUrl);
-        }
+      console.log(`[UnifiedFileUpload] Component unmounting, cleaning up ${objectURLsRef.current.size} object URLs`);
+      objectURLsRef.current.forEach(url => {
+        URL.revokeObjectURL(url);
       });
+      objectURLsRef.current.clear();
     };
   }, []);
+
+  // Auto-clear validation errors when the underlying issue is resolved
+  useEffect(() => {
+    setValidationErrors(currentErrors => {
+      return currentErrors.filter(error => {
+        // Keep max files error if we're still over the limit
+        if (error.type === 'maxFiles' && previews.length >= maxFiles) {
+          return true;
+        }
+        
+        // Keep file-specific errors if the file still exists
+        if (error.fileName) {
+          const fileStillExists = previews.some(p => p.file.name === error.fileName);
+          return fileStillExists;
+        }
+        
+        // Keep other errors
+        return true;
+      });
+    });
+  }, [previews, maxFiles]);
 
   // Desktop drag-and-drop setup
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
