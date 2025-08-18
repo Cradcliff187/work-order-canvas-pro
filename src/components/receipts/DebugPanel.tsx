@@ -32,16 +32,30 @@ export function DebugPanel({
   }
 
   // Debug logging for confidence data flow
+  // Note: formData is excluded from dependencies to prevent infinite loops
+  // since form.getValues() creates new object references on every render
   useEffect(() => {
     if (debugMode && confidenceValues) {
       console.log('🐛 Essential Details Debug:', {
         confidenceValues,
-        ocrResult,
-        formData
+        ocrResult
       });
       logConfidenceDebug('DebugPanel', confidenceValues);
     }
-  }, [debugMode, confidenceValues, ocrResult, formData]);
+  }, [debugMode, confidenceValues, ocrResult]);
+
+  // Separate effect for form data logging with change detection
+  useEffect(() => {
+    if (debugMode && formData) {
+      const formDataString = JSON.stringify(formData);
+      // Only log if form data actually changed
+      const prevFormDataString = sessionStorage.getItem('lastFormDataDebug');
+      if (formDataString !== prevFormDataString) {
+        console.log('🐛 Form Data Debug:', formData);
+        sessionStorage.setItem('lastFormDataDebug', formDataString);
+      }
+    }
+  }, [debugMode, JSON.stringify(formData)]);
 
   if (!debugMode) {
     return (
