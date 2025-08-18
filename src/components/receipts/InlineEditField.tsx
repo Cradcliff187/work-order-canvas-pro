@@ -203,7 +203,19 @@ const InlineEditFieldComponent: React.FC<InlineEditFieldProps> = ({
       case 'currency':
         return typeof value === 'number' ? `$${value.toFixed(2)}` : '$0.00';
       case 'date':
-        return value instanceof Date ? value.toLocaleDateString() : 'No date';
+        // Handle both Date objects and date strings
+        if (value instanceof Date) {
+          return value.toLocaleDateString();
+        } else if (typeof value === 'string' && value.trim() !== '') {
+          // Try to parse date string (YYYY-MM-DD format expected)
+          const dateObj = new Date(value);
+          if (!isNaN(dateObj.getTime())) {
+            return dateObj.toLocaleDateString();
+          }
+          // If parsing fails, return the string as-is (might be already formatted)
+          return value;
+        }
+        return 'No date';
       default:
         return value?.toString() || 'No value';
     }

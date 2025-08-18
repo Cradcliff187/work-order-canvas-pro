@@ -460,7 +460,15 @@ export function SmartReceiptFlow() {
         
         if (ocrResult.vendor) form.setValue('vendor_name', ocrResult.vendor);
         if (ocrResult.total) form.setValue('amount', ocrResult.total);
-        if (ocrResult.date) form.setValue('receipt_date', ocrResult.date);
+        if (ocrResult.date) {
+          form.setValue('receipt_date', ocrResult.date);
+          console.log('📅 Date OCR Success:', {
+            ocrDate: ocrResult.date,
+            formDateAfterSet: form.getValues('receipt_date'),
+            dateType: typeof ocrResult.date,
+            isValidDate: ocrResult.date ? !isNaN(new Date(ocrResult.date).getTime()) : false
+          });
+        }
         
         const mappedConfidence = mapOCRConfidenceToForm(ocrResult.confidence || {});
         
@@ -1430,18 +1438,30 @@ export function SmartReceiptFlow() {
                   enableRealtimeValidation={true}
                 />
 
-                 <InlineEditField
-                   value={form.watch('receipt_date') || (ocrData?.date ? ocrData.date : format(new Date(), "yyyy-MM-dd"))}
-                   onSave={(value) => {
-                     const dateStr = value instanceof Date ? value.toISOString().split('T')[0] : value;
-                     form.setValue('receipt_date', dateStr, { shouldValidate: true });
-                   }}
-                   inputType="date"
-                   fieldType="date"
-                   label="Receipt Date"
-                   confidence={ocrConfidence.receipt_date}
+                <InlineEditField
+                  value={form.watch('receipt_date') || ''}
+                  onSave={(value) => {
+                    const dateStr = value instanceof Date ? value.toISOString().split('T')[0] : value;
+                    form.setValue('receipt_date', dateStr, { shouldValidate: true });
+                    saveDraft();
+                  }}
+                  inputType="date"
+                  fieldType="date"
+                  label="Receipt Date"
+                  confidence={ocrConfidence?.receipt_date}
                    enableRealtimeValidation={true}
                  />
+                 
+                 {/* Temporary date debug section */}
+                 {process.env.NODE_ENV === 'development' && (
+                   <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-xs">
+                     <strong>📅 Date Debug:</strong>
+                     <div>Form date value: {JSON.stringify(form.watch('receipt_date'))}</div>
+                     <div>Date confidence: {ocrConfidence?.receipt_date || 'undefined'} ({ocrConfidence?.receipt_date ? `${Math.round(ocrConfidence.receipt_date * 100)}%` : 'N/A'})</div>
+                     <div>Date type: {typeof form.watch('receipt_date')}</div>
+                     <div>OCR date from state: {JSON.stringify(ocrData?.date)}</div>
+                   </div>
+                 )}
               </div>
             </FieldGroup>
 
