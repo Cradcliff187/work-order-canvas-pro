@@ -20,7 +20,7 @@ import { CalendarIcon, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-interface ReportsFiltersValue {
+export interface ReportsFiltersValue {
   search?: string;
   status?: string[];
   date_from?: string;

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { WorkOrderReport, PaginationState, SortingState } from '@/types/reports';
-import { ReportsFiltersValue } from '@/components/admin/reports/ReportsFilters';
+import { ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersV2';
 
 export function useAdminReports(
   pagination: PaginationState,
@@ -81,13 +81,56 @@ export function useAdminReports(
         query = query.lte('submitted_at', filters.date_to);
       }
 
-      // Simple location filter
-      if (filters.location) {
+      // Partner organization filter
+      if (filters.partner_organization_ids?.length) {
         try {
           const { data: matchingWorkOrders } = await supabase
             .from('work_orders')
             .select('id')
-            .eq('store_location', filters.location);
+            .in('organization_id', filters.partner_organization_ids);
+          
+          if (matchingWorkOrders && matchingWorkOrders.length > 0) {
+            const workOrderIds = matchingWorkOrders.map(wo => wo.id);
+            query = query.in('work_order_id', workOrderIds);
+          } else {
+            query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+          }
+        } catch (error) {
+          console.error('Error filtering by partner organization:', error);
+        }
+      }
+
+      // Subcontractor organization filter
+      if (filters.subcontractor_organization_ids?.length) {
+        query = query.in('subcontractor_organization_id', filters.subcontractor_organization_ids);
+      }
+
+      // Trade filter
+      if (filters.trade_ids?.length) {
+        try {
+          const { data: matchingWorkOrders } = await supabase
+            .from('work_orders')
+            .select('id')
+            .in('trade_id', filters.trade_ids);
+          
+          if (matchingWorkOrders && matchingWorkOrders.length > 0) {
+            const workOrderIds = matchingWorkOrders.map(wo => wo.id);
+            query = query.in('work_order_id', workOrderIds);
+          } else {
+            query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+          }
+        } catch (error) {
+          console.error('Error filtering by trade:', error);
+        }
+      }
+
+      // Location filter (array support)
+      if (filters.location_filter?.length) {
+        try {
+          const { data: matchingWorkOrders } = await supabase
+            .from('work_orders')
+            .select('id')
+            .in('store_location', filters.location_filter);
           
           if (matchingWorkOrders && matchingWorkOrders.length > 0) {
             const workOrderIds = matchingWorkOrders.map(wo => wo.id);
@@ -125,9 +168,12 @@ export function useAdminReports(
       const allData = (data as any[]) || [];
 
       // Apply client-side search filtering (similar to WorkOrderList.tsx pattern)
-      const filteredData = searchTerm ? 
-        allData.filter(report => {
-          const searchLower = searchTerm.toLowerCase();
+      let filteredData = allData;
+
+      // Apply search term filtering
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        filteredData = filteredData.filter(report => {
           return (
             report.work_orders?.work_order_number?.toLowerCase().includes(searchLower) ||
             report.work_orders?.store_location?.toLowerCase().includes(searchLower) ||
@@ -136,7 +182,32 @@ export function useAdminReports(
             report.notes?.toLowerCase().includes(searchLower) ||
             report.materials_used?.toLowerCase().includes(searchLower)
           );
-        }) : allData;
+        });
+      }
+
+      // Apply client-side filters for submitted_by and work_order
+      if (filters.submitted_by) {
+        const submittedByLower = filters.submitted_by.toLowerCase();
+        filteredData = filteredData.filter(report => {
+          const submittedBy = report.submitted_by;
+          return (
+            submittedBy?.first_name?.toLowerCase().includes(submittedByLower) ||
+            submittedBy?.last_name?.toLowerCase().includes(submittedByLower) ||
+            submittedBy?.email?.toLowerCase().includes(submittedByLower)
+          );
+        });
+      }
+
+      if (filters.work_order) {
+        const workOrderLower = filters.work_order.toLowerCase();
+        filteredData = filteredData.filter(report => {
+          const workOrder = report.work_orders;
+          return (
+            workOrder?.work_order_number?.toLowerCase().includes(workOrderLower) ||
+            workOrder?.title?.toLowerCase().includes(workOrderLower)
+          );
+        });
+      }
 
       return {
         data: filteredData,

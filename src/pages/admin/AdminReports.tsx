@@ -62,7 +62,7 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
-import { ReportsFilters, ReportsFiltersValue } from '@/components/admin/reports/ReportsFilters';
+import { ReportsFiltersV2, ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersV2';
 
 export default function AdminReports() {
   const navigate = useNavigate();
@@ -86,9 +86,9 @@ export default function AdminReports() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Persist filters using the simple ReportsFilters structure
+  // Persist filters using the ReportsFiltersV2 structure
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<ReportsFiltersValue>(
-    'admin-reports-filters-v3',
+    'admin-reports-filters-v4',
     {},
     { excludeKeys: [] }
   );
@@ -415,32 +415,13 @@ const table = useReactTable({
       </div>
 
       {/* Filters */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Input
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search work orders, notes, or invoice numbers..."
-            className="flex-1"
-          />
-        </div>
-        <ReportsFilters
-          value={filters}
-          onChange={handleFiltersChange}
-        />
-        {(filterCount > 0 || searchTerm) && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleClearFilters}>
-              <X className="w-4 h-4 mr-2" />
-              Clear all filters
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {filterCount} filter{filterCount !== 1 ? 's' : ''} applied
-              {searchTerm && ' + search'}
-            </span>
-          </div>
-        )}
-      </div>
+      <ReportsFiltersV2
+        value={filters}
+        onChange={handleFiltersChange}
+        searchTerm={searchTerm}
+        onSearchChange={handleSearchChange}
+        onClear={(filterCount > 0 || searchTerm) ? handleClearFilters : undefined}
+      />
 
       {/* Bulk Actions */}
       {selectedRows.length > 0 && (
