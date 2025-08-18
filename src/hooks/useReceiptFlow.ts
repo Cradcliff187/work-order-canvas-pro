@@ -33,25 +33,49 @@ interface OCRResult {
 // Storage key for persistence
 const STORAGE_KEY = 'receipt-flow-state';
 
-// Session storage utilities
+// Session storage utilities with debouncing
+let saveTimeout: NodeJS.Timeout | null = null;
+const SAVE_DEBOUNCE_MS = 300;
+
 const saveStateToStorage = (state: ReceiptFlowState) => {
-  try {
-    // Don't persist sensitive data like files or streams
-    const persistableState = {
-      ...state,
-      receipt: {
-        ...state.receipt,
-        file: null, // Don't persist File objects
-      },
-      ui: {
-        ...state.ui,
-        cameraStream: null, // Don't persist MediaStream objects
-      },
-    };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(persistableState));
-  } catch (error) {
-    console.warn('Failed to save receipt flow state to storage:', error);
+  // Clear existing timeout
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
   }
+
+  // Debounce storage writes to prevent excessive writes during rapid state changes
+  saveTimeout = setTimeout(() => {
+    try {
+      // Don't save intermediate processing states
+      if (state.progress.stage === 'uploading' || state.progress.stage === 'processing') {
+        console.log('🔄 Skipping storage save for intermediate state:', state.progress.stage);
+        return;
+      }
+
+      // Don't persist sensitive data like files or streams
+      const persistableState = {
+        ...state,
+        receipt: {
+          ...state.receipt,
+          file: null, // Don't persist File objects
+        },
+        ui: {
+          ...state.ui,
+          cameraStream: null, // Don't persist MediaStream objects
+        },
+      };
+      
+      console.log('💾 Saving stable state to storage:', { 
+        stage: state.stage, 
+        progressStage: state.progress.stage,
+        hasOCR: !!state.ocr.data 
+      });
+      
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(persistableState));
+    } catch (error) {
+      console.warn('Failed to save receipt flow state to storage:', error);
+    }
+  }, SAVE_DEBOUNCE_MS);
 };
 
 const loadStateFromStorage = (): Partial<ReceiptFlowState> | null => {
@@ -61,12 +85,38 @@ const loadStateFromStorage = (): Partial<ReceiptFlowState> | null => {
     
     const parsedState = JSON.parse(stored);
     
-    // Validate that it's a reasonable state object
-    if (typeof parsedState === 'object' && parsedState.stage && parsedState.meta) {
-      return parsedState;
+    // Enhanced validation for state consistency
+    if (typeof parsedState !== 'object' || !parsedState.stage || !parsedState.meta) {
+      console.log('🔄 Storage validation failed: Missing required fields');
+      return null;
     }
+
+    // Validate stage transitions and data consistency
+    if (parsedState.stage === 'review') {
+      // If stage is 'review', we must have OCR data or be in manual entry mode
+      if (!parsedState.ocr?.data && parsedState.stage !== 'manual-entry') {
+        console.log('🔄 Storage validation failed: Review stage without OCR data');
+        return null;
+      }
+    }
+
+    // Check if state is too old (older than 1 hour)
+    if (parsedState.meta?.lastUpdated) {
+      const lastUpdated = new Date(parsedState.meta.lastUpdated);
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      if (lastUpdated < oneHourAgo) {
+        console.log('🔄 Storage validation failed: State too old');
+        return null;
+      }
+    }
+
+    console.log('✅ Storage validation passed:', { 
+      stage: parsedState.stage, 
+      hasOCR: !!parsedState.ocr?.data,
+      lastUpdated: parsedState.meta?.lastUpdated
+    });
     
-    return null;
+    return parsedState;
   } catch (error) {
     console.warn('Failed to load receipt flow state from storage:', error);
     return null;
@@ -87,8 +137,10 @@ export function useReceiptFlow() {
   const [state, dispatch] = useReducer(receiptFlowReducer, initialReceiptFlowState, (initial) => {
     const storedState = loadStateFromStorage();
     if (storedState) {
+      console.log('🔄 Hydrating initial state from storage');
       return receiptFlowReducer(initial, { type: 'HYDRATE_STATE', payload: storedState });
     }
+    console.log('🔄 Starting with fresh initial state');
     return initial;
   });
 
@@ -223,6 +275,18 @@ export function useReceiptFlow() {
     },
 
     hydrateState: (partialState: Partial<ReceiptFlowState>) => {
+      // Prevent hydration during active OCR processing
+      if (state.ocr.isProcessing || state.progress.stage === 'processing' || state.progress.stage === 'uploading') {
+        console.log('🚫 Hydration blocked - OCR processing active');
+        return;
+      }
+      
+      console.log('🔄 Hydrating state:', { 
+        fromStage: state.stage, 
+        toStage: partialState.stage,
+        hasOCRData: !!partialState.ocr?.data 
+      });
+      
       dispatch({ 
         type: 'HYDRATE_STATE', 
         payload: partialState 

@@ -547,8 +547,30 @@ export function receiptFlowReducer(
       };
 
       case 'HYDRATE_STATE':
+        // Prevent hydration if current state is more advanced
+        if (state.ocr.isProcessing || state.progress.stage === 'processing') {
+          console.log('🚫 HYDRATE_STATE blocked - processing in progress');
+          return state;
+        }
+
         // Carefully merge payload while preserving type safety
         const sanitizedPayload: Partial<ReceiptFlowState> = { ...action.payload };
+        
+        // Validate stage regression protection
+        if (sanitizedPayload.stage === 'capture' && state.stage === 'review' && state.ocr.data) {
+          console.log('🚫 HYDRATE_STATE blocked - would regress from review to capture with OCR data');
+          return state;
+        }
+
+        // Enhanced state consistency validation
+        if (sanitizedPayload.stage === 'review') {
+          // Ensure we have OCR data for review stage
+          if (!sanitizedPayload.ocr?.data) {
+            console.log('🚫 HYDRATE_STATE blocked - review stage without OCR data');
+            // Force to capture stage instead
+            sanitizedPayload.stage = 'capture';
+          }
+        }
         
         // Sanitize progress stage if present
         if (sanitizedPayload.progress?.stage) {
@@ -560,6 +582,12 @@ export function receiptFlowReducer(
             };
           }
         }
+
+        console.log('✅ HYDRATE_STATE applied:', { 
+          fromStage: state.stage, 
+          toStage: sanitizedPayload.stage,
+          hasOCRData: !!sanitizedPayload.ocr?.data 
+        });
         
         return {
           ...state,
