@@ -385,11 +385,6 @@ export function ReportsFiltersV2({
   // Desktop layout
   return (
     <div className="space-y-4">
-      {/* Always visible search on desktop */}
-      <Card className="p-4">
-        {renderSearchFilter()}
-      </Card>
-
       {/* Desktop right sidebar */}
       <Sheet open={isDesktopSheetOpen} onOpenChange={setIsDesktopSheetOpen}>
         <SheetTrigger asChild>
