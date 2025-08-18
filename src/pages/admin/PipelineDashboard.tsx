@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { ReportStatusBadge, FinancialStatusBadge, ComputedFinancialStatusBadge } from '@/components/ui/status-badge';
@@ -29,7 +30,8 @@ import {
   TrendingUp,
   Package,
   CreditCard,
-  Receipt
+  Receipt,
+  Filter
 } from 'lucide-react';
 
 // Mobile card component for pipeline data
@@ -95,6 +97,7 @@ export default function PipelineDashboard() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { data: pipelineData, isLoading, error } = useWorkOrderLifecycle();
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   
   // Configure view modes - mobile gets list only, desktop gets table and card options
   const viewModeConfig: ViewModeConfig = {
@@ -271,74 +274,181 @@ export default function PipelineDashboard() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <AdminFilterBar 
-        title="Pipeline Filters"
-        filterCount={Object.values(filters).filter(v => 
-          Array.isArray(v) ? v.length > 0 : 
-          typeof v === 'string' ? v !== '' : 
-          typeof v === 'boolean' ? v === true : 
-          false
-        ).length}
-        onClear={() => setFilters({
-          search: '',
-          operationalStatus: [],
-          reportStatus: [],
-          invoiceStatus: [],
-          billingStatus: [],
-          partnerId: '',
-          subcontractorId: '',
-          location: [],
-          showOnlyActionable: false
-        })}
-      >
-        <Input
-          placeholder="Search work orders..."
-          value={filters.search}
-          onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-          className="w-full md:w-64"
-        />
-
-        <MultiSelectFilter
-          options={locationOptions}
-          selectedValues={filters.location}
-          onSelectionChange={(values) => setFilters(prev => ({ ...prev, location: values }))}
-          placeholder="All locations"
-          maxDisplayCount={2}
-        />
-        
-        <MultiSelectFilter
-          options={[
-            { value: 'received', label: 'New' },
-            { value: 'assigned', label: 'Assigned' },
-            { value: 'estimate_needed', label: 'Estimate Needed' },
-            { value: 'estimate_approved', label: 'Estimate Approved' },
-            { value: 'in_progress', label: 'In Progress' },
-            { value: 'completed', label: 'Completed' }
-          ]}
-          selectedValues={filters.operationalStatus}
-          onSelectionChange={(values) => setFilters(prev => ({ ...prev, operationalStatus: values }))}
-          placeholder="All statuses"
-        />
-        
-        <Button
-          variant={filters.showOnlyActionable ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilters(prev => ({ ...prev, showOnlyActionable: !prev.showOnlyActionable }))}
+      {/* Mobile Filters */}
+      <div className="lg:hidden">
+        <AdminFilterBar 
+          title="Pipeline Filters"
+          filterCount={Object.values(filters).filter(v => 
+            Array.isArray(v) ? v.length > 0 : 
+            typeof v === 'string' ? v !== '' : 
+            typeof v === 'boolean' ? v === true : 
+            false
+          ).length}
+          onClear={() => setFilters({
+            search: '',
+            operationalStatus: [],
+            reportStatus: [],
+            invoiceStatus: [],
+            billingStatus: [],
+            partnerId: '',
+            subcontractorId: '',
+            location: [],
+            showOnlyActionable: false
+          })}
         >
-          <AlertCircle className="h-4 w-4 mr-2" />
-          Action Required
-        </Button>
-        
-        {/* View Mode Switcher - only show on desktop with multiple allowed modes */}
-        {!isMobile && (
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
+          <Input
+            placeholder="Search work orders..."
+            value={filters.search}
+            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+            className="w-full md:w-64"
           />
-        )}
-      </AdminFilterBar>
+
+          <MultiSelectFilter
+            options={locationOptions}
+            selectedValues={filters.location}
+            onSelectionChange={(values) => setFilters(prev => ({ ...prev, location: values }))}
+            placeholder="All locations"
+            maxDisplayCount={2}
+          />
+          
+          <MultiSelectFilter
+            options={[
+              { value: 'received', label: 'New' },
+              { value: 'assigned', label: 'Assigned' },
+              { value: 'estimate_needed', label: 'Estimate Needed' },
+              { value: 'estimate_approved', label: 'Estimate Approved' },
+              { value: 'in_progress', label: 'In Progress' },
+              { value: 'completed', label: 'Completed' }
+            ]}
+            selectedValues={filters.operationalStatus}
+            onSelectionChange={(values) => setFilters(prev => ({ ...prev, operationalStatus: values }))}
+            placeholder="All statuses"
+          />
+          
+          <Button
+            variant={filters.showOnlyActionable ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilters(prev => ({ ...prev, showOnlyActionable: !prev.showOnlyActionable }))}
+          >
+            <AlertCircle className="h-4 w-4 mr-2" />
+            Action Required
+          </Button>
+          
+          {/* View Mode Switcher - only show on desktop with multiple allowed modes */}
+          {!isMobile && (
+            <ViewModeSwitcher
+              value={viewMode}
+              onValueChange={setViewMode}
+              allowedModes={allowedModes}
+            />
+          )}
+        </AdminFilterBar>
+      </div>
+
+      {/* Desktop Filters */}
+      <div className="hidden lg:flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsFilterOpen(true)}
+            className="gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            {Object.values(filters).filter(v => 
+              Array.isArray(v) ? v.length > 0 : 
+              typeof v === 'string' ? v !== '' : 
+              typeof v === 'boolean' ? v === true : 
+              false
+            ).length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {Object.values(filters).filter(v => 
+                  Array.isArray(v) ? v.length > 0 : 
+                  typeof v === 'string' ? v !== '' : 
+                  typeof v === 'boolean' ? v === true : 
+                  false
+                ).length}
+              </Badge>
+            )}
+          </Button>
+        </div>
+
+        <ViewModeSwitcher
+          value={viewMode}
+          onValueChange={setViewMode}
+          allowedModes={allowedModes}
+        />
+      </div>
+
+      <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+        <SheetContent side="right" className="w-[480px]">
+          <SheetHeader>
+            <SheetTitle>Pipeline Filters</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6">
+            <AdminFilterBar 
+              title=""
+              filterCount={Object.values(filters).filter(v => 
+                Array.isArray(v) ? v.length > 0 : 
+                typeof v === 'string' ? v !== '' : 
+                typeof v === 'boolean' ? v === true : 
+                false
+              ).length}
+              onClear={() => setFilters({
+                search: '',
+                operationalStatus: [],
+                reportStatus: [],
+                invoiceStatus: [],
+                billingStatus: [],
+                partnerId: '',
+                subcontractorId: '',
+                location: [],
+                showOnlyActionable: false
+              })}
+              collapsible={false}
+            >
+              <Input
+                placeholder="Search work orders..."
+                value={filters.search}
+                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                className="w-full"
+              />
+
+              <MultiSelectFilter
+                options={locationOptions}
+                selectedValues={filters.location}
+                onSelectionChange={(values) => setFilters(prev => ({ ...prev, location: values }))}
+                placeholder="All locations"
+                maxDisplayCount={2}
+              />
+              
+              <MultiSelectFilter
+                options={[
+                  { value: 'received', label: 'New' },
+                  { value: 'assigned', label: 'Assigned' },
+                  { value: 'estimate_needed', label: 'Estimate Needed' },
+                  { value: 'estimate_approved', label: 'Estimate Approved' },
+                  { value: 'in_progress', label: 'In Progress' },
+                  { value: 'completed', label: 'Completed' }
+                ]}
+                selectedValues={filters.operationalStatus}
+                onSelectionChange={(values) => setFilters(prev => ({ ...prev, operationalStatus: values }))}
+                placeholder="All statuses"
+              />
+              
+              <Button
+                variant={filters.showOnlyActionable ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilters(prev => ({ ...prev, showOnlyActionable: !prev.showOnlyActionable }))}
+                className="w-full justify-start"
+              >
+                <AlertCircle className="h-4 w-4 mr-2" />
+                Action Required
+              </Button>
+            </AdminFilterBar>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Main Content - Responsive Views */}
       {viewMode === 'table' ? (
