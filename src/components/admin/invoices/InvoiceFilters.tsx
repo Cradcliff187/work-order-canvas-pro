@@ -1,293 +1,203 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { useTrades } from '@/hooks/useWorkOrders';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { usePartnerLocations } from '@/hooks/usePartnerLocations';
+import { AlertTriangle } from 'lucide-react';
 
+// Filter interface aligned with work order pipeline workflow
 export interface InvoiceFiltersValue {
-  status?: string[];
-  paymentStatus?: 'paid' | 'unpaid';
   search?: string;
-  partner_organization_id?: string; // partner organization (via work orders)
-  subcontractor_organization_id?: string; // subcontractor organization (direct)
-  trade_id?: string[];
+  overdue?: boolean;
+  partner_organization_id?: string;
   location_filter?: string[];
-  date_from?: string;
-  date_to?: string;
-  due_date_from?: string;
-  due_date_to?: string;
-  amount_min?: number;
-  amount_max?: number;
-  has_attachments?: boolean;
-  overdue?: boolean; // due_date < today AND unpaid
-  created_today?: boolean; // created today
+  subcontractor_organization_id?: string;
+  operational_status?: string[];
+  report_status?: string[];
+  invoice_status?: string[];
+  partner_billing_status?: string[];
 }
 
 interface InvoiceFiltersProps {
   value: InvoiceFiltersValue;
-  onChange: (next: InvoiceFiltersValue) => void;
-  onClear?: () => void;
-  filterCount?: number;
+  onChange: (value: InvoiceFiltersValue) => void;
+  onClear: () => void;
 }
 
-const statusOptions = [
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'reviewed', label: 'Reviewed' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' },
+// Status options matching WorkOrderPipelineTable exactly
+const operationalStatusOptions = [
+  { value: 'new', label: 'New Orders' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'reports_pending', label: 'Reports Pending Review' },
+  { value: 'complete', label: 'Completed' }
 ];
 
-export function InvoiceFilters({ value, onChange, onClear, filterCount = 0 }: InvoiceFiltersProps) {
-  const { data: trades } = useTrades();
+const reportStatusOptions = [
+  { value: 'not_submitted', label: 'Not Submitted' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'reviewed', label: 'Under Review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Needs Revision' }
+];
 
-  const set = (patch: Partial<InvoiceFiltersValue>) => onChange({ ...value, ...patch });
+const invoiceStatusOptions = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'reviewed', label: 'Under Review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' }
+];
 
-  // Locations sourced from work orders, optionally filtered by partner organization
-  const { data: locations } = useQuery({
-    queryKey: ['invoice-locations', value.partner_organization_id],
-    queryFn: async () => {
-      let query = supabase
-        .from('work_orders')
-        .select('store_location')
-        .not('store_location', 'is', null)
-        .not('store_location', 'eq', '');
-      if (value.partner_organization_id) {
-        query = query.eq('organization_id', value.partner_organization_id);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      const uniqueLocations = [...new Set((data || []).map((w) => w.store_location).filter(Boolean) as string[])].sort();
-      return uniqueLocations;
-    },
-  });
+const partnerBillingStatusOptions = [
+  { value: 'report_pending', label: 'Report Pending' },
+  { value: 'invoice_needed', label: 'Subcontractor Invoice Needed' },
+  { value: 'invoice_pending', label: 'Invoice Pending Approval' },
+  { value: 'ready_to_bill', label: 'Ready to Bill Partner' },
+  { value: 'billed', label: 'Partner Billed' },
+];
 
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(value.date_from ? new Date(value.date_from) : undefined);
-  const [dateTo, setDateTo] = useState<Date | undefined>(value.date_to ? new Date(value.date_to) : undefined);
-  const [dueDateFrom, setDueDateFrom] = useState<Date | undefined>(value.due_date_from ? new Date(value.due_date_from) : undefined);
-  const [dueDateTo, setDueDateTo] = useState<Date | undefined>(value.due_date_to ? new Date(value.due_date_to) : undefined);
+export function InvoiceFilters({ value, onChange, onClear }: InvoiceFiltersProps) {
+  // Get partner locations for the selected partner organization
+  const { data: partnerLocations } = usePartnerLocations(value.partner_organization_id);
 
-  // Sync local date state with filter values when filters are cleared
-  useEffect(() => {
-    setDateFrom(value.date_from ? new Date(value.date_from) : undefined);
-  }, [value.date_from]);
+  // Create location options from partner locations
+  const locationOptions = useMemo(() => {
+    if (!partnerLocations) return [];
+    
+    return partnerLocations.map(location => ({
+      value: location.location_name,
+      label: `${location.location_name} (${location.location_number})`
+    }));
+  }, [partnerLocations]);
 
-  useEffect(() => {
-    setDateTo(value.date_to ? new Date(value.date_to) : undefined);
-  }, [value.date_to]);
+  // Helper function to update filter values
+  const set = (key: keyof InvoiceFiltersValue, newValue: any) => {
+    onChange({ ...value, [key]: newValue });
+  };
 
-  useEffect(() => {
-    setDueDateFrom(value.due_date_from ? new Date(value.due_date_from) : undefined);
-  }, [value.due_date_from]);
-
-  useEffect(() => {
-    setDueDateTo(value.due_date_to ? new Date(value.due_date_to) : undefined);
-  }, [value.due_date_to]);
+  // Calculate active filter count for clear button
+  const filterCount = Object.values(value).filter(v => {
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === 'string') return v.trim() !== '';
+    if (typeof v === 'boolean') return v;
+    return false;
+  }).length;
 
   return (
-    <AdminFilterBar title="Filters" filterCount={filterCount} onClear={onClear} collapsible={true}>
-      {/* Search - Full width on mobile, grid on desktop */}
-      <div className="col-span-full lg:col-span-1">
-        <SmartSearchInput
-          value={value.search || ''}
-          onChange={(e) => set({ search: e.target.value })}
-          placeholder="Search invoices..."
-          storageKey="admin-invoices-search"
-        />
-      </div>
-
-      {/* Status - MultiSelectFilter */}
-      <MultiSelectFilter
-        options={statusOptions}
-        selectedValues={value.status || []}
-        onSelectionChange={(values) => set({ status: values.length ? values : undefined })}
-        placeholder="All Statuses"
-      />
-
-      {/* Payment Status - Single Select */}
-      <Select
-        value={value.paymentStatus || 'all'}
-        onValueChange={(val) => set({ paymentStatus: val === 'all' ? undefined : val as 'paid' | 'unpaid' })}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Payment Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All</SelectItem>
-          <SelectItem value="paid">Paid</SelectItem>
-          <SelectItem value="unpaid">Unpaid</SelectItem>
-        </SelectContent>
-      </Select>
-
-      {/* Partner Organization Filter (via work orders) */}
-      <OrganizationSelector
-        value={value.partner_organization_id}
-        onChange={(id) => set({ partner_organization_id: id, location_filter: undefined })}
-        organizationType="partner"
-        placeholder="All Partners"
-      />
-
-      {/* Subcontractor Organization Filter (direct) */}
-      <OrganizationSelector
-        value={value.subcontractor_organization_id}
-        onChange={(id) => set({ subcontractor_organization_id: id })}
-        organizationType="subcontractor"
-        placeholder="All Subcontractors"
-      />
-
-      {/* Location Filter */}
-      <MultiSelectFilter
-        options={(locations || []).map((loc) => ({ value: loc, label: loc }))}
-        selectedValues={value.location_filter || []}
-        onSelectionChange={(values) => set({ location_filter: values.length ? values : undefined })}
-        placeholder="All Locations"
-      />
-
-      {/* Trade Filter */}
-      <MultiSelectFilter
-        options={(Array.isArray(trades) ? trades : []).map((t) => ({ value: t.id || `trade-${t.name}`, label: t.name }))}
-        selectedValues={value.trade_id || []}
-        onSelectionChange={(values) => set({ trade_id: values.length ? values : undefined })}
-        placeholder="All Trades"
-      />
-
-      {/* Date Range - Start */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="justify-start">
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateFrom ? format(dateFrom, 'MMM d, yyyy') : 'From Date'}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 z-50" align="start">
-          <Calendar
-            mode="single"
-            selected={dateFrom}
-            onSelect={(date) => {
-              setDateFrom(date || undefined);
-              set({ date_from: date ? format(date, 'yyyy-MM-dd') : undefined });
-            }}
-            className="pointer-events-auto"
+    <AdminFilterBar
+      title="Invoice Filters"
+      filterCount={filterCount}
+      onClear={onClear}
+      collapsible
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* Smart Search Input */}
+        <div className="col-span-full sm:col-span-2">
+          <SmartSearchInput
+            value={value.search || ''}
+            onChange={(search) => set('search', search)}
+            placeholder="Search work orders, partners, locations..."
           />
-        </PopoverContent>
-      </Popover>
+        </div>
 
-      {/* Date Range - End */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="justify-start">
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateTo ? format(dateTo, 'MMM d, yyyy') : 'To Date'}
+        {/* Overdue Quick Filter */}
+        <div className="flex items-center">
+          <Button
+            variant={value.overdue ? "default" : "outline"}
+            size="sm"
+            onClick={() => set('overdue', !value.overdue)}
+            className="w-full"
+          >
+            <AlertTriangle className="w-4 h-4 mr-2" />
+            Overdue Only
           </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 z-50" align="start">
-          <Calendar
-            mode="single"
-            selected={dateTo}
-            onSelect={(date) => {
-              setDateTo(date || undefined);
-              set({ date_to: date ? format(date, 'yyyy-MM-dd') : undefined });
+        </div>
+
+        {/* Partner Organization Selector */}
+        <div>
+          <OrganizationSelector
+            value={value.partner_organization_id || ''}
+            onChange={(partnerId) => {
+              set('partner_organization_id', partnerId);
+              // Clear location filter when partner changes
+              if (value.location_filter?.length) {
+                set('location_filter', []);
+              }
             }}
-            className="pointer-events-auto"
+            organizationType="partner"
+            placeholder="Select Partner"
           />
-        </PopoverContent>
-      </Popover>
+        </div>
 
-      {/* Due Date Range - Start */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="justify-start">
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {dueDateFrom ? format(dueDateFrom, 'MMM d, yyyy') : 'Due From'}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 z-50" align="start">
-          <Calendar
-            mode="single"
-            selected={dueDateFrom}
-            onSelect={(date) => {
-              setDueDateFrom(date || undefined);
-              set({ due_date_from: date ? format(date, 'yyyy-MM-dd') : undefined });
-            }}
-            className="pointer-events-auto"
+        {/* Location Filter (dependent on partner selection) */}
+        <div>
+          <MultiSelectFilter
+            options={locationOptions}
+            selectedValues={value.location_filter || []}
+            onSelectionChange={(locations) => set('location_filter', locations)}
+            placeholder="Select Locations"
+            disabled={!value.partner_organization_id}
+            maxDisplayCount={2}
           />
-        </PopoverContent>
-      </Popover>
+        </div>
 
-      {/* Due Date Range - End */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="justify-start">
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {dueDateTo ? format(dueDateTo, 'MMM d, yyyy') : 'Due To'}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 z-50" align="start">
-          <Calendar
-            mode="single"
-            selected={dueDateTo}
-            onSelect={(date) => {
-              setDueDateTo(date || undefined);
-              set({ due_date_to: date ? format(date, 'yyyy-MM-dd') : undefined });
-            }}
-            className="pointer-events-auto"
+        {/* Subcontractor Organization Selector */}
+        <div>
+          <OrganizationSelector
+            value={value.subcontractor_organization_id || ''}
+            onChange={(subcontractorId) => set('subcontractor_organization_id', subcontractorId)}
+            organizationType="subcontractor"
+            placeholder="Select Subcontractor"
           />
-        </PopoverContent>
-      </Popover>
+        </div>
 
-      {/* Amount Min */}
-      <Input
-        type="number"
-        placeholder="Min Amount"
-        value={value.amount_min || ''}
-        onChange={(e) => set({ amount_min: e.target.value ? Number(e.target.value) : undefined })}
-      />
+        {/* Operational Status Multi-Select */}
+        <div>
+          <MultiSelectFilter
+            options={operationalStatusOptions}
+            selectedValues={value.operational_status || []}
+            onSelectionChange={(statuses) => set('operational_status', statuses)}
+            placeholder="Work Status"
+            maxDisplayCount={2}
+          />
+        </div>
 
-      {/* Amount Max */}
-      <Input
-        type="number"
-        placeholder="Max Amount"
-        value={value.amount_max || ''}
-        onChange={(e) => set({ amount_max: e.target.value ? Number(e.target.value) : undefined })}
-      />
+        {/* Report Status Multi-Select */}
+        <div>
+          <MultiSelectFilter
+            options={reportStatusOptions}
+            selectedValues={value.report_status || []}
+            onSelectionChange={(statuses) => set('report_status', statuses)}
+            placeholder="Report Status"
+            maxDisplayCount={2}
+          />
+        </div>
 
-      {/* Quick Filters Section - Full width */}
-      <div className="col-span-full flex gap-2 flex-wrap">
-        <Button
-          variant={value.overdue ? 'secondary' : 'outline'}
-          size="sm"
-          onClick={() => set({ overdue: !value.overdue })}
-        >
-          Overdue
-        </Button>
-        <Button
-          variant={value.created_today ? 'secondary' : 'outline'}
-          size="sm"
-          onClick={() => set({ created_today: !value.created_today })}
-        >
-          Created Today
-        </Button>
-        <Button
-          variant={value.has_attachments ? 'secondary' : 'outline'}
-          size="sm"
-          onClick={() => set({ has_attachments: !value.has_attachments })}
-        >
-          Has Attachments
-        </Button>
+        {/* Invoice Status Multi-Select */}
+        <div>
+          <MultiSelectFilter
+            options={invoiceStatusOptions}
+            selectedValues={value.invoice_status || []}
+            onSelectionChange={(statuses) => set('invoice_status', statuses)}
+            placeholder="Invoice Status"
+            maxDisplayCount={2}
+          />
+        </div>
+
+        {/* Partner Billing Status Multi-Select */}
+        <div>
+          <MultiSelectFilter
+            options={partnerBillingStatusOptions}
+            selectedValues={value.partner_billing_status || []}
+            onSelectionChange={(statuses) => set('partner_billing_status', statuses)}
+            placeholder="Partner Billing Status"
+            maxDisplayCount={2}
+          />
+        </div>
       </div>
     </AdminFilterBar>
   );
 }
-
-export default InvoiceFilters;

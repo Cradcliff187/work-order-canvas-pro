@@ -496,7 +496,6 @@ const table = useReactTable({
           clearFilters(); 
           setPage(1); 
         }}
-        filterCount={filterCount}
       />
 
       {/* Results */}
