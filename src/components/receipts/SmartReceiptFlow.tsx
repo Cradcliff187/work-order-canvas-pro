@@ -30,6 +30,7 @@ import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
 import { mapOCRConfidenceToForm, type OCRConfidence, type FormConfidence } from '@/utils/ocr-confidence-mapper';
 import { formatConfidencePercent, getFieldConfidence } from '@/utils/confidence-display';
+import { DebugPanel } from "./DebugPanel";
 import { useOCRProcessor } from '@/hooks/useOCRProcessor';
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { EnhancedAllocationPanel } from "./EnhancedAllocationPanel";
@@ -146,11 +147,7 @@ export function SmartReceiptFlow() {
   // Centralized state management with useReceiptFlow hook
   const { state, actions, computed, persistence } = useReceiptFlow();
   
-  // ADD DEBUG MODE STATE - only available in development
-  const [debugMode, setDebugMode] = useState(false);
-  const [rawOCRText, setRawOCRText] = useState<string | null>(null);
-  const [debugOCRData, setDebugOCRData] = useState<any>(null);
-  const [showRawText, setShowRawText] = useState(false);
+  // Debug state moved to DebugPanel component
   
   // Hooks
   const isMobile = useIsMobile();
@@ -232,8 +229,7 @@ export function SmartReceiptFlow() {
   const removeFile = useCallback(() => {
     onSwipeAction(); // Haptic feedback
     actions.resetFlow();
-    setRawOCRText(null); // Clear debug data
-    setDebugOCRData(null);
+    // Debug data handled by DebugPanel
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   }, [onSwipeAction, actions]);
@@ -258,8 +254,7 @@ export function SmartReceiptFlow() {
     onFormReset: () => {
       form.reset();
       actions.resetFlow();
-      setRawOCRText(null);
-      setDebugOCRData(null);
+      // Debug data handled by DebugPanel
     },
     enableTouchGesture: isMobile
   });
@@ -420,8 +415,8 @@ export function SmartReceiptFlow() {
       
       actions.setOCRError(errorMessage);
     },
-    setRawOCRText,
-    setDebugOCRData,
+    setRawOCRText: () => {}, // No-op, handled by DebugPanel
+    setDebugOCRData: () => {}, // No-op, handled by DebugPanel
     isProcessingLocked,
   });
 
@@ -431,9 +426,7 @@ export function SmartReceiptFlow() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Clear previous debug data
-    setRawOCRText(null);
-    setDebugOCRData(null);
+    // Debug data handled by DebugPanel
 
     // File validation
     if (!isValidFileSize(file, MAX_FILE_SIZE)) {
@@ -574,9 +567,7 @@ export function SmartReceiptFlow() {
         // Camera cleanup is handled by the reducer
         actions.setCameraState(false);
         
-        // Clear debug data
-        setRawOCRText(null);
-        setDebugOCRData(null);
+        // Debug data handled by DebugPanel
         
         // Compress captured image
         try {
@@ -651,8 +642,7 @@ export function SmartReceiptFlow() {
   // Memoized OCR retry function
   const retryOCR = useCallback(() => {
     if (receiptFile) {
-      setRawOCRText(null);
-      setDebugOCRData(null);
+      // Debug data handled by DebugPanel
       actions.retryOCR();
       processWithOCR(receiptFile);
     }
@@ -710,8 +700,7 @@ export function SmartReceiptFlow() {
         // Reset form and state
         form.reset();
         actions.resetFlow();
-        setRawOCRText(null);
-        setDebugOCRData(null);
+        // Debug data handled by DebugPanel
       }, 2000);
 
       toast({
@@ -786,34 +775,12 @@ export function SmartReceiptFlow() {
         )}
       </AnimatePresence>
 
-      {/* DEBUG MODE TOGGLE - Only show in development */}
-      {import.meta.env.MODE === 'development' && (
-        <Card className="border-dashed border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20">
-          <CardContent className="py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bug className="h-4 w-4 text-yellow-600" />
-                <span className="text-sm font-medium">Debug OCR Mode</span>
-                <Badge variant="outline" className="text-xs">Dev Only</Badge>
-              </div>
-               <Switch
-                checked={debugMode}
-                onCheckedChange={(checked) => {
-                  if (import.meta.env.MODE === 'development') {
-                    setDebugMode(checked);
-                  }
-                }}
-                className="data-[state=checked]:bg-yellow-600"
-              />
-            </div>
-            {debugMode && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Raw OCR text and parsing details will be captured
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Debug Panel Component */}
+      <DebugPanel 
+        ocrResult={ocrData}
+        formData={form.getValues()}
+        confidenceValues={ocrConfidence}
+      />
 
       {/* Camera/Upload Capture Section */}
       <Card data-tour="upload-section">
@@ -966,110 +933,13 @@ export function SmartReceiptFlow() {
                 </div>
               ) : null}
 
-              {/* DEBUG: Raw OCR Text Display */}
-              {import.meta.env.MODE === 'development' && debugMode && rawOCRText && (
-                <Card className="border-dashed border-blue-400 bg-blue-50 dark:bg-blue-900/20">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium flex items-center gap-2">
-                        <Eye className="h-4 w-4" />
-                        Raw OCR Text (Debug)
-                      </h4>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setShowRawText(!showRawText)}
-                        >
-                          {showRawText ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                          {showRawText ? 'Hide' : 'Show'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            navigator.clipboard.writeText(rawOCRText);
-                            toast({ title: 'Copied to clipboard!' });
-                          }}
-                        >
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  {showRawText && (
-                    <CardContent>
-                      <div className="p-3 bg-white dark:bg-gray-900 rounded-lg max-h-48 overflow-auto">
-                        <pre className="text-xs font-mono whitespace-pre-wrap">{rawOCRText}</pre>
-                      </div>
-                      {debugOCRData && (
-                        <div className="mt-3 space-y-2 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Text Length:</span>
-                            <span>{debugOCRData.text_length} characters</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Detection Method:</span>
-                            <span>{debugOCRData.has_doc_text ? 'DOCUMENT_TEXT' : 'TEXT_DETECTION'}</span>
-                          </div>
-                          {debugOCRData.parsed_result && (
-                            <>
-                              <div className="border-t pt-2 mt-2">
-                                <p className="font-medium mb-1">Parsed Results:</p>
-                                <div className="space-y-1">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Vendor:</span>
-                                    <span className="font-mono">{debugOCRData.parsed_result.vendor || 'NOT FOUND'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Total:</span>
-                                    <span className="font-mono">${debugOCRData.parsed_result.total || 0}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Date:</span>
-                                    <span className="font-mono">{debugOCRData.parsed_result.date || 'NOT FOUND'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  )}
-                </Card>
-              )}
+              {/* Debug info handled by DebugPanel component */}
 
-            {/* OCR Processing Status */}
-              {isProcessingOCR && (
-                <div className="flex items-center justify-center py-4 space-x-3" data-tour="ocr-section">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <div className="flex items-center gap-2">
-                    <span>Reading receipt with AI...</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>AI is extracting vendor, amount, date, and line items from your receipt</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              )}
-
-              {/* Enhanced Confidence Display with Debug Info */}
+              {/* Enhanced Confidence Display */}
               {ocrConfidence && Object.keys(ocrConfidence).length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium flex items-center gap-2">
                     OCR Confidence
-                    {debugMode && ocrData && (
-                      <Badge variant="outline" className="text-xs">
-                        {(ocrData as any).from_cache ? 'From Cache' : 'Fresh Scan'}
-                        {(ocrData as any).processing_time && ` (${(ocrData as any).processing_time}ms)`}
-                      </Badge>
-                    )}
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(ocrConfidence).map(([field, confidence]) => (
@@ -1229,129 +1099,145 @@ export function SmartReceiptFlow() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-tour="form-section">
             
-            {/* Enhanced Debug Panel with Better Info */}
-            {import.meta.env.MODE === 'development' && debugMode && (
-              <Card className="border-dashed border-orange-400 bg-orange-50 dark:bg-orange-900/20">
-                <CardHeader className="pb-3">
-                  <h3 className="font-semibold text-orange-800 dark:text-orange-200 flex items-center gap-2">
-                    <Bug className="h-4 w-4" />
-                    Debug Info
-                  </h3>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xs space-y-1 text-orange-700 dark:text-orange-300">
-                    <div>Stage: <strong>{flowStage}</strong></div>
-                    <div>Form Visible: <strong>{computed.isFormVisible ? 'YES' : 'NO'}</strong></div>
-                    <div>Has OCR Data: <strong>{computed.hasOCRData ? 'YES' : 'NO'}</strong></div>
-                     <div>OCR Error: <strong>{ocrError ? 'YES' : 'NO'}</strong></div>
-                     {ocrData && (
-                       <div className="mt-2 border-t pt-2">
-                         <div className="mb-2 text-sm font-medium text-orange-700 dark:text-orange-300">OCR Detected vs Form Values</div>
-                         <div className="space-y-1 text-xs">
-                           <div>Vendor: <strong>{ocrData.vendor || 'None'}</strong> → <em>{form.watch('vendor_name') || 'Empty'}</em> ({((ocrConfidence.vendor_name || 0) * 100).toFixed(1)}%)</div>
-                           <div>Amount: <strong>${ocrData.total || 'None'}</strong> → <em>${form.watch('amount') || '0'}</em> ({((ocrConfidence.amount || 0) * 100).toFixed(1)}%)</div>
-                           <div>Date: <strong>{ocrData.date || 'None'}</strong> → <em>{form.watch('receipt_date') || 'Empty'}</em> ({((ocrConfidence.receipt_date || 0) * 100).toFixed(1)}%)</div>
-                           <div>Line Items: <strong>{ocrData.lineItems?.length || 0}</strong></div>
-                         </div>
-                         {(ocrData as any).from_cache && (
-                           <div className="text-green-600 dark:text-green-400 font-medium text-xs mt-1">✅ From Cache</div>
-                         )}
-                         {(ocrData as any).processing_time && (
-                           <div className="text-xs">Processing Time: <strong>{(ocrData as any).processing_time}ms</strong></div>
-                         )}
-                       </div>
-                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Rest of the form remains exactly the same... */}
-            {/* Essential Details - Always Open */}
+            {/* Essential Details - Vendor, Amount, Date */}
             <FieldGroup
               title="Essential Details"
-              icon={<FileText className="h-4 w-4" />}
-              defaultOpen={true}
+              icon={<DollarSign className="h-4 w-4" />}
+              badge={
+                ocrConfidence && Object.keys(ocrConfidence).length > 0 ? (
+                  <Badge variant="outline" className="ml-2">
+                    OCR Data Available
+                  </Badge>
+                ) : undefined
+              }
             >
-              {/* Debug logging for confidence data flow - using useEffect to avoid TSX issues */}
-              {(() => {
-                console.log('🐛 Essential Details Debug:', {
-                  ocrConfidence,
-                  ocrConfidenceKeys: Object.keys(ocrConfidence || {}),
-                  vendorConfidence: ocrConfidence?.vendor_name,
-                  amountConfidence: ocrConfidence?.amount,
-                  dateConfidence: ocrConfidence?.receipt_date,
-                  mappingTest: ocrConfidence ? 'Mapped object exists' : 'No mapped object'
-                });
-                return null;
-              })()}
-              
-              {/* Development-only debug section */}
-              {process.env.NODE_ENV === 'development' && ocrConfidence && (
-                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                  <h4 className="text-sm font-bold text-yellow-800 dark:text-yellow-200 mb-2">🔍 Confidence Debug</h4>
-                  <div className="text-xs space-y-1">
-                    <div><strong>Raw ocrConfidence object:</strong> {JSON.stringify(ocrConfidence, null, 2)}</div>
-                    <div><strong>vendor_name:</strong> {ocrConfidence.vendor_name} → {ocrConfidence.vendor_name ? `${Math.round(ocrConfidence.vendor_name * 100)}%` : 'undefined'}</div>
-                    <div><strong>amount:</strong> {ocrConfidence.amount} → {ocrConfidence.amount ? `${Math.round(ocrConfidence.amount * 100)}%` : 'undefined'}</div>
-                    <div><strong>receipt_date:</strong> {ocrConfidence.receipt_date} → {ocrConfidence.receipt_date ? `${Math.round(ocrConfidence.receipt_date * 100)}%` : 'undefined'}</div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-4">
-                <InlineEditField
-                  value={form.watch('vendor_name') || ''}
-                  onSave={(value) => {
-                    form.setValue('vendor_name', value, { shouldValidate: true });
-                  }}
-                  inputType="text"
-                  fieldType="vendor"
-                  label="Vendor Name"
-                  placeholder="Enter vendor name"
-                  confidence={ocrConfidence.vendor_name}
-                  suggestions={COMMON_VENDORS}
-                  enableRealtimeValidation={true}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Vendor Name Field */}
+                <FormField
+                  control={form.control}
+                  name="vendor_name"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        Vendor Name
+                        <ConfidenceBadge 
+                          confidence={getFieldConfidence(ocrConfidence, 'vendor_name') || 0}
+                        />
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Enter vendor name..."
+                          className="font-medium"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
 
-                <InlineEditField
-                  value={form.watch('amount') || 0}
-                  onSave={(value) => {
-                    form.setValue('amount', parseFloat(value) || 0, { shouldValidate: true });
-                  }}
-                  inputType="currency"
-                  fieldType="amount"
-                  label="Amount"
-                  placeholder="0.00"
-                  confidence={ocrConfidence.amount}
-                  enableRealtimeValidation={true}
+                {/* Amount Field */}
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Amount
+                        <ConfidenceBadge 
+                          confidence={getFieldConfidence(ocrConfidence, 'amount') || 0}
+                        />
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                            $
+                          </span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            className="pl-8 font-mono text-lg"
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                      
+                      {/* Quick amount buttons for mobile */}
+                      {isMobile && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {QUICK_AMOUNTS.map(amount => (
+                            <Button
+                              key={amount}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => form.setValue('amount', amount, { shouldValidate: true })}
+                              className="text-xs"
+                            >
+                              ${amount}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </FormItem>
+                  )}
                 />
-
-                <InlineEditField
-                  value={form.watch('receipt_date') || ''}
-                  onSave={(value) => {
-                    const dateStr = value instanceof Date ? value.toISOString().split('T')[0] : value;
-                    form.setValue('receipt_date', dateStr, { shouldValidate: true });
-                    saveDraft();
-                  }}
-                  inputType="date"
-                  fieldType="date"
-                  label="Receipt Date"
-                  confidence={ocrConfidence?.receipt_date}
-                   enableRealtimeValidation={true}
-                 />
-                 
-                 {/* Temporary date debug section */}
-                 {process.env.NODE_ENV === 'development' && (
-                   <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-xs">
-                     <strong>📅 Date Debug:</strong>
-                     <div>Form date value: {JSON.stringify(form.watch('receipt_date'))}</div>
-                     <div>Date confidence: {ocrConfidence?.receipt_date || 'undefined'} ({formatConfidencePercent(ocrConfidence?.receipt_date)})</div>
-                     <div>Date type: {typeof form.watch('receipt_date')}</div>
-                     <div>OCR date from state: {JSON.stringify(ocrData?.date)}</div>
-                   </div>
-                 )}
               </div>
+
+              {/* Receipt Date Field - Full width */}
+              <FormField
+                control={form.control}
+                name="receipt_date"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Receipt Date
+                      <ConfidenceBadge 
+                        confidence={getFieldConfidence(ocrConfidence, 'receipt_date') || 0}
+                      />
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        className="font-mono"
+                        max={format(new Date(), "yyyy-MM-dd")}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Optional Description Field */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Description (Optional)
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Brief description of purchase..."
+                        className="min-h-[80px] resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </FieldGroup>
 
             {/* Enhanced Work Order Assignment */}
