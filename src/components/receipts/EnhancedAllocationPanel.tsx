@@ -85,8 +85,12 @@ export function EnhancedAllocationPanel({
   
   // Enhanced allocation summary with percentages
   const allocationSummary = useMemo(() => {
+    const validAllocations = (allocations || [])
+      .filter(a => a && a.work_order_id && a.allocated_amount > 0)
+      .map(a => ({ work_order_id: a.work_order_id, allocated_amount: a.allocated_amount }));
+    
     const calculationState = allocationCalculator.calculateState(
-      (allocations || []).map(a => ({ work_order_id: a.work_order_id, allocated_amount: a.allocated_amount })),
+      validAllocations,
       totalAmount
     );
     

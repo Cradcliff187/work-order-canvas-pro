@@ -49,8 +49,13 @@ class AllocationCalculator {
       return this.memoCache.get(cacheKey);
     }
 
+    // Filter out invalid allocations before calculation
+    const validAllocations = allocations.filter(alloc => 
+      alloc && alloc.work_order_id && typeof alloc.allocated_amount === 'number' && alloc.allocated_amount > 0
+    );
+
     const totalAllocated = this.roundToPrecision(
-      allocations.reduce((sum, alloc) => sum + alloc.allocated_amount, 0)
+      validAllocations.reduce((sum, alloc) => sum + alloc.allocated_amount, 0)
     );
     
     const remaining = this.roundToPrecision(totalAmount - totalAllocated);

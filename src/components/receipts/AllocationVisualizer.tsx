@@ -58,6 +58,27 @@ const AllocationVisualizer: React.FC<AllocationVisualizerProps> = ({
   mode,
   className
 }) => {
+  // Show loading state while data loads
+  if (!allocations) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <div className="animate-pulse text-muted-foreground">
+          Loading allocations...
+        </div>
+      </div>
+    );
+  }
+
+  // Check for valid allocations early
+  const hasValidAllocations = allocations.some(a => a && a.work_order_id && a.allocated_amount > 0);
+  if (!hasValidAllocations) {
+    return (
+      <div className="text-center p-4 text-muted-foreground">
+        No valid allocations yet
+      </div>
+    );
+  }
+
   // Prepare visualization data with optimized filtering and calculations
   const { visualData, totalAllocated } = useMemo(() => {
     if (!allocations || !Array.isArray(allocations) || !workOrders || !Array.isArray(workOrders)) {

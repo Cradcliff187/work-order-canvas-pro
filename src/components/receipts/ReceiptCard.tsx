@@ -46,10 +46,9 @@ export function ReceiptCard({ receipt, onDelete }: ReceiptCardProps) {
     }
   };
 
-  const totalAllocated = receipt.receipt_work_orders.reduce(
-    (sum, allocation) => sum + allocation.allocated_amount,
-    0
-  );
+  const totalAllocated = (receipt.receipt_work_orders || [])
+    .filter(a => a && a.work_orders?.id && a.allocated_amount > 0)
+    .reduce((sum, allocation) => sum + allocation.allocated_amount, 0);
 
   return (
     <Card>
