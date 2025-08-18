@@ -186,17 +186,6 @@ export class AllocationWorkflowValidator {
     }));
   }
 
-  /**
-   * Smart work order suggestions based on context
-   */
-  getWorkOrderSuggestions(vendor?: string, location?: string): string[] {
-    // This could be enhanced with ML/history-based suggestions
-    // For now, return recent or high-priority work orders
-    return this.selectedWorkOrders
-      .filter(wo => wo.status === 'assigned' || wo.status === 'in_progress')
-      .slice(0, 3)
-      .map(wo => wo.id);
-  }
 }
 
 /**

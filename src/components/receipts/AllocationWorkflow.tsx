@@ -20,10 +20,7 @@ import {
   Users,
   Target,
   DollarSign,
-  Lightbulb,
-  ChevronRight,
-  Zap,
-  History
+  ChevronRight
 } from "lucide-react";
 import {
   AllocationWorkflowValidator,
@@ -33,8 +30,6 @@ import {
   type WorkflowAllocation,
   type AllocationState
 } from "@/utils/allocationWorkflow";
-import { useAllocationPatterns } from "@/hooks/useAllocationPatterns";
-import AllocationSuggestions from "./AllocationSuggestions";
 
 interface AllocationWorkflowProps {
   workOrders: WorkOrder[];
@@ -78,8 +73,6 @@ export const AllocationWorkflow = memo(function AllocationWorkflow({
     allocations.map(a => a.work_order_id)
   );
   
-  // Smart suggestions state
-  const [showSuggestions, setShowSuggestions] = useState(true);
   
   // Initialize validator
   const validator = useMemo(
@@ -87,13 +80,6 @@ export const AllocationWorkflow = memo(function AllocationWorkflow({
     [totalAmount, workOrders]
   );
   
-  // Smart patterns hook
-  const { suggestions: patternSuggestions, applyPattern } = useAllocationPatterns({
-    workOrders,
-    totalAmount,
-    vendor,
-    enableHaptics: !isMobile
-  });
   
   // Workflow state with enhanced logic
   const workflowState: AllocationState = useMemo(() => ({
@@ -129,26 +115,6 @@ export const AllocationWorkflow = memo(function AllocationWorkflow({
     [allocations, totalAmount]
   );
   
-  // Smart work order pre-selection based on vendor/history
-  const suggestedWorkOrderIds = useMemo(() => {
-    if (!vendor || selectedWorkOrderIds.length > 0) return [];
-    
-    // Look for work orders that match vendor patterns
-    const vendorLower = vendor.toLowerCase();
-    if (vendorLower.includes('home depot') || vendorLower.includes('lowes')) {
-      return workOrders
-        .filter(wo => 
-          wo.title.toLowerCase().includes('maintenance') || 
-          wo.title.toLowerCase().includes('repair') ||
-          wo.title.toLowerCase().includes('hvac') ||
-          wo.title.toLowerCase().includes('plumbing')
-        )
-        .slice(0, 3) // Suggest top 3
-        .map(wo => wo.id);
-    }
-    
-    return [];
-  }, [vendor, workOrders, selectedWorkOrderIds.length]);
   
   // Handle work order selection with haptic feedback
   const handleWorkOrderToggle = useCallback((workOrderId: string, checked: boolean) => {
@@ -170,25 +136,11 @@ export const AllocationWorkflow = memo(function AllocationWorkflow({
         onAllocationsChange(updatedAllocations);
       }
       
-      // Hide suggestions after first manual selection
-      if (checked) setShowSuggestions(false);
       
       return newSelection;
     });
   }, [allocations, onAllocationsChange, hapticFeedback]);
   
-  // Apply smart suggestions
-  const handleApplySuggestion = useCallback((suggestedAllocations: Array<{ work_order_id: string; allocated_amount: number }>) => {
-    const workOrderIds = suggestedAllocations.map(a => a.work_order_id);
-    setSelectedWorkOrderIds(workOrderIds);
-    onAllocationsChange(suggestedAllocations);
-    setShowSuggestions(false);
-    
-    toast({
-      title: "Smart Suggestion Applied",
-      description: `Allocated to ${suggestedAllocations.length} work orders based on patterns`,
-    });
-  }, [onAllocationsChange, toast]);
   
   // Handle amount changes with haptic feedback and validation
   const handleAmountChange = useCallback((workOrderId: string, amount: number) => {
@@ -347,49 +299,6 @@ export const AllocationWorkflow = memo(function AllocationWorkflow({
         </CardContent>
       </Card>
       
-      {/* Smart Suggestions - Show early in workflow */}
-      {showSuggestions && vendor && selectedWorkOrderIds.length === 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Lightbulb className="h-4 w-4" />
-            <span>Smart suggestions based on {vendor} purchases</span>
-          </div>
-          <AllocationSuggestions
-            availableWorkOrders={workOrders}
-            totalAmount={totalAmount}
-            vendor={vendor}
-            onApplySuggestion={handleApplySuggestion}
-          />
-        </div>
-      )}
-      
-      {/* Vendor-specific pre-selection hints */}
-      {suggestedWorkOrderIds.length > 0 && selectedWorkOrderIds.length === 0 && (
-        <Alert className="border-blue-200 bg-blue-50">
-          <Zap className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            <div className="flex items-center justify-between">
-              <span>
-                Based on previous {vendor} receipts, we recommend selecting maintenance work orders
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedWorkOrderIds(suggestedWorkOrderIds);
-                  toast({
-                    title: "Smart Selection Applied",
-                    description: `Pre-selected ${suggestedWorkOrderIds.length} work orders for ${vendor}`,
-                  });
-                }}
-                className="ml-2"
-              >
-                Auto-Select
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
       
       {/* Work Order Selection */}
       <Card>
@@ -414,7 +323,7 @@ export const AllocationWorkflow = memo(function AllocationWorkflow({
             <div className="space-y-2">
               {workOrders.map((workOrder) => {
                 const isSelected = selectedWorkOrderIds.includes(workOrder.id);
-                const isSuggested = suggestedWorkOrderIds.includes(workOrder.id);
+                const isSuggested = false;
                 const allocation = allocations.find(a => a.work_order_id === workOrder.id);
                 
                 return (
@@ -444,24 +353,12 @@ export const AllocationWorkflow = memo(function AllocationWorkflow({
                             {workOrder.organizations.initials || workOrder.organizations.name}
                           </Badge>
                         )}
-                        {isSuggested && !isSelected && (
-                          <Badge variant="default" className="text-xs bg-blue-100 text-blue-800">
-                            <Lightbulb className="h-3 w-3 mr-1" />
-                            Suggested
-                          </Badge>
-                        )}
                       </div>
                       <p className="font-medium text-sm">{workOrder.title}</p>
                       {workOrder.store_location && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                           <MapPin className="h-3 w-3" />
                           {workOrder.store_location}
-                        </p>
-                      )}
-                      {isSuggested && !isSelected && (
-                        <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                          <History className="h-3 w-3" />
-                          Previously used for {vendor} purchases
                         </p>
                       )}
                     </div>
@@ -537,39 +434,6 @@ export const AllocationWorkflow = memo(function AllocationWorkflow({
                   </Button>
                 )}
               </div>
-              
-              {/* Context-aware suggestions */}
-              {patternSuggestions.length > 0 && (
-                <div className="border-t pt-3">
-                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                    <Zap className="h-3 w-3" />
-                    Pattern-based suggestions:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {patternSuggestions.slice(0, 2).map((pattern) => (
-                      <Button
-                        key={pattern.id}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const allocationsFromPattern = applyPattern(pattern.id);
-                          if (allocationsFromPattern.length > 0) {
-                            setSelectedWorkOrderIds(allocationsFromPattern.map(a => a.work_order_id));
-                            onAllocationsChange(allocationsFromPattern);
-                            toast({
-                              title: "Pattern Applied",
-                              description: `Applied ${pattern.name} to ${allocationsFromPattern.length} work orders`,
-                            });
-                          }
-                        }}
-                        className="text-xs h-auto py-1 px-2"
-                      >
-                        {pattern.name} ({Math.round(pattern.confidence * 100)}%)
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
