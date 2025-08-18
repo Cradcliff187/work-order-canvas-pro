@@ -29,6 +29,7 @@ import { FieldGroup } from "./FieldGroup";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
 import { mapOCRConfidenceToForm, type OCRConfidence, type FormConfidence } from '@/utils/ocr-confidence-mapper';
+import { formatConfidencePercent, getFieldConfidence } from '@/utils/confidence-display';
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { EnhancedAllocationPanel } from "./EnhancedAllocationPanel";
 import { FloatingActionBar } from "./FloatingActionBar";
@@ -1457,7 +1458,7 @@ export function SmartReceiptFlow() {
                    <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-xs">
                      <strong>📅 Date Debug:</strong>
                      <div>Form date value: {JSON.stringify(form.watch('receipt_date'))}</div>
-                     <div>Date confidence: {ocrConfidence?.receipt_date || 'undefined'} ({ocrConfidence?.receipt_date ? `${Math.round(ocrConfidence.receipt_date * 100)}%` : 'N/A'})</div>
+                     <div>Date confidence: {ocrConfidence?.receipt_date || 'undefined'} ({formatConfidencePercent(ocrConfidence?.receipt_date)})</div>
                      <div>Date type: {typeof form.watch('receipt_date')}</div>
                      <div>OCR date from state: {JSON.stringify(ocrData?.date)}</div>
                    </div>
