@@ -140,9 +140,20 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
               id,
               work_order_number,
               title,
+              status,
               organization_id,
-              trade_id,
-              store_location
+              store_location,
+              partner_billed_at,
+              organizations(
+                id,
+                name
+              ),
+              latest_report:work_order_reports(
+                id,
+                status,
+                submitted_at,
+                reviewed_at
+              )
             )
           ),
           attachment_count:invoice_attachments(count)
@@ -150,8 +161,10 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
-      // TODO: Apply invoice status filter (phase 4)
-      // TODO: Apply payment status filter (phase 4)
+      // Apply invoice status filter (direct on invoice.status field)
+      if (otherFilters.invoice_status && otherFilters.invoice_status.length > 0) {
+        query = query.in('status', otherFilters.invoice_status);
+      }
 
       // Apply subcontractor organization filter (direct field on invoice)
       if (otherFilters.subcontractor_organization_id) {
@@ -185,8 +198,6 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         }
       }
 
-      // TODO: Apply operational status filter (phase 4)
-      // TODO: Apply report status filter (phase 4)
 
       // Apply location filter (via related work orders)
       if (otherFilters.location_filter && otherFilters.location_filter.length > 0) {
@@ -200,7 +211,7 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         query = query.or(`internal_invoice_number.ilike.${searchTerm},external_invoice_number.ilike.${searchTerm}`);
       }
 
-      // TODO: Apply date filters (phase 4)
+      
 
       // Overdue: due_date < today and unpaid
       if (otherFilters.overdue) {
@@ -208,10 +219,6 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         query = query.lt('due_date', today).is('paid_at', null);
       }
 
-      // TODO: Apply partner billing status filter (phase 4)
-      // TODO: Apply amount filters (phase 4)
-      // TODO: Apply attachment filters (phase 4)
-      // TODO: Apply date range filters (phase 4)
       const { data, error, count } = await query;
 
       if (error) {
