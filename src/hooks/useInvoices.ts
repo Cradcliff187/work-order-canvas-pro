@@ -156,7 +156,7 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
               status,
               organization_id,
               store_location,
-              organizations(
+              organizations!work_orders_organization_id_fkey(
                 id,
                 name
               ),
