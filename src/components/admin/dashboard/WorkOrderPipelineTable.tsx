@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   useReactTable,
@@ -16,24 +16,22 @@ import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { ComputedFinancialStatusBadge, FinancialStatusBadge, ReportStatusBadge, StatusBadge } from '@/components/ui/status-badge';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
-import { ClipboardList, Copy, Filter } from 'lucide-react';
+import { ClipboardList, Copy } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
 import { cn } from '@/lib/utils';
 import { useTrades } from '@/hooks/useWorkOrders';
@@ -98,11 +96,6 @@ export function WorkOrderPipelineTable() {
   const navigate = useNavigate();
   const { data: pipelineData, isLoading, isError } = useWorkOrderLifecycle();
   const { data: trades } = useTrades();
-  const isMobile = useIsMobile();
-  
-  // Sheet states
-  const [isDesktopSheetOpen, setIsDesktopSheetOpen] = useState(false);
-  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   
   // Smart default filters for actionable items
   const initialFilters: PipelineFiltersValue = {
@@ -128,22 +121,6 @@ export function WorkOrderPipelineTable() {
   const handleClearFilters = () => {
     clearFilters();
   };
-
-  // Active filter count
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filters.search?.trim()) count++;
-    if (filters.operational_status?.length) count++;
-    if (filters.financial_status?.length) count++;
-    if (filters.partner_billing_status?.length) count++;
-    if (filters.partner_organization_id?.trim()) count++;
-    if (filters.overdue) count++;
-    if (filters.priority?.length) count++;
-    if (filters.assigned_organization_id?.length) count++;
-    if (filters.report_status?.length) count++;
-    if (filters.location_filter?.length) count++;
-    return count;
-  }, [filters]);
 
   // Debounce search input
   const debouncedSearch = useDebounce(filters.search || '', 300);
@@ -489,124 +466,6 @@ export function WorkOrderPipelineTable() {
     navigate(`/admin/work-orders/${item.id}`);
   };
 
-  // Filter render functions
-  const renderSearchFilter = () => (
-    <SmartSearchInput
-      value={filters.search || ''}
-      onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-      placeholder="Search work orders, partners, locations..."
-      storageKey="pipeline-table-search"
-    />
-  );
-
-  const renderOperationalStatusFilter = () => (
-    <MultiSelectFilter
-      options={operationalStatusOptions}
-      selectedValues={filters.operational_status || []}
-      onSelectionChange={(values) => 
-        setFilters({ ...filters, operational_status: values })
-      }
-      placeholder="Show actionable items"
-      maxDisplayCount={2}
-    />
-  );
-
-  const renderFinancialStatusFilter = () => (
-    <MultiSelectFilter
-      options={financialStatusOptions}
-      selectedValues={filters.financial_status || []}
-      onSelectionChange={(values) => 
-        setFilters({ ...filters, financial_status: values })
-      }
-      placeholder="All invoice statuses"
-      maxDisplayCount={2}
-    />
-  );
-
-  const renderOverdueSwitch = () => (
-    <div className="flex items-center space-x-2">
-      <Switch
-        checked={filters.overdue || false}
-        onCheckedChange={(checked) => 
-          setFilters({ ...filters, overdue: checked })
-        }
-      />
-      <Label htmlFor="overdue-switch" className="text-sm font-medium">
-        Overdue Only
-      </Label>
-    </div>
-  );
-
-  const renderPartnerOrganizationFilter = () => (
-    <OrganizationSelector
-      value={filters.partner_organization_id || ''}
-      onChange={(value) => 
-        setFilters({ ...filters, partner_organization_id: value })
-      }
-      organizationType="partner"
-      placeholder="All partners"
-    />
-  );
-
-  const renderPartnerBillingStatusFilter = () => (
-    <MultiSelectFilter
-      options={partnerBillingStatusOptions}
-      selectedValues={filters.partner_billing_status || []}
-      onSelectionChange={(values) => 
-        setFilters({ ...filters, partner_billing_status: values })
-      }
-      placeholder="All billing statuses"
-      maxDisplayCount={2}
-    />
-  );
-
-  const renderReportStatusFilter = () => (
-    <MultiSelectFilter
-      options={reportStatusOptions}
-      selectedValues={filters.report_status || []}
-      onSelectionChange={(values) => 
-        setFilters({ ...filters, report_status: values })
-      }
-      placeholder="All report statuses"
-      maxDisplayCount={2}
-    />
-  );
-
-  const renderPriorityFilter = () => (
-    <MultiSelectFilter
-      options={priorityOptions}
-      selectedValues={filters.priority || []}
-      onSelectionChange={(values) => 
-        setFilters({ ...filters, priority: values })
-      }
-      placeholder="All priorities"
-      maxDisplayCount={2}
-    />
-  );
-
-  const renderAssignedOrganizationFilter = () => (
-    <OrganizationSelector
-      value={filters.assigned_organization_id?.[0] || ''}
-      onChange={(value) => 
-        setFilters({ ...filters, assigned_organization_id: value ? [value] : [] })
-      }
-      organizationType="subcontractor"
-      placeholder="All subcontractors"
-    />
-  );
-
-  const renderLocationFilter = () => (
-    <MultiSelectFilter
-      options={locationOptions}
-      selectedValues={filters.location_filter || []}
-      onSelectionChange={(values) => 
-        setFilters({ ...filters, location_filter: values })
-      }
-      placeholder="All locations"
-      maxDisplayCount={2}
-    />
-  );
-
   if (isError) {
     return (
       <Card>
@@ -625,208 +484,110 @@ export function WorkOrderPipelineTable() {
   return (
     <Card>
       <CardContent>
-        {/* Mobile - Search Bar Always Visible */}
-        {isMobile && (
-          <Card className="mb-4">
-            <CardContent className="pt-4">
-              {renderSearchFilter()}
-            </CardContent>
-          </Card>
-        )}
+        {/* Filters */}
+        <AdminFilterBar
+          title="Filters"
+          filterCount={filterCount}
+          onClear={handleClearFilters}
+          className="mb-6"
+        >
+          <SmartSearchInput
+            value={filters.search || ''}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            placeholder="Search work orders, partners, locations..."
+            storageKey="pipeline-table-search"
+          />
+          
+          <MultiSelectFilter
+            options={locationOptions}
+            selectedValues={filters.location_filter || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, location_filter: values })
+            }
+            placeholder="All locations"
+            maxDisplayCount={2}
+          />
 
-        {/* Filter Trigger & Sheets */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <h3 className="text-lg font-semibold">Work Order Pipeline</h3>
-            <Badge variant="secondary" className="text-xs">
-              {data.length} total
-            </Badge>
+          <MultiSelectFilter
+            options={operationalStatusOptions}
+            selectedValues={filters.operational_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, operational_status: values })
+            }
+            placeholder="Show actionable items"
+            maxDisplayCount={2}
+          />
+          
+          <MultiSelectFilter
+            options={financialStatusOptions}
+            selectedValues={filters.financial_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, financial_status: values })
+            }
+            placeholder="All invoice statuses"
+            maxDisplayCount={2}
+          />
+
+          <MultiSelectFilter
+            options={partnerBillingStatusOptions}
+            selectedValues={filters.partner_billing_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, partner_billing_status: values })
+            }
+            placeholder="All billing statuses"
+            maxDisplayCount={2}
+          />
+
+          <MultiSelectFilter
+            options={reportStatusOptions}
+            selectedValues={filters.report_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, report_status: values })
+            }
+            placeholder="All report statuses"
+            maxDisplayCount={2}
+          />
+
+          <OrganizationSelector
+            value={filters.partner_organization_id || ''}
+            onChange={(value) => 
+              setFilters({ ...filters, partner_organization_id: value })
+            }
+            organizationType="partner"
+            placeholder="All partners"
+          />
+
+          <MultiSelectFilter
+            options={priorityOptions}
+            selectedValues={filters.priority || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, priority: values })
+            }
+            placeholder="All priorities"
+            maxDisplayCount={2}
+          />
+
+          <OrganizationSelector
+            value={filters.assigned_organization_id?.[0] || ''}
+            onChange={(value) => 
+              setFilters({ ...filters, assigned_organization_id: value ? [value] : [] })
+            }
+            organizationType="subcontractor"
+            placeholder="All subcontractors"
+          />
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={filters.overdue || false}
+              onCheckedChange={(checked) => 
+                setFilters({ ...filters, overdue: checked })
+              }
+            />
+            <Label htmlFor="overdue-switch" className="text-sm font-medium">
+              Overdue Only
+            </Label>
           </div>
-
-          {/* Desktop Sidebar */}
-          {!isMobile && (
-            <Sheet open={isDesktopSheetOpen} onOpenChange={setIsDesktopSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[420px] overflow-y-auto">
-                <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2">
-                    <Filter className="h-4 w-4" />
-                    Pipeline Filters
-                  </SheetTitle>
-                </SheetHeader>
-                
-                <div className="space-y-6 py-6">
-                  {/* Essential Filters */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground">Essential</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Search</Label>
-                        {renderSearchFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Operational Status</Label>
-                        {renderOperationalStatusFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Financial Status</Label>
-                        {renderFinancialStatusFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Overdue Items</Label>
-                        {renderOverdueSwitch()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Advanced Filters */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground">Advanced</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Partner Organization</Label>
-                        {renderPartnerOrganizationFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Partner Billing Status</Label>
-                        {renderPartnerBillingStatusFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Report Status</Label>
-                        {renderReportStatusFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Priority</Label>
-                        {renderPriorityFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Assigned Organization</Label>
-                        {renderAssignedOrganizationFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Location</Label>
-                        {renderLocationFilter()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <SheetFooter className="flex flex-row gap-2">
-                  {activeFilterCount > 0 && (
-                    <Button variant="outline" onClick={handleClearFilters} size="sm">
-                      Clear All
-                    </Button>
-                  )}
-                  <Button onClick={() => setIsDesktopSheetOpen(false)} size="sm">
-                    Apply Filters
-                  </Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-          )}
-
-          {/* Mobile Bottom Sheet */}
-          {isMobile && (
-            <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 w-full">
-                  <Filter className="h-4 w-4" />
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
-                <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2">
-                    <Filter className="h-4 w-4" />
-                    Pipeline Filters
-                  </SheetTitle>
-                </SheetHeader>
-                
-                <div className="space-y-6 py-6">
-                  {/* Essential Filters */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground">Essential</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Operational Status</Label>
-                        {renderOperationalStatusFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Financial Status</Label>
-                        {renderFinancialStatusFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Overdue Items</Label>
-                        {renderOverdueSwitch()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Advanced Filters */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground">Advanced</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Partner Organization</Label>
-                        {renderPartnerOrganizationFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Partner Billing Status</Label>
-                        {renderPartnerBillingStatusFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Report Status</Label>
-                        {renderReportStatusFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Priority</Label>
-                        {renderPriorityFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Assigned Organization</Label>
-                        {renderAssignedOrganizationFilter()}
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Location</Label>
-                        {renderLocationFilter()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <SheetFooter className="flex flex-row gap-2 pt-4">
-                  {activeFilterCount > 0 && (
-                    <Button variant="outline" onClick={handleClearFilters} size="sm" className="flex-1">
-                      Clear All
-                    </Button>
-                  )}
-                  <Button onClick={() => setIsMobileSheetOpen(false)} size="sm" className="flex-1">
-                    Apply Filters
-                  </Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-          )}
-        </div>
+        </AdminFilterBar>
 
         {isLoading ? (
           <TableSkeleton rows={5} columns={4} />
