@@ -1,26 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { InvoiceFiltersValue } from '@/components/admin/invoices/InvoiceFilters';
 
-export interface InvoiceFilters {
-  status?: string[];
-  paymentStatus?: 'paid' | 'unpaid';
-  search?: string;
+export interface InvoiceFilters extends InvoiceFiltersValue {
   page?: number;
   limit?: number;
-  partner_organization_id?: string; // partner organization (via related work order)
-  subcontractor_organization_id?: string; // subcontractor organization (direct)
-  trade_id?: string[];
-  location_filter?: string[];
-  date_from?: string;
-  date_to?: string;
-  due_date_from?: string;
-  due_date_to?: string;
-  amount_min?: number;
-  amount_max?: number;
-  has_attachments?: boolean;
-  overdue?: boolean;
-  created_today?: boolean;
 }
 
 
@@ -88,43 +73,29 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
   const stableQueryKey = useMemo(() => {
     // Serialize complex objects to ensure stability
     const key = {
-      status: (filters.status || []).sort().join(','), // Sort for consistency
-      paymentStatus: filters.paymentStatus || 'any',
       search: filters.search || '',
-      partner_organization_id: filters.partner_organization_id || 'all',
-      subcontractor_organization_id: filters.subcontractor_organization_id || 'all',
-      trade_id: (filters.trade_id || []).sort().join(','),
-      location_filter: (filters.location_filter || []).sort().join(','),
-      date_from: filters.date_from || '',
-      date_to: filters.date_to || '',
-      due_date_from: filters.due_date_from || '',
-      due_date_to: filters.due_date_to || '',
-      amount_min: filters.amount_min || 0,
-      amount_max: filters.amount_max || 0,
-      has_attachments: filters.has_attachments ? 'true' : 'false',
       overdue: filters.overdue ? 'true' : 'false',
-      created_today: filters.created_today ? 'true' : 'false',
+      partner_organization_id: filters.partner_organization_id || 'all',
+      location_filter: (filters.location_filter || []).sort().join(','),
+      subcontractor_organization_id: filters.subcontractor_organization_id || 'all',
+      operational_status: (filters.operational_status || []).sort().join(','),
+      report_status: (filters.report_status || []).sort().join(','),
+      invoice_status: (filters.invoice_status || []).sort().join(','),
+      partner_billing_status: (filters.partner_billing_status || []).sort().join(','),
       page: filters.page || 1,
       limit: filters.limit || 10,
     };
     return ['invoices', key] as const;
   }, [
-    filters.status?.sort().join(','), // Consistent serialization
-    filters.paymentStatus,
     filters.search,
-    filters.partner_organization_id,
-    filters.subcontractor_organization_id,
-    filters.trade_id?.sort().join(','),
-    filters.location_filter?.sort().join(','),
-    filters.date_from,
-    filters.date_to,
-    filters.due_date_from,
-    filters.due_date_to,
-    filters.amount_min,
-    filters.amount_max,
-    filters.has_attachments,
     filters.overdue,
-    filters.created_today,
+    filters.partner_organization_id,
+    filters.location_filter?.sort().join(','),
+    filters.subcontractor_organization_id,
+    filters.operational_status?.sort().join(','),
+    filters.report_status?.sort().join(','),
+    filters.invoice_status?.sort().join(','),
+    filters.partner_billing_status?.sort().join(','),
     filters.page,
     filters.limit,
   ]);
@@ -179,17 +150,8 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
-      // Apply status filter
-      if (otherFilters.status && otherFilters.status.length > 0) {
-        query = query.in('status', otherFilters.status);
-      }
-
-      // Apply payment status filter
-      if (otherFilters.paymentStatus === 'paid') {
-        query = query.not('paid_at', 'is', null);
-      } else if (otherFilters.paymentStatus === 'unpaid') {
-        query = query.is('paid_at', null);
-      }
+      // TODO: Apply invoice status filter (phase 4)
+      // TODO: Apply payment status filter (phase 4)
 
       // Apply subcontractor organization filter (direct field on invoice)
       if (otherFilters.subcontractor_organization_id) {
@@ -223,10 +185,8 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         }
       }
 
-      // Apply trade filter (via related work orders)
-      if (otherFilters.trade_id && otherFilters.trade_id.length > 0) {
-        query = query.in('invoice_work_orders.work_orders.trade_id', otherFilters.trade_id);
-      }
+      // TODO: Apply operational status filter (phase 4)
+      // TODO: Apply report status filter (phase 4)
 
       // Apply location filter (via related work orders)
       if (otherFilters.location_filter && otherFilters.location_filter.length > 0) {
@@ -240,13 +200,7 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         query = query.or(`internal_invoice_number.ilike.${searchTerm},external_invoice_number.ilike.${searchTerm}`);
       }
 
-      // Date range on invoice created_at
-      if (otherFilters.date_from) {
-        query = query.gte('created_at', otherFilters.date_from);
-      }
-      if (otherFilters.date_to) {
-        query = query.lte('created_at', otherFilters.date_to);
-      }
+      // TODO: Apply date filters (phase 4)
 
       // Overdue: due_date < today and unpaid
       if (otherFilters.overdue) {
@@ -254,34 +208,10 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         query = query.lt('due_date', today).is('paid_at', null);
       }
 
-      // Due date range filters
-      if (otherFilters.due_date_from) {
-        query = query.gte('due_date', otherFilters.due_date_from);
-      }
-      if (otherFilters.due_date_to) {
-        query = query.lte('due_date', otherFilters.due_date_to);
-      }
-
-      // Amount range filters
-      if (otherFilters.amount_min) {
-        query = query.gte('total_amount', otherFilters.amount_min);
-      }
-      if (otherFilters.amount_max) {
-        query = query.lte('total_amount', otherFilters.amount_max);
-      }
-
-      // Has attachments filter
-      if (otherFilters.has_attachments) {
-        // Only show invoices that have attachments
-        query = query.gt('attachment_count', 0);
-      }
-
-      // Created today
-      if (otherFilters.created_today) {
-        const today = new Date().toISOString().split('T')[0];
-        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        query = query.gte('created_at', today).lt('created_at', tomorrow);
-      }
+      // TODO: Apply partner billing status filter (phase 4)
+      // TODO: Apply amount filters (phase 4)
+      // TODO: Apply attachment filters (phase 4)
+      // TODO: Apply date range filters (phase 4)
       const { data, error, count } = await query;
 
       if (error) {
