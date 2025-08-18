@@ -18,14 +18,12 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { ComputedFinancialStatusBadge, FinancialStatusBadge, ReportStatusBadge, StatusBadge } from '@/components/ui/status-badge';
-import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
@@ -98,7 +96,8 @@ export function WorkOrderPipelineTable() {
   const navigate = useNavigate();
   const { data: pipelineData, isLoading, isError } = useWorkOrderLifecycle();
   const { data: trades } = useTrades();
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   
   // Default filters - show all work orders
   const initialFilters: PipelineFiltersValue = {
@@ -123,6 +122,7 @@ export function WorkOrderPipelineTable() {
 
   const handleClearFilters = () => {
     clearFilters();
+    setIsMobileFilterOpen(false);
   };
 
   // Debounce search input
@@ -266,7 +266,6 @@ export function WorkOrderPipelineTable() {
   }, [pipelineData, debouncedSearch, filters]);
 
   const data = useMemo(() => filteredData, [filteredData]);
-
 
   const columns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
     {
@@ -486,128 +485,37 @@ export function WorkOrderPipelineTable() {
 
   return (
     <Card>
-      <CardContent>
-        {/* Mobile Filters */}
-        <div className="lg:hidden mb-6">
-          <AdminFilterBar
-            title="Filters"
-            filterCount={filterCount}
-            onClear={handleClearFilters}
-          >
-            <SmartSearchInput
-              value={filters.search || ''}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              placeholder="Search work orders, partners, locations..."
-              storageKey="pipeline-table-search"
-            />
-            
-            <MultiSelectFilter
-              options={locationOptions}
-              selectedValues={filters.location_filter || []}
-              onSelectionChange={(values) => 
-                setFilters({ ...filters, location_filter: values })
-              }
-              placeholder="All locations"
-              maxDisplayCount={2}
-            />
+      <CardHeader>
+        <CardTitle>Work Order Pipeline</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Mobile Filter Button */}
+        <Button 
+          variant="outline" 
+          onClick={() => setIsMobileFilterOpen(true)}
+          className="w-full lg:hidden"
+        >
+          <Filter className="h-4 w-4 mr-2" />
+          Filters {filterCount > 0 && `(${filterCount})`}
+        </Button>
 
-            <MultiSelectFilter
-              options={operationalStatusOptions}
-              selectedValues={filters.operational_status || []}
-              onSelectionChange={(values) => 
-                setFilters({ ...filters, operational_status: values })
-              }
-              placeholder="Show actionable items"
-              maxDisplayCount={2}
-            />
-            
-            <MultiSelectFilter
-              options={financialStatusOptions}
-              selectedValues={filters.financial_status || []}
-              onSelectionChange={(values) => 
-                setFilters({ ...filters, financial_status: values })
-              }
-              placeholder="All invoice statuses"
-              maxDisplayCount={2}
-            />
-
-            <MultiSelectFilter
-              options={partnerBillingStatusOptions}
-              selectedValues={filters.partner_billing_status || []}
-              onSelectionChange={(values) => 
-                setFilters({ ...filters, partner_billing_status: values })
-              }
-              placeholder="All billing statuses"
-              maxDisplayCount={2}
-            />
-
-            <MultiSelectFilter
-              options={reportStatusOptions}
-              selectedValues={filters.report_status || []}
-              onSelectionChange={(values) => 
-                setFilters({ ...filters, report_status: values })
-              }
-              placeholder="All report statuses"
-              maxDisplayCount={2}
-            />
-
-            <OrganizationSelector
-              value={filters.partner_organization_id || ''}
-              onChange={(value) => 
-                setFilters({ ...filters, partner_organization_id: value })
-              }
-              organizationType="partner"
-              placeholder="All partners"
-            />
-
-            <MultiSelectFilter
-              options={priorityOptions}
-              selectedValues={filters.priority || []}
-              onSelectionChange={(values) => 
-                setFilters({ ...filters, priority: values })
-              }
-              placeholder="All priorities"
-              maxDisplayCount={2}
-            />
-
-            <OrganizationSelector
-              value={filters.assigned_organization_id?.[0] || ''}
-              onChange={(value) => 
-                setFilters({ ...filters, assigned_organization_id: value ? [value] : [] })
-              }
-              organizationType="subcontractor"
-              placeholder="All subcontractors"
-            />
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={filters.overdue || false}
-                onCheckedChange={(checked) => 
-                  setFilters({ ...filters, overdue: checked })
-                }
-              />
-              <Label htmlFor="overdue-switch" className="text-sm font-medium">
-                Overdue Only
-              </Label>
-            </div>
-          </AdminFilterBar>
-        </div>
-
-        {/* Desktop Filter Button + Sidebar */}
-        <div className="hidden lg:block mb-6">
+        {/* Desktop Filter Button */}
+        <div className="hidden lg:flex items-center justify-end">
           <Button 
             variant="outline" 
-            onClick={() => setIsFilterOpen(true)}
-            className="flex items-center gap-2"
+            onClick={() => setIsDesktopFilterOpen(true)}
           >
-            <Filter className="h-4 w-4" />
+            <Filter className="h-4 w-4 mr-2" />
             Filters {filterCount > 0 && `(${filterCount})`}
           </Button>
-          
-          <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-            <SheetContent side="right" className="w-[520px] overflow-y-auto">
-              <SheetHeader className="space-y-1">
-                <SheetTitle>Pipeline Filters</SheetTitle>
+        </div>
+
+        {/* Mobile Bottom Sheet */}
+        <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+          <SheetContent side="bottom" className="h-[85vh]">
+            <SheetHeader>
+              <SheetTitle>Work Order Filters</SheetTitle>
+              {filterCount > 0 && (
                 <Button 
                   variant="ghost" 
                   size="sm"
@@ -616,156 +524,219 @@ export function WorkOrderPipelineTable() {
                 >
                   Clear All
                 </Button>
-              </SheetHeader>
-              
-              <div className="mt-6 space-y-4">
-                {/* Search */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Search</label>
-                  <SmartSearchInput
-                    value={filters.search || ''}
-                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                    placeholder="Search work orders, partners, locations..."
-                    storageKey="pipeline-table-search"
-                    className="w-full"
-                  />
-                </div>
-                
-                {/* Locations */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Locations</label>
-                  <MultiSelectFilter
-                    options={locationOptions}
-                    selectedValues={filters.location_filter || []}
-                    onSelectionChange={(values) => 
-                      setFilters({ ...filters, location_filter: values })
-                    }
-                    placeholder="All locations"
-                    maxDisplayCount={2}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Operational Status */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Operational Status</label>
-                  <MultiSelectFilter
-                    options={operationalStatusOptions}
-                    selectedValues={filters.operational_status || []}
-                    onSelectionChange={(values) => 
-                      setFilters({ ...filters, operational_status: values })
-                    }
-                    placeholder="All statuses"
-                    maxDisplayCount={2}
-                    className="w-full"
-                  />
-                </div>
-                
-                {/* Financial Status */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Invoice Status</label>
-                  <MultiSelectFilter
-                    options={financialStatusOptions}
-                    selectedValues={filters.financial_status || []}
-                    onSelectionChange={(values) => 
-                      setFilters({ ...filters, financial_status: values })
-                    }
-                    placeholder="All invoice statuses"
-                    maxDisplayCount={2}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Partner Billing Status */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Billing Status</label>
-                  <MultiSelectFilter
-                    options={partnerBillingStatusOptions}
-                    selectedValues={filters.partner_billing_status || []}
-                    onSelectionChange={(values) => 
-                      setFilters({ ...filters, partner_billing_status: values })
-                    }
-                    placeholder="All billing statuses"
-                    maxDisplayCount={2}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Report Status */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Report Status</label>
-                  <MultiSelectFilter
-                    options={reportStatusOptions}
-                    selectedValues={filters.report_status || []}
-                    onSelectionChange={(values) => 
-                      setFilters({ ...filters, report_status: values })
-                    }
-                    placeholder="All report statuses"
-                    maxDisplayCount={2}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Partner Organization */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Partner Organization</label>
-                  <OrganizationSelector
-                    value={filters.partner_organization_id || ''}
-                    onChange={(value) => 
-                      setFilters({ ...filters, partner_organization_id: value })
-                    }
-                    organizationType="partner"
-                    placeholder="All partners"
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Priority */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Priority</label>
-                  <MultiSelectFilter
-                    options={priorityOptions}
-                    selectedValues={filters.priority || []}
-                    onSelectionChange={(values) => 
-                      setFilters({ ...filters, priority: values })
-                    }
-                    placeholder="All priorities"
-                    maxDisplayCount={2}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Assigned Organization */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Assigned Organization</label>
-                  <OrganizationSelector
-                    value={filters.assigned_organization_id?.[0] || ''}
-                    onChange={(value) => 
-                      setFilters({ ...filters, assigned_organization_id: value ? [value] : [] })
-                    }
-                    organizationType="subcontractor"
-                    placeholder="All subcontractors"
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Overdue Only */}
-                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/50">
-                  <Switch
-                    id="overdue-switch"
-                    checked={filters.overdue || false}
-                    onCheckedChange={(checked) => 
-                      setFilters({ ...filters, overdue: checked })
-                    }
-                  />
-                  <Label htmlFor="overdue-switch" className="text-sm font-medium flex-1">
-                    Overdue Only
-                  </Label>
-                </div>
+              )}
+            </SheetHeader>
+            
+            <div className="mt-6 space-y-4 overflow-y-auto px-1 pb-20">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Search</label>
+                <SmartSearchInput
+                  value={filters.search || ''}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  placeholder="Search by work order number, title, partner, location..."
+                  className="w-full"
+                />
               </div>
-            </SheetContent>
-          </Sheet>
-        </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Partner Organization</label>
+                <OrganizationSelector
+                  value={filters.partner_organization_id || ''}
+                  onChange={(value) => setFilters(prev => ({ ...prev, partner_organization_id: value }))}
+                  placeholder="Select partner"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Operational Status</label>
+                <MultiSelectFilter
+                  options={operationalStatusOptions}
+                  selectedValues={filters.operational_status || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, operational_status: values }))}
+                  placeholder="Select operational status"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Financial Status</label>
+                <MultiSelectFilter
+                  options={financialStatusOptions}
+                  selectedValues={filters.financial_status || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, financial_status: values }))}
+                  placeholder="Select financial status"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Partner Billing Status</label>
+                <MultiSelectFilter
+                  options={partnerBillingStatusOptions}
+                  selectedValues={filters.partner_billing_status || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, partner_billing_status: values }))}
+                  placeholder="Select partner billing status"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Priority</label>
+                <MultiSelectFilter
+                  options={priorityOptions}
+                  selectedValues={filters.priority || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, priority: values }))}
+                  placeholder="Select priority"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Report Status</label>
+                <MultiSelectFilter
+                  options={reportStatusOptions}
+                  selectedValues={filters.report_status || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, report_status: values }))}
+                  placeholder="Select report status"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Location</label>
+                <MultiSelectFilter
+                  options={locationOptions}
+                  selectedValues={filters.location_filter || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, location_filter: values }))}
+                  placeholder="Select locations"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="overdue-filter-mobile"
+                  checked={filters.overdue || false}
+                  onCheckedChange={(checked) => setFilters(prev => ({ ...prev, overdue: checked }))}
+                />
+                <Label htmlFor="overdue-filter-mobile" className="text-sm">Show only overdue orders</Label>
+              </div>
+            </div>
+
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
+              <Button 
+                onClick={() => setIsMobileFilterOpen(false)} 
+                className="w-full"
+                size="lg"
+              >
+                Apply Filters
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {/* Desktop Right Sidebar */}
+        <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
+          <SheetContent side="right" className="w-[480px]">
+            <SheetHeader>
+              <SheetTitle>Work Order Filters</SheetTitle>
+              {filterCount > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="absolute right-12 top-4"
+                >
+                  Clear All
+                </Button>
+              )}
+            </SheetHeader>
+            
+            <div className="mt-6 space-y-4 overflow-y-auto px-1">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Search</label>
+                <SmartSearchInput
+                  value={filters.search || ''}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  placeholder="Search by work order number, title, partner, location..."
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Partner Organization</label>
+                <OrganizationSelector
+                  value={filters.partner_organization_id || ''}
+                  onChange={(value) => setFilters(prev => ({ ...prev, partner_organization_id: value }))}
+                  placeholder="Select partner"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Operational Status</label>
+                <MultiSelectFilter
+                  options={operationalStatusOptions}
+                  selectedValues={filters.operational_status || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, operational_status: values }))}
+                  placeholder="Select operational status"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Financial Status</label>
+                <MultiSelectFilter
+                  options={financialStatusOptions}
+                  selectedValues={filters.financial_status || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, financial_status: values }))}
+                  placeholder="Select financial status"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Partner Billing Status</label>
+                <MultiSelectFilter
+                  options={partnerBillingStatusOptions}
+                  selectedValues={filters.partner_billing_status || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, partner_billing_status: values }))}
+                  placeholder="Select partner billing status"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Priority</label>
+                <MultiSelectFilter
+                  options={priorityOptions}
+                  selectedValues={filters.priority || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, priority: values }))}
+                  placeholder="Select priority"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Report Status</label>
+                <MultiSelectFilter
+                  options={reportStatusOptions}
+                  selectedValues={filters.report_status || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, report_status: values }))}
+                  placeholder="Select report status"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Location</label>
+                <MultiSelectFilter
+                  options={locationOptions}
+                  selectedValues={filters.location_filter || []}
+                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, location_filter: values }))}
+                  placeholder="Select locations"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="overdue-filter-desktop"
+                  checked={filters.overdue || false}
+                  onCheckedChange={(checked) => setFilters(prev => ({ ...prev, overdue: checked }))}
+                />
+                <Label htmlFor="overdue-filter-desktop" className="text-sm">Show only overdue orders</Label>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
 
         {isLoading ? (
           <TableSkeleton rows={5} columns={4} />
