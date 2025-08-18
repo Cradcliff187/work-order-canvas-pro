@@ -93,7 +93,7 @@ export function useOCRProcessor({
       console.log('📄 Processing receipt at URL:', publicUrl);
 
       // Call the edge function for OCR processing
-      const { data: ocrData, error: ocrError } = await supabase.functions.invoke('process-receipt-ocr', {
+      const { data: ocrData, error: ocrError } = await supabase.functions.invoke('process-receipt', {
         body: { 
           imageUrl: publicUrl,
           fileName: fileName,

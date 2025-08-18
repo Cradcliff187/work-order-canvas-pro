@@ -5,37 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { FieldGroup } from "./FieldGroup";
 import { List, Plus, Calculator } from "lucide-react";
-
-interface LineItem {
-  description: string;
-  quantity?: number;
-  unit_price?: number;
-  total_price?: number;
-}
-
-interface OCRResult {
-  vendor: string;
-  total: number;
-  date: string;
-  confidence: {
-    vendor: number;
-    total: number;
-    lineItems: number;
-    date: number;
-  };
-  subtotal?: number;
-  tax?: number;
-  lineItems: LineItem[];
-}
-
-interface SmartReceiptFormData {
-  vendor_name: string;
-  amount: number;
-  description?: string;
-  receipt_date: string;
-  notes?: string;
-  work_order_id?: string;
-}
+import type { LineItem, OCRResult, SmartReceiptFormData } from '@/types/receipt';
 
 interface LineItemsDisplayProps {
   ocrData: OCRResult;

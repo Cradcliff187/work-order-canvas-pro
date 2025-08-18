@@ -36,40 +36,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { useCamera } from '@/hooks/useCamera';
 import { format } from "date-fns";
-
-// TypeScript interfaces
-interface LineItem {
-  description: string;
-  quantity?: number;
-  unit_price?: number;
-  total_price?: number;
-}
-
-interface OCRResult {
-  vendor: string;
-  total: number;
-  date: string;
-  confidence: {
-    vendor: number;
-    total: number;
-    lineItems: number;
-    date: number;
-  };
-  subtotal?: number;
-  tax?: number;
-  lineItems: LineItem[];
-  from_cache?: boolean;        // ADD THIS LINE
-  processing_time?: number;     // ADD THIS LINE
-}
-
-interface SmartReceiptFormData {
-  vendor_name: string;
-  amount: number;
-  description?: string;
-  receipt_date: string;
-  notes?: string;
-  work_order_id?: string;
-}
+import type { LineItem, OCRResult, SmartReceiptFormData } from '@/types/receipt';
 
 // Progressive validation schema - allows submission with warnings
 const receiptSchema = z.object({
