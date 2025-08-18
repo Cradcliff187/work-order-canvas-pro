@@ -23,7 +23,7 @@ import { CameraCapture } from "./CameraCapture";
 import { FilePreview } from "./FilePreview";
 import { ReceiptFormFields } from "./ReceiptFormFields";
 import { useOCRProcessor } from '@/hooks/useOCRProcessor';
-import { EnhancedAllocationPanel } from "./EnhancedAllocationPanel";
+import { AllocationWorkflow } from "./AllocationWorkflow";
 import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
 import { ReceiptTour, useReceiptTour } from "./ReceiptTour";
@@ -258,39 +258,20 @@ export function SmartReceiptFlow() {
     return currentAmount > 100 || (availableWorkOrders.data && availableWorkOrders.data.length > 1);
   }, [currentAmount, availableWorkOrders.data]);
   
-  // Handle allocation changes
-  const handleAllocationModeChange = useCallback((mode: 'single' | 'split') => {
-    actions.setAllocationMode(mode);
-  }, [actions]);
-  
+  // Handle allocation changes (simplified for new workflow)
   const handleAllocationsChange = useCallback((newAllocations: typeof allocations) => {
     actions.updateAllocations(newAllocations);
   }, [actions]);
   
-  const handleSingleAllocationChange = useCallback((workOrderId: string) => {
-    actions.setSingleAllocation(workOrderId, currentAmount);
-  }, [actions, currentAmount]);
-  
-  // Update allocation amount when form amount changes (debounced)
-  useEffect(() => {
-    let mounted = true;
-    
-    if (allocationMode === 'single' && (allocations || []).length > 0 && currentAmount > 0) {
-      const timeoutId = setTimeout(() => {
-        if (mounted) {
-          actions.updateAllocations([{
-            ...(allocations || [])[0],
-            allocated_amount: currentAmount,
-          }]);
-        }
-      }, 200); // 200ms debounce for form updates
-      
-      return () => {
-        mounted = false;
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [currentAmount, allocationMode, allocations, actions]);
+  // Convert allocations to new workflow format
+  const workflowAllocations = useMemo(() => 
+    (allocations || []).map(a => ({
+      work_order_id: a.work_order_id,
+      allocated_amount: a.allocated_amount,
+      allocation_notes: a.allocation_notes
+    })),
+    [allocations]
+  );
 
   // OCR Processing Hook
   const { processWithOCR, cancelOCR: cancelOCRProcessor } = useOCRProcessor({
@@ -531,43 +512,49 @@ export function SmartReceiptFlow() {
     });
   }, [cancelOCRProcessor, actions, toast]);
 
-  // Memoized form submission
+  // Memoized form submission with new workflow validation
   const onSubmit = useCallback(async (data: SmartReceiptFormData) => {
-    const submitStartTime = Date.now();
+    trackFormInteraction('form_submit', { 
+      vendor: data.vendor_name,
+      amount: data.amount,
+      ocrConfidence,
+      allocationsCount: workflowAllocations.length 
+    });
     
-    try {
-      // Use allocation system for work order assignment
-      const finalAllocations = allocations.length > 0 
-        ? allocations 
-        : (data.work_order_id ? [{ 
-            work_order_id: data.work_order_id, 
-            allocated_amount: data.amount 
-          }] : []);
-      
-      // Validate allocations before submission
-      if (!canSubmitAllocations(finalAllocations, data.amount)) {
-        const validationResult = validateAllocations(finalAllocations, {
-          totalAmount: data.amount,
-          allowPartialAllocation: true
-        });
-        
-        toast({
-          title: "Invalid Allocations",
-          description: validationResult.errors[0] || "Please fix allocation errors before submitting",
-          variant: "destructive"
-        });
-        return;
+    // Enhanced pre-submission validation with new workflow
+    const validationResult = validateAllocations(
+      workflowAllocations,
+      {
+        totalAmount: data.amount,
+        allowPartialAllocation: true,
+        minAllocationAmount: 0.01
       }
+    );
 
-      // Check if allocations are empty
-      if (finalAllocations.length === 0) {
-        toast({
-          title: "Work Order Required",
-          description: "Please select at least one work order for allocation",
-          variant: "destructive"
-        });
-        return;
-      }
+    if (!validationResult.isValid) {
+      toast({
+        title: "Allocation Error",
+        description: validationResult.errors[0] || "Please fix allocation issues before submitting",
+        variant: "destructive"
+      });
+      trackError(new Error('Validation failed'), { 
+        context: 'form_submit_validation',
+        errors: validationResult.errors 
+      });
+      return;
+    }
+
+    if (workflowAllocations.length === 0) {
+      toast({
+        title: "Allocation Required",
+        description: "Please select and allocate this receipt to at least one work order",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const submitStartTime = Date.now();
       
       const receiptData = {
         vendor_name: data.vendor_name,
@@ -575,7 +562,11 @@ export function SmartReceiptFlow() {
         description: data.description || '',
         receipt_date: data.receipt_date,
         notes: data.notes || '',
-        allocations: finalAllocations,
+        allocations: workflowAllocations.map(a => ({
+          work_order_id: a.work_order_id,
+          allocated_amount: a.allocated_amount,
+          allocation_notes: a.allocation_notes || ""
+        })),
         receipt_image: receiptFile,
       };
 
@@ -609,10 +600,9 @@ export function SmartReceiptFlow() {
 
     } catch (error: any) {
       console.error('Receipt submission error:', error);
-      const submissionTime = Date.now() - submitStartTime;
+      const submissionTime = Date.now() - 557; // Use the line where submitStartTime is declared
       trackError(error, { 
         context: 'Receipt submission',
-        submissionTime,
         formData: data
       });
       onError(); // Haptic feedback
@@ -622,7 +612,7 @@ export function SmartReceiptFlow() {
         variant: 'destructive',
       });
     }
-  }, [receiptFile, createReceipt, onSubmitSuccess, actions, form, toast, onError, track, trackError, ocrData, allocations]);
+  }, [workflowAllocations, receiptFile, createReceipt, onSubmitSuccess, actions, form, toast, onError, track, trackError, trackFormInteraction, ocrData, ocrConfidence]);
 
   // Memoized confidence indicator
   const getConfidenceColor = useCallback((field: string) => {
@@ -758,19 +748,15 @@ export function SmartReceiptFlow() {
               isMobile={isMobile}
             />
 
-            {/* Enhanced Work Order Assignment */}
+            {/* Simplified Allocation Workflow */}
             {availableWorkOrders.data && availableWorkOrders.data.length > 0 && (
               <div data-tour="work-order-section">
-                <EnhancedAllocationPanel
-                  availableWorkOrders={availableWorkOrders.data}
-                  recentWorkOrders={recentWorkOrders}
+                <AllocationWorkflow
+                  workOrders={availableWorkOrders.data}
                   totalAmount={currentAmount}
-                  mode={allocationMode}
-                  allocations={allocations}
-                  onModeChange={handleAllocationModeChange}
+                  allocations={workflowAllocations}
                   onAllocationsChange={handleAllocationsChange}
-                  onSingleAllocationChange={handleSingleAllocationChange}
-                  showModeToggle={showAllocationToggle}
+                  vendor={watchedValues.vendor_name}
                 />
               </div>
             )}
