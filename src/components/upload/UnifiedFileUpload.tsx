@@ -10,6 +10,24 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { isSupportedFileType, getSupportedFormatsText } from '@/utils/fileUtils';
 
+// ============= FILE STATE MANAGEMENT =============
+// Clear state ownership model:
+// 1. 'selecting' - User is choosing files (component owns state)
+// 2. 'staged' - Files selected but not yet confirmed for upload (component owns state)  
+// 3. 'uploading' - Files confirmed and being uploaded (parent owns state)
+// 4. 'completed'/'error' - Upload finished (parent owns state)
+
+type FileStage = 'selecting' | 'staged' | 'uploading' | 'completed' | 'error';
+
+interface StagedFile {
+  file: File;
+  id: string;
+  previewUrl?: string;
+  fileType: 'image' | 'document';
+  stage: FileStage;
+}
+
+// Legacy interface for backward compatibility  
 interface FilePreview {
   file: File;
   id: string;
@@ -55,14 +73,25 @@ export function UnifiedFileUpload({
   isUploading = false
 }: UnifiedFileUploadProps) {
   const isMobile = useIsMobile();
-  const [previews, setPreviews] = useState<FilePreview[]>([]);
+  
+  // ============= STAGED FILE STATE =============
+  // Component owns file state until explicit confirmation
+  // Clear separation between 'staged' and 'uploading' states
+  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   
   // Track object URLs for proper cleanup
   const objectURLsRef = useRef<Set<string>>(new Set());
   
-  // Track the last file list sent to parent to prevent unnecessary calls
-  const lastNotifiedFilesRef = useRef<File[]>([]);
+  // Legacy backward compatibility - convert stagedFiles to previews
+  const previews: FilePreview[] = useMemo(() => {
+    return stagedFiles.map(sf => ({
+      file: sf.file,
+      id: sf.id,
+      previewUrl: sf.previewUrl,
+      fileType: sf.fileType
+    }));
+  }, [stagedFiles]);
 
   const getFileType = (file: File): 'image' | 'document' => {
     return file.type.startsWith('image/') ? 'image' : 'document';
@@ -78,7 +107,7 @@ export function UnifiedFileUpload({
   const validateFiles = useCallback((files: File[]): { valid: File[]; errors: ValidationError[] } => {
     const errors: ValidationError[] = [];
     const valid: File[] = [];
-    const currentCount = previews.length;
+    const currentCount = stagedFiles.length;
 
     // Check file count
     if (currentCount + files.length > maxFiles) {
@@ -125,9 +154,9 @@ export function UnifiedFileUpload({
         return;
       }
 
-      // Check for duplicates
-      const isDuplicate = previews.some(p => 
-        p.file.name === file.name && p.file.size === file.size
+      // Check for duplicates  
+      const isDuplicate = stagedFiles.some(sf => 
+        sf.file.name === file.name && sf.file.size === file.size
       );
       if (isDuplicate) {
         errors.push({
@@ -145,30 +174,13 @@ export function UnifiedFileUpload({
     });
 
     return { valid, errors };
-  }, [previews, maxFiles, maxSizeBytes, acceptedTypes]);
+  }, [stagedFiles, maxFiles, maxSizeBytes, acceptedTypes]);
 
-  // Centralized function to update file list and notify parent
-  const updateFileList = useCallback((newPreviews: FilePreview[], reason: string) => {
-    console.log(`[UnifiedFileUpload] File list updated: ${reason}`, newPreviews.length);
-    
-    setPreviews(newPreviews);
-    
-    // Only notify parent if the file list actually changed
-    const currentFiles = newPreviews.map(p => p.file);
-    const lastFiles = lastNotifiedFilesRef.current;
-    
-    const hasChanged = currentFiles.length !== lastFiles.length || 
-      currentFiles.some((file, index) => file !== lastFiles[index]);
-    
-    if (hasChanged) {
-      console.log(`[UnifiedFileUpload] Notifying parent: ${reason}`, currentFiles.length);
-      lastNotifiedFilesRef.current = currentFiles;
-      onFilesSelected(currentFiles);
-    }
-  }, [onFilesSelected]);
-
+  // ============= STAGED FILE MANAGEMENT =============
+  // Files stay in component state until explicit confirmation
+  // NO immediate parent notification - staged files only
   const handleFilesSelected = useCallback((newFiles: File[]) => {
-    console.log(`[UnifiedFileUpload] Processing ${newFiles.length} new files`);
+    console.log(`[UnifiedFileUpload] Staging ${newFiles.length} new files (NO parent notification)`);
     
     const { valid, errors } = validateFiles(newFiles);
     
@@ -176,7 +188,7 @@ export function UnifiedFileUpload({
     setValidationErrors(errors);
     
     if (valid.length > 0) {
-      const newPreviews: FilePreview[] = valid.map(file => {
+      const newStagedFiles: StagedFile[] = valid.map(file => {
         const id = `${Date.now()}_${Math.random()}`;
         const fileType = getFileType(file);
         
@@ -190,25 +202,26 @@ export function UnifiedFileUpload({
           file,
           id,
           fileType,
-          previewUrl
+          previewUrl,
+          stage: 'staged' as FileStage
         };
       });
 
-      // Update file list with new previews
-      setPreviews(prev => {
-        const updated = [...prev, ...newPreviews];
-        updateFileList(updated, `added ${valid.length} files`);
+      // Add to staged files - NO parent notification
+      setStagedFiles(prev => {
+        const updated = [...prev, ...newStagedFiles];
+        console.log(`[UnifiedFileUpload] Added ${valid.length} files to staging. Total staged: ${updated.length}`);
         return updated;
       });
     }
-  }, [validateFiles, updateFileList]);
+  }, [validateFiles]);
 
   const removeFile = useCallback((id: string) => {
-    console.log(`[UnifiedFileUpload] Removing file with id: ${id}`);
+    console.log(`[UnifiedFileUpload] Removing staged file with id: ${id}`);
     
-    setPreviews(prev => {
-      const fileToRemove = prev.find(p => p.id === id);
-      const updated = prev.filter(p => p.id !== id);
+    setStagedFiles(prev => {
+      const fileToRemove = prev.find(sf => sf.id === id);
+      const updated = prev.filter(sf => sf.id !== id);
       
       // Clean up object URL to prevent memory leaks
       if (fileToRemove?.previewUrl) {
@@ -234,28 +247,27 @@ export function UnifiedFileUpload({
         });
       }
       
-      // Update file list and notify parent
-      updateFileList(updated, `removed file: ${fileToRemove?.file.name || id}`);
+      console.log(`[UnifiedFileUpload] Removed staged file: ${fileToRemove?.file.name || id}. Remaining: ${updated.length}`);
       return updated;
     });
-  }, [maxFiles, updateFileList]);
+  }, [maxFiles]);
 
   const clearAll = useCallback(() => {
-    console.log(`[UnifiedFileUpload] Clearing all ${previews.length} files`);
+    console.log(`[UnifiedFileUpload] Clearing all ${stagedFiles.length} staged files`);
     
     // Clean up all object URLs to prevent memory leaks
-    previews.forEach(preview => {
-      if (preview.previewUrl) {
-        console.log(`[UnifiedFileUpload] Revoking object URL for: ${preview.file.name}`);
-        URL.revokeObjectURL(preview.previewUrl);
-        objectURLsRef.current.delete(preview.previewUrl);
+    stagedFiles.forEach(stagedFile => {
+      if (stagedFile.previewUrl) {
+        console.log(`[UnifiedFileUpload] Revoking object URL for: ${stagedFile.file.name}`);
+        URL.revokeObjectURL(stagedFile.previewUrl);
+        objectURLsRef.current.delete(stagedFile.previewUrl);
       }
     });
     
-    setPreviews([]);
+    setStagedFiles([]);
     setValidationErrors([]);
-    updateFileList([], 'cleared all files');
-  }, [previews, updateFileList]);
+    console.log(`[UnifiedFileUpload] All staged files cleared`);
+  }, [stagedFiles]);
 
   const dismissError = useCallback((errorId: string) => {
     setValidationErrors(prev => prev.filter(error => error.id !== errorId));
