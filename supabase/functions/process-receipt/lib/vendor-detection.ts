@@ -510,19 +510,20 @@ export function findVendor(text) {
         }
         
         // Handle specific OCR confusion cases
+        let correctedVendor = vendor;
         if ((alias === 'LOVES' || alias === 'LOWES') && normalizedAlias === 'LOVES') {
           if (hasHardwareContext && !hasGasContext) {
             // Likely "LOWES" misread as "LOVES"
-            vendor = 'Lowes';
+            correctedVendor = 'Lowes';
             contextBonus = 0.1;
             console.log(`[VENDOR] OCR correction: LOVES -> Lowes (hardware context)`);
           }
         }
         
         const finalConfidence = Math.min(0.99, confidence + contextBonus);
-        vendorMatches.push({ vendor, alias, confidence: finalConfidence });
+        vendorMatches.push({ vendor: correctedVendor, alias, confidence: finalConfidence });
         
-        console.log(`[VENDOR] Found match: ${vendor} ("${alias}") - confidence: ${finalConfidence.toFixed(2)}`);
+        console.log(`[VENDOR] Found match: ${correctedVendor} ("${alias}") - confidence: ${finalConfidence.toFixed(2)}`);
       }
     }
   }
