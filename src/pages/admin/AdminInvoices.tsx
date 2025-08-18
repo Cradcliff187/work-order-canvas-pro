@@ -71,75 +71,54 @@ export default function AdminInvoices() {
   // Initialize isInitialMount ref at component level
   const isInitialMount = useRef(true);
   
-  // Get initial filters with conditional default for status
+  // Get initial filters with new filter structure  
   const getInitialFilters = () => {
     try {
-      const stored = localStorage.getItem('admin-invoices-filters-v1');
+      const stored = localStorage.getItem('admin-invoices-filters-v2');
       if (stored) {
         // User has used filters before, don't apply default
         return {
-          status: [] as string[],
-          paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
           search: '',
-          partner_organization_id: undefined as string | undefined,
-          subcontractor_organization_id: undefined as string | undefined,
-          trade_id: [] as string[],
-          location_filter: [] as string[],
-          date_from: undefined as string | undefined,
-          date_to: undefined as string | undefined,
-          due_date_from: undefined as string | undefined,
-          due_date_to: undefined as string | undefined,
-          amount_min: undefined as number | undefined,
-          amount_max: undefined as number | undefined,
-          has_attachments: false,
           overdue: false,
-          created_today: false,
+          partner_organization_id: undefined as string | undefined,
+          location_filter: [] as string[],
+          subcontractor_organization_id: undefined as string | undefined,
+          operational_status: [] as string[],
+          report_status: [] as string[],
+          invoice_status: [] as string[],
+          partner_billing_status: [] as string[],
         };
       } else {
-        // First time user, apply "submitted" as default
+        // First time user, apply "submitted" as default for invoice_status
         return {
-          status: ['submitted'] as string[],
-          paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
           search: '',
-          partner_organization_id: undefined as string | undefined,
-          subcontractor_organization_id: undefined as string | undefined,
-          trade_id: [] as string[],
-          location_filter: [] as string[],
-          date_from: undefined as string | undefined,
-          date_to: undefined as string | undefined,
-          due_date_from: undefined as string | undefined,
-          due_date_to: undefined as string | undefined,
-          amount_min: undefined as number | undefined,
-          amount_max: undefined as number | undefined,
-          has_attachments: false,
           overdue: false,
-          created_today: false,
+          partner_organization_id: undefined as string | undefined,
+          location_filter: [] as string[],
+          subcontractor_organization_id: undefined as string | undefined,
+          operational_status: [] as string[],
+          report_status: [] as string[],
+          invoice_status: ['submitted'] as string[],
+          partner_billing_status: [] as string[],
         };
       }
     } catch (error) {
       // If localStorage access fails, use default with submitted filter
       return {
-        status: ['submitted'] as string[],
-        paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
         search: '',
-        partner_organization_id: undefined as string | undefined,
-        subcontractor_organization_id: undefined as string | undefined,
-        trade_id: [] as string[],
-        location_filter: [] as string[],
-        date_from: undefined as string | undefined,
-        date_to: undefined as string | undefined,
-        due_date_from: undefined as string | undefined,
-        due_date_to: undefined as string | undefined,
-        amount_min: undefined as number | undefined,
-        amount_max: undefined as number | undefined,
-        has_attachments: false,
         overdue: false,
-        created_today: false,
+        partner_organization_id: undefined as string | undefined,
+        location_filter: [] as string[],
+        subcontractor_organization_id: undefined as string | undefined,
+        operational_status: [] as string[],
+        report_status: [] as string[],
+        invoice_status: ['submitted'] as string[],
+        partner_billing_status: [] as string[],
       };
     }
   };
 
-  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v1', getInitialFilters());
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
 
   
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
@@ -177,33 +156,6 @@ export default function AdminInvoices() {
     }
   };
 
-  // Initialize filters from URL parameters - runs only on mount and URL changes
-  useEffect(() => {
-    const statusParam = searchParams.get('status');
-    const paymentStatusParam = searchParams.get('paymentStatus');
-    
-    // Only update if URL params actually exist and are different
-    setFilters(prev => {
-      const newFilters = {
-        ...prev,
-        status: statusParam ? [statusParam] : prev.status || [],
-        paymentStatus: paymentStatusParam as 'paid' | 'unpaid' | undefined || prev.paymentStatus,
-      };
-      
-      // Check if anything actually changed
-      if (JSON.stringify(prev) === JSON.stringify(newFilters)) {
-        return prev; // No change, return same reference
-      }
-      
-      return newFilters;
-    });
-    
-    // Reset pagination only if filters actually changed
-    if (statusParam || paymentStatusParam) {
-      setPage(1);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]); // Intentionally exclude setFilters - it's now stable
 
   // Stable debounced search to prevent new function creation
   const [debouncedSearch, setDebouncedSearch] = useState(filters.search || '');
@@ -221,38 +173,24 @@ export default function AdminInvoices() {
   // Optimize dependencies with useMemo for stable references
   const stableFilterDeps = useMemo(() => ({
     debouncedSearch,
-    status: filters.status?.join(','),
-    paymentStatus: filters.paymentStatus,
-    partner_organization_id: filters.partner_organization_id,
-    subcontractor_organization_id: filters.subcontractor_organization_id,
-    trade_id: filters.trade_id?.join(','),
-    location_filter: filters.location_filter?.join(','),
-    date_from: filters.date_from,
-    date_to: filters.date_to,
-    due_date_from: filters.due_date_from,
-    due_date_to: filters.due_date_to,
-    amount_min: filters.amount_min,
-    amount_max: filters.amount_max,
-    has_attachments: filters.has_attachments,
     overdue: filters.overdue,
-    created_today: filters.created_today,
+    partner_organization_id: filters.partner_organization_id,
+    location_filter: filters.location_filter?.sort().join(','),
+    subcontractor_organization_id: filters.subcontractor_organization_id,
+    operational_status: filters.operational_status?.sort().join(','),
+    report_status: filters.report_status?.sort().join(','),
+    invoice_status: filters.invoice_status?.sort().join(','),
+    partner_billing_status: filters.partner_billing_status?.sort().join(','),
   }), [
     debouncedSearch,
-    filters.status?.join(','),
-    filters.paymentStatus,
-    filters.partner_organization_id,
-    filters.subcontractor_organization_id,
-    filters.trade_id?.join(','),
-    filters.location_filter?.join(','),
-    filters.date_from,
-    filters.date_to,
-    filters.due_date_from,
-    filters.due_date_to,
-    filters.amount_min,
-    filters.amount_max,
-    filters.has_attachments,
     filters.overdue,
-    filters.created_today,
+    filters.partner_organization_id,
+    filters.location_filter?.sort().join(','),
+    filters.subcontractor_organization_id,
+    filters.operational_status?.sort().join(','),
+    filters.report_status?.sort().join(','),
+    filters.invoice_status?.sort().join(','),
+    filters.partner_billing_status?.sort().join(','),
   ]);
 
   // Reset page when filters change (but not on initial mount)
@@ -582,7 +520,7 @@ const table = useReactTable({
                         <EmptyTableState
                           icon={FileText}
                           title="No subcontractor invoices found"
-                          description={filters.status.length > 0 || filters.paymentStatus || filters.search ? "Try adjusting your filters or search criteria" : "Subcontractor invoices will appear here when submitted"}
+                          description={filters.invoice_status?.length > 0 || filters.search ? "Try adjusting your filters or search criteria" : "Subcontractor invoices will appear here when submitted"}
                           colSpan={columns.length}
                         />
                       )}
@@ -642,7 +580,7 @@ const table = useReactTable({
                     <FileText className="mx-auto h-8 w-8 mb-2 opacity-60" />
                     <div className="font-medium">No subcontractor invoices found</div>
                     <div className="text-sm">
-                      {filters.status.length > 0 || filters.paymentStatus || filters.search ? 'Try adjusting your filters or search criteria' : 'Subcontractor invoices will appear here when submitted'}
+                      {filters.invoice_status?.length > 0 || filters.search ? 'Try adjusting your filters or search criteria' : 'Subcontractor invoices will appear here when submitted'}
                     </div>
                   </div>
                 )}
