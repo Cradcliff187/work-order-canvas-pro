@@ -263,15 +263,8 @@ export function SmartReceiptFlow() {
     actions.updateAllocations(newAllocations);
   }, [actions]);
   
-  // Convert allocations to new workflow format
-  const workflowAllocations = useMemo(() => 
-    (allocations || []).map(a => ({
-      work_order_id: a.work_order_id,
-      allocated_amount: a.allocated_amount,
-      allocation_notes: a.allocation_notes
-    })),
-    [allocations]
-  );
+  // Direct allocation format (no conversion needed)
+  const workflowAllocations = allocations || [];
 
   // OCR Processing Hook
   const { processWithOCR, cancelOCR: cancelOCRProcessor } = useOCRProcessor({
