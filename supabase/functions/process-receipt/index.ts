@@ -107,12 +107,35 @@ function parseReceiptWithCustomParsers(text: string) {
   const dateResult = parseReceiptDate(text);
   const amountResult = parseAmounts(text);
   
-  // Calculate overall confidence based on individual confidences
-  const avgConfidence = (
-    (vendorResult.confidence || 0) + 
-    (dateResult.confidence || 0) + 
-    (amountResult.confidence || 0)
-  ) / 3;
+  // Extract confidence from new return structures
+  const confidence = {
+    vendor: vendorResult.confidence || 0.3,
+    total: amountResult.confidence || 0.3,
+    date: dateResult.confidence || 0.3,
+    lineItems: 0, // Not implemented in custom parsers
+    overall: 0
+  };
+  
+  // Calculate weighted overall confidence
+  confidence.overall = (
+    confidence.vendor * 0.3 +
+    confidence.total * 0.4 +
+    confidence.date * 0.2 +
+    confidence.lineItems * 0.1
+  );
+  
+  // Create warnings for low confidence fields
+  const warnings = {
+    low_vendor_confidence: confidence.vendor < 0.6,
+    low_amount_confidence: confidence.total < 0.6,
+    low_date_confidence: confidence.date < 0.6,
+    fallback_date_used: confidence.date <= 0.3
+  };
+  
+  const hasWarnings = Object.values(warnings).some(w => w);
+  if (hasWarnings) {
+    console.log('[PARSER] ⚠️ Warnings generated:', warnings);
+  }
   
   const result = {
     vendor: vendorResult.name || 'Unknown Vendor',
@@ -122,13 +145,8 @@ function parseReceiptWithCustomParsers(text: string) {
     tax: null, // Custom parser doesn't extract tax separately yet
     lineItems: [], // Custom parser doesn't extract line items yet
     document_type: 'receipt',
-    confidence: {
-      vendor: vendorResult.confidence || 0.5,
-      total: amountResult.confidence || 0.5,
-      date: dateResult.confidence || 0.5,
-      lineItems: 0, // Not implemented in custom parsers
-      overall: avgConfidence
-    },
+    confidence,
+    warnings: hasWarnings ? warnings : undefined,
     extraction_method: 'google_vision_custom_parsing'
   };
   

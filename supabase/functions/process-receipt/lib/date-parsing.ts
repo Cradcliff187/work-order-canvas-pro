@@ -1,5 +1,5 @@
 // Date parsing for receipts - FIXED VERSION
-export function parseReceiptDate(text) {
+export function parseReceiptDate(text): { date: string; confidence: number } {
   console.log('[DATE] Looking for date in receipt...');
   
   // Common date patterns found on receipts
@@ -120,7 +120,10 @@ export function parseReceiptDate(text) {
     const bestDate = validDates.length > 0 ? validDates[0] : uniqueDates[0];
     console.log(`[DATE] ✅ Best date selected: ${bestDate.date} (from "${bestDate.original}")`);
     console.log(`[DATE] Total dates found: ${uniqueDates.length}, Valid dates: ${validDates.length}`);
-    return bestDate.date;
+    
+    // Calculate confidence based on how the date was found
+    const confidence = bestDate.confidence || 0.9; // High confidence for found dates
+    return { date: bestDate.date, confidence };
   }
   
   console.log(`[DATE] ❌ No dates found in receipt text`);
@@ -128,5 +131,7 @@ export function parseReceiptDate(text) {
   const today = new Date();
   const fallbackDate = today.toISOString().split('T')[0];
   console.log(`[DATE] Using fallback date: ${fallbackDate}`);
-  return fallbackDate;
+  
+  // Low confidence for fallback dates
+  return { date: fallbackDate, confidence: 0.3 };
 }
