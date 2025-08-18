@@ -14,7 +14,7 @@ import { useAnalytics } from "@/utils/analytics";
 import { ErrorDisplay, getErrorForToast } from '@/components/receipts/ErrorDisplay';
 import { compressImage } from "@/utils/imageCompression";
 import { validateField } from "@/utils/receiptValidation";
-import { validateAllocations, canSubmitAllocations } from "@/utils/allocationValidation";
+import { AllocationWorkflowValidator, type WorkflowAllocation } from "@/utils/allocationWorkflow";
 import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocr-confidence-mapper';
 import { cn } from "@/lib/utils";
 import { DebugPanel } from "./DebugPanel";
@@ -522,24 +522,24 @@ export function SmartReceiptFlow() {
     });
     
     // Enhanced pre-submission validation with new workflow
-    const validationResult = validateAllocations(
-      workflowAllocations,
-      {
-        totalAmount: data.amount,
-        allowPartialAllocation: true,
-        minAllocationAmount: 0.01
-      }
-    );
+    const validator = new AllocationWorkflowValidator(data.amount, availableWorkOrders.data || []);
+    const validationResult = validator.validateWorkflow({
+      selectedWorkOrderIds: workflowAllocations.map(a => a.work_order_id),
+      allocations: workflowAllocations,
+      totalAmount: data.amount,
+      mode: 'confirm'
+    });
 
-    if (!validationResult.isValid) {
+    if (!validationResult.canSubmit) {
+      const primaryError = validationResult.errors[0];
       toast({
         title: "Allocation Error",
-        description: validationResult.errors[0] || "Please fix allocation issues before submitting",
+        description: primaryError?.message || "Please fix allocation issues before submitting",
         variant: "destructive"
       });
       trackError(new Error('Validation failed'), { 
         context: 'form_submit_validation',
-        errors: validationResult.errors 
+        errors: validationResult.errors.map(e => e.message)
       });
       return;
     }

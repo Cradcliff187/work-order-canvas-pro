@@ -13,7 +13,7 @@ import { ConfidenceBadge } from "./ConfidenceBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { WorkOrderSelector } from "./WorkOrderSelector";
+import { AllocationWorkflow } from "./AllocationWorkflow";
 import { useReceipts } from "@/hooks/useReceipts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -933,12 +933,23 @@ export function ReceiptUpload() {
                       ))}
                     </div>
                   ) : (
-                    <WorkOrderSelector
-                      workOrders={availableWorkOrders.data || []}
-                      allocations={allocations}
-                      totalAmount={watchedAmount}
-                      onAllocationChange={setAllocations}
-                    />
+                     <AllocationWorkflow
+                       workOrders={availableWorkOrders.data || []}
+                       totalAmount={watchedAmount}
+                       allocations={allocations.map(a => ({
+                         work_order_id: a.work_order_id,
+                         allocated_amount: a.allocated_amount,
+                         allocation_notes: a.allocation_notes
+                       }))}
+                       onAllocationsChange={(newAllocations) => {
+                         setAllocations(newAllocations.map(a => ({
+                           work_order_id: a.work_order_id,
+                           allocated_amount: a.allocated_amount,
+                           allocation_notes: a.allocation_notes
+                         })));
+                       }}
+                       vendor={form.watch("vendor_name")}
+                     />
                   )}
                 </CardContent>
               </Card>
