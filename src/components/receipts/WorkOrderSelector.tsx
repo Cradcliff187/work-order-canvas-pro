@@ -248,18 +248,6 @@ export function WorkOrderSelector({
           </ScrollArea>
         </MobilePullToRefresh>
 
-      {/* Validation Alert */}
-      {!isFullyAllocated && totalAllocated > 0 && (
-        <Alert variant={remaining < -0.01 ? "destructive" : "default"}>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            {remaining > 0.01 
-              ? `You still need to allocate $${remaining.toFixed(2)}.`
-              : `You've over-allocated by $${Math.abs(remaining).toFixed(2)}.`
-            }
-          </AlertDescription>
-        </Alert>
-      )}
 
     </div>
   );

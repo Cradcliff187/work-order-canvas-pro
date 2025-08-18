@@ -60,6 +60,10 @@ const AllocationVisualizer: React.FC<AllocationVisualizerProps> = ({
 }) => {
   // Prepare visualization data
   const visualData = useMemo(() => {
+    if (!allocations || !Array.isArray(allocations) || !workOrders || !Array.isArray(workOrders)) {
+      return [];
+    }
+    
     const data = allocations.map((allocation, index) => {
       const workOrder = workOrders.find(wo => wo.id === allocation.work_order_id);
       const percentage = totalAmount > 0 ? (allocation.allocated_amount / totalAmount) * 100 : 0;
