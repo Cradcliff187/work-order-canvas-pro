@@ -48,6 +48,7 @@ interface PipelineFiltersValue {
   trade_id?: string[];
   assigned_organization_id?: string[];
   report_status?: string[];
+  location_filter?: string[];
   date_from?: string;
   date_to?: string;
   age_range?: [number, number];
@@ -107,7 +108,8 @@ export function WorkOrderPipelineTable() {
     priority: [],
     trade_id: [],
     assigned_organization_id: [],
-    report_status: []
+    report_status: [],
+    location_filter: []
   };
 
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters(
@@ -122,6 +124,24 @@ export function WorkOrderPipelineTable() {
 
   // Debounce search input
   const debouncedSearch = useDebounce(filters.search || '', 300);
+
+  // Extract unique locations for filter options
+  const locationOptions = useMemo(() => {
+    if (!pipelineData) return [];
+    
+    const locations = new Set<string>();
+    pipelineData.forEach(item => {
+      if (item.store_location) {
+        locations.add(item.store_location);
+      } else {
+        locations.add('No location');
+      }
+    });
+    
+    return Array.from(locations)
+      .sort()
+      .map(location => ({ value: location, label: location }));
+  }, [pipelineData]);
 
   // Helper function to get operational status key for filtering
   const getOperationalStatusKey = (item: WorkOrderPipelineItem): string => {
@@ -230,6 +250,12 @@ export function WorkOrderPipelineTable() {
       if (filters.report_status && filters.report_status.length > 0) {
         const reportStatus = item.report_status || 'not_submitted';
         if (!filters.report_status.includes(reportStatus)) return false;
+      }
+
+      // Location filter
+      if (filters.location_filter && filters.location_filter.length > 0) {
+        const itemLocation = item.store_location || 'No location';
+        if (!filters.location_filter.includes(itemLocation)) return false;
       }
 
       return true;
@@ -472,6 +498,16 @@ export function WorkOrderPipelineTable() {
             storageKey="pipeline-table-search"
           />
           
+          <MultiSelectFilter
+            options={locationOptions}
+            selectedValues={filters.location_filter || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, location_filter: values })
+            }
+            placeholder="All locations"
+            maxDisplayCount={2}
+          />
+
           <MultiSelectFilter
             options={operationalStatusOptions}
             selectedValues={filters.operational_status || []}
