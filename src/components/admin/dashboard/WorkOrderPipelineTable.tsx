@@ -100,10 +100,10 @@ export function WorkOrderPipelineTable() {
   const { data: trades } = useTrades();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
-  // Smart default filters for actionable items
+  // Default filters - show all work orders
   const initialFilters: PipelineFiltersValue = {
     search: '',
-    operational_status: ['new', 'assigned', 'in_progress', 'reports_pending'], // Show actionable items by default
+    operational_status: [], // Show all work orders by default
     financial_status: [],
     partner_billing_status: [],
     partner_organization_id: '',
