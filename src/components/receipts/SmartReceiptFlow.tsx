@@ -14,6 +14,7 @@ import { useAnalytics } from "@/utils/analytics";
 import { ErrorDisplay, getErrorForToast } from '@/components/receipts/ErrorDisplay';
 import { compressImage } from "@/utils/imageCompression";
 import { validateField } from "@/utils/receiptValidation";
+import { validateAllocations, canSubmitAllocations } from "@/utils/allocationValidation";
 import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocr-confidence-mapper';
 import { cn } from "@/lib/utils";
 import { DebugPanel } from "./DebugPanel";
@@ -533,6 +534,7 @@ export function SmartReceiptFlow() {
   // Memoized form submission
   const onSubmit = useCallback(async (data: SmartReceiptFormData) => {
     const submitStartTime = Date.now();
+    
     try {
       // Use allocation system for work order assignment
       const finalAllocations = allocations.length > 0 
@@ -541,6 +543,31 @@ export function SmartReceiptFlow() {
             work_order_id: data.work_order_id, 
             allocated_amount: data.amount 
           }] : []);
+      
+      // Validate allocations before submission
+      if (!canSubmitAllocations(finalAllocations, data.amount)) {
+        const validationResult = validateAllocations(finalAllocations, {
+          totalAmount: data.amount,
+          allowPartialAllocation: true
+        });
+        
+        toast({
+          title: "Invalid Allocations",
+          description: validationResult.errors[0] || "Please fix allocation errors before submitting",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check if allocations are empty
+      if (finalAllocations.length === 0) {
+        toast({
+          title: "Work Order Required",
+          description: "Please select at least one work order for allocation",
+          variant: "destructive"
+        });
+        return;
+      }
       
       const receiptData = {
         vendor_name: data.vendor_name,

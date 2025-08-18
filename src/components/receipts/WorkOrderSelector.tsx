@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MobilePullToRefresh } from "@/components/MobilePullToRefresh";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Search, 
   Zap, 
@@ -52,6 +53,7 @@ export function WorkOrderSelector({
 }: WorkOrderSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   // Pull to refresh functionality
   const { handleRefresh } = usePullToRefresh({
@@ -116,9 +118,37 @@ export function WorkOrderSelector({
   };
 
   const handleAmountChange = (workOrderId: string, amount: number) => {
+    // Validate amount before applying
+    if (amount < 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Amount cannot be negative",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (amount === 0) {
+      toast({
+        title: "Invalid Amount", 
+        description: "Amount must be greater than $0.00",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (amount > totalAmount) {
+      toast({
+        title: "Invalid Amount",
+        description: `Amount cannot exceed receipt total of $${totalAmount.toFixed(2)}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     const updatedAllocations = allocations.map(allocation =>
       allocation.work_order_id === workOrderId
-        ? { ...allocation, allocated_amount: Math.max(0, amount) }
+        ? { ...allocation, allocated_amount: amount }
         : allocation
     );
     onAllocationChange(updatedAllocations);

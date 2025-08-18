@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { sanitizeAllocations, validateAllocations } from "@/utils/allocationValidation";
 
 export interface ReceiptLineItem {
   id: string;
@@ -244,8 +245,33 @@ export function useReceipts() {
           }
         }
 
-        // Create allocation records
-        const allocations = data.allocations.map(allocation => ({
+        // Validate and sanitize allocations before database insert
+        const validatedAllocations = validateAllocations(data.allocations, {
+          totalAmount: data.amount,
+          allowPartialAllocation: true,
+          minAllocationAmount: 0.01
+        });
+
+        if (!validatedAllocations.isValid) {
+          throw new Error(`Invalid allocations: ${validatedAllocations.errors.join(', ')}`);
+        }
+
+        const sanitizedAllocations = sanitizeAllocations(data.allocations, {
+          totalAmount: data.amount,
+          minAllocationAmount: 0.01
+        });
+
+        if (sanitizedAllocations.length === 0) {
+          throw new Error("At least one valid allocation is required");
+        }
+
+        // Log any filtered allocations for debugging
+        if (sanitizedAllocations.length !== data.allocations.length) {
+          console.warn(`Filtered ${data.allocations.length - sanitizedAllocations.length} invalid allocations`);
+        }
+
+        // Create allocation records with validated data
+        const allocations = sanitizedAllocations.map(allocation => ({
           receipt_id: receipt.id,
           work_order_id: allocation.work_order_id,
           allocated_amount: allocation.allocated_amount,
