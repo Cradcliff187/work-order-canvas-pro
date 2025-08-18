@@ -70,9 +70,7 @@ const AllocationVisualizer: React.FC<AllocationVisualizerProps> = ({
                      allocation.work_order_id && 
                      (typeof allocation.allocated_amount === 'number' || !isNaN(Number(allocation.allocated_amount)));
       
-      if (!isValid && allocation) {
-        console.warn('Invalid allocation filtered out:', allocation);
-      }
+      // Silently skip invalid allocations - no console logs in render
       return isValid;
     });
 
