@@ -1098,6 +1098,30 @@ export type Database = {
           },
         ]
       }
+      receipt_ocr_cache: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          image_hash: string
+          ocr_result: Json
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          image_hash: string
+          ocr_result: Json
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          image_hash?: string
+          ocr_result?: Json
+        }
+        Relationships: []
+      }
       receipt_work_orders: {
         Row: {
           allocated_amount: number
