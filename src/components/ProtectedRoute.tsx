@@ -13,15 +13,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
   const { user, profile, loading, userOrganizations } = useAuth();
   const { isAdmin, isEmployee, isPartner, isSubcontractor, hasPermission } = useUserProfile();
 
-  // Enhanced debugging for auth state
-  console.log('ProtectedRoute DEBUG:', {
-    user: !!user,
-    profile: !!profile,
-    loading,
-    userOrganizations: userOrganizations?.length || 0,
-    requiredUserType,
-    hasPermissionResult: requiredUserType ? hasPermission(requiredUserType) : 'N/A'
-  });
 
   // Show loading if authentication is still in progress
   if (loading) {
@@ -43,7 +34,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
   // Show loading if user exists but organizations are still loading
   // This prevents permission checks from running before data is ready
   if (user && (!userOrganizations || userOrganizations.length === 0)) {
-    console.log('ProtectedRoute - Waiting for organization data to load...');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -63,7 +53,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
   const hasRequiredPermission = hasPermission(requiredUserType);
 
   if (!hasRequiredPermission) {
-    console.log('ProtectedRoute - ACCESS DENIED - Insufficient permissions');
     
     // Redirect based on user type
     let redirectPath = '/auth';

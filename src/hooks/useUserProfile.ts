@@ -18,11 +18,6 @@ export const useUserProfile = () => {
     const partner = filterMembershipsByType(userOrganizations, 'partner');
     const subcontractor = filterMembershipsByType(userOrganizations, 'subcontractor');
 
-    // DEBUG: Log organization memberships
-    console.log('🔍 [useUserProfile] userOrganizations:', userOrganizations);
-    console.log('🔍 [useUserProfile] internal membership:', internal);
-    console.log('🔍 [useUserProfile] partner memberships:', partner);
-    console.log('🔍 [useUserProfile] subcontractor memberships:', subcontractor);
 
     return { internal, partner, subcontractor };
   }, [userOrganizations]);
@@ -36,8 +31,6 @@ export const useUserProfile = () => {
       isSubcontractor: organizationCheckers.isSubcontractor(memberships.subcontractor)
     };
 
-    // DEBUG: Log permission checks
-    console.log('🔍 [useUserProfile] Permission checks:', checks);
 
     return checks;
   }, [

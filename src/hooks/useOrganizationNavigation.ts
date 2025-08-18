@@ -16,11 +16,6 @@ export interface NavigationItem {
 export const useOrganizationNavigation = () => {
   const { isAdmin, isEmployee, isPartner, isSubcontractor, hasPermission } = useUserProfile();
 
-  // DEBUG: Log user profile checks
-  console.log('🔍 [useOrganizationNavigation] isPartner():', isPartner());
-  console.log('🔍 [useOrganizationNavigation] isAdmin():', isAdmin());
-  console.log('🔍 [useOrganizationNavigation] isEmployee():', isEmployee());
-  console.log('🔍 [useOrganizationNavigation] isSubcontractor():', isSubcontractor());
 
   // Stable navigation items with memoized permission checks
   return useMemo(() => {
@@ -50,8 +45,6 @@ export const useOrganizationNavigation = () => {
         { label: 'Reports', path: '/partner/reports', icon: ClipboardList, visible: true },
       ];
       
-      // DEBUG: Log partner navigation items
-      console.log('🔍 [useOrganizationNavigation] Partner navigation items:', partnerNav);
       
       return partnerNav;
     } else if (isSubcontractor()) {
@@ -67,8 +60,6 @@ export const useOrganizationNavigation = () => {
 
     const emptyNav = [];
     
-    // DEBUG: Log when no navigation items are returned
-    console.log('🔍 [useOrganizationNavigation] No matching user type, returning empty array');
     
     return emptyNav;
   }, [

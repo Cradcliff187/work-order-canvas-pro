@@ -9,6 +9,7 @@ import { formatFileSize } from "@/utils/fileUtils";
 import { getCameraAttribute } from "@/utils/mobileDetection";
 import { getErrorForToast } from '@/components/receipts/ErrorDisplay';
 import { useAnalytics } from "@/utils/analytics";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { 
   Sparkles, 
   Camera, 
@@ -131,33 +132,34 @@ export function FileUploadSection({
   }
 
   return (
-    <Card data-tour={dataTour}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            Smart Receipt Capture
-          </div>
-          {hasCompletedTour && onStartTour && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={onStartTour}
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                >
-                  <HelpCircle className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Restart tutorial</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <ErrorBoundary>
+      <Card data-tour={dataTour}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Smart Receipt Capture
+            </div>
+            {hasCompletedTour && onStartTour && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={onStartTour}
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Restart tutorial</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
         <div className="space-y-4">
           {/* Mobile-optimized capture buttons */}
           {isMobile ? (
@@ -239,7 +241,8 @@ export function FileUploadSection({
           capture={getCameraAttribute() === 'camera' ? 'user' : getCameraAttribute() === 'environment' ? 'environment' : undefined}
           onChange={handleFileSelect}
         />
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </ErrorBoundary>
   );
 }
