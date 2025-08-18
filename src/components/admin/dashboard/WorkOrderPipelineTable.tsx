@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   useReactTable,
@@ -16,6 +16,8 @@ import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -31,7 +33,7 @@ import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
-import { ClipboardList, Copy } from 'lucide-react';
+import { ClipboardList, Copy, Filter } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
 import { cn } from '@/lib/utils';
 import { useTrades } from '@/hooks/useWorkOrders';
@@ -96,6 +98,7 @@ export function WorkOrderPipelineTable() {
   const navigate = useNavigate();
   const { data: pipelineData, isLoading, isError } = useWorkOrderLifecycle();
   const { data: trades } = useTrades();
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   
   // Smart default filters for actionable items
   const initialFilters: PipelineFiltersValue = {
@@ -484,110 +487,235 @@ export function WorkOrderPipelineTable() {
   return (
     <Card>
       <CardContent>
-        {/* Filters */}
-        <AdminFilterBar
-          title="Filters"
-          filterCount={filterCount}
-          onClear={handleClearFilters}
-          className="mb-6"
-        >
-          <SmartSearchInput
-            value={filters.search || ''}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            placeholder="Search work orders, partners, locations..."
-            storageKey="pipeline-table-search"
-          />
-          
-          <MultiSelectFilter
-            options={locationOptions}
-            selectedValues={filters.location_filter || []}
-            onSelectionChange={(values) => 
-              setFilters({ ...filters, location_filter: values })
-            }
-            placeholder="All locations"
-            maxDisplayCount={2}
-          />
-
-          <MultiSelectFilter
-            options={operationalStatusOptions}
-            selectedValues={filters.operational_status || []}
-            onSelectionChange={(values) => 
-              setFilters({ ...filters, operational_status: values })
-            }
-            placeholder="Show actionable items"
-            maxDisplayCount={2}
-          />
-          
-          <MultiSelectFilter
-            options={financialStatusOptions}
-            selectedValues={filters.financial_status || []}
-            onSelectionChange={(values) => 
-              setFilters({ ...filters, financial_status: values })
-            }
-            placeholder="All invoice statuses"
-            maxDisplayCount={2}
-          />
-
-          <MultiSelectFilter
-            options={partnerBillingStatusOptions}
-            selectedValues={filters.partner_billing_status || []}
-            onSelectionChange={(values) => 
-              setFilters({ ...filters, partner_billing_status: values })
-            }
-            placeholder="All billing statuses"
-            maxDisplayCount={2}
-          />
-
-          <MultiSelectFilter
-            options={reportStatusOptions}
-            selectedValues={filters.report_status || []}
-            onSelectionChange={(values) => 
-              setFilters({ ...filters, report_status: values })
-            }
-            placeholder="All report statuses"
-            maxDisplayCount={2}
-          />
-
-          <OrganizationSelector
-            value={filters.partner_organization_id || ''}
-            onChange={(value) => 
-              setFilters({ ...filters, partner_organization_id: value })
-            }
-            organizationType="partner"
-            placeholder="All partners"
-          />
-
-          <MultiSelectFilter
-            options={priorityOptions}
-            selectedValues={filters.priority || []}
-            onSelectionChange={(values) => 
-              setFilters({ ...filters, priority: values })
-            }
-            placeholder="All priorities"
-            maxDisplayCount={2}
-          />
-
-          <OrganizationSelector
-            value={filters.assigned_organization_id?.[0] || ''}
-            onChange={(value) => 
-              setFilters({ ...filters, assigned_organization_id: value ? [value] : [] })
-            }
-            organizationType="subcontractor"
-            placeholder="All subcontractors"
-          />
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              checked={filters.overdue || false}
-              onCheckedChange={(checked) => 
-                setFilters({ ...filters, overdue: checked })
-              }
+        {/* Mobile Filters */}
+        <div className="lg:hidden mb-6">
+          <AdminFilterBar
+            title="Filters"
+            filterCount={filterCount}
+            onClear={handleClearFilters}
+          >
+            <SmartSearchInput
+              value={filters.search || ''}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              placeholder="Search work orders, partners, locations..."
+              storageKey="pipeline-table-search"
             />
-            <Label htmlFor="overdue-switch" className="text-sm font-medium">
-              Overdue Only
-            </Label>
-          </div>
-        </AdminFilterBar>
+            
+            <MultiSelectFilter
+              options={locationOptions}
+              selectedValues={filters.location_filter || []}
+              onSelectionChange={(values) => 
+                setFilters({ ...filters, location_filter: values })
+              }
+              placeholder="All locations"
+              maxDisplayCount={2}
+            />
+
+            <MultiSelectFilter
+              options={operationalStatusOptions}
+              selectedValues={filters.operational_status || []}
+              onSelectionChange={(values) => 
+                setFilters({ ...filters, operational_status: values })
+              }
+              placeholder="Show actionable items"
+              maxDisplayCount={2}
+            />
+            
+            <MultiSelectFilter
+              options={financialStatusOptions}
+              selectedValues={filters.financial_status || []}
+              onSelectionChange={(values) => 
+                setFilters({ ...filters, financial_status: values })
+              }
+              placeholder="All invoice statuses"
+              maxDisplayCount={2}
+            />
+
+            <MultiSelectFilter
+              options={partnerBillingStatusOptions}
+              selectedValues={filters.partner_billing_status || []}
+              onSelectionChange={(values) => 
+                setFilters({ ...filters, partner_billing_status: values })
+              }
+              placeholder="All billing statuses"
+              maxDisplayCount={2}
+            />
+
+            <MultiSelectFilter
+              options={reportStatusOptions}
+              selectedValues={filters.report_status || []}
+              onSelectionChange={(values) => 
+                setFilters({ ...filters, report_status: values })
+              }
+              placeholder="All report statuses"
+              maxDisplayCount={2}
+            />
+
+            <OrganizationSelector
+              value={filters.partner_organization_id || ''}
+              onChange={(value) => 
+                setFilters({ ...filters, partner_organization_id: value })
+              }
+              organizationType="partner"
+              placeholder="All partners"
+            />
+
+            <MultiSelectFilter
+              options={priorityOptions}
+              selectedValues={filters.priority || []}
+              onSelectionChange={(values) => 
+                setFilters({ ...filters, priority: values })
+              }
+              placeholder="All priorities"
+              maxDisplayCount={2}
+            />
+
+            <OrganizationSelector
+              value={filters.assigned_organization_id?.[0] || ''}
+              onChange={(value) => 
+                setFilters({ ...filters, assigned_organization_id: value ? [value] : [] })
+              }
+              organizationType="subcontractor"
+              placeholder="All subcontractors"
+            />
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={filters.overdue || false}
+                onCheckedChange={(checked) => 
+                  setFilters({ ...filters, overdue: checked })
+                }
+              />
+              <Label htmlFor="overdue-switch" className="text-sm font-medium">
+                Overdue Only
+              </Label>
+            </div>
+          </AdminFilterBar>
+        </div>
+
+        {/* Desktop Filter Button + Sidebar */}
+        <div className="hidden lg:block mb-6">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsFilterOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Filters {filterCount > 0 && `(${filterCount})`}
+          </Button>
+          
+          <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <SheetContent side="right" className="w-[480px]">
+              <SheetHeader>
+                <SheetTitle>Pipeline Filters</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6">
+                <AdminFilterBar
+                  title="Filters"
+                  filterCount={filterCount}
+                  onClear={handleClearFilters}
+                >
+                  <SmartSearchInput
+                    value={filters.search || ''}
+                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                    placeholder="Search work orders, partners, locations..."
+                    storageKey="pipeline-table-search"
+                  />
+                  
+                  <MultiSelectFilter
+                    options={locationOptions}
+                    selectedValues={filters.location_filter || []}
+                    onSelectionChange={(values) => 
+                      setFilters({ ...filters, location_filter: values })
+                    }
+                    placeholder="All locations"
+                    maxDisplayCount={2}
+                  />
+
+                  <MultiSelectFilter
+                    options={operationalStatusOptions}
+                    selectedValues={filters.operational_status || []}
+                    onSelectionChange={(values) => 
+                      setFilters({ ...filters, operational_status: values })
+                    }
+                    placeholder="Show actionable items"
+                    maxDisplayCount={2}
+                  />
+                  
+                  <MultiSelectFilter
+                    options={financialStatusOptions}
+                    selectedValues={filters.financial_status || []}
+                    onSelectionChange={(values) => 
+                      setFilters({ ...filters, financial_status: values })
+                    }
+                    placeholder="All invoice statuses"
+                    maxDisplayCount={2}
+                  />
+
+                  <MultiSelectFilter
+                    options={partnerBillingStatusOptions}
+                    selectedValues={filters.partner_billing_status || []}
+                    onSelectionChange={(values) => 
+                      setFilters({ ...filters, partner_billing_status: values })
+                    }
+                    placeholder="All billing statuses"
+                    maxDisplayCount={2}
+                  />
+
+                  <MultiSelectFilter
+                    options={reportStatusOptions}
+                    selectedValues={filters.report_status || []}
+                    onSelectionChange={(values) => 
+                      setFilters({ ...filters, report_status: values })
+                    }
+                    placeholder="All report statuses"
+                    maxDisplayCount={2}
+                  />
+
+                  <OrganizationSelector
+                    value={filters.partner_organization_id || ''}
+                    onChange={(value) => 
+                      setFilters({ ...filters, partner_organization_id: value })
+                    }
+                    organizationType="partner"
+                    placeholder="All partners"
+                  />
+
+                  <MultiSelectFilter
+                    options={priorityOptions}
+                    selectedValues={filters.priority || []}
+                    onSelectionChange={(values) => 
+                      setFilters({ ...filters, priority: values })
+                    }
+                    placeholder="All priorities"
+                    maxDisplayCount={2}
+                  />
+
+                  <OrganizationSelector
+                    value={filters.assigned_organization_id?.[0] || ''}
+                    onChange={(value) => 
+                      setFilters({ ...filters, assigned_organization_id: value ? [value] : [] })
+                    }
+                    organizationType="subcontractor"
+                    placeholder="All subcontractors"
+                  />
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={filters.overdue || false}
+                      onCheckedChange={(checked) => 
+                        setFilters({ ...filters, overdue: checked })
+                      }
+                    />
+                    <Label htmlFor="overdue-switch" className="text-sm font-medium">
+                      Overdue Only
+                    </Label>
+                  </div>
+                </AdminFilterBar>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
 
         {isLoading ? (
           <TableSkeleton rows={5} columns={4} />
