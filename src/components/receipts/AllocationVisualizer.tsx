@@ -64,15 +64,28 @@ const AllocationVisualizer: React.FC<AllocationVisualizerProps> = ({
       return [];
     }
     
-    const data = allocations.map((allocation, index) => {
+    // Filter out invalid allocations early
+    const validAllocations = allocations.filter(allocation => {
+      const isValid = allocation && 
+                     allocation.work_order_id && 
+                     (typeof allocation.allocated_amount === 'number' || !isNaN(Number(allocation.allocated_amount)));
+      
+      if (!isValid && allocation) {
+        console.warn('Invalid allocation filtered out:', allocation);
+      }
+      return isValid;
+    });
+
+    const data = validAllocations.map((allocation, index) => {
       const workOrder = workOrders.find(wo => wo.id === allocation.work_order_id);
-      const percentage = totalAmount > 0 ? (allocation.allocated_amount / totalAmount) * 100 : 0;
+      const allocatedAmount = Number(allocation.allocated_amount) || 0;
+      const percentage = totalAmount > 0 ? (allocatedAmount / totalAmount) * 100 : 0;
       
       return {
         id: allocation.work_order_id,
         name: workOrder?.work_order_number || (allocation.work_order_id ? `WO-${String(allocation.work_order_id).slice(0, 6)}` : 'WO-Unknown'),
         title: workOrder?.title || 'Unknown Work Order',
-        value: allocation.allocated_amount,
+        value: allocatedAmount,
         percentage: Math.round(percentage * 10) / 10,
         color: WORK_ORDER_COLORS[index % WORK_ORDER_COLORS.length],
         organization: workOrder?.organization?.name
@@ -80,7 +93,10 @@ const AllocationVisualizer: React.FC<AllocationVisualizerProps> = ({
     });
 
     // Add remaining amount if under-allocated
-    const totalAllocated = allocations.reduce((sum, alloc) => sum + alloc.allocated_amount, 0);
+    const totalAllocated = validAllocations.reduce((sum, alloc) => {
+      const amount = Number(alloc?.allocated_amount) || 0;
+      return sum + amount;
+    }, 0);
     const remaining = totalAmount - totalAllocated;
     
     if (remaining > 0.01) {
@@ -98,7 +114,10 @@ const AllocationVisualizer: React.FC<AllocationVisualizerProps> = ({
     return data;
   }, [workOrders, allocations, totalAmount]);
 
-  const totalAllocated = allocations.reduce((sum, alloc) => sum + alloc.allocated_amount, 0);
+  const totalAllocated = (allocations || []).reduce((sum, alloc) => {
+    const amount = Number(alloc?.allocated_amount) || 0;
+    return sum + amount;
+  }, 0);
   const completionPercentage = totalAmount > 0 ? (totalAllocated / totalAmount) * 100 : 0;
   const isComplete = Math.abs(totalAmount - totalAllocated) < 0.01;
   const isOverAllocated = totalAllocated > totalAmount + 0.01;
