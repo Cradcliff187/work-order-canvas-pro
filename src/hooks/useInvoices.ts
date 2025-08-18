@@ -309,41 +309,43 @@ const getOperationalStatus = (workOrder: any): string => {
     case 'in_progress':
       return 'in_progress';
     case 'completed':
-      // If work order is completed but reports need review/approval
-      if (workOrder.latest_report?.status === 'submitted' || workOrder.latest_report?.status === 'reviewed') {
+      // FIX: Access first item in array, not the array itself
+      const report = workOrder.latest_report?.[0];
+      if (report?.status === 'submitted' || report?.status === 'reviewed') {
         return 'reports_pending';
       }
-      // If report is approved or no report needed, it's complete
       return 'complete';
     default:
       return 'new';
   }
 };
 
-// Helper function to get partner billing status based on workflow
 const getPartnerBillingStatus = (invoice: Invoice): string => {
-  // Check all work orders in the invoice for their status
-  for (const iwo of invoice.invoice_work_orders) {
-    const workOrder = iwo.work_order;
-    
-    if (workOrder.status !== 'completed') {
-      return 'report_pending'; // Work not completed yet
-    }
-    
-    if (workOrder.latest_report?.status !== 'approved') {
-      return 'invoice_needed'; // Report not approved yet  
-    }
-    
-    if (invoice.status === 'submitted' || invoice.status === 'pending') {
-      return 'invoice_pending'; // Has pending subcontractor invoices
-    }
-    
-    if (invoice.status === 'approved') {
-      return 'ready_to_bill'; // Has approved invoices, ready to bill partner
-    }
+  const allWorkOrders = invoice.invoice_work_orders || [];
+  
+  // Check if any work orders are incomplete
+  const hasIncompleteWork = allWorkOrders.some(iwo => 
+    iwo.work_order?.status !== 'completed'
+  );
+  if (hasIncompleteWork) return 'report_pending';
+  
+  // Check if any reports are not approved
+  const hasUnapprovedReports = allWorkOrders.some(iwo => {
+    const report = iwo.work_order?.latest_report?.[0];
+    return !report || report.status !== 'approved';
+  });
+  if (hasUnapprovedReports) return 'invoice_needed';
+  
+  // Check invoice status
+  if (invoice.status === 'submitted' || invoice.status === 'reviewed') {
+    return 'invoice_pending';
   }
   
-  return 'invoice_needed'; // Default - needs subcontractor invoice
+  if (invoice.status === 'approved') {
+    return 'ready_to_bill';
+  }
+  
+  return 'invoice_needed';
 };
 
 export const useInvoice = (id: string) => {
