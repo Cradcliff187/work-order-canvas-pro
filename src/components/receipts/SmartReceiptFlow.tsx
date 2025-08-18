@@ -30,6 +30,7 @@ import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
 import { mapOCRConfidenceToForm, type OCRConfidence, type FormConfidence } from '@/utils/ocr-confidence-mapper';
 import { formatConfidencePercent, getFieldConfidence } from '@/utils/confidence-display';
+import { useOCRProcessor } from '@/hooks/useOCRProcessor';
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { EnhancedAllocationPanel } from "./EnhancedAllocationPanel";
 import { FloatingActionBar } from "./FloatingActionBar";
@@ -338,11 +339,74 @@ export function SmartReceiptFlow() {
     }
   }, [currentAmount, allocationMode, allocations, actions]);
 
-  // AbortController for cancelling OCR
-  const abortControllerRef = useRef<AbortController | null>(null);
+  // OCR Processing Hook
+  const { processWithOCR, cancelOCR: cancelOCRProcessor } = useOCRProcessor({
+    onOCRStart: () => {
+      actions.startOCRProcessing();
+      trackOCRPerformance('started', { fileName: receiptFile?.name || 'unknown', fileSize: receiptFile?.size || 0 });
+    },
+    onOCRProgress: (stage: string, progress: number) => {
+      actions.updateOCRProgress(stage, progress);
+    },
+    onOCRSuccess: (ocrResult) => {
+      // Set form values
+      if (ocrResult.vendor) form.setValue('vendor_name', ocrResult.vendor);
+      if (ocrResult.total) form.setValue('amount', ocrResult.total);
+      if (ocrResult.date) {
+        form.setValue('receipt_date', ocrResult.date);
+        console.log('📅 Date OCR Success:', {
+          ocrDate: ocrResult.date,
+          formDateAfterSet: form.getValues('receipt_date'),
+          dateType: typeof ocrResult.date,
+          isValidDate: ocrResult.date ? !isNaN(new Date(ocrResult.date).getTime()) : false
+        });
+      }
+      
+      // Map and set confidence values
+      const mappedConfidence = mapOCRConfidenceToForm(ocrResult.confidence || {});
+      setOcrConfidence(mappedConfidence);
+      actions.setOCRSuccess(ocrResult, mappedConfidence);
+      
+      const successMessage = `Found ${ocrResult.vendor || 'vendor'} - $${ocrResult.total || 0}`;
+      toast({
+        title: '✨ Receipt Scanned!',
+        description: successMessage,
+      });
+      
+      trackOCRPerformance('completed', { 
+        confidence: ocrResult.confidence,
+        extractedFields: {
+          vendor: !!ocrResult.vendor,
+          amount: !!ocrResult.total,
+          date: !!ocrResult.date,
+          lineItems: ocrResult.line_items?.length || 0
+        }
+      });
+    },
+    onOCRError: (error) => {
+      trackOCRPerformance('failed', { 
+        errorMessage: error.message,
+        errorType: error.code || 'unknown'
+      });
+      trackError(error, { context: 'OCR processing', fileName: receiptFile?.name || 'unknown' });
+      
+      let errorMessage = 'Unable to extract data from receipt';
+      if (error.message?.includes('network')) {
+        errorMessage = 'Network issue - check your connection';
+      } else if (error.message?.includes('file') || error.message?.includes('format')) {
+        errorMessage = 'Image quality too low or unsupported format';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Processing took too long - try a clearer image';
+      }
+      
+      actions.setOCRError(errorMessage);
+    },
+    setRawOCRText,
+    setDebugOCRData,
+    isProcessingLocked,
+  });
 
-  // ENHANCED OCR processing function with DEBUG MODE
-  const processWithOCR = useCallback(async (file: File) => {
+  // Remove old processWithOCR function - now handled by hook
     // Check if already processing
     if (isProcessingLocked) {
       console.warn('OCR processing rejected - already locked');
@@ -770,15 +834,13 @@ export function SmartReceiptFlow() {
 
   // Cancel OCR processing
   const cancelOCR = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort('User cancelled');
-    }
+    cancelOCRProcessor();
     actions.cancelOCRProcessing();
     toast({
       title: 'Processing Cancelled',
       description: 'OCR processing has been cancelled',
     });
-  }, [actions, toast]);
+  }, [cancelOCRProcessor, actions, toast]);
 
   // Memoized form submission
   const onSubmit = useCallback(async (data: SmartReceiptFormData) => {
