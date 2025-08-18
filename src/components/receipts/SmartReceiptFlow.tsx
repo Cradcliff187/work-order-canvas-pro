@@ -346,7 +346,7 @@ export function SmartReceiptFlow() {
       trackOCRPerformance('started', { fileName: receiptFile?.name || 'unknown', fileSize: receiptFile?.size || 0 });
     },
     onOCRProgress: (stage: string, progress: number) => {
-      actions.updateOCRProgress(stage, progress);
+      actions.updateOCRProgress(stage as any, progress);
     },
     onOCRSuccess: (ocrResult) => {
       // Set form values
@@ -364,8 +364,27 @@ export function SmartReceiptFlow() {
       
       // Map and set confidence values
       const mappedConfidence = mapOCRConfidenceToForm(ocrResult.confidence || {});
-      setOcrConfidence(mappedConfidence);
-      actions.setOCRSuccess(ocrResult, mappedConfidence);
+      
+      // Convert hook's OCRResult to component's OCRResult format with required properties
+      const componentOCRResult: OCRResult = {
+        vendor: ocrResult.vendor || '',
+        total: ocrResult.total || 0,
+        date: ocrResult.date || '',
+        confidence: {
+          vendor: ocrResult.confidence?.vendor || 0,
+          total: ocrResult.confidence?.total || 0,
+          lineItems: 0,
+          date: ocrResult.confidence?.date || 0,
+        },
+        lineItems: ocrResult.line_items?.map(item => ({
+          description: item.description,
+          quantity: 1,
+          unit_price: item.amount,
+          total_price: item.amount
+        })) || []
+      };
+      
+      actions.setOCRSuccess(componentOCRResult, mappedConfidence);
       
       const successMessage = `Found ${ocrResult.vendor || 'vendor'} - $${ocrResult.total || 0}`;
       toast({
@@ -406,200 +425,7 @@ export function SmartReceiptFlow() {
     isProcessingLocked,
   });
 
-  // Remove old processWithOCR function - now handled by hook
-    // Check if already processing
-    if (isProcessingLocked) {
-      console.warn('OCR processing rejected - already locked');
-      toast({
-        title: 'Processing in Progress',
-        description: 'Please wait for current processing to complete',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Create new AbortController for this request
-    abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
-
-    actions.startOCRProcessing();
-    const startTime = Date.now();
-    trackOCRPerformance('started', { fileName: file.name, fileSize: file.size });
-
-    // Set up timeout (30 seconds)
-    const timeoutId = setTimeout(() => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort('Processing timeout');
-      }
-    }, 30000);
-    
-    try {
-      // Stage 1: Upload (0-30%)
-      actions.updateOCRProgress('uploading', 10);
-      const timestamp = Date.now();
-      const fileName = `temp_ocr_${timestamp}_${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('work-order-attachments')
-        .upload(`receipts/temp/${fileName}`, file);
-
-      if (uploadError) throw uploadError;
-      actions.updateOCRProgress('uploading', 30);
-
-      // Stage 2: Processing (30-70%)
-      actions.updateOCRProgress('processing', 40);
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('work-order-attachments')
-        .getPublicUrl(uploadData.path);
-
-      actions.updateOCRProgress('processing', 60);
-
-      // Stage 3: OCR Extraction (70-90%)
-      actions.updateOCRProgress('extracting', 70);
-      
-      // DEBUG MODE: Get raw OCR text first if enabled
-      if (debugMode) {
-        console.log('🔍 DEBUG MODE ENABLED - Getting raw OCR text...');
-        
-        const { data: debugData, error: debugError } = await supabase.functions.invoke('process-receipt', {
-          body: { imageUrl: publicUrl, testMode: 'debug' }
-        });
-        
-        if (debugData && !debugError) {
-          console.log('================== RAW OCR TEXT ==================');
-          console.log(debugData.raw_text);
-          console.log('================== FIRST 10 LINES ==================');
-          console.log(debugData.first_10_lines);
-          console.log('================== OCR STATS ==================');
-          console.log('Text length:', debugData.text_length);
-          console.log('Has DOCUMENT_TEXT:', debugData.has_doc_text);
-          console.log('Has SIMPLE_TEXT:', debugData.has_simple_text);
-          console.log('==================================================');
-          
-          // Store raw text and debug data for display
-          setRawOCRText(debugData.raw_text);
-          setDebugOCRData(debugData);
-          
-          // Show debug info in toast
-          toast({
-            title: '🔍 Debug: Raw OCR Text Captured',
-            description: `Extracted ${debugData.text_length} characters. Check debug panel for details.`,
-          });
-        }
-      }
-      
-      // Regular OCR processing
-      const { data: ocrResult, error: ocrError } = await supabase.functions.invoke('process-receipt', {
-        body: { imageUrl: publicUrl }
-      });
-
-      if (ocrError) throw ocrError;
-      actions.updateOCRProgress('extracting', 90);
-
-      // Stage 4: Complete (90-100%)
-      if (ocrResult) {
-        const processingTime = Date.now() - startTime;
-        
-        // Enhanced debug logging
-        if (debugMode) {
-          console.group('🎯 OCR EXTRACTION RESULTS');
-          console.log('Vendor:', ocrResult.vendor || 'NOT FOUND');
-          console.log('Total:', ocrResult.total || 'NOT FOUND');
-          console.log('Date:', ocrResult.date || 'NOT FOUND');
-          console.log('Processing Time:', processingTime + 'ms');
-          console.log('From Cache:', ocrResult.from_cache || false);
-          console.log('Confidence:', ocrResult.confidence);
-          console.groupEnd();
-        }
-        
-        trackOCRPerformance('completed', { 
-          processingTime,
-          confidence: ocrResult.confidence,
-          extractedFields: {
-            vendor: !!ocrResult.vendor,
-            amount: !!ocrResult.total,
-            date: !!ocrResult.date,
-            lineItems: ocrResult.lineItems?.length || 0
-          }
-        });
-        
-        if (ocrResult.vendor) form.setValue('vendor_name', ocrResult.vendor);
-        if (ocrResult.total) form.setValue('amount', ocrResult.total);
-        if (ocrResult.date) {
-          form.setValue('receipt_date', ocrResult.date);
-          console.log('📅 Date OCR Success:', {
-            ocrDate: ocrResult.date,
-            formDateAfterSet: form.getValues('receipt_date'),
-            dateType: typeof ocrResult.date,
-            isValidDate: ocrResult.date ? !isNaN(new Date(ocrResult.date).getTime()) : false
-          });
-        }
-        
-        const mappedConfidence = mapOCRConfidenceToForm(ocrResult.confidence || {});
-        
-        // Debug OCR confidence mapping
-        console.log('🔄 OCR Confidence Mapping Debug:', {
-          rawOCRConfidence: ocrResult.confidence,
-          mappedConfidence,
-          vendor: `${ocrResult.confidence?.vendor || 0} → ${mappedConfidence.vendor_name || 0}`,
-          total: `${ocrResult.confidence?.total || 0} → ${mappedConfidence.amount || 0}`,
-          date: `${ocrResult.confidence?.date || 0} → ${mappedConfidence.receipt_date || 0}`
-        });
-        
-        actions.setOCRSuccess(ocrResult, mappedConfidence);
-        
-        const successMessage = `Found ${ocrResult.vendor || 'vendor'} - $${ocrResult.total || 0}`;
-        
-        toast({
-          title: '✨ Receipt Scanned!',
-          description: successMessage,
-        });
-      }
-
-      // Clean up temp file
-      await supabase.storage
-        .from('work-order-attachments')
-        .remove([uploadData.path]);
-
-    } catch (error: any) {
-      // Clear timeout on completion
-      clearTimeout(timeoutId);
-      
-      // Handle cancellation gracefully
-      if (signal.aborted) {
-        console.log('OCR processing was cancelled');
-        actions.cancelOCRProcessing();
-        return; // Don't show error toast for user-initiated cancellation
-      }
-      console.error('OCR processing error:', error);
-      const processingTime = Date.now() - startTime;
-      
-      trackOCRPerformance('failed', { 
-        processingTime,
-        errorMessage: error.message,
-        errorType: error.code || 'unknown'
-      });
-      trackError(error, { context: 'OCR processing', fileName: file.name });
-      
-      // Enhanced error messages based on error type
-      let errorMessage = 'Unable to extract data from receipt';
-      if (error.message?.includes('network')) {
-        errorMessage = 'Network issue - check your connection';
-      } else if (error.message?.includes('file') || error.message?.includes('format')) {
-        errorMessage = 'Image quality too low or unsupported format';
-      } else if (error.message?.includes('timeout')) {
-        errorMessage = 'Processing took too long - try a clearer image';
-      }
-      
-      actions.setOCRError(errorMessage);
-      
-      // Don't show toast - let the FloatingProgress handle error display
-    } finally {
-      // Always clear timeout and abort controller
-      clearTimeout(timeoutId);
-      abortControllerRef.current = null;
-    }
-  }, [actions, form, toast, trackOCRPerformance, trackError, isProcessingLocked, debugMode]);
+  // OCR processing is now handled by the useOCRProcessor hook
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
