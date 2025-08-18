@@ -40,6 +40,7 @@ import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
 import { ReceiptTour, useReceiptTour } from "./ReceiptTour";
 import { ReceiptSuccessCard } from "./ReceiptSuccessCard";
+import { LineItemsDisplay } from "./LineItemsDisplay";
 import { useReceiptFlow } from "@/hooks/useReceiptFlow";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -49,10 +50,7 @@ import {
   Calendar,
   Building2,
   AlertCircle,
-  Plus,
-  Calculator,
   Briefcase,
-  List,
   PenTool,
   Edit,
   RefreshCw,
@@ -800,113 +798,12 @@ export function SmartReceiptFlow() {
             )}
 
             {/* Line Items */}
-            {ocrData?.lineItems && ocrData.lineItems.length > 0 && (
-              <FieldGroup
-                title="Line Items"
-                icon={<List className="h-4 w-4" />}
-                badge={
-                  <Badge variant="secondary" className="ml-2">
-                    {ocrData.lineItems.length} items
-                  </Badge>
-                }
-              >
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground border-b pb-2">
-                    <span>Description</span>
-                    <span>Quantity × Price</span>
-                    <span className="text-right">Total</span>
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {ocrData.lineItems.map((item, index) => (
-                      <div key={index} className="grid grid-cols-3 gap-4 text-sm p-2 bg-muted rounded">
-                        <span className="font-medium">{item.description}</span>
-                        <span className="text-muted-foreground">
-                          {item.quantity && item.unit_price 
-                            ? `${item.quantity} × $${item.unit_price.toFixed(2)}`
-                            : 'N/A'
-                          }
-                        </span>
-                        <span className="text-right font-medium">
-                          ${item.total_price?.toFixed(2) || 'N/A'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {(ocrData.subtotal || ocrData.tax || ocrData.total) && (
-                    <div className="border-t pt-4 space-y-2">
-                      {ocrData.subtotal && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Subtotal:</span>
-                          <span>${ocrData.subtotal.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {ocrData.tax && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Tax:</span>
-                          <span>${ocrData.tax.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {ocrData.total && (
-                        <div className="flex justify-between font-medium border-t pt-2">
-                          <span>Total:</span>
-                          <span>${ocrData.total.toFixed(2)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Quick correction buttons */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const item = prompt('Enter item description:');
-                        const price = prompt('Enter price:');
-                        if (item && price && ocrData) {
-                          const newLineItem = {
-                            description: item,
-                            total_price: parseFloat(price)
-                          };
-                          actions.setOCRSuccess({
-                            ...ocrData,
-                            lineItems: [...ocrData.lineItems, newLineItem]
-                          }, ocrConfidence);
-                        }
-                      }}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Item
-                    </Button>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (ocrData?.subtotal && ocrData?.tax) {
-                          const correct = ocrData.subtotal + ocrData.tax;
-                          form.setValue('amount', correct, { shouldValidate: true });
-                          actions.setOCRSuccess({
-                            ...ocrData,
-                            total: correct
-                          }, ocrConfidence);
-                          toast({
-                            title: 'Total Recalculated',
-                            description: `New total: $${correct.toFixed(2)}`,
-                          });
-                        }
-                      }}
-                    >
-                      <Calculator className="h-3 w-3 mr-1" />
-                      Recalculate
-                    </Button>
-                  </div>
-                </div>
-              </FieldGroup>
-            )}
+            <LineItemsDisplay
+              ocrData={ocrData}
+              ocrConfidence={ocrConfidence}
+              onUpdateOCRData={(newData, confidence) => actions.setOCRSuccess(newData, confidence)}
+              form={form}
+            />
 
 
             {/* Bottom padding to account for FloatingActionBar */}
