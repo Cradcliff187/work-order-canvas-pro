@@ -56,6 +56,19 @@ export interface Invoice {
       id: string;
       work_order_number: string | null;
       title: string;
+      status?: string;
+      organization_id?: string;
+      store_location?: string | null;
+      organizations?: {
+        id: string;
+        name: string;
+      } | null;
+      latest_report?: {
+        id: string;
+        status: string;
+        submitted_at: string | null;
+        reviewed_at: string | null;
+      } | null;
     };
   }>;
   invoice_attachments?: Array<{
@@ -143,7 +156,6 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
               status,
               organization_id,
               store_location,
-              partner_billed_at,
               organizations(
                 id,
                 name
@@ -171,39 +183,10 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         query = query.eq('subcontractor_organization_id', otherFilters.subcontractor_organization_id);
       }
 
-      // Apply partner organization filter (via related work orders) - complex filtering
-      if (otherFilters.partner_organization_id) {
-        // Get work order IDs for this partner organization first
-        const { data: workOrderIds } = await supabase
-          .from('work_orders')
-          .select('id')
-          .eq('organization_id', otherFilters.partner_organization_id);
-        
-        if (workOrderIds && workOrderIds.length > 0) {
-          // Get invoice IDs that have these work orders
-          const { data: invoiceIds } = await supabase
-            .from('invoice_work_orders')
-            .select('invoice_id')
-            .in('work_order_id', workOrderIds.map(wo => wo.id));
-          
-          if (invoiceIds && invoiceIds.length > 0) {
-            query = query.in('id', invoiceIds.map(iwo => iwo.invoice_id));
-          } else {
-            // No invoices for this partner - return empty result
-            query = query.eq('id', '00000000-0000-0000-0000-000000000000');
-          }
-        } else {
-          // No work orders for this partner - return empty result
-          query = query.eq('id', '00000000-0000-0000-0000-000000000000');
-        }
-      }
+      // Server-side filters are limited - complex filters handled client-side below
 
 
-      // Apply location filter (via related work orders)
-      if (otherFilters.location_filter && otherFilters.location_filter.length > 0) {
-        const locationSearchTerms = otherFilters.location_filter.map(loc => `invoice_work_orders.work_orders.store_location.ilike.%${loc.trim()}%`).join(',');
-        query = query.or(locationSearchTerms);
-      }
+      // Location and other complex filters handled client-side below
 
       // Apply search filter (search both internal and external invoice numbers)
       if (otherFilters.search) {
@@ -242,9 +225,60 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         };
       });
 
+      // Apply client-side filters for complex relationships
+      let filteredData = transformedData;
+
+      // Filter by partner organization (through work orders)
+      if (otherFilters.partner_organization_id && otherFilters.partner_organization_id !== 'all') {
+        filteredData = filteredData.filter(invoice => 
+          invoice.invoice_work_orders.some(iwo => 
+            iwo.work_order.organization_id === otherFilters.partner_organization_id
+          )
+        );
+      }
+
+      // Filter by location (through work orders)  
+      if (otherFilters.location_filter && otherFilters.location_filter.length > 0) {
+        filteredData = filteredData.filter(invoice =>
+          invoice.invoice_work_orders.some(iwo =>
+            otherFilters.location_filter!.some(location =>
+              iwo.work_order.store_location?.toLowerCase().includes(location.toLowerCase())
+            )
+          )
+        );
+      }
+
+      // Filter by operational status (through work orders)
+      if (otherFilters.operational_status && otherFilters.operational_status.length > 0) {
+        filteredData = filteredData.filter(invoice =>
+          invoice.invoice_work_orders.some(iwo => {
+            const operationalStatus = getOperationalStatus(iwo.work_order);
+            return otherFilters.operational_status!.includes(operationalStatus);
+          })
+        );
+      }
+
+      // Filter by report status (through work order reports)
+      if (otherFilters.report_status && otherFilters.report_status.length > 0) {
+        filteredData = filteredData.filter(invoice =>
+          invoice.invoice_work_orders.some(iwo => {
+            const reportStatus = iwo.work_order.latest_report?.status || 'not_submitted';
+            return otherFilters.report_status!.includes(reportStatus);
+          })
+        );
+      }
+
+      // Filter by partner billing status (complex calculation)
+      if (otherFilters.partner_billing_status && otherFilters.partner_billing_status.length > 0) {
+        filteredData = filteredData.filter(invoice => {
+          const partnerBillingStatus = getPartnerBillingStatus(invoice);
+          return otherFilters.partner_billing_status!.includes(partnerBillingStatus);
+        });
+      }
+
       return {
-        data: transformedData as Invoice[],
-        count: count || 0,
+        data: filteredData as any[],
+        count: filteredData.length,
       };
     },
     enabled: true,
@@ -263,6 +297,53 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
     retryOnMount: true,
     placeholderData: (previousData) => previousData, // v5 syntax for keepPreviousData
   });
+};
+
+// Helper function to get operational status from work order status
+const getOperationalStatus = (workOrder: any): string => {
+  switch (workOrder.status) {
+    case 'received':
+      return 'new';
+    case 'assigned':
+      return 'assigned';
+    case 'in_progress':
+      return 'in_progress';
+    case 'completed':
+      // If work order is completed but reports need review/approval
+      if (workOrder.latest_report?.status === 'submitted' || workOrder.latest_report?.status === 'reviewed') {
+        return 'reports_pending';
+      }
+      // If report is approved or no report needed, it's complete
+      return 'complete';
+    default:
+      return 'new';
+  }
+};
+
+// Helper function to get partner billing status based on workflow
+const getPartnerBillingStatus = (invoice: Invoice): string => {
+  // Check all work orders in the invoice for their status
+  for (const iwo of invoice.invoice_work_orders) {
+    const workOrder = iwo.work_order;
+    
+    if (workOrder.status !== 'completed') {
+      return 'report_pending'; // Work not completed yet
+    }
+    
+    if (workOrder.latest_report?.status !== 'approved') {
+      return 'invoice_needed'; // Report not approved yet  
+    }
+    
+    if (invoice.status === 'submitted' || invoice.status === 'pending') {
+      return 'invoice_pending'; // Has pending subcontractor invoices
+    }
+    
+    if (invoice.status === 'approved') {
+      return 'ready_to_bill'; // Has approved invoices, ready to bill partner
+    }
+  }
+  
+  return 'invoice_needed'; // Default - needs subcontractor invoice
 };
 
 export const useInvoice = (id: string) => {
@@ -307,7 +388,18 @@ export const useInvoice = (id: string) => {
               work_order_number,
               title,
               status,
-              organization_id
+              organization_id,
+              store_location,
+              organizations(
+                id,
+                name
+              ),
+              latest_report:work_order_reports(
+                id,
+                status,
+                submitted_at,
+                reviewed_at
+              )
             )
           ),
           invoice_attachments(
@@ -327,7 +419,7 @@ export const useInvoice = (id: string) => {
         throw error;
       }
 
-      return data as Invoice;
+      return data as any;
     },
     enabled: !!id && id !== 'skip-query',
     staleTime: 5 * 60 * 1000, // 5 minutes
