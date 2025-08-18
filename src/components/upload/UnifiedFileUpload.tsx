@@ -52,7 +52,32 @@ interface UploadProgress {
 }
 
 interface UnifiedFileUploadProps {
-  onFilesSelected: (files: File[]) => void;
+  /**
+   * Upload mode controls the file handling behavior:
+   * - 'immediate': Files are sent to parent immediately on selection (legacy behavior)
+   * - 'staged': Files are held internally until explicit upload action (new behavior)
+   * @default 'immediate' for backward compatibility
+   */
+  mode?: 'immediate' | 'staged';
+  
+  /**
+   * Legacy callback - called immediately when files are selected in 'immediate' mode
+   * Not called in 'staged' mode
+   */
+  onFilesSelected?: (files: File[]) => void;
+  
+  /**
+   * Called when files are selected and staged (only in 'staged' mode)
+   * Use this to update UI to show selected files awaiting upload
+   */
+  onFilesStaged?: (files: File[]) => void;
+  
+  /**
+   * Called when user explicitly requests upload (only in 'staged' mode)
+   * This is when you should start the actual upload process
+   */
+  onUploadRequested?: (files: File[]) => void;
+  
   maxFiles?: number;
   maxSizeBytes?: number;
   uploadProgress?: UploadProgress;
@@ -63,7 +88,10 @@ interface UnifiedFileUploadProps {
 }
 
 export function UnifiedFileUpload({
+  mode = 'immediate', // Default to immediate for backward compatibility
   onFilesSelected,
+  onFilesStaged,
+  onUploadRequested,
   maxFiles = 10,
   maxSizeBytes = 50 * 1024 * 1024, // 50MB default
   uploadProgress = {},
@@ -176,11 +204,10 @@ export function UnifiedFileUpload({
     return { valid, errors };
   }, [stagedFiles, maxFiles, maxSizeBytes, acceptedTypes]);
 
-  // ============= STAGED FILE MANAGEMENT =============
-  // Files stay in component state until explicit confirmation
-  // NO immediate parent notification - staged files only
+  // ============= DUAL MODE FILE MANAGEMENT =============
+  // Support both immediate and staged modes for backward compatibility
   const handleFilesSelected = useCallback((newFiles: File[]) => {
-    console.log(`[UnifiedFileUpload] Staging ${newFiles.length} new files (NO parent notification)`);
+    console.log(`[UnifiedFileUpload] Files selected in ${mode} mode:`, newFiles.length);
     
     const { valid, errors } = validateFiles(newFiles);
     
@@ -188,33 +215,45 @@ export function UnifiedFileUpload({
     setValidationErrors(errors);
     
     if (valid.length > 0) {
-      const newStagedFiles: StagedFile[] = valid.map(file => {
-        const id = `${Date.now()}_${Math.random()}`;
-        const fileType = getFileType(file);
+      if (mode === 'immediate') {
+        // Legacy immediate mode: call onFilesSelected right away
+        console.log(`[UnifiedFileUpload] Immediate mode - calling onFilesSelected`);
+        onFilesSelected?.(valid);
+      } else {
+        // Staged mode: hold files internally and call onFilesStaged
+        console.log(`[UnifiedFileUpload] Staged mode - adding to internal state`);
         
-        let previewUrl: string | undefined;
-        if (fileType === 'image') {
-          previewUrl = URL.createObjectURL(file);
-          objectURLsRef.current.add(previewUrl);
-        }
-        
-        return {
-          file,
-          id,
-          fileType,
-          previewUrl,
-          stage: 'staged' as FileStage
-        };
-      });
+        const newStagedFiles: StagedFile[] = valid.map(file => {
+          const id = `${Date.now()}_${Math.random()}`;
+          const fileType = getFileType(file);
+          
+          let previewUrl: string | undefined;
+          if (fileType === 'image') {
+            previewUrl = URL.createObjectURL(file);
+            objectURLsRef.current.add(previewUrl);
+          }
+          
+          return {
+            file,
+            id,
+            fileType,
+            previewUrl,
+            stage: 'staged' as FileStage
+          };
+        });
 
-      // Add to staged files - NO parent notification
-      setStagedFiles(prev => {
-        const updated = [...prev, ...newStagedFiles];
-        console.log(`[UnifiedFileUpload] Added ${valid.length} files to staging. Total staged: ${updated.length}`);
-        return updated;
-      });
+        // Add to staged files in staged mode
+        setStagedFiles(prev => {
+          const updated = [...prev, ...newStagedFiles];
+          console.log(`[UnifiedFileUpload] Added ${valid.length} files to staging. Total staged: ${updated.length}`);
+          return updated;
+        });
+
+        // Notify parent about staged files
+        onFilesStaged?.(valid);
+      }
     }
-  }, [validateFiles]);
+  }, [mode, validateFiles, onFilesSelected, onFilesStaged]);
 
   const removeFile = useCallback((id: string) => {
     console.log(`[UnifiedFileUpload] Removing staged file with id: ${id}`);

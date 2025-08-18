@@ -29,7 +29,30 @@ interface UploadOption {
 
 interface UniversalUploadSheetProps {
   trigger?: React.ReactNode;
-  onFilesSelected: (files: File[]) => void;
+  /**
+   * Upload mode controls the file handling behavior:
+   * - 'immediate': Files are sent to parent immediately on selection (legacy behavior)
+   * - 'staged': Files are held internally until explicit upload action (new behavior)
+   * @default 'immediate' for backward compatibility
+   */
+  mode?: 'immediate' | 'staged';
+  
+  /**
+   * Legacy callback - called immediately when files are selected in 'immediate' mode
+   * Not called in 'staged' mode
+   */
+  onFilesSelected?: (files: File[]) => void;
+  
+  /**
+   * Called when files are selected and staged (only in 'staged' mode)
+   */
+  onFilesStaged?: (files: File[]) => void;
+  
+  /**
+   * Called when user explicitly requests upload (only in 'staged' mode)
+   */
+  onUploadRequested?: (files: File[]) => void;
+  
   accept?: string;
   multiple?: boolean;
   disabled?: boolean;
@@ -43,7 +66,10 @@ interface UniversalUploadSheetProps {
 
 export function UniversalUploadSheet({
   trigger,
+  mode = 'immediate', // Default to immediate for backward compatibility
   onFilesSelected,
+  onFilesStaged,
+  onUploadRequested,
   accept = "*/*",
   multiple = true,
   disabled = false,
@@ -138,8 +164,12 @@ export function UniversalUploadSheet({
       setSuccessFileCount(files.length);
       setShowSuccess(true);
       
-      // Call the parent handler
-      onFilesSelected(files);
+      // Call appropriate handler based on mode
+      if (mode === 'immediate') {
+        onFilesSelected?.(files);
+      } else {
+        onFilesStaged?.(files);
+      }
       
       // Delay closing the sheet to show success confirmation
       setTimeout(() => {
