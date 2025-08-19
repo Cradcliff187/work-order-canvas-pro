@@ -436,14 +436,9 @@ const table = useReactTable({
       {/* Results */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>
-              {data?.totalCount || 0} Invoice{(data?.totalCount || 0) !== 1 ? 's' : ''}
-            </CardTitle>
-            <div className="text-sm text-muted-foreground">
-              Page {page} of {totalPages}
-            </div>
-          </div>
+          <CardTitle>
+            {data?.totalCount || 0} Invoice{(data?.totalCount || 0) !== 1 ? 's' : ''}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
