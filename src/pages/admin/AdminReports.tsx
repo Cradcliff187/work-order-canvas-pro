@@ -529,12 +529,13 @@ const table = useReactTable({
                             {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0 z-[70]" align="start">
                           <Calendar
                             mode="single"
                             selected={filters.date_from ? new Date(filters.date_from) : undefined}
                             onSelect={handleDateFromChange}
                             initialFocus
+                            className="p-3 pointer-events-auto"
                           />
                         </PopoverContent>
                       </Popover>
@@ -551,12 +552,13 @@ const table = useReactTable({
                             {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0 z-[70]" align="start">
                           <Calendar
                             mode="single"
                             selected={filters.date_to ? new Date(filters.date_to) : undefined}
                             onSelect={handleDateToChange}
                             initialFocus
+                            className="p-3 pointer-events-auto"
                           />
                         </PopoverContent>
                       </Popover>
