@@ -509,20 +509,8 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
 
       {/* Locations Table */}
       <Card>
-        <CardHeader className="flex items-center justify-between">
+        <CardHeader>
           <CardTitle>Locations ({filteredLocations.length})</CardTitle>
-          <div className="flex items-center gap-2">
-            <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || filteredLocations.length === 0} />
-            <ColumnVisibilityDropdown
-              columns={columnOptions}
-              onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
-              onResetToDefaults={resetToDefaults}
-              variant="outline"
-              size="sm"
-              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-              totalCount={columnOptions.filter(c => c.canHide).length}
-            />
-          </div>
         </CardHeader>
         <CardContent>
           {/* Desktop Table */}
