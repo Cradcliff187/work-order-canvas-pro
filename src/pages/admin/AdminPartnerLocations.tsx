@@ -277,20 +277,81 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
     );
   }
 
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedOrganization('all');
+    setStatusFilter('all');
+    setSelectedLocations([]);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2">
         <div className="min-w-0">
           <h1 className="text-3xl font-bold tracking-tight">Partner Locations</h1>
           <p className="text-muted-foreground">
             Manage all partner locations across organizations
           </p>
         </div>
-        <Button onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Location
-        </Button>
+      </div>
+
+      {/* Top Control Bar */}
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex gap-4 mb-6">
+        <div className="flex flex-1 gap-2">
+          <SmartSearchInput
+            placeholder="Search locations..."
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            onSearchSubmit={handleSearchChange}
+            className="flex-1"
+            storageKey="admin-partner-locations-search"
+          />
+          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
+            <Filter className="h-4 w-4 mr-2" />
+            Filters {filterCount > 0 && `(${filterCount})`}
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <ColumnVisibilityDropdown
+            columns={columnOptions}
+            onToggleColumn={toggleColumn}
+            onResetToDefaults={resetToDefaults}
+            visibleCount={getVisibleColumnCount()}
+          />
+          <ExportDropdown onExport={handleExport} />
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Location
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="lg:hidden space-y-3">
+        <SmartSearchInput
+          placeholder="Search locations..."
+          value={searchTerm}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          onSearchSubmit={handleSearchChange}
+          className="w-full"
+          storageKey="admin-partner-locations-search"
+        />
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters {filterCount > 0 && `(${filterCount})`}
+          </Button>
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Location
+          </Button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -336,22 +397,6 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         </Card>
       </div>
 
-      {/* Mobile Filter Button */}
-      <div className="lg:hidden mb-4">
-        <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="w-full">
-          <Filter className="h-4 w-4 mr-2" />
-          Filters {filterCount > 0 && `(${filterCount})`}
-        </Button>
-      </div>
-
-      {/* Desktop Filter Button */}
-      <div className="hidden lg:block mb-6">
-        <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
-          <Filter className="h-4 w-4 mr-2" />
-          Filters {filterCount > 0 && `(${filterCount})`}
-        </Button>
-      </div>
-
       {/* Mobile Bottom Sheet */}
       <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
         <SheetContent side="bottom" className="h-[85vh]">
@@ -359,17 +404,6 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             <SheetTitle>Location Filters</SheetTitle>
           </SheetHeader>
           <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-4 py-4 pb-20">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Search</Label>
-              <SmartSearchInput
-                placeholder="Search locations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onSearchSubmit={setSearchTerm}
-                storageKey="admin-partner-locations-search"
-                className="w-full"
-              />
-            </div>
             <div className="space-y-2">
               <Label className="text-sm font-medium">Organization</Label>
               <Select value={selectedOrganization} onValueChange={setSelectedOrganization}>
@@ -422,17 +456,6 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
           </SheetHeader>
           <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Search</Label>
-              <SmartSearchInput
-                placeholder="Search locations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onSearchSubmit={setSearchTerm}
-                storageKey="admin-partner-locations-search"
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
               <Label className="text-sm font-medium">Organization</Label>
               <Select value={selectedOrganization} onValueChange={setSelectedOrganization}>
                 <SelectTrigger className="w-full">
@@ -469,23 +492,17 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                 </SelectContent>
               </Select>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedOrganization('all');
-                setStatusFilter('all');
-                setSelectedLocations([]);
-                try {
-                  localStorage.removeItem('admin-partner-locations-filters-v1');
-                  localStorage.removeItem('admin-partner-locations-search');
-                } catch {}
-              }}
-              disabled={filterCount === 0}
-              className="w-full"
-            >
-              Clear All Filters
-            </Button>
+            <div className="flex gap-2 pt-4">
+              <Button onClick={() => setIsDesktopFilterOpen(false)} className="flex-1">
+                Apply Filters
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleClearFilters}
+              >
+                Clear All
+              </Button>
+            </div>
           </div>
         </SheetContent>
       </Sheet>
