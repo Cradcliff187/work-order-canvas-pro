@@ -32,9 +32,112 @@ export function useWorkOrderLifecycleTesting() {
     setResults([]);
 
     try {
-      // Test 1: Partner can create work order
+      // Test 1: Partner can create work order using Testing Org
       updateResult('Partner Work Order Creation', 'running');
-      const { data: partnerUser } = await supabase
+      
+      // Use Testing Org specifically
+      const { data: partnerOrg, error: orgError } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('name', 'Testing Org')
+        .eq('organization_type', 'partner')
+        .eq('is_active', true)
+        .single();
+
+      if (orgError || !partnerOrg) {
+        updateResult('Partner Work Order Creation', 'fail', `Testing Org not found: ${orgError?.message || 'Organization not available'}`);
+        return;
+      }
+
+      // Get an active trade for the work order
+      const { data: trade } = await supabase
+        .from('trades')
+        .select('id')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+
+      if (!trade) {
+        updateResult('Partner Work Order Creation', 'fail', 'No active trades found');
+        return;
+      }
+
+      // Get existing partner location for Testing Org
+      const { data: partnerLocation, error: locationError } = await supabase
+        .from('partner_locations')
+        .select('*')
+        .eq('organization_id', partnerOrg.id)
+        .eq('is_active', true)
+        .single();
+
+      if (locationError || !partnerLocation) {
+        updateResult('Partner Work Order Creation', 'fail', `No partner location found for Testing Org: ${locationError?.message || 'Location not available'}`);
+        return;
+      }
+
+      // Get current admin user for work order creation
+      const { data: currentUser } = await supabase.auth.getUser();
+      if (!currentUser?.user) {
+        updateResult('Partner Work Order Creation', 'fail', 'No authenticated user found');
+        return;
+      }
+
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', currentUser.user.id)
+        .single();
+
+      if (!currentProfile) {
+        updateResult('Partner Work Order Creation', 'fail', 'User profile not found');
+        return;
+      }
+
+      // Create a test work order (as admin for Testing Org)
+      const { data: workOrder, error: createError } = await supabase
+        .from('work_orders')
+        .insert({
+          work_order_number: `TEST-${Date.now()}`,
+          title: 'Lifecycle Test Work Order',
+          description: 'Test work order for lifecycle testing',
+          organization_id: partnerOrg.id,
+          trade_id: trade.id,
+          status: 'received',
+          created_by: currentProfile.id,
+          store_location: partnerLocation.location_name,
+          street_address: partnerLocation.street_address,
+          city: partnerLocation.city,
+          state: partnerLocation.state,
+          zip_code: partnerLocation.zip_code,
+          estimated_hours: 2.0,
+          date_submitted: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Work order creation error:', createError);
+        updateResult('Partner Work Order Creation', 'fail', `Failed to create work order: ${createError.message}. Make sure you're logged in as an admin.`);
+        return;
+      }
+
+      updateResult('Partner Work Order Creation', 'pass', `Created work order: ${workOrder.id}`);
+      
+      // Test 2: Admin can assign work order
+      updateResult('Admin Assignment', 'running');
+      const { data: subcontractorOrg } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .eq('organization_type', 'subcontractor')
+        .limit(1)
+        .single();
+
+      if (!subcontractorOrg) {
+        updateResult('Admin Assignment', 'fail', 'No subcontractor organization found');
+        return;
+      }
+
+      const { data: subcontractorUser } = await supabase
         .from('profiles')
         .select(`
           id, 
@@ -43,256 +146,134 @@ export function useWorkOrderLifecycleTesting() {
             organizations!inner(organization_type)
           )
         `)
-        .eq('organization_members.organizations.organization_type', 'partner')
+        .eq('organization_members.organizations.organization_type', 'subcontractor')
         .limit(1)
         .single();
 
-      if (!partnerUser || !partnerUser.organization_members?.[0]) {
-        updateResult('Partner Work Order Creation', 'fail', 'No partner user with organization found');
+      if (!subcontractorUser) {
+        updateResult('Admin Assignment', 'fail', 'No subcontractor user found');
+        return;
+      }
+
+      // Create assignment
+      const { error: assignError } = await supabase
+        .from('work_order_assignments')
+        .insert({
+          work_order_id: workOrder.id,
+          assigned_to: subcontractorUser.id,
+          assigned_organization_id: subcontractorOrg.id,
+          assignment_type: 'lead',
+          assigned_by: currentProfile.id,
+          notes: 'Test assignment for lifecycle testing'
+        });
+
+      if (assignError) {
+        updateResult('Admin Assignment', 'fail', assignError.message);
+        return;
+      }
+
+      // Update work order status
+      await supabase
+        .from('work_orders')
+        .update({ status: 'assigned', assigned_organization_id: subcontractorOrg.id })
+        .eq('id', workOrder.id);
+
+      updateResult('Admin Assignment', 'pass', `Assigned to ${subcontractorOrg.name}`);
+
+      // Test 3: Subcontractor can submit report
+      updateResult('Subcontractor Report Submission', 'running');
+      const { data: report, error: reportError } = await supabase
+        .from('work_order_reports')
+        .insert({
+          work_order_id: workOrder.id,
+          subcontractor_user_id: subcontractorUser.id,
+          work_performed: 'Test work performed for lifecycle testing',
+          materials_used: 'Test materials',
+          hours_worked: 2.5,
+          invoice_amount: 150.00,
+          invoice_number: 'TEST-INV-001',
+          notes: 'Test report notes',
+          status: 'submitted'
+        })
+        .select()
+        .single();
+
+      if (reportError) {
+        updateResult('Subcontractor Report Submission', 'fail', reportError.message);
+        return;
+      }
+
+      // Update work order to completed
+      await supabase
+        .from('work_orders')
+        .update({ 
+          status: 'completed',
+          subcontractor_report_submitted: true,
+          date_completed: new Date().toISOString()
+        })
+        .eq('id', workOrder.id);
+
+      updateResult('Subcontractor Report Submission', 'pass', `Report submitted: ${report.id}`);
+
+      // Test 4: Admin can review report
+      updateResult('Admin Report Review', 'running');
+      const { error: reviewError } = await supabase
+        .from('work_order_reports')
+        .update({
+          status: 'approved',
+          reviewed_by_user_id: currentProfile.id,
+          reviewed_at: new Date().toISOString(),
+          review_notes: 'Test review - approved for lifecycle testing'
+        })
+        .eq('id', report.id);
+
+      if (reviewError) {
+        updateResult('Admin Report Review', 'fail', reviewError.message);
+        return;
+      }
+
+      updateResult('Admin Report Review', 'pass', 'Report approved successfully');
+
+      // Test 5: PDF Generation
+      updateResult('PDF Generation Test', 'running');
+      try {
+        const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-report-pdf', {
+          body: { reportId: report.id }
+        });
+
+        if (pdfError) {
+          updateResult('PDF Generation Test', 'fail', `PDF generation failed: ${pdfError.message}`);
+        } else if (pdfResult?.success) {
+          updateResult('PDF Generation Test', 'pass', `PDF generated: ${pdfResult.pdfUrl}`);
+        } else {
+          updateResult('PDF Generation Test', 'fail', `PDF generation failed: ${pdfResult?.error || 'Unknown error'}`);
+        }
+      } catch (pdfErr: any) {
+        updateResult('PDF Generation Test', 'fail', `PDF generation error: ${pdfErr.message}`);
+      }
+
+      // Test 6: Verify complete lifecycle data integrity
+      updateResult('Data Integrity Check', 'running');
+      const { data: finalWorkOrder } = await supabase
+        .from('work_orders')
+        .select(`
+          *,
+          work_order_assignments(*),
+          work_order_reports(*)
+        `)
+        .eq('id', workOrder.id)
+        .single();
+
+      const hasAssignment = finalWorkOrder?.work_order_assignments?.length > 0;
+      const hasReport = finalWorkOrder?.work_order_reports?.length > 0;
+      const isCompleted = finalWorkOrder?.status === 'completed';
+      const hasWorkOrderNumber = !!finalWorkOrder?.work_order_number;
+
+      if (hasAssignment && hasReport && isCompleted && hasWorkOrderNumber) {
+        updateResult('Data Integrity Check', 'pass', `All lifecycle data is consistent. Work Order: ${finalWorkOrder.work_order_number}`);
       } else {
-        // Get partner organization
-        const { data: partnerOrg } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('id', partnerUser.organization_members[0].organization_id)
-          .single();
-
-        // Get an active trade for the work order
-        const { data: trade } = await supabase
-          .from('trades')
-          .select('id')
-          .eq('is_active', true)
-          .limit(1)
-          .single();
-
-        if (!trade) {
-          updateResult('Partner Work Order Creation', 'fail', 'No active trades found');
-          return;
-        }
-
-        // Ensure partner location exists
-        let partnerLocation;
-        const { data: existingLocation } = await supabase
-          .from('partner_locations')
-          .select('*')
-          .eq('organization_id', partnerOrg.id)
-          .limit(1)
-          .single();
-
-        if (!existingLocation) {
-          // Create a test partner location
-          const { data: newLocation, error: locationError } = await supabase
-            .from('partner_locations')
-            .insert({
-              organization_id: partnerOrg.id,
-              location_name: 'Test Location',
-              location_number: '001',
-              street_address: '123 Test St',
-              city: 'Test City',
-              state: 'TS',
-              zip_code: '12345',
-              contact_name: 'Test Contact',
-              contact_email: 'test@example.com'
-            })
-            .select()
-            .single();
-
-          if (locationError) {
-            updateResult('Partner Work Order Creation', 'fail', `Failed to create partner location: ${locationError.message}`);
-            return;
-          }
-          partnerLocation = newLocation;
-        } else {
-          partnerLocation = existingLocation;
-        }
-
-        // Create a test work order
-        const { data: workOrder, error: createError } = await supabase
-          .from('work_orders')
-          .insert({
-            title: 'Lifecycle Test Work Order',
-            description: 'Test work order for lifecycle testing',
-            organization_id: partnerOrg.id,
-            trade_id: trade.id,
-            status: 'received',
-            created_by: partnerUser.id,
-            store_location: partnerLocation.location_name,
-            street_address: partnerLocation.street_address,
-            city: partnerLocation.city,
-            state: partnerLocation.state,
-            zip_code: partnerLocation.zip_code,
-            estimated_hours: 2.0
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          updateResult('Partner Work Order Creation', 'fail', createError.message);
-        } else {
-          updateResult('Partner Work Order Creation', 'pass', `Created work order: ${workOrder.id}`);
-          
-          // Test 2: Admin can assign work order
-          updateResult('Admin Assignment', 'running');
-          const { data: subcontractorOrg } = await supabase
-            .from('organizations')
-            .select('id, name')
-            .eq('organization_type', 'subcontractor')
-            .limit(1)
-            .single();
-
-          if (!subcontractorOrg) {
-            updateResult('Admin Assignment', 'fail', 'No subcontractor organization found');
-          } else {
-            const { data: subcontractorUser } = await supabase
-              .from('profiles')
-              .select(`
-                id, 
-                organization_members!inner(
-                  organization_id,
-                  organizations!inner(organization_type)
-                )
-              `)
-              .eq('organization_members.organizations.organization_type', 'subcontractor')
-              .limit(1)
-              .single();
-
-            if (!subcontractorUser) {
-              updateResult('Admin Assignment', 'fail', 'No subcontractor user found');
-            } else {
-              // Create assignment
-              const { data: adminUser } = await supabase
-                .from('profiles')
-                .select(`
-                  id,
-                  organization_members!inner(
-                    role,
-                    organizations!inner(organization_type)
-                  )
-                `)
-                .eq('organization_members.organizations.organization_type', 'internal')
-                .eq('organization_members.role', 'admin')
-                .limit(1)
-                .single();
-
-              const { error: assignError } = await supabase
-                .from('work_order_assignments')
-                .insert({
-                  work_order_id: workOrder.id,
-                  assigned_to: subcontractorUser.id,
-                  assigned_organization_id: subcontractorOrg.id,
-                  assignment_type: 'lead',
-                  assigned_by: adminUser.id,
-                  notes: 'Test assignment for lifecycle testing'
-                });
-
-              if (assignError) {
-                updateResult('Admin Assignment', 'fail', assignError.message);
-              } else {
-                // Update work order status
-                await supabase
-                  .from('work_orders')
-                  .update({ status: 'assigned', assigned_organization_id: subcontractorOrg.id })
-                  .eq('id', workOrder.id);
-
-                updateResult('Admin Assignment', 'pass', `Assigned to ${subcontractorOrg.name}`);
-
-                // Test 3: Subcontractor can submit report
-                updateResult('Subcontractor Report Submission', 'running');
-                const { data: report, error: reportError } = await supabase
-                  .from('work_order_reports')
-                  .insert({
-                    work_order_id: workOrder.id,
-                    subcontractor_user_id: subcontractorUser.id,
-                    work_performed: 'Test work performed for lifecycle testing',
-                    materials_used: 'Test materials',
-                    hours_worked: 2.5,
-                    invoice_amount: 150.00,
-                    invoice_number: 'TEST-INV-001',
-                    notes: 'Test report notes',
-                    status: 'submitted'
-                  })
-                  .select()
-                  .single();
-
-                if (reportError) {
-                  updateResult('Subcontractor Report Submission', 'fail', reportError.message);
-                } else {
-                  // Update work order to completed
-                  await supabase
-                    .from('work_orders')
-                    .update({ 
-                      status: 'completed',
-                      subcontractor_report_submitted: true,
-                      date_completed: new Date().toISOString()
-                    })
-                    .eq('id', workOrder.id);
-
-                  updateResult('Subcontractor Report Submission', 'pass', `Report submitted: ${report.id}`);
-
-                  // Test 4: Admin can review report
-                  updateResult('Admin Report Review', 'running');
-                  const { error: reviewError } = await supabase
-                    .from('work_order_reports')
-                    .update({
-                      status: 'approved',
-                      reviewed_by_user_id: adminUser.id,
-                      reviewed_at: new Date().toISOString(),
-                      review_notes: 'Test review - approved for lifecycle testing'
-                    })
-                    .eq('id', report.id);
-
-                  if (reviewError) {
-                    updateResult('Admin Report Review', 'fail', reviewError.message);
-                  } else {
-                    updateResult('Admin Report Review', 'pass', 'Report approved successfully');
-
-                    // Test 5: PDF Generation
-                    updateResult('PDF Generation Test', 'running');
-                    try {
-                      const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-report-pdf', {
-                        body: { reportId: report.id }
-                      });
-
-                      if (pdfError) {
-                        updateResult('PDF Generation Test', 'fail', `PDF generation failed: ${pdfError.message}`);
-                      } else if (pdfResult.success) {
-                        updateResult('PDF Generation Test', 'pass', `PDF generated: ${pdfResult.pdfUrl}`);
-                      } else {
-                        updateResult('PDF Generation Test', 'fail', `PDF generation failed: ${pdfResult.error}`);
-                      }
-                    } catch (pdfErr: any) {
-                      updateResult('PDF Generation Test', 'fail', `PDF generation error: ${pdfErr.message}`);
-                    }
-
-                    // Test 6: Verify complete lifecycle data integrity
-                    updateResult('Data Integrity Check', 'running');
-                    const { data: finalWorkOrder } = await supabase
-                      .from('work_orders')
-                      .select(`
-                        *,
-                        work_order_assignments(*),
-                        work_order_reports(*)
-                      `)
-                      .eq('id', workOrder.id)
-                      .single();
-
-                    const hasAssignment = finalWorkOrder.work_order_assignments?.length > 0;
-                    const hasReport = finalWorkOrder.work_order_reports?.length > 0;
-                    const isCompleted = finalWorkOrder.status === 'completed';
-                    const hasWorkOrderNumber = !!finalWorkOrder.work_order_number;
-
-                    if (hasAssignment && hasReport && isCompleted && hasWorkOrderNumber) {
-                      updateResult('Data Integrity Check', 'pass', `All lifecycle data is consistent. Work Order: ${finalWorkOrder.work_order_number}`);
-                    } else {
-                      updateResult('Data Integrity Check', 'fail', 
-                        `Missing data: Assignment=${hasAssignment}, Report=${hasReport}, Completed=${isCompleted}, WorkOrderNumber=${hasWorkOrderNumber}`);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        updateResult('Data Integrity Check', 'fail', 
+          `Missing data: Assignment=${hasAssignment}, Report=${hasReport}, Completed=${isCompleted}, WorkOrderNumber=${hasWorkOrderNumber}`);
       }
 
       // Test 7: Subcontractor access verification
