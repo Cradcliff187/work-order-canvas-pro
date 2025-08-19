@@ -38,6 +38,12 @@ import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 
 export default function AdminWorkOrders() {
+  // Clear corrupted localStorage on component mount
+  useEffect(() => {
+    localStorage.removeItem('admin-work-orders-filters-v3');
+    localStorage.removeItem('billing-pipeline-filters-v3');
+  }, []);
+
   const { toast } = useToast();
   const navigate = useNavigate();
   const { profile, isEmployee, isAdmin } = useUserProfile();
@@ -75,20 +81,43 @@ export default function AdminWorkOrders() {
       return '';
     }
   });
+  // Define initial filters with proper types
+  const initialFilters: WorkOrderFiltersValue = {
+    search: undefined,
+    status: [],
+    priority: [],
+    partner_organization_ids: [],
+    completed_by: [],
+    trade_id: [],
+    location_filter: [],
+    date_range: undefined
+  };
+
   // Use unified filters hook
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<WorkOrderFiltersValue>(
     'admin-work-orders-filters-v3',
-    {
-      search: '',
-      status: [],
-      priority: [],
-      partner_organization_ids: [],
-      completed_by: [],
-      trade_id: [],
-      location_filter: [],
-      date_range: undefined
-    }
+    initialFilters
   );
+
+  // Clean and validate filters to fix corruption
+  const cleanFilters = useMemo(() => {
+    const cleanedFilters = { ...filters };
+    
+    // Fix corrupted search field
+    if (typeof cleanedFilters.search === 'object' && cleanedFilters.search !== null) {
+      console.log('🔧 Fixing corrupted search field:', cleanedFilters.search);
+      cleanedFilters.search = undefined;
+    }
+    
+    // Fix corrupted date_range field
+    if (cleanedFilters.date_range && typeof cleanedFilters.date_range === 'object' && 
+        ('_type' in cleanedFilters.date_range || 'value' in cleanedFilters.date_range)) {
+      console.log('🔧 Fixing corrupted date_range field:', cleanedFilters.date_range);
+      cleanedFilters.date_range = undefined;
+    }
+    
+    return cleanedFilters;
+  }, [filters]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
@@ -484,7 +513,7 @@ export default function AdminWorkOrders() {
           </SheetHeader>
           <div className="mt-6">
             <UnifiedWorkOrderFilters
-              filters={filters}
+              filters={cleanFilters}
               onFiltersChange={setFilters}
               onClear={handleClearFilters}
               filterCount={filterCount}
@@ -501,7 +530,7 @@ export default function AdminWorkOrders() {
           </SheetHeader>
           <div className="mt-6">
             <UnifiedWorkOrderFilters
-              filters={filters}
+              filters={cleanFilters}
               onFiltersChange={setFilters}
               onClear={handleClearFilters}
               filterCount={filterCount}
