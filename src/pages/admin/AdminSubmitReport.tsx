@@ -16,6 +16,7 @@ import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizat
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { EnhancedUploadTrigger } from '@/components/ui/enhanced-upload-trigger';
 import { useAuth } from '@/contexts/AuthContext';
+import { ReportPreviewModal } from '@/components/reports/ReportPreviewModal';
 
 interface FormData {
   workPerformed: string;
@@ -47,6 +48,7 @@ export default function AdminSubmitReport() {
   });
 
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   if (!workOrderId) {
     return (
@@ -131,7 +133,7 @@ export default function AdminSubmitReport() {
     }
 
     if (!showConfirmation) {
-      setShowConfirmation(true);
+      setShowPreview(true);
       return;
     }
 
@@ -315,7 +317,24 @@ export default function AdminSubmitReport() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <>
+      <ReportPreviewModal
+        isOpen={showPreview}
+        onEdit={() => setShowPreview(false)}
+        onConfirm={() => {
+          setShowPreview(false);
+          setShowConfirmation(true);
+        }}
+        formData={{
+          workPerformed: formData.workPerformed,
+          materialsUsed: formData.materialsUsed,
+          hoursWorked: formData.hoursWorked,
+          notes: formData.notes,
+          attachments: formData.attachments
+        }}
+      />
+      
+      <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button 
@@ -527,6 +546,7 @@ export default function AdminSubmitReport() {
           </StandardFormLayout.Actions>
         </StandardFormLayout>
       </form>
-    </div>
+      </div>
+    </>
   );
 }
