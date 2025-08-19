@@ -18,8 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Eye, 
@@ -63,8 +62,14 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
-import { ReportsFiltersV2, ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersV2';
+import { ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersV2';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 export default function AdminReports() {
@@ -96,7 +101,33 @@ export default function AdminReports() {
     { excludeKeys: [] }
   );
 
-  const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
+  // Data for filters
+  const { data: organizations = [] } = useOrganizationsForWorkOrders();
+  const { data: trades = [] } = useTrades();
+  
+  // Partner and Subcontractor organizations
+  const partnerOrganizations = organizations.filter(org => org.organization_type === 'partner');
+  const subcontractorOrganizations = organizations.filter(org => org.organization_type === 'subcontractor');
+  
+  // Partner locations (dependent on selected partners)
+  const { data: locations = [] } = useQuery({
+    queryKey: ['report-locations', filters.partner_organization_ids],
+    queryFn: async () => {
+      if (!filters.partner_organization_ids?.length) return [];
+      
+      const { data: partnerLocations } = await supabase
+        .from('partner_locations')
+        .select('*')
+        .in('organization_id', filters.partner_organization_ids);
+      
+      if (!partnerLocations) return [];
+      
+      return [...new Set(partnerLocations.map(loc => loc.location_name))].filter(Boolean).sort();
+    },
+    enabled: !!filters.partner_organization_ids?.length
+  });
+
+  
   const { reviewReport, bulkReviewReports, deleteReport } = useAdminReportMutations();
   const { data: submittedCounts } = useSubmittedCounts();
 
@@ -318,6 +349,48 @@ const table = useReactTable({
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
+  // Helper function to update filters
+  const handleFilterChange = (key: keyof ReportsFiltersValue, filterValue: any) => {
+    handleFiltersChange({ ...filters, [key]: filterValue });
+  };
+
+  // Handle date changes
+  const handleDateFromChange = (date: Date | undefined) => {
+    handleFilterChange('date_from', date ? format(date, 'yyyy-MM-dd') : undefined);
+  };
+
+  const handleDateToChange = (date: Date | undefined) => {
+    handleFilterChange('date_to', date ? format(date, 'yyyy-MM-dd') : undefined);
+  };
+
+  // Status options and other filter data
+  const statusOptions = [
+    { value: 'submitted', label: 'Submitted' },
+    { value: 'reviewed', label: 'Reviewed' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+  ];
+
+  const partnerOptions = partnerOrganizations.map(org => ({
+    value: org.id,
+    label: org.name
+  }));
+
+  const subcontractorOptions = subcontractorOrganizations.map(org => ({
+    value: org.id,
+    label: org.name
+  }));
+
+  const tradeOptions = trades.map(trade => ({
+    value: trade.id,
+    label: trade.name
+  }));
+
+  const locationOptions = locations.map(location => ({
+    value: location,
+    label: location
+  }));
+
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
@@ -409,18 +482,151 @@ const table = useReactTable({
         </div>
       </div>
 
-      {/* Layout */}
-      <div className="flex flex-col lg:flex-row gap-4 mb-6">
+      {/* Single Control Bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-6">
         <div className="flex-1">
-          <ReportsFiltersV2
-            value={filters}
-            onChange={handleFiltersChange}
-            searchTerm={searchTerm}
-            onSearchChange={handleSearchChange}
-            onClear={handleClearFilters}
+          <Input
+            placeholder="Search Reports"
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <AdminFilterBar
+            title="Filters"
+            filterCount={filterCount}
+            onClear={handleClearFilters}
+            searchSlot={null}
+            sections={{
+              essential: (
+                <>
+                  <div className="space-y-2">
+                    <Label>Report Status</Label>
+                    <MultiSelectFilter
+                      options={statusOptions}
+                      selectedValues={filters.status || []}
+                      onSelectionChange={(status) => handleFilterChange('status', status)}
+                      placeholder="Select status"
+                      maxDisplayCount={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date Range</Label>
+                    <div className="flex gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !filters.date_from && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={filters.date_from ? new Date(filters.date_from) : undefined}
+                            onSelect={handleDateFromChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !filters.date_to && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={filters.date_to ? new Date(filters.date_to) : undefined}
+                            onSelect={handleDateToChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </>
+              ),
+              advanced: (
+                <>
+                  <div className="space-y-2">
+                    <Label>Partner Organization</Label>
+                    <MultiSelectFilter
+                      options={partnerOptions}
+                      selectedValues={filters.partner_organization_ids || []}
+                      onSelectionChange={(ids) => handleFilterChange('partner_organization_ids', ids)}
+                      placeholder="Select partners"
+                      maxDisplayCount={1}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Location</Label>
+                    <MultiSelectFilter
+                      options={locationOptions}
+                      selectedValues={filters.location_filter || []}
+                      onSelectionChange={(locations) => handleFilterChange('location_filter', locations)}
+                      placeholder={filters.partner_organization_ids?.length ? "Select locations" : "Select partner first"}
+                      disabled={!filters.partner_organization_ids?.length}
+                      maxDisplayCount={1}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Subcontractor Organization</Label>
+                    <MultiSelectFilter
+                      options={subcontractorOptions}
+                      selectedValues={filters.subcontractor_organization_ids || []}
+                      onSelectionChange={(ids) => handleFilterChange('subcontractor_organization_ids', ids)}
+                      placeholder="Select subcontractors"
+                      maxDisplayCount={1}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Trade</Label>
+                    <MultiSelectFilter
+                      options={tradeOptions}
+                      selectedValues={filters.trade_ids || []}
+                      onSelectionChange={(ids) => handleFilterChange('trade_ids', ids)}
+                      placeholder="Select trades"
+                      maxDisplayCount={1}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="submitted-by">Submitted By</Label>
+                    <Input
+                      id="submitted-by"
+                      value={filters.submitted_by || ''}
+                      onChange={(e) => handleFilterChange('submitted_by', e.target.value || undefined)}
+                      placeholder="Enter name or email"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="work-order">Work Order</Label>
+                    <Input
+                      id="work-order"
+                      value={filters.work_order || ''}
+                      onChange={(e) => handleFilterChange('work_order', e.target.value || undefined)}
+                      placeholder="Enter work order number"
+                    />
+                  </div>
+                </>
+              )
+            }}
+          />
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
