@@ -81,7 +81,7 @@ export function MultiSelectFilter({
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 z-[60] bg-popover" align="start">
+      <PopoverContent className="w-[300px] p-0 z-[70] bg-popover" align="start">
         <div className="p-3 space-y-3">
           {/* Search input */}
           <div className="relative">
