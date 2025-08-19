@@ -527,7 +527,7 @@ export function WorkOrderPipelineTable() {
               )}
             </SheetHeader>
             
-            <div className="mt-6 space-y-4 overflow-y-auto px-1 pb-20">
+            <div className="mt-6 space-y-4 overflow-y-auto max-h-[calc(85vh-8rem)] px-1 pb-20">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Search</label>
                 <SmartSearchInput
@@ -646,7 +646,7 @@ export function WorkOrderPipelineTable() {
               )}
             </SheetHeader>
             
-            <div className="mt-6 space-y-4 overflow-y-auto px-1">
+            <div className="mt-6 space-y-4 overflow-y-auto max-h-[calc(100vh-8rem)] px-1">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Search</label>
                 <SmartSearchInput
