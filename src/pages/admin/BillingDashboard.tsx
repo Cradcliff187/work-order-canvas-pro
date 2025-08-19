@@ -12,9 +12,9 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -36,7 +36,11 @@ import {
 import { format } from 'date-fns';
 import { KPICard } from '@/components/analytics/KPICard';
 import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
-import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { Invoice } from '@/hooks/useInvoices';
 
@@ -872,16 +876,116 @@ if (error) {
                 collapsible={true}
                 sections={{
                   essential: (
-                    <WorkOrderFilters
-                      filters={filters}
-                      searchTerm={searchTerm}
-                      onFiltersChange={setFilters}
-                      onSearchChange={(value) => {
-                        setSearchTerm(value);
-                        setFilters({ ...filters, search: value });
-                      }}
-                      onClearFilters={clearFilters}
-                    />
+                    <>
+                      <div className="space-y-2">
+                        <Label>Operational Status</Label>
+                        <MultiSelectFilter
+                          options={operationalStatusOptions}
+                          selectedValues={filters.status || []}
+                          onSelectionChange={(status) => setFilters({ ...filters, status })}
+                          placeholder="Select operational status"
+                          maxDisplayCount={2}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Partner Organization</Label>
+                        <MultiSelectFilter
+                          options={[]} // Will be populated by actual data
+                          selectedValues={filters.partner_organization_ids || []}
+                          onSelectionChange={(ids) => setFilters({ ...filters, partner_organization_ids: ids })}
+                          placeholder="Select partners"
+                          maxDisplayCount={1}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Completed By</Label>
+                        <MultiSelectFilter
+                          options={[
+                            { value: 'internal', label: 'Internal' },
+                            // Subcontractor options would be populated here
+                          ]}
+                          selectedValues={filters.completed_by || []}
+                          onSelectionChange={(completed_by) => setFilters({ ...filters, completed_by })}
+                          placeholder="Select assignee type"
+                          maxDisplayCount={1}
+                        />
+                      </div>
+                    </>
+                  ),
+                  advanced: (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Trade</Label>
+                        <MultiSelectFilter
+                          options={trades?.map(trade => ({ value: trade.id, label: trade.name })) || []}
+                          selectedValues={filters.trade_id || []}
+                          onSelectionChange={(trade_id) => setFilters({ ...filters, trade_id })}
+                          placeholder="Select trade"
+                          maxDisplayCount={1}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Location</Label>
+                        <MultiSelectFilter
+                          options={locationOptions}
+                          selectedValues={filters.location_filter || []}
+                          onSelectionChange={(location_filter) => setFilters({ ...filters, location_filter })}
+                          placeholder="Select location"
+                          maxDisplayCount={1}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Date Range</Label>
+                        <div className="flex gap-2">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !filters.date_from && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={filters.date_from ? new Date(filters.date_from) : undefined}
+                                onSelect={(date) => setFilters({ ...filters, date_from: date ? format(date, 'yyyy-MM-dd') : undefined })}
+                                initialFocus
+                                className="p-3 pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !filters.date_to && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={filters.date_to ? new Date(filters.date_to) : undefined}
+                                onSelect={(date) => setFilters({ ...filters, date_to: date ? format(date, 'yyyy-MM-dd') : undefined })}
+                                initialFocus
+                                className="p-3 pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                    </>
                   )
                 }}
               />

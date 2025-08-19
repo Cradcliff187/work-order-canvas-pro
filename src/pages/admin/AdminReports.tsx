@@ -484,14 +484,16 @@ const table = useReactTable({
 
       {/* Single Control Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-6">
-        <div className="flex-1">
-          <Input
-            placeholder="Search Reports"
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full"
-          />
-        </div>
+      <div className="flex-1">
+        <SmartSearchInput
+          placeholder="Search reports by work order, subcontractor..."
+          value={searchTerm}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          onSearchSubmit={handleSearchChange}
+          storageKey="admin-reports-search"
+          className="w-full"
+        />
+      </div>
         <div className="flex items-center gap-2">
           <AdminFilterBar
             title="Filters"
