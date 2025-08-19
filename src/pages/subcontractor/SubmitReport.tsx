@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { EnhancedUploadTrigger } from '@/components/ui/enhanced-upload-trigger';
+import { ReportPreviewModal } from '@/components/reports/ReportPreviewModal';
 import type { PhotoAttachment } from '@/types/offline';
 
 interface FormData {
@@ -71,6 +72,7 @@ export default function SubmitReport() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [showUploadSheet, setShowUploadSheet] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Check for work order ID
   if (!workOrderId) {
@@ -101,6 +103,12 @@ export default function SubmitReport() {
       });
       return;
     }
+
+    setShowPreview(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
+    if (!workOrderId) return;
 
     setIsSubmitting(true);
     try {
@@ -277,7 +285,24 @@ export default function SubmitReport() {
   const workOrder = workOrderQuery.data;
 
   return (
-    <div className="space-y-6">
+    <>
+      <ReportPreviewModal
+        isOpen={showPreview}
+        onEdit={() => setShowPreview(false)}
+        onConfirm={() => {
+          setShowPreview(false);
+          handleConfirmedSubmit();
+        }}
+        formData={{
+          workPerformed: formData.workPerformed,
+          materialsUsed: formData.materialsUsed,
+          hoursWorked: formData.hoursWorked,
+          notes: formData.notes,
+          attachments: formData.attachments
+        }}
+      />
+      
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -433,6 +458,7 @@ export default function SubmitReport() {
           </StandardFormLayout.Actions>
         </StandardFormLayout>
       </form>
-    </div>
+      </div>
+    </>
   );
 }
