@@ -36,7 +36,7 @@ import {
 import { format } from 'date-fns';
 import { KPICard } from '@/components/analytics/KPICard';
 import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
-import { PipelineFilters } from '@/components/admin/dashboard/PipelineFilters';
+import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { Invoice } from '@/hooks/useInvoices';
 
@@ -165,22 +165,16 @@ function useBillingMetrics() {
   });
 }
 
-// Filter interface for Pipeline tab
+// Filter interface for Pipeline tab - adapted to WorkOrderFilters format
 interface PipelineFiltersValue {
-  search?: string;
-  operational_status?: string[];
-  financial_status?: string[];
-  partner_billing_status?: string[];
-  partner_organization_id?: string;
-  overdue?: boolean;
-  priority?: string[];
+  status?: string[];
   trade_id?: string[];
-  assigned_organization_id?: string[];
-  report_status?: string[];
-  location_filter?: string[];
+  partner_organization_ids?: string[];
+  completed_by?: string[];
+  search?: string;
   date_from?: string;
   date_to?: string;
-  age_range?: [number, number];
+  location_filter?: string[];
 }
 
 // Filter options for Pipeline
@@ -247,16 +241,13 @@ export default function BillingDashboard() {
   
   // Default filters - show all work orders
   const initialFilters: PipelineFiltersValue = {
-    search: '',
-    operational_status: [],
-    financial_status: [],
-    partner_billing_status: [],
-    partner_organization_id: '',
-    overdue: false,
-    priority: [],
+    status: [],
     trade_id: [],
-    assigned_organization_id: [],
-    report_status: [],
+    partner_organization_ids: [],
+    completed_by: [],
+    search: '',
+    date_from: undefined,
+    date_to: undefined,
     location_filter: []
   };
 
@@ -273,6 +264,9 @@ export default function BillingDashboard() {
 
   // Debounce search input
   const debouncedSearch = useDebounce(filters.search || '', 300);
+  
+  // Track search separately for WorkOrderFilters
+  const [searchTerm, setSearchTerm] = useState(filters.search || '');
 
   // Extract unique locations for filter options
   const locationOptions = useMemo(() => {
@@ -345,60 +339,43 @@ export default function BillingDashboard() {
 
     return pipelineData.filter((item) => {
       // Enhanced search filter (work order number, title, partner, location, assigned org)
-      if (debouncedSearch && debouncedSearch.trim()) {
-        const searchTerm = debouncedSearch.toLowerCase().trim();
+      if (searchTerm && searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase().trim();
         const matchesSearch = 
-          item.work_order_number?.toLowerCase().includes(searchTerm) ||
-          item.title?.toLowerCase().includes(searchTerm) ||
-          item.partner_organization_name?.toLowerCase().includes(searchTerm) ||
-          item.store_location?.toLowerCase().includes(searchTerm) ||
-          item.assigned_organization_name?.toLowerCase().includes(searchTerm);
+          item.work_order_number?.toLowerCase().includes(searchLower) ||
+          item.title?.toLowerCase().includes(searchLower) ||
+          item.partner_organization_name?.toLowerCase().includes(searchLower) ||
+          item.store_location?.toLowerCase().includes(searchLower) ||
+          item.assigned_organization_name?.toLowerCase().includes(searchLower);
         if (!matchesSearch) return false;
       }
 
-      // Operational status filter
-      if (filters.operational_status && filters.operational_status.length > 0) {
-        const itemOperationalStatus = getOperationalStatusKey(item);
-        if (!filters.operational_status.includes(itemOperationalStatus)) return false;
+      // Status filter (maps to operational status)
+      if (filters.status && filters.status.length > 0) {
+        if (!filters.status.includes(item.status)) return false;
       }
 
-      // Financial status filter
-      if (filters.financial_status && filters.financial_status.length > 0) {
-        if (!filters.financial_status.includes(item.financial_status)) return false;
-      }
-
-      // Partner billing status filter
-      if (filters.partner_billing_status && filters.partner_billing_status.length > 0) {
-        const partnerBillingStatus = getPartnerBillingStatus(item);
-        if (!filters.partner_billing_status.includes(partnerBillingStatus)) return false;
-      }
+      // Trade filter - Skip for now as trade info not in pipeline data
+      // if (filters.trade_id && filters.trade_id.length > 0) {
+      //   // Trade filtering would require additional join in pipeline query
+      // }
 
       // Partner organization filter
-      if (filters.partner_organization_id && filters.partner_organization_id.trim()) {
-        if (item.organization_id !== filters.partner_organization_id) return false;
+      if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
+        if (!item.organization_id || !filters.partner_organization_ids.includes(item.organization_id)) return false;
       }
 
-      // Overdue filter
-      if (filters.overdue) {
-        if (!item.is_overdue) return false;
+      // Completed by filter (maps to assigned organization)
+      if (filters.completed_by && filters.completed_by.length > 0) {
+        const itemCompletedBy = item.assigned_organization_id === 'internal' ? 'internal' : item.assigned_organization_id;
+        if (!itemCompletedBy || !filters.completed_by.includes(itemCompletedBy)) return false;
       }
 
-      // Priority filter (handle null values properly)
-      if (filters.priority && filters.priority.length > 0) {
-        const itemPriority = item.priority || 'medium';
-        if (!filters.priority.includes(itemPriority)) return false;
-      }
-
-      // Assigned organization filter (fix data type issue)
-      if (filters.assigned_organization_id && filters.assigned_organization_id.length > 0) {
-        if (!item.assigned_organization_id || 
-            !filters.assigned_organization_id.includes(item.assigned_organization_id)) return false;
-      }
-
-      // Report status filter
-      if (filters.report_status && filters.report_status.length > 0) {
-        const reportStatus = item.report_status || 'not_submitted';
-        if (!filters.report_status.includes(reportStatus)) return false;
+      // Date range filter
+      if (filters.date_from || filters.date_to) {
+        const itemDate = new Date(item.created_at);
+        if (filters.date_from && itemDate < new Date(filters.date_from)) return false;
+        if (filters.date_to && itemDate > new Date(filters.date_to)) return false;
       }
 
       // Location filter
@@ -409,7 +386,7 @@ export default function BillingDashboard() {
 
       return true;
     });
-  }, [pipelineData, debouncedSearch, filters, getOperationalStatusKey, getPartnerBillingStatus]);
+  }, [pipelineData, searchTerm, filters]);
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -929,12 +906,15 @@ if (error) {
               <SheetHeader>
                 <SheetTitle>Filter Pipeline</SheetTitle>
               </SheetHeader>
-              <PipelineFilters
-                value={filters}
-                onChange={setFilters}
-                onClear={handleClearFilters}
-                filterCount={filterCount}
-                locationOptions={locationOptions}
+              <WorkOrderFilters
+                filters={filters}
+                searchTerm={searchTerm}
+                onFiltersChange={setFilters}
+                onSearchChange={(value) => {
+                  setSearchTerm(value);
+                  setFilters({ ...filters, search: value });
+                }}
+                onClearFilters={handleClearFilters}
               />
             </SheetContent>
           </Sheet>
@@ -945,12 +925,15 @@ if (error) {
               <SheetHeader>
                 <SheetTitle>Filter Pipeline</SheetTitle>
               </SheetHeader>
-              <PipelineFilters
-                value={filters}
-                onChange={setFilters}
-                onClear={clearFilters}
-                filterCount={filterCount}
-                locationOptions={locationOptions}
+              <WorkOrderFilters
+                filters={filters}
+                searchTerm={searchTerm}
+                onFiltersChange={setFilters}
+                onSearchChange={(value) => {
+                  setSearchTerm(value);
+                  setFilters({ ...filters, search: value });
+                }}
+                onClearFilters={clearFilters}
               />
             </SheetContent>
           </Sheet>
