@@ -2,53 +2,70 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export interface EnhancedUploadTriggerProps {
-  children: React.ReactNode;
+  children: React.ReactElement;
   onClick?: () => void;
   className?: string;
   disabled?: boolean;
 }
 
 const EnhancedUploadTrigger = React.forwardRef<
-  HTMLButtonElement,
+  HTMLDivElement,
   EnhancedUploadTriggerProps
 >(({ children, onClick, className, disabled = false, ...props }, ref) => {
+  const handleClick = (e: React.MouseEvent) => {
+    if (disabled) return;
+    
+    // Call the onClick prop if provided
+    if (onClick) {
+      onClick();
+    }
+    
+    // Also call the child's onClick if it exists
+    if (children.props.onClick) {
+      children.props.onClick(e);
+    }
+  };
+
   return (
-    <button
+    <div
       ref={ref}
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
       className={cn(
-        // Base styles
-        "relative inline-flex items-center justify-center gap-2",
-        "rounded-xl px-6 py-3 text-sm font-medium",
-        "bg-primary text-primary-foreground",
+        // Base wrapper styles
+        "relative",
         
-        // Animations and transitions
+        // Enhancement animations and transitions
         "transition-all duration-300 ease-out",
-        "animate-pulse",
+        
+        // Pulse animation (subtle)
+        !disabled && "animate-pulse [animation-duration:3s]",
         
         // Hover effects
-        "hover:scale-105 hover:shadow-lg",
-        "hover:shadow-primary/25",
-        
-        // Active state
-        "active:scale-[0.98]",
-        
-        // Focus states
-        "focus-visible:outline-none focus-visible:ring-2",
-        "focus-visible:ring-ring focus-visible:ring-offset-2",
+        !disabled && [
+          "hover:scale-[1.02]",
+          // Gradient overlay using before pseudo-element
+          "before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-r",
+          "before:from-primary/10 before:to-accent/10 before:opacity-0",
+          "before:transition-opacity before:duration-300 hover:before:opacity-100",
+          "before:pointer-events-none before:z-0"
+        ],
         
         // Disabled state
-        "disabled:opacity-50 disabled:pointer-events-none",
-        "disabled:hover:scale-100 disabled:hover:shadow-none",
+        disabled && "opacity-50 pointer-events-none",
         
         className
       )}
       {...props}
     >
-      {children}
-    </button>
+      {React.cloneElement(children, {
+        onClick: handleClick,
+        disabled: disabled || children.props.disabled,
+        className: cn(
+          // Ensure child is above the overlay
+          "relative z-10",
+          children.props.className
+        ),
+      })}
+    </div>
   );
 });
 
