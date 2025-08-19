@@ -9,7 +9,7 @@ import MDEditor from '@uiw/react-md-editor';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Save, ArrowLeft, FileText, Loader2 } from "lucide-react";
+import { Save, ArrowLeft, FileText, Loader2, Paperclip, Eye, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSuccessAnimation } from "@/hooks/useSuccessAnimation";
 import { DraftIndicator } from '@/components/DraftIndicator';
@@ -23,6 +23,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { EnhancedUploadTrigger } from '@/components/ui/enhanced-upload-trigger';
 import { ReportPreviewModal } from '@/components/reports/ReportPreviewModal';
+import { StepProgressIndicator } from '@/components/ui/step-progress-indicator';
 import type { PhotoAttachment } from '@/types/offline';
 
 interface FormData {
@@ -74,6 +75,15 @@ export default function SubmitReport() {
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [showUploadSheet, setShowUploadSheet] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+
+  const steps = [
+    { label: "Work Details", icon: FileText },
+    { label: "Attachments", icon: Paperclip },
+    { label: "Review", icon: Eye },
+    { label: "Submit", icon: Send }
+  ];
 
   // Check for work order ID
   if (!workOrderId) {
@@ -83,6 +93,34 @@ export default function SubmitReport() {
       </Alert>
     );
   }
+
+  const canAdvanceToStep = (step: number) => {
+    switch (step) {
+      case 1: return true; // Always can be on step 1
+      case 2: return formData.workPerformed.trim() !== '';
+      case 3: return formData.workPerformed.trim() !== '';
+      case 4: return formData.workPerformed.trim() !== '';
+      default: return false;
+    }
+  };
+
+  const goToNextStep = () => {
+    if (currentStep < steps.length && canAdvanceToStep(currentStep + 1)) {
+      setCurrentStep(prev => prev + 1);
+      if (!completedSteps.includes(currentStep)) {
+        setCompletedSteps(prev => [...prev, currentStep]);
+      }
+      if (currentStep === 2) {
+        setShowPreview(true);
+      }
+    }
+  };
+
+  const goToPreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +143,12 @@ export default function SubmitReport() {
       return;
     }
 
-    setShowPreview(true);
+    if (currentStep < 3) {
+      setCurrentStep(3);
+      setShowPreview(true);
+    } else {
+      setShowPreview(true);
+    }
   };
 
   const handleConfirmedSubmit = async () => {
@@ -328,137 +371,176 @@ export default function SubmitReport() {
         />
       </div>
 
+      <StepProgressIndicator
+        currentStep={currentStep}
+        totalSteps={steps.length}
+        steps={steps}
+        className="mb-8"
+      />
+
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <StandardFormLayout>
-          <StandardFormLayout.Section 
-            title="Work Details"
-            description="Provide detailed information about the work performed"
-          >
-            <StandardFormLayout.FieldGroup>
-              <div className="space-y-2">
-                <Label htmlFor="workPerformed">Work Performed *</Label>
-                <MDEditor
-                  value={formData.workPerformed}
-                  onChange={(value) => setFormData(prev => ({ ...prev, workPerformed: value || '' }))}
-                  data-color-mode="light"
-                  height={200}
-                  preview="edit"
-                  hideToolbar={false}
-                  visibleDragbar={false}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="materialsUsed">Materials Used</Label>
-                <Textarea
-                  id="materialsUsed"
-                  placeholder="List materials, parts, or supplies used..."
-                  value={formData.materialsUsed}
-                  onChange={(e) => setFormData(prev => ({ ...prev, materialsUsed: e.target.value }))}
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Any additional information or observations..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  className="min-h-[80px]"
-                />
-              </div>
-            </StandardFormLayout.FieldGroup>
-          </StandardFormLayout.Section>
-
-          {isEmployee() && (
+          {currentStep === 1 && (
             <StandardFormLayout.Section 
-              title="Time Tracking"
-              description="Record hours worked for this assignment"
+              title="Work Details"
+              description="Provide detailed information about the work performed"
             >
-              <StandardFormLayout.FieldGroup columns={1}>
+              <StandardFormLayout.FieldGroup>
                 <div className="space-y-2">
-                  <Label htmlFor="hoursWorked">Hours Worked *</Label>
-                  <Input
-                    id="hoursWorked"
-                    type="number"
-                    step="0.25"
-                    min="0"
-                    placeholder="8.5"
-                    value={formData.hoursWorked}
-                    onChange={(e) => setFormData(prev => ({ ...prev, hoursWorked: e.target.value }))}
-                    required
+                  <Label htmlFor="workPerformed">Work Performed *</Label>
+                  <MDEditor
+                    value={formData.workPerformed}
+                    onChange={(value) => setFormData(prev => ({ ...prev, workPerformed: value || '' }))}
+                    data-color-mode="light"
+                    height={200}
+                    preview="edit"
+                    hideToolbar={false}
+                    visibleDragbar={false}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="materialsUsed">Materials Used</Label>
+                  <Textarea
+                    id="materialsUsed"
+                    placeholder="List materials, parts, or supplies used..."
+                    value={formData.materialsUsed}
+                    onChange={(e) => setFormData(prev => ({ ...prev, materialsUsed: e.target.value }))}
+                    className="min-h-[80px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Additional Notes</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Any additional information or observations..."
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="min-h-[80px]"
+                  />
+                </div>
+
+                {isEmployee() && (
+                  <div className="space-y-2">
+                    <Label htmlFor="hoursWorked">Hours Worked *</Label>
+                    <Input
+                      id="hoursWorked"
+                      type="number"
+                      step="0.25"
+                      min="0"
+                      placeholder="8.5"
+                      value={formData.hoursWorked}
+                      onChange={(e) => setFormData(prev => ({ ...prev, hoursWorked: e.target.value }))}
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter total hours worked on this assignment for payroll tracking
+                    </p>
+                  </div>
+                )}
+              </StandardFormLayout.FieldGroup>
+            </StandardFormLayout.Section>
+          )}
+
+          {currentStep === 2 && (
+            <StandardFormLayout.Section 
+              title="Photos & Documentation"
+              description="Upload photos and documents related to the work"
+            >
+              <StandardFormLayout.FieldGroup>
+                <div className="space-y-2">
+                  <Label>Upload Files</Label>
+                  <UniversalUploadSheet
+                    trigger={
+                      <EnhancedUploadTrigger>
+                        <Button variant="outline" className="w-full h-20 border-dashed border-2 hover:border-primary/50 bg-background">
+                          <div className="text-center">
+                            <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                            <p className="text-sm font-medium">Upload Files</p>
+                            <p className="text-xs text-muted-foreground">Click to select photos & documents</p>
+                          </div>
+                        </Button>
+                      </EnhancedUploadTrigger>
+                    }
+                    onFilesSelected={handleFilesSelected}
+                    open={showUploadSheet}
+                    onOpenChange={setShowUploadSheet}
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+                    multiple={true}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Enter total hours worked on this assignment for payroll tracking
+                    Upload photos, PDF documents, Excel files, or Word documents
                   </p>
                 </div>
               </StandardFormLayout.FieldGroup>
             </StandardFormLayout.Section>
           )}
 
-          <StandardFormLayout.Section 
-            title="Photos & Documentation"
-            description="Upload photos and documents related to the work"
-          >
-            <StandardFormLayout.FieldGroup>
-              <div className="space-y-2">
-                <Label>Upload Files</Label>
-                <UniversalUploadSheet
-                  trigger={
-                    <EnhancedUploadTrigger>
-                      <Button variant="outline" className="w-full h-20 border-dashed border-2 hover:border-primary/50 bg-background">
-                        <div className="text-center">
-                          <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                          <p className="text-sm font-medium">Upload Files</p>
-                          <p className="text-xs text-muted-foreground">Click to select photos & documents</p>
-                        </div>
-                      </Button>
-                    </EnhancedUploadTrigger>
-                  }
-                  onFilesSelected={handleFilesSelected}
-                  open={showUploadSheet}
-                  onOpenChange={setShowUploadSheet}
-                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
-                  multiple={true}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Upload photos, PDF documents, Excel files, or Word documents
-                </p>
-              </div>
-            </StandardFormLayout.FieldGroup>
-          </StandardFormLayout.Section>
-
           <StandardFormLayout.Actions>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleSaveDraft}
-              disabled={isSubmitting}
-              className="min-h-[44px]"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Save Draft
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="min-h-[44px]"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Submit Report
-                </>
-              )}
-            </Button>
+            <div className="flex justify-between w-full">
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => navigate('/subcontractor/work-orders')}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                
+                {currentStep > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={goToPreviousStep}
+                    disabled={isSubmitting}
+                  >
+                    Previous
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  onClick={handleSaveDraft}
+                  disabled={isSubmitting || !formData.workPerformed.trim()}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Draft
+                </Button>
+                
+                {currentStep < 3 ? (
+                  <Button 
+                    type="button"
+                    onClick={goToNextStep}
+                    disabled={!canAdvanceToStep(currentStep + 1)}
+                  >
+                    Next
+                  </Button>
+                ) : (
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting || !formData.workPerformed.trim()}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Review & Submit
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
           </StandardFormLayout.Actions>
         </StandardFormLayout>
       </form>

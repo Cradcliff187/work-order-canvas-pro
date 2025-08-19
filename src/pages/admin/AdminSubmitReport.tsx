@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import MDEditor from '@uiw/react-md-editor';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, FileText, Loader2, AlertTriangle, Users, RotateCcw } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, AlertTriangle, Users, RotateCcw, Paperclip, Eye, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSuccessAnimation } from "@/hooks/useSuccessAnimation";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
@@ -18,6 +18,7 @@ import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { EnhancedUploadTrigger } from '@/components/ui/enhanced-upload-trigger';
 import { useAuth } from '@/contexts/AuthContext';
 import { ReportPreviewModal } from '@/components/reports/ReportPreviewModal';
+import { StepProgressIndicator } from '@/components/ui/step-progress-indicator';
 
 interface FormData {
   workPerformed: string;
@@ -32,6 +33,13 @@ export default function AdminSubmitReport() {
   const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const steps = [
+    { label: "Work Details", icon: FileText },
+    { label: "Attachments", icon: Paperclip },
+    { label: "Review", icon: Eye },
+    { label: "Submit", icon: Send }
+  ];
   const { profile } = useAuth();
   const { showSuccess } = useSuccessAnimation();
   
@@ -50,6 +58,7 @@ export default function AdminSubmitReport() {
 
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   if (!workOrderId) {
     return (
@@ -357,6 +366,13 @@ export default function AdminSubmitReport() {
           </p>
         </div>
       </div>
+
+      <StepProgressIndicator
+        currentStep={currentStep}
+        totalSteps={steps.length}
+        steps={steps}
+        className="mb-8"
+      />
 
       {/* Assignment Status Display */}
       {!isCompletelyUnassigned && (
