@@ -465,56 +465,59 @@ const table = useReactTable({
     </div>
   ) : (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="flex items-center gap-3">
+      {/* Header Section - Always Visible */}
+      <div className="space-y-4 mb-6">
+        {/* Row 1: Title and Stats */}
+        <div className="flex justify-between items-start">
+          <div>
             <h1 className="text-2xl font-bold">Report Review</h1>
-            {submittedCounts && submittedCounts.reportsCount > 0 && (
-              <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                {submittedCounts.reportsCount} pending
-              </Badge>
-            )}
+            <p className="text-muted-foreground">
+              {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'Review and approve subcontractor reports'}
+            </p>
           </div>
-          <p className="text-muted-foreground">
-            {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'Review and approve subcontractor reports'}
-          </p>
+          {submittedCounts && submittedCounts.reportsCount > 0 && (
+            <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+              {submittedCounts.reportsCount} pending
+            </Badge>
+          )}
         </div>
-      </div>
 
-      {/* Row 1: Search & Filters */}
-      <div className="flex gap-3 mb-3">
-        <div className="flex-1 max-w-md">
-          <SmartSearchInput
-            placeholder="Search reports by work order, subcontractor..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onSearchSubmit={handleSearchChange}
-            storageKey="admin-reports-search"
-            className="w-full"
-          />
-        </div>
-        <AdminFilterBar
-          title="Filters"
-          filterCount={filterCount}
-          onClear={handleClearFilters}
-          collapsible={true}
-          sections={{
-            essential: (
-              <>
-                <div className="space-y-2">
-                  <Label>Report Status</Label>
-                  <MultiSelectFilter
-                    options={statusOptions}
-                    selectedValues={filters.status || []}
-                    onSelectionChange={(status) => handleFilterChange('status', status)}
-                    placeholder="Select status"
-                    maxDisplayCount={2}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Date Range</Label>
-                  <div className="flex gap-2">
+        {/* Row 2: Search and Filter Button */}
+        <div className="flex gap-3">
+          <div className="flex-1 max-w-xl">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <SmartSearchInput
+                placeholder="Search reports by work order, location, or subcontractor..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onSearchSubmit={handleSearchChange}
+                storageKey="admin-reports-search"
+                className="pl-10 h-10 w-full"
+              />
+            </div>
+          </div>
+          <AdminFilterBar
+            title="Filters"
+            filterCount={filterCount}
+            onClear={handleClearFilters}
+            collapsible={true}
+            className="h-10"
+            sections={{
+              essential: (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Report Status</Label>
+                    <MultiSelectFilter
+                      options={statusOptions}
+                      selectedValues={filters.status || []}
+                      onSelectionChange={(status) => handleFilterChange('status', status)}
+                      placeholder="Select status"
+                      maxDisplayCount={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date From</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -538,6 +541,9 @@ const table = useReactTable({
                         />
                       </PopoverContent>
                     </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date To</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -562,94 +568,90 @@ const table = useReactTable({
                       </PopoverContent>
                     </Popover>
                   </div>
+                  <div className="space-y-2">
+                    <Label>Partner Organization</Label>
+                    <MultiSelectFilter
+                      options={partnerOptions}
+                      selectedValues={filters.partner_organization_ids || []}
+                      onSelectionChange={(ids) => handleFilterChange('partner_organization_ids', ids)}
+                      placeholder="Select partners"
+                      maxDisplayCount={1}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Location</Label>
+                    <MultiSelectFilter
+                      options={locationOptions}
+                      selectedValues={filters.location_filter || []}
+                      onSelectionChange={(locations) => handleFilterChange('location_filter', locations)}
+                      placeholder={filters.partner_organization_ids?.length ? "Select locations" : "Select partner first"}
+                      disabled={!filters.partner_organization_ids?.length}
+                      maxDisplayCount={1}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Subcontractor Organization</Label>
+                    <MultiSelectFilter
+                      options={subcontractorOptions}
+                      selectedValues={filters.subcontractor_organization_ids || []}
+                      onSelectionChange={(ids) => handleFilterChange('subcontractor_organization_ids', ids)}
+                      placeholder="Select subcontractors"
+                      maxDisplayCount={1}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Trade</Label>
+                    <MultiSelectFilter
+                      options={tradeOptions}
+                      selectedValues={filters.trade_ids || []}
+                      onSelectionChange={(ids) => handleFilterChange('trade_ids', ids)}
+                      placeholder="Select trades"
+                      maxDisplayCount={1}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="submitted-by">Submitted By</Label>
+                    <Input
+                      id="submitted-by"
+                      value={filters.submitted_by || ''}
+                      onChange={(e) => handleFilterChange('submitted_by', e.target.value || undefined)}
+                      placeholder="Enter name or email"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="work-order">Work Order</Label>
+                    <Input
+                      id="work-order"
+                      value={filters.work_order || ''}
+                      onChange={(e) => handleFilterChange('work_order', e.target.value || undefined)}
+                      placeholder="Enter work order number"
+                    />
+                  </div>
                 </div>
-              </>
-            ),
-            advanced: (
-              <>
-                <div className="space-y-2">
-                  <Label>Partner Organization</Label>
-                  <MultiSelectFilter
-                    options={partnerOptions}
-                    selectedValues={filters.partner_organization_ids || []}
-                    onSelectionChange={(ids) => handleFilterChange('partner_organization_ids', ids)}
-                    placeholder="Select partners"
-                    maxDisplayCount={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Location</Label>
-                  <MultiSelectFilter
-                    options={locationOptions}
-                    selectedValues={filters.location_filter || []}
-                    onSelectionChange={(locations) => handleFilterChange('location_filter', locations)}
-                    placeholder={filters.partner_organization_ids?.length ? "Select locations" : "Select partner first"}
-                    disabled={!filters.partner_organization_ids?.length}
-                    maxDisplayCount={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Subcontractor Organization</Label>
-                  <MultiSelectFilter
-                    options={subcontractorOptions}
-                    selectedValues={filters.subcontractor_organization_ids || []}
-                    onSelectionChange={(ids) => handleFilterChange('subcontractor_organization_ids', ids)}
-                    placeholder="Select subcontractors"
-                    maxDisplayCount={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Trade</Label>
-                  <MultiSelectFilter
-                    options={tradeOptions}
-                    selectedValues={filters.trade_ids || []}
-                    onSelectionChange={(ids) => handleFilterChange('trade_ids', ids)}
-                    placeholder="Select trades"
-                    maxDisplayCount={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="submitted-by">Submitted By</Label>
-                  <Input
-                    id="submitted-by"
-                    value={filters.submitted_by || ''}
-                    onChange={(e) => handleFilterChange('submitted_by', e.target.value || undefined)}
-                    placeholder="Enter name or email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="work-order">Work Order</Label>
-                  <Input
-                    id="work-order"
-                    value={filters.work_order || ''}
-                    onChange={(e) => handleFilterChange('work_order', e.target.value || undefined)}
-                    placeholder="Enter work order number"
-                  />
-                </div>
-              </>
-            )
-          }}
-        />
-      </div>
-
-      {/* Row 2: View Controls & Actions */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex gap-2">
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
-          />
-          <ColumnVisibilityDropdown
-            columns={columnOptions}
-            onToggleColumn={toggleColumn}
-            onResetToDefaults={resetToDefaults}
-            visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-            totalCount={columnOptions.filter(c => c.canHide).length}
+              )
+            }}
           />
         </div>
-        <div className="flex gap-2">
-          <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
+
+        {/* Row 3: View Controls and Actions */}
+        <div className="flex justify-between items-center">
+          <div className="flex gap-2">
+            <ViewModeSwitcher
+              value={viewMode}
+              onValueChange={setViewMode}
+              allowedModes={allowedModes}
+            />
+          </div>
+          <div className="flex gap-2">
+            <ColumnVisibilityDropdown
+              columns={columnOptions}
+              onToggleColumn={toggleColumn}
+              onResetToDefaults={resetToDefaults}
+              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+              totalCount={columnOptions.filter(c => c.canHide).length}
+            />
+            <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
+          </div>
         </div>
       </div>
 
