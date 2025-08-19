@@ -497,9 +497,7 @@ const table = useReactTable({
             title="Filters"
             filterCount={filterCount}
             onClear={handleClearFilters}
-            searchSlot={null}
-            forceSheetOnDesktop={true}
-            sheetSide="right"
+            collapsible={true}
             sections={{
               essential: (
                 <>

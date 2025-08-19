@@ -11,10 +11,10 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -236,8 +236,6 @@ export default function BillingDashboard() {
   // Pipeline filter state
   const { data: pipelineData, isLoading: pipelineLoading, isError: pipelineError } = useWorkOrderLifecycle();
   const { data: trades } = useTrades();
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   
   // Default filters - show all work orders
   const initialFilters: PipelineFiltersValue = {
@@ -259,7 +257,6 @@ export default function BillingDashboard() {
 
   const handleClearFilters = () => {
     clearFilters();
-    setIsMobileFilterOpen(false);
   };
 
   // Debounce search input
@@ -868,20 +865,26 @@ if (error) {
                 storageKey="billing-pipeline-search"
               />
               
-              {/* Filter Button */}
-              <Button
-                variant="outline"
-                onClick={() => isMobile ? setIsMobileFilterOpen(true) : setIsDesktopFilterOpen(true)}
-                className="gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                Filters
-                {filterCount > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
-                    {filterCount}
-                  </span>
-                )}
-              </Button>
+              <AdminFilterBar
+                title="Filters"
+                filterCount={filterCount}
+                onClear={handleClearFilters}
+                collapsible={true}
+                sections={{
+                  essential: (
+                    <WorkOrderFilters
+                      filters={filters}
+                      searchTerm={searchTerm}
+                      onFiltersChange={setFilters}
+                      onSearchChange={(value) => {
+                        setSearchTerm(value);
+                        setFilters({ ...filters, search: value });
+                      }}
+                      onClearFilters={clearFilters}
+                    />
+                  )
+                }}
+              />
             </div>
             
             {/* Action Buttons Group */}
@@ -900,43 +903,6 @@ if (error) {
             isError={pipelineError}
           />
 
-          {/* Mobile Filter Sheet */}
-          <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-            <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Filter Pipeline</SheetTitle>
-              </SheetHeader>
-              <WorkOrderFilters
-                filters={filters}
-                searchTerm={searchTerm}
-                onFiltersChange={setFilters}
-                onSearchChange={(value) => {
-                  setSearchTerm(value);
-                  setFilters({ ...filters, search: value });
-                }}
-                onClearFilters={handleClearFilters}
-              />
-            </SheetContent>
-          </Sheet>
-
-          {/* Desktop Filter Sidebar */}
-          <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-            <SheetContent side="right" className="w-[480px] overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Filter Pipeline</SheetTitle>
-              </SheetHeader>
-              <WorkOrderFilters
-                filters={filters}
-                searchTerm={searchTerm}
-                onFiltersChange={setFilters}
-                onSearchChange={(value) => {
-                  setSearchTerm(value);
-                  setFilters({ ...filters, search: value });
-                }}
-                onClearFilters={clearFilters}
-              />
-            </SheetContent>
-          </Sheet>
         </TabsContent>
       </Tabs>
 

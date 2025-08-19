@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { PaginationState, SortingState, RowSelectionState } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+
 import { Plus, RotateCcw, CheckSquare, Filter } from 'lucide-react';
 import { useWorkOrders, useWorkOrderMutations, WorkOrder } from '@/hooks/useWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
@@ -33,6 +33,7 @@ import { useGlobalKeyboardShortcuts } from '@/hooks/useGlobalKeyboardShortcuts';
 import { KeyboardShortcutsTooltip } from '@/components/ui/keyboard-shortcuts-tooltip';
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 
 
 interface WorkOrderFiltersState {
@@ -105,8 +106,6 @@ export default function AdminWorkOrders() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(null);
   const [updatingRowIds, setUpdatingRowIds] = useState<Set<string>>(new Set());
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const isMobile = useIsMobile();
 
   // Column visibility management
@@ -409,10 +408,26 @@ export default function AdminWorkOrders() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1"
           />
-          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length > 0 && `(${Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length})`}
-          </Button>
+          <AdminFilterBar
+            title="Filters"
+            filterCount={Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length}
+            onClear={handleClearFilters}
+            collapsible={true}
+            sections={{
+              essential: (
+                <WorkOrderFilters
+                  filters={filters}
+                  searchTerm={searchTerm}
+                  onFiltersChange={setFilters}
+                  onSearchChange={(value) => {
+                    setSearchTerm(value);
+                    setFilters({ ...filters, search: value });
+                  }}
+                  onClearFilters={handleClearFilters}
+                />
+              )
+            }}
+          />
         </div>
         <div className="flex gap-2">
           <ViewModeSwitcher
@@ -453,10 +468,26 @@ export default function AdminWorkOrders() {
           className="w-full"
         />
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length > 0 && `(${Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length})`}
-          </Button>
+          <AdminFilterBar
+            title="Filters"
+            filterCount={Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length}
+            onClear={handleClearFilters}
+            collapsible={true}
+            sections={{
+              essential: (
+                <WorkOrderFilters
+                  filters={filters}
+                  searchTerm={searchTerm}
+                  onFiltersChange={setFilters}
+                  onSearchChange={(value) => {
+                    setSearchTerm(value);
+                    setFilters({ ...filters, search: value });
+                  }}
+                  onClearFilters={handleClearFilters}
+                />
+              )
+            }}
+          />
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
@@ -484,41 +515,6 @@ export default function AdminWorkOrders() {
         </div>
       </div>
 
-      {/* Desktop Filter Sheet */}
-      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-80">
-          <SheetHeader>
-            <SheetTitle>Filter Work Orders</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
-            <WorkOrderFilters
-              filters={filters}
-              searchTerm={searchTerm}
-              onFiltersChange={setFilters}
-              onSearchChange={setSearchTerm}
-              onClearFilters={handleClearFilters}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Mobile Filter Sheet */}
-      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[80vh]">
-          <SheetHeader>
-            <SheetTitle>Filter Work Orders</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
-            <WorkOrderFilters
-              filters={filters}
-              searchTerm={searchTerm}
-              onFiltersChange={setFilters}
-              onSearchChange={setSearchTerm}
-              onClearFilters={handleClearFilters}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
 
       {/* Work Order Table */}
       <WorkOrderTable
