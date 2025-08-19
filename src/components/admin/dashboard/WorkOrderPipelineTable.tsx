@@ -232,13 +232,23 @@ export function WorkOrderPipelineTable({ data, isLoading, isError }: WorkOrderPi
         
         const statusValue = getInvoiceStatusForBadge();
         
+        return <FinancialStatusBadge status={statusValue} size="sm" showIcon />;
+      },
+    },
+    {
+      id: 'amount',
+      header: 'Amount',
+      cell: ({ row }) => {
+        const item = row.original;
+        
         return (
-          <div className="space-y-1">
-            <FinancialStatusBadge status={statusValue} size="sm" showIcon />
-            {item.subcontractor_invoice_amount && (
-              <div className="text-xs text-muted-foreground">
+          <div className="text-right">
+            {item.subcontractor_invoice_amount ? (
+              <span className="font-medium">
                 ${item.subcontractor_invoice_amount.toLocaleString()}
-              </div>
+              </span>
+            ) : (
+              <span className="text-muted-foreground text-sm">—</span>
             )}
           </div>
         );
