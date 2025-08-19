@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   useReactTable,
@@ -16,172 +16,24 @@ import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { ComputedFinancialStatusBadge, FinancialStatusBadge, ReportStatusBadge, StatusBadge } from '@/components/ui/status-badge';
-import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
-import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
-import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { useAdminFilters } from '@/hooks/useAdminFilters';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
-import { ClipboardList, Copy, Filter } from 'lucide-react';
+import { ClipboardList, Copy } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
 import { cn } from '@/lib/utils';
-import { useTrades } from '@/hooks/useWorkOrders';
-
-// Filter interface
-interface PipelineFiltersValue {
-  search?: string;
-  operational_status?: string[];
-  financial_status?: string[];
-  partner_billing_status?: string[];
-  partner_organization_id?: string;
-  overdue?: boolean;
-  priority?: string[];
-  trade_id?: string[];
-  assigned_organization_id?: string[];
-  report_status?: string[];
-  location_filter?: string[];
-  date_from?: string;
-  date_to?: string;
-  age_range?: [number, number];
-}
-
-// Smart filter options with correct mappings
-const operationalStatusOptions = [
-  { value: 'new', label: 'New Orders' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'reports_pending', label: 'Reports Pending Review' },
-  { value: 'complete', label: 'Completed' }
-];
-
-const financialStatusOptions = [
-  { value: 'not_billed', label: 'No Invoice' },
-  { value: 'invoice_received', label: 'Invoice Received' },
-  { value: 'paid', label: 'Paid' }
-];
-
-const partnerBillingStatusOptions = [
-  { value: 'report_pending', label: 'Report Pending' },
-  { value: 'invoice_needed', label: 'Subcontractor Invoice Needed' },
-  { value: 'invoice_pending', label: 'Invoice Pending Approval' },
-  { value: 'ready_to_bill', label: 'Ready to Bill Partner' },
-  { value: 'billed', label: 'Partner Billed' },
-];
-
-const priorityOptions = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' }
-];
-
-const reportStatusOptions = [
-  { value: 'not_submitted', label: 'Not Submitted' },
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'reviewed', label: 'Under Review' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Needs Revision' }
-];
 
 interface WorkOrderPipelineTableProps {
-  data?: WorkOrderPipelineItem[];
-  isLoading?: boolean;
-  isError?: boolean;
+  data: WorkOrderPipelineItem[];
+  isLoading: boolean;
+  isError: boolean;
 }
 
-export function WorkOrderPipelineTable({ 
-  data: propData, 
-  isLoading: propIsLoading, 
-  isError: propIsError 
-}: WorkOrderPipelineTableProps = {}) {
+export function WorkOrderPipelineTable({ data, isLoading, isError }: WorkOrderPipelineTableProps) {
   const navigate = useNavigate();
-  const { data: fetchedData, isLoading: fetchedIsLoading, isError: fetchedIsError } = useWorkOrderLifecycle();
-  
-  // Use prop data if provided, otherwise use fetched data
-  const pipelineData = propData ?? fetchedData;
-  const isLoading = propIsLoading ?? fetchedIsLoading;
-  const isError = propIsError ?? fetchedIsError;
-  
-  const { data: trades } = useTrades();
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  
-  // Default filters - show all work orders
-  const initialFilters: PipelineFiltersValue = {
-    search: '',
-    operational_status: [], // Show all work orders by default
-    financial_status: [],
-    partner_billing_status: [],
-    partner_organization_id: '',
-    overdue: false,
-    priority: [],
-    trade_id: [],
-    assigned_organization_id: [],
-    report_status: [],
-    location_filter: []
-  };
-
-  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters(
-    'admin-pipeline-filters',
-    initialFilters,
-    { excludeKeys: [] }
-  );
-
-  const handleClearFilters = () => {
-    clearFilters();
-    setIsMobileFilterOpen(false);
-  };
-
-  // Debounce search input
-  const debouncedSearch = useDebounce(filters.search || '', 300);
-
-  // Extract unique locations for filter options
-  const locationOptions = useMemo(() => {
-    if (!pipelineData) return [];
-    
-    const locations = new Set<string>();
-    pipelineData.forEach(item => {
-      if (item.store_location) {
-        locations.add(item.store_location);
-      } else {
-        locations.add('No location');
-      }
-    });
-    
-    return Array.from(locations)
-      .sort()
-      .map(location => ({ value: location, label: location }));
-  }, [pipelineData]);
-
-  // Helper function to get operational status key for filtering
-  const getOperationalStatusKey = (item: WorkOrderPipelineItem): string => {
-    switch (item.status) {
-      case 'received':
-        return 'new';
-      case 'assigned':
-        return 'assigned';
-      case 'in_progress':
-        return 'in_progress';
-      case 'completed':
-        // Better logic: if work order is completed but reports need review/approval
-        if (item.report_status === 'submitted' || item.report_status === 'reviewed') {
-          return 'reports_pending';
-        }
-        // If report is approved or no report needed, it's complete
-        return 'complete';
-      default:
-        return 'new';
-    }
-  };
 
   // Helper function to get partner billing status based on workflow
   const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
@@ -208,80 +60,6 @@ export function WorkOrderPipelineTable({
     
     return 'invoice_needed'; // Default - needs subcontractor invoice
   };
-
-  // Apply client-side filtering with improved logic
-  const filteredData = useMemo(() => {
-    if (!pipelineData) return [];
-
-    return pipelineData.filter((item) => {
-      // Enhanced search filter (work order number, title, partner, location, assigned org)
-      if (debouncedSearch && debouncedSearch.trim()) {
-        const searchTerm = debouncedSearch.toLowerCase().trim();
-        const matchesSearch = 
-          item.work_order_number?.toLowerCase().includes(searchTerm) ||
-          item.title?.toLowerCase().includes(searchTerm) ||
-          item.partner_organization_name?.toLowerCase().includes(searchTerm) ||
-          item.store_location?.toLowerCase().includes(searchTerm) ||
-          item.assigned_organization_name?.toLowerCase().includes(searchTerm);
-        if (!matchesSearch) return false;
-      }
-
-      // Operational status filter
-      if (filters.operational_status && filters.operational_status.length > 0) {
-        const itemOperationalStatus = getOperationalStatusKey(item);
-        if (!filters.operational_status.includes(itemOperationalStatus)) return false;
-      }
-
-      // Financial status filter
-      if (filters.financial_status && filters.financial_status.length > 0) {
-        if (!filters.financial_status.includes(item.financial_status)) return false;
-      }
-
-      // Partner billing status filter
-      if (filters.partner_billing_status && filters.partner_billing_status.length > 0) {
-        const partnerBillingStatus = getPartnerBillingStatus(item);
-        if (!filters.partner_billing_status.includes(partnerBillingStatus)) return false;
-      }
-
-      // Partner organization filter
-      if (filters.partner_organization_id && filters.partner_organization_id.trim()) {
-        if (item.organization_id !== filters.partner_organization_id) return false;
-      }
-
-      // Overdue filter
-      if (filters.overdue) {
-        if (!item.is_overdue) return false;
-      }
-
-      // Priority filter (handle null values properly)
-      if (filters.priority && filters.priority.length > 0) {
-        const itemPriority = item.priority || 'medium';
-        if (!filters.priority.includes(itemPriority)) return false;
-      }
-
-      // Assigned organization filter (fix data type issue)
-      if (filters.assigned_organization_id && filters.assigned_organization_id.length > 0) {
-        if (!item.assigned_organization_id || 
-            !filters.assigned_organization_id.includes(item.assigned_organization_id)) return false;
-      }
-
-      // Report status filter
-      if (filters.report_status && filters.report_status.length > 0) {
-        const reportStatus = item.report_status || 'not_submitted';
-        if (!filters.report_status.includes(reportStatus)) return false;
-      }
-
-      // Location filter
-      if (filters.location_filter && filters.location_filter.length > 0) {
-        const itemLocation = item.store_location || 'No location';
-        if (!filters.location_filter.includes(itemLocation)) return false;
-      }
-
-      return true;
-    });
-  }, [pipelineData, debouncedSearch, filters]);
-
-  const data = useMemo(() => filteredData, [filteredData]);
 
   const columns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
     {
@@ -505,266 +283,13 @@ export function WorkOrderPipelineTable({
         <CardTitle>Work Order Pipeline</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Mobile Filter Button */}
-        <Button 
-          variant="outline" 
-          onClick={() => setIsMobileFilterOpen(true)}
-          className="w-full lg:hidden"
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          Filters {filterCount > 0 && `(${filterCount})`}
-        </Button>
-
-        {/* Desktop Filter Button */}
-        <div className="hidden lg:flex items-center justify-end">
-          <Button 
-            variant="outline" 
-            onClick={() => setIsDesktopFilterOpen(true)}
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-        </div>
-
-        {/* Mobile Bottom Sheet */}
-        <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-          <SheetContent side="bottom" className="h-[85vh]">
-            <SheetHeader>
-              <SheetTitle>Work Order Filters</SheetTitle>
-              {filterCount > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={handleClearFilters}
-                  className="absolute right-12 top-4"
-                >
-                  Clear All
-                </Button>
-              )}
-            </SheetHeader>
-            
-            <div className="mt-6 space-y-4 overflow-y-auto max-h-[calc(85vh-8rem)] px-1 pb-20">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Search</label>
-                <SmartSearchInput
-                  value={filters.search || ''}
-                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                  placeholder="Search by work order number, title, partner, location..."
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Partner Organization</label>
-                <OrganizationSelector
-                  value={filters.partner_organization_id || ''}
-                  onChange={(value) => setFilters(prev => ({ ...prev, partner_organization_id: value }))}
-                  placeholder="Select partner"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Operational Status</label>
-                <MultiSelectFilter
-                  options={operationalStatusOptions}
-                  selectedValues={filters.operational_status || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, operational_status: values }))}
-                  placeholder="Select operational status"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Financial Status</label>
-                <MultiSelectFilter
-                  options={financialStatusOptions}
-                  selectedValues={filters.financial_status || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, financial_status: values }))}
-                  placeholder="Select financial status"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Partner Billing Status</label>
-                <MultiSelectFilter
-                  options={partnerBillingStatusOptions}
-                  selectedValues={filters.partner_billing_status || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, partner_billing_status: values }))}
-                  placeholder="Select partner billing status"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Priority</label>
-                <MultiSelectFilter
-                  options={priorityOptions}
-                  selectedValues={filters.priority || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, priority: values }))}
-                  placeholder="Select priority"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Report Status</label>
-                <MultiSelectFilter
-                  options={reportStatusOptions}
-                  selectedValues={filters.report_status || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, report_status: values }))}
-                  placeholder="Select report status"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Location</label>
-                <MultiSelectFilter
-                  options={locationOptions}
-                  selectedValues={filters.location_filter || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, location_filter: values }))}
-                  placeholder="Select locations"
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="overdue-filter-mobile"
-                  checked={filters.overdue || false}
-                  onCheckedChange={(checked) => setFilters(prev => ({ ...prev, overdue: checked }))}
-                />
-                <Label htmlFor="overdue-filter-mobile" className="text-sm">Show only overdue orders</Label>
-              </div>
-            </div>
-
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
-              <Button 
-                onClick={() => setIsMobileFilterOpen(false)} 
-                className="w-full"
-                size="lg"
-              >
-                Apply Filters
-              </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        {/* Desktop Right Sidebar */}
-        <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-          <SheetContent side="right" className="w-[480px]">
-            <SheetHeader>
-              <SheetTitle>Work Order Filters</SheetTitle>
-              {filterCount > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={handleClearFilters}
-                  className="absolute right-12 top-4"
-                >
-                  Clear All
-                </Button>
-              )}
-            </SheetHeader>
-            
-            <div className="mt-6 space-y-4 overflow-y-auto max-h-[calc(100vh-8rem)] px-1">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Search</label>
-                <SmartSearchInput
-                  value={filters.search || ''}
-                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                  placeholder="Search by work order number, title, partner, location..."
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Partner Organization</label>
-                <OrganizationSelector
-                  value={filters.partner_organization_id || ''}
-                  onChange={(value) => setFilters(prev => ({ ...prev, partner_organization_id: value }))}
-                  placeholder="Select partner"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Operational Status</label>
-                <MultiSelectFilter
-                  options={operationalStatusOptions}
-                  selectedValues={filters.operational_status || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, operational_status: values }))}
-                  placeholder="Select operational status"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Financial Status</label>
-                <MultiSelectFilter
-                  options={financialStatusOptions}
-                  selectedValues={filters.financial_status || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, financial_status: values }))}
-                  placeholder="Select financial status"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Partner Billing Status</label>
-                <MultiSelectFilter
-                  options={partnerBillingStatusOptions}
-                  selectedValues={filters.partner_billing_status || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, partner_billing_status: values }))}
-                  placeholder="Select partner billing status"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Priority</label>
-                <MultiSelectFilter
-                  options={priorityOptions}
-                  selectedValues={filters.priority || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, priority: values }))}
-                  placeholder="Select priority"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Report Status</label>
-                <MultiSelectFilter
-                  options={reportStatusOptions}
-                  selectedValues={filters.report_status || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, report_status: values }))}
-                  placeholder="Select report status"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Location</label>
-                <MultiSelectFilter
-                  options={locationOptions}
-                  selectedValues={filters.location_filter || []}
-                  onSelectionChange={(values) => setFilters(prev => ({ ...prev, location_filter: values }))}
-                  placeholder="Select locations"
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="overdue-filter-desktop"
-                  checked={filters.overdue || false}
-                  onCheckedChange={(checked) => setFilters(prev => ({ ...prev, overdue: checked }))}
-                />
-                <Label htmlFor="overdue-filter-desktop" className="text-sm">Show only overdue orders</Label>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-
         {isLoading ? (
           <TableSkeleton rows={5} columns={4} />
         ) : data.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
-            title={filterCount > 0 ? "No matching work orders" : "No work orders found"}
-            description={
-              filterCount > 0 
-                ? "No work orders match your current filters. Try adjusting your criteria."
-                : "No work orders are currently in the pipeline."
-            }
+            title="No work orders found"
+            description="No work orders are currently in the pipeline."
             variant="card"
           />
         ) : (
@@ -874,27 +399,27 @@ export function WorkOrderPipelineTable({
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-3 py-1 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
                   Previous
-                </button>
+                </Button>
                 <div className="flex items-center gap-1">
                   <span className="text-sm text-muted-foreground">
                     Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-3 py-1 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           </>
