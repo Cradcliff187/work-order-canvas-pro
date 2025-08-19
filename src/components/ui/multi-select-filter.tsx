@@ -108,24 +108,19 @@ export function MultiSelectFilter({
                 No options found
               </div>
             ) : (
-            filteredOptions.map((option) => (
-              <div
-                key={option.value}
-                className="flex items-center space-x-2 p-2 hover:bg-accent rounded-sm"
-              >
-                <Checkbox
-                  checked={selectedValues.includes(option.value)}
-                  onCheckedChange={() => handleToggleOption(option.value)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <span 
-                  className="text-sm cursor-pointer"
+              filteredOptions.map((option) => (
+                <div
+                  key={option.value}
+                  className="flex items-center space-x-2 p-2 hover:bg-accent rounded-sm cursor-pointer"
                   onClick={() => handleToggleOption(option.value)}
                 >
-                  {option.label}
-                </span>
-              </div>
-            ))
+                  <Checkbox
+                    checked={selectedValues.includes(option.value)}
+                    onChange={() => handleToggleOption(option.value)}
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </div>
+              ))
             )}
           </div>
         </div>
