@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { ChevronDown, Search } from 'lucide-react';
+import { ChevronDown, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Option {
@@ -46,6 +46,10 @@ export function MultiSelectFilter({
     onSelectionChange(newValues);
   };
 
+  const handleClearAll = () => {
+    onSelectionChange([]);
+  };
+
   const getDisplayText = () => {
     if (selectedValues.length === 0) {
       return placeholder;
@@ -62,13 +66,11 @@ export function MultiSelectFilter({
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen} modal={true}>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           disabled={disabled}
-          role="combobox"
-          aria-expanded={isOpen}
           className={cn(
             "justify-between text-left font-normal min-w-[200px]",
             selectedValues.length === 0 && "text-muted-foreground",
@@ -79,33 +81,20 @@ export function MultiSelectFilter({
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-[300px] p-0 bg-popover" 
-        align="start"
-        sideOffset={5}
-        style={{ 
-          zIndex: 99999,
-          position: 'relative'
-        }}
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-        }}
-      >
+      <PopoverContent className="w-[300px] p-0 z-[60] bg-popover" align="start">
         <div className="p-3 space-y-3">
           {/* Search input */}
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
             />
           </div>
 
-          {/* Selection count */}
+          {/* Selection count - no individual clear button */}
           {selectedValues.length > 0 && (
             <div className="text-sm text-muted-foreground px-1">
               {selectedValues.length} selected
@@ -113,42 +102,30 @@ export function MultiSelectFilter({
           )}
 
           {/* Options list */}
-          <div 
-            className="max-h-[40vh] md:max-h-[300px] overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
-            style={{ position: 'relative', zIndex: 1 }}
-          >
+          <div className="max-h-[40vh] md:max-h-[300px] overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
             {filteredOptions.length === 0 ? (
               <div className="py-2 text-center text-sm text-muted-foreground">
                 No options found
               </div>
             ) : (
-              filteredOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center space-x-2 p-2 hover:bg-accent rounded-sm cursor-pointer select-none"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleToggleOption(option.value);
-                  }}
+            filteredOptions.map((option) => (
+              <div
+                key={option.value}
+                className="flex items-center space-x-2 p-2 hover:bg-accent rounded-sm"
+              >
+                <Checkbox
+                  checked={selectedValues.includes(option.value)}
+                  onCheckedChange={() => handleToggleOption(option.value)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span 
+                  className="text-sm cursor-pointer"
+                  onClick={() => handleToggleOption(option.value)}
                 >
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <Checkbox
-                      checked={selectedValues.includes(option.value)}
-                      onCheckedChange={() => {}}
-                      aria-label={option.label}
-                      className="pointer-events-none"
-                    />
-                  </div>
-                  <span className="text-sm flex-1 select-none">
-                    {option.label}
-                  </span>
-                </label>
-              ))
+                  {option.label}
+                </span>
+              </div>
+            ))
             )}
           </div>
         </div>
