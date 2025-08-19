@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Save, ArrowLeft, FileText, Loader2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useSuccessAnimation } from "@/hooks/useSuccessAnimation";
 import { DraftIndicator } from '@/components/DraftIndicator';
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,6 +35,7 @@ export default function SubmitReport() {
   const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { showSuccess } = useSuccessAnimation();
   const { profile } = useAuth();
   const { isEmployee } = useUserProfile();
   const { submitReport } = useWorkOrderReportSubmission();
@@ -110,6 +112,9 @@ export default function SubmitReport() {
         notes: formData.notes || undefined,
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
+
+      // Trigger success animation
+      showSuccess();
 
       toast({
         title: "Report Submitted",
