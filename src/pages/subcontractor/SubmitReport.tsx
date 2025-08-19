@@ -19,6 +19,7 @@ import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
+import { EnhancedUploadTrigger } from '@/components/ui/enhanced-upload-trigger';
 import type { PhotoAttachment } from '@/types/offline';
 
 interface FormData {
@@ -375,17 +376,13 @@ export default function SubmitReport() {
                 <Label>Upload Files</Label>
                 <UniversalUploadSheet
                   trigger={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full h-20 border-dashed border-2 hover:border-primary/50"
-                    >
+                    <EnhancedUploadTrigger className="w-full h-20 border-dashed border-2 hover:border-primary/50 bg-background">
                       <div className="text-center">
                         <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                         <p className="text-sm font-medium">Upload Files</p>
                         <p className="text-xs text-muted-foreground">Click to select photos & documents</p>
                       </div>
-                    </Button>
+                    </EnhancedUploadTrigger>
                   }
                   onFilesSelected={handleFilesSelected}
                   open={showUploadSheet}
