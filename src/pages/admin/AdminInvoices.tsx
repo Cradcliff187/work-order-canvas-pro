@@ -393,15 +393,6 @@ const table = useReactTable({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <ColumnVisibilityDropdown
-            columns={columnOptions}
-            onToggleColumn={toggleColumn}
-            onResetToDefaults={resetToDefaults}
-            variant="outline"
-            size="sm"
-            visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-            totalCount={columnOptions.filter(c => c.canHide).length}
-          />
           <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || (data?.data?.length ?? 0) === 0} />
           <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0} aria-label="Open bulk actions">
             Bulk Actions{selectedCount > 0 ? ` (${selectedCount})` : ''}
@@ -436,9 +427,20 @@ const table = useReactTable({
       {/* Results */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            {data?.totalCount || 0} Invoice{(data?.totalCount || 0) !== 1 ? 's' : ''}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>
+              {data?.totalCount || 0} Invoice{(data?.totalCount || 0) !== 1 ? 's' : ''}
+            </CardTitle>
+            <ColumnVisibilityDropdown
+              columns={columnOptions}
+              onToggleColumn={toggleColumn}
+              onResetToDefaults={resetToDefaults}
+              variant="outline"
+              size="sm"
+              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+              totalCount={columnOptions.filter(c => c.canHide).length}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
