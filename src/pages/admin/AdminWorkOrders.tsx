@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { PaginationState, SortingState, RowSelectionState } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, RotateCcw, CheckSquare } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Plus, RotateCcw, CheckSquare, Filter } from 'lucide-react';
 import { useWorkOrders, useWorkOrderMutations, WorkOrder } from '@/hooks/useWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -31,6 +32,7 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useGlobalKeyboardShortcuts';
 import { KeyboardShortcutsTooltip } from '@/components/ui/keyboard-shortcuts-tooltip';
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
 
 
 interface WorkOrderFiltersState {
@@ -103,6 +105,8 @@ export default function AdminWorkOrders() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(null);
   const [updatingRowIds, setUpdatingRowIds] = useState<Set<string>>(new Set());
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const isMobile = useIsMobile();
 
   // Column visibility management
@@ -382,7 +386,7 @@ export default function AdminWorkOrders() {
       <WorkOrderBreadcrumb />
       
       {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-3" role="banner" aria-label="Work orders management header">
+      <header className="flex flex-wrap items-center justify-between gap-3 mb-6" role="banner" aria-label="Work orders management header">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold">Work Orders Management</h1>
           <p className="text-muted-foreground">
@@ -394,8 +398,23 @@ export default function AdminWorkOrders() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0 max-w-full justify-end" role="toolbar" aria-label="Work order actions">
-          <KeyboardShortcutsTooltip />
+      </header>
+
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex gap-4 mb-6">
+        <div className="flex flex-1 gap-2">
+          <SmartSearchInput
+            placeholder="Search WO#, title, or location..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1"
+          />
+          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
+            <Filter className="h-4 w-4 mr-2" />
+            Filters {Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length > 0 && `(${Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length})`}
+          </Button>
+        </div>
+        <div className="flex gap-2">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
@@ -411,18 +430,7 @@ export default function AdminWorkOrders() {
             aria-pressed={bulkMode}
           >
             <CheckSquare className="w-4 h-4 mr-2" />
-            {/* Short labels on mobile */}
-            {bulkMode ? (
-              <>
-                <span className="hidden sm:inline">Exit Bulk Mode</span>
-                <span className="sm:hidden">Exit</span>
-              </>
-            ) : (
-              <>
-                <span className="hidden sm:inline">Bulk Actions</span>
-                <span className="sm:hidden">Bulk</span>
-              </>
-            )}
+            <span className="hidden sm:inline">Bulk Actions</span>
           </Button>
           <Button 
             size="sm" 
@@ -431,25 +439,86 @@ export default function AdminWorkOrders() {
             aria-label="Create new work order"
           >
             <Plus className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">New Work Order</span>
-            <span className="sm:hidden">New</span>
+            New Work Order
           </Button>
         </div>
-      </header>
+      </div>
 
-
-      {/* Filters */}
-      <section className="flex flex-col lg:flex-row gap-4" role="search" aria-label="Work order filters">
-        <div className="flex-1">
-          <WorkOrderFilters
-            filters={filters}
-            searchTerm={searchTerm}
-            onFiltersChange={setFilters}
-            onSearchChange={setSearchTerm}
-            onClearFilters={handleClearFilters}
+      {/* Mobile Layout */}
+      <div className="lg:hidden space-y-3 mb-6">
+        <SmartSearchInput
+          placeholder="Search WO#, title, or location..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full"
+        />
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters {Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length > 0 && `(${Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length})`}
+          </Button>
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+            className="h-9"
           />
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setBulkMode(!bulkMode)}
+            className={cn("h-9", bulkMode ? "border-primary text-primary" : "")}
+            aria-label={bulkMode ? 'Exit bulk selection mode' : 'Enter bulk selection mode'}
+            aria-pressed={bulkMode}
+          >
+            <CheckSquare className="w-4 h-4" />
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={() => setShowCreateModal(true)} 
+            className="h-9"
+            aria-label="Create new work order"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
         </div>
-      </section>
+      </div>
+
+      {/* Desktop Filter Sheet */}
+      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
+        <SheetContent side="right" className="w-80">
+          <SheetHeader>
+            <SheetTitle>Filter Work Orders</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6">
+            <WorkOrderFilters
+              filters={filters}
+              searchTerm={searchTerm}
+              onFiltersChange={setFilters}
+              onSearchChange={setSearchTerm}
+              onClearFilters={handleClearFilters}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Mobile Filter Sheet */}
+      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+        <SheetContent side="bottom" className="h-[80vh]">
+          <SheetHeader>
+            <SheetTitle>Filter Work Orders</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6">
+            <WorkOrderFilters
+              filters={filters}
+              searchTerm={searchTerm}
+              onFiltersChange={setFilters}
+              onSearchChange={setSearchTerm}
+              onClearFilters={handleClearFilters}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Work Order Table */}
       <WorkOrderTable
