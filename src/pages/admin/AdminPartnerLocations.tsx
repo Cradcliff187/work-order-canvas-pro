@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AddLocationModal } from '@/components/admin/partner-locations/AddLocationModal';
 import { EditLocationModal } from '@/components/admin/partner-locations/EditLocationModal';
@@ -28,6 +29,7 @@ export default function AdminPartnerLocations() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrganization, setSelectedOrganization] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [deletingLocation, setDeletingLocation] = useState<any>(null);
@@ -43,6 +45,7 @@ export default function AdminPartnerLocations() {
         if (typeof parsed.searchTerm === 'string') setSearchTerm(parsed.searchTerm);
         if (typeof parsed.selectedOrganization === 'string') setSelectedOrganization(parsed.selectedOrganization);
         if (typeof parsed.statusFilter === 'string') setStatusFilter(parsed.statusFilter);
+        if (Array.isArray(parsed.selectedLocations)) setSelectedLocations(parsed.selectedLocations);
       }
     } catch (e) {
       console.warn('Failed to parse partner locations filters', e);
@@ -53,10 +56,10 @@ export default function AdminPartnerLocations() {
     try {
       localStorage.setItem(
         'admin-partner-locations-filters-v1',
-        JSON.stringify({ searchTerm, selectedOrganization, statusFilter })
+        JSON.stringify({ searchTerm, selectedOrganization, statusFilter, selectedLocations })
       );
     } catch {}
-  }, [searchTerm, selectedOrganization, statusFilter]);
+  }, [searchTerm, selectedOrganization, statusFilter, selectedLocations]);
 // Fetch all partner locations (admin can see all)
   const { data: allLocations = [], isLoading: locationsLoading, error: locationsError, refetch: refetchLocations } = usePartnerLocations();
   const { data: organizations = [], isLoading: orgsLoading, error: orgsError, refetch: refetchOrgs } = useOrganizations();
@@ -74,14 +77,36 @@ export default function AdminPartnerLocations() {
   // Filter partner organizations
   const partnerOrganizations = organizations.filter(org => org.organization_type === 'partner');
 
+  // Create location options for filter
+  const locationOptions = useMemo(() => {
+    const options = [{ value: 'all', label: 'All Locations' }];
+    const sortedLocations = [...allLocations].sort((a, b) => {
+      const orgA = organizationMap[a.organization_id]?.name || '';
+      const orgB = organizationMap[b.organization_id]?.name || '';
+      if (orgA !== orgB) return orgA.localeCompare(orgB);
+      return a.location_name.localeCompare(b.location_name);
+    });
+    
+    sortedLocations.forEach(location => {
+      const org = organizationMap[location.organization_id];
+      options.push({
+        value: location.id,
+        label: `${location.location_name} (${location.location_number}) - ${org?.name || 'Unknown Org'}`
+      });
+    });
+    
+    return options;
+  }, [allLocations, organizationMap]);
+
   // Calculate active filter count
   const filterCount = useMemo(() => [
     searchTerm,
     selectedOrganization !== 'all' ? selectedOrganization : null,
-    statusFilter !== 'all' ? statusFilter : null
-  ].filter(Boolean).length, [searchTerm, selectedOrganization, statusFilter]);
+    statusFilter !== 'all' ? statusFilter : null,
+    selectedLocations.length > 0 ? selectedLocations : null
+  ].filter(Boolean).length, [searchTerm, selectedOrganization, statusFilter, selectedLocations]);
 
-  // Filter locations based on search term, organization, and status
+  // Filter locations based on search term, organization, status, and selected locations
   const filteredLocations = allLocations.filter(location => {
     const org = organizationMap[location.organization_id];
     const matchesSearch = searchTerm === '' || 
@@ -98,7 +123,10 @@ export default function AdminPartnerLocations() {
       (statusFilter === 'active' && location.is_active) ||
       (statusFilter === 'inactive' && !location.is_active);
 
-    return matchesSearch && matchesOrganization && matchesStatus;
+    const matchesSelectedLocations = selectedLocations.length === 0 || 
+      selectedLocations.includes(location.id);
+
+    return matchesSearch && matchesOrganization && matchesStatus && matchesSelectedLocations;
   });
 
   // Sorting state and helpers
@@ -330,7 +358,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
           <SheetHeader>
             <SheetTitle>Location Filters</SheetTitle>
           </SheetHeader>
-          <div className="mt-6 space-y-4 overflow-y-auto">
+          <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-4 py-4 pb-20">
             <div className="space-y-2">
               <Label className="text-sm font-medium">Search</Label>
               <SmartSearchInput
@@ -355,6 +383,16 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Locations</Label>
+              <MultiSelectFilter
+                placeholder="Select locations"
+                options={locationOptions}
+                selectedValues={selectedLocations}
+                onSelectionChange={setSelectedLocations}
+                maxDisplayCount={2}
+              />
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-medium">Status</Label>
@@ -378,11 +416,11 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
 
       {/* Desktop Right Sidebar */}
       <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-[420px]">
+        <SheetContent side="right" className="w-[480px] flex flex-col">
           <SheetHeader>
             <SheetTitle>Location Filters</SheetTitle>
           </SheetHeader>
-          <div className="mt-6 space-y-4 overflow-y-auto">
+          <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-4 py-4">
             <div className="space-y-2">
               <Label className="text-sm font-medium">Search</Label>
               <SmartSearchInput
@@ -409,6 +447,16 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
               </Select>
             </div>
             <div className="space-y-2">
+              <Label className="text-sm font-medium">Locations</Label>
+              <MultiSelectFilter
+                placeholder="Select locations"
+                options={locationOptions}
+                selectedValues={selectedLocations}
+                onSelectionChange={setSelectedLocations}
+                maxDisplayCount={2}
+              />
+            </div>
+            <div className="space-y-2">
               <Label className="text-sm font-medium">Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full">
@@ -427,6 +475,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                 setSearchTerm('');
                 setSelectedOrganization('all');
                 setStatusFilter('all');
+                setSelectedLocations([]);
                 try {
                   localStorage.removeItem('admin-partner-locations-filters-v1');
                   localStorage.removeItem('admin-partner-locations-search');
