@@ -268,7 +268,7 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
                 </div>
               </SheetHeader>
 
-              <div className="flex-1 overflow-y-auto space-y-6 py-4">
+              <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-6 py-4 pb-20">
                 {/* Essential Filters Section */}
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-foreground border-b pb-2">Essential Filters</h3>
@@ -334,7 +334,7 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
             </Button>
           </SheetTrigger>
           
-          <SheetContent side="right" className="w-[420px] flex flex-col">
+          <SheetContent side="right" className="w-[480px] flex flex-col">
             <SheetHeader>
               <div className="flex items-center justify-between">
                 <SheetTitle>Filter Invoices</SheetTitle>
@@ -355,7 +355,7 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
               </div>
             </SheetHeader>
 
-            <div className="flex-1 overflow-y-auto space-y-6 py-4">
+            <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-6 py-4">
               {/* Essential Filters Section */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-foreground border-b pb-2">Essential Filters</h3>

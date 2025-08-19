@@ -361,7 +361,7 @@ export function ReportsFiltersV2({
               <SheetTitle>Filter Reports</SheetTitle>
             </SheetHeader>
             
-            <div className="flex-1 overflow-y-auto space-y-6 py-4">
+            <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-6 py-4 pb-20">
               <div>
                 <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
                 {essentialFilters}
@@ -403,12 +403,12 @@ export function ReportsFiltersV2({
             )}
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" className="w-[420px] flex flex-col">
+        <SheetContent side="right" className="w-[480px] flex flex-col">
           <SheetHeader>
             <SheetTitle>Filter Reports</SheetTitle>
           </SheetHeader>
           
-          <div className="flex-1 overflow-y-auto space-y-6 py-4">
+          <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-6 py-4">
             <div>
               <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
               {essentialFilters}
