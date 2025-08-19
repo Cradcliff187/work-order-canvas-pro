@@ -83,7 +83,6 @@ export default function AdminWorkOrders() {
   });
   // Define initial filters with proper types
   const initialFilters: WorkOrderFiltersValue = {
-    search: undefined,
     status: [],
     priority: [],
     partner_organization_ids: [],
@@ -102,12 +101,6 @@ export default function AdminWorkOrders() {
   // Clean and validate filters to fix corruption
   const cleanFilters = useMemo(() => {
     const cleanedFilters = { ...filters };
-    
-    // Fix corrupted search field
-    if (typeof cleanedFilters.search === 'object' && cleanedFilters.search !== null) {
-      console.log('🔧 Fixing corrupted search field:', cleanedFilters.search);
-      cleanedFilters.search = undefined;
-    }
     
     // Fix corrupted date_range field
     if (cleanedFilters.date_range && typeof cleanedFilters.date_range === 'object' && 

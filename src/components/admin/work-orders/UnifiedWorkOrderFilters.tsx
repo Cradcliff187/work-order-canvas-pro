@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
@@ -15,7 +14,6 @@ import { useAllAssignees } from '@/hooks/useEmployeesForAssignment';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 
 export interface WorkOrderFiltersValue {
-  search?: string;
   status?: string[];
   priority?: string[];
   partner_organization_ids?: string[];
@@ -131,12 +129,6 @@ export function UnifiedWorkOrderFilters({
     });
   };
 
-  const handleSearchChange = (value: string) => {
-    onFiltersChange({
-      ...filters,
-      search: value.trim() || undefined
-    });
-  };
 
   const handleDateFromChange = (date: Date | undefined) => {
     onFiltersChange({
@@ -331,17 +323,6 @@ export function UnifiedWorkOrderFilters({
 
   return (
     <div className="space-y-4">
-      {/* Search always visible */}
-      <SmartSearchInput
-        placeholder="Search work orders..."
-        value={filters.search || ''}
-        onChange={(e) => handleSearchChange(e.target.value)}
-        onSearchSubmit={handleSearchChange}
-        storageKey="admin-work-orders-search"
-        aria-label="Search work orders"
-        className="w-full"
-      />
-      
       {/* Essential Filters */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-muted-foreground">Essential</h3>
