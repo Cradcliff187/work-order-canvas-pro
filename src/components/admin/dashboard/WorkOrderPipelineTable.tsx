@@ -92,9 +92,25 @@ const reportStatusOptions = [
   { value: 'rejected', label: 'Needs Revision' }
 ];
 
-export function WorkOrderPipelineTable() {
+interface WorkOrderPipelineTableProps {
+  data?: WorkOrderPipelineItem[];
+  isLoading?: boolean;
+  isError?: boolean;
+}
+
+export function WorkOrderPipelineTable({ 
+  data: propData, 
+  isLoading: propIsLoading, 
+  isError: propIsError 
+}: WorkOrderPipelineTableProps = {}) {
   const navigate = useNavigate();
-  const { data: pipelineData, isLoading, isError } = useWorkOrderLifecycle();
+  const { data: fetchedData, isLoading: fetchedIsLoading, isError: fetchedIsError } = useWorkOrderLifecycle();
+  
+  // Use prop data if provided, otherwise use fetched data
+  const pipelineData = propData ?? fetchedData;
+  const isLoading = propIsLoading ?? fetchedIsLoading;
+  const isError = propIsError ?? fetchedIsError;
+  
   const { data: trades } = useTrades();
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
