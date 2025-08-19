@@ -482,160 +482,163 @@ const table = useReactTable({
         </div>
       </div>
 
-      {/* Single Control Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-6">
-      <div className="flex-1">
-        <SmartSearchInput
-          placeholder="Search reports by work order, subcontractor..."
-          value={searchTerm}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          onSearchSubmit={handleSearchChange}
-          storageKey="admin-reports-search"
-          className="w-full"
+      {/* Row 1: Search & Filters */}
+      <div className="flex gap-3 mb-3">
+        <div className="flex-1 max-w-md">
+          <SmartSearchInput
+            placeholder="Search reports by work order, subcontractor..."
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            onSearchSubmit={handleSearchChange}
+            storageKey="admin-reports-search"
+            className="w-full"
+          />
+        </div>
+        <AdminFilterBar
+          title="Filters"
+          filterCount={filterCount}
+          onClear={handleClearFilters}
+          collapsible={true}
+          sections={{
+            essential: (
+              <>
+                <div className="space-y-2">
+                  <Label>Report Status</Label>
+                  <MultiSelectFilter
+                    options={statusOptions}
+                    selectedValues={filters.status || []}
+                    onSelectionChange={(status) => handleFilterChange('status', status)}
+                    placeholder="Select status"
+                    maxDisplayCount={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Date Range</Label>
+                  <div className="flex gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !filters.date_from && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={filters.date_from ? new Date(filters.date_from) : undefined}
+                          onSelect={handleDateFromChange}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !filters.date_to && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={filters.date_to ? new Date(filters.date_to) : undefined}
+                          onSelect={handleDateToChange}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </>
+            ),
+            advanced: (
+              <>
+                <div className="space-y-2">
+                  <Label>Partner Organization</Label>
+                  <MultiSelectFilter
+                    options={partnerOptions}
+                    selectedValues={filters.partner_organization_ids || []}
+                    onSelectionChange={(ids) => handleFilterChange('partner_organization_ids', ids)}
+                    placeholder="Select partners"
+                    maxDisplayCount={1}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Location</Label>
+                  <MultiSelectFilter
+                    options={locationOptions}
+                    selectedValues={filters.location_filter || []}
+                    onSelectionChange={(locations) => handleFilterChange('location_filter', locations)}
+                    placeholder={filters.partner_organization_ids?.length ? "Select locations" : "Select partner first"}
+                    disabled={!filters.partner_organization_ids?.length}
+                    maxDisplayCount={1}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subcontractor Organization</Label>
+                  <MultiSelectFilter
+                    options={subcontractorOptions}
+                    selectedValues={filters.subcontractor_organization_ids || []}
+                    onSelectionChange={(ids) => handleFilterChange('subcontractor_organization_ids', ids)}
+                    placeholder="Select subcontractors"
+                    maxDisplayCount={1}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Trade</Label>
+                  <MultiSelectFilter
+                    options={tradeOptions}
+                    selectedValues={filters.trade_ids || []}
+                    onSelectionChange={(ids) => handleFilterChange('trade_ids', ids)}
+                    placeholder="Select trades"
+                    maxDisplayCount={1}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="submitted-by">Submitted By</Label>
+                  <Input
+                    id="submitted-by"
+                    value={filters.submitted_by || ''}
+                    onChange={(e) => handleFilterChange('submitted_by', e.target.value || undefined)}
+                    placeholder="Enter name or email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="work-order">Work Order</Label>
+                  <Input
+                    id="work-order"
+                    value={filters.work_order || ''}
+                    onChange={(e) => handleFilterChange('work_order', e.target.value || undefined)}
+                    placeholder="Enter work order number"
+                  />
+                </div>
+              </>
+            )
+          }}
         />
       </div>
-        <div className="flex items-center gap-2">
-          <AdminFilterBar
-            title="Filters"
-            filterCount={filterCount}
-            onClear={handleClearFilters}
-            collapsible={true}
-            sections={{
-              essential: (
-                <>
-                  <div className="space-y-2">
-                    <Label>Report Status</Label>
-                    <MultiSelectFilter
-                      options={statusOptions}
-                      selectedValues={filters.status || []}
-                      onSelectionChange={(status) => handleFilterChange('status', status)}
-                      placeholder="Select status"
-                      maxDisplayCount={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date Range</Label>
-                    <div className="flex gap-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !filters.date_from && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-[70]" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={filters.date_from ? new Date(filters.date_from) : undefined}
-                            onSelect={handleDateFromChange}
-                            initialFocus
-                            className="p-3 pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !filters.date_to && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-[70]" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={filters.date_to ? new Date(filters.date_to) : undefined}
-                            onSelect={handleDateToChange}
-                            initialFocus
-                            className="p-3 pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                </>
-              ),
-              advanced: (
-                <>
-                  <div className="space-y-2">
-                    <Label>Partner Organization</Label>
-                    <MultiSelectFilter
-                      options={partnerOptions}
-                      selectedValues={filters.partner_organization_ids || []}
-                      onSelectionChange={(ids) => handleFilterChange('partner_organization_ids', ids)}
-                      placeholder="Select partners"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Location</Label>
-                    <MultiSelectFilter
-                      options={locationOptions}
-                      selectedValues={filters.location_filter || []}
-                      onSelectionChange={(locations) => handleFilterChange('location_filter', locations)}
-                      placeholder={filters.partner_organization_ids?.length ? "Select locations" : "Select partner first"}
-                      disabled={!filters.partner_organization_ids?.length}
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Subcontractor Organization</Label>
-                    <MultiSelectFilter
-                      options={subcontractorOptions}
-                      selectedValues={filters.subcontractor_organization_ids || []}
-                      onSelectionChange={(ids) => handleFilterChange('subcontractor_organization_ids', ids)}
-                      placeholder="Select subcontractors"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Trade</Label>
-                    <MultiSelectFilter
-                      options={tradeOptions}
-                      selectedValues={filters.trade_ids || []}
-                      onSelectionChange={(ids) => handleFilterChange('trade_ids', ids)}
-                      placeholder="Select trades"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="submitted-by">Submitted By</Label>
-                    <Input
-                      id="submitted-by"
-                      value={filters.submitted_by || ''}
-                      onChange={(e) => handleFilterChange('submitted_by', e.target.value || undefined)}
-                      placeholder="Enter name or email"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="work-order">Work Order</Label>
-                    <Input
-                      id="work-order"
-                      value={filters.work_order || ''}
-                      onChange={(e) => handleFilterChange('work_order', e.target.value || undefined)}
-                      placeholder="Enter work order number"
-                    />
-                  </div>
-                </>
-              )
-            }}
-          />
+
+      {/* Row 2: View Controls & Actions */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex gap-2">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
             allowedModes={allowedModes}
-            className="h-9"
           />
           <ColumnVisibilityDropdown
             columns={columnOptions}
@@ -644,6 +647,8 @@ const table = useReactTable({
             visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
             totalCount={columnOptions.filter(c => c.canHide).length}
           />
+        </div>
+        <div className="flex gap-2">
           <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
         </div>
       </div>
