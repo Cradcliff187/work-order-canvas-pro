@@ -405,34 +405,34 @@ const table = useReactTable({
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden lg:flex gap-4 mb-6">
-        <div className="flex flex-1 gap-2">
-          <SmartSearchInput
-            placeholder="Search by work order, location, materials..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="flex-1"
-          />
+      <div className="hidden lg:space-y-4 mb-6">
+        <SmartSearchInput
+          placeholder="Search by work order, location, materials..."
+          value={searchTerm}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="w-full"
+        />
+        <div className="flex justify-between items-center">
           <ReportsFiltersV2 
             value={filters} 
             onChange={handleFiltersChange}
           />
-        </div>
-        <div className="flex gap-2">
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
-            className="h-9"
-          />
-          <ColumnVisibilityDropdown
-            columns={columnOptions}
-            onToggleColumn={toggleColumn}
-            onResetToDefaults={resetToDefaults}
-            visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-            totalCount={columnOptions.filter(c => c.canHide).length}
-          />
-          <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
+          <div className="flex gap-2">
+            <ViewModeSwitcher
+              value={viewMode}
+              onValueChange={setViewMode}
+              allowedModes={allowedModes}
+              className="h-9"
+            />
+            <ColumnVisibilityDropdown
+              columns={columnOptions}
+              onToggleColumn={toggleColumn}
+              onResetToDefaults={resetToDefaults}
+              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+              totalCount={columnOptions.filter(c => c.canHide).length}
+            />
+            <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
+          </div>
         </div>
       </div>
 

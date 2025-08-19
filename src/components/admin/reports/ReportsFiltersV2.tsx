@@ -35,9 +35,6 @@ export interface ReportsFiltersValue {
 interface ReportsFiltersV2Props {
   value: ReportsFiltersValue;
   onChange: (filters: ReportsFiltersValue) => void;
-  searchTerm?: string;
-  onSearchChange?: (search: string) => void;
-  onClear?: () => void;
 }
 
 const statusOptions = [
@@ -49,10 +46,7 @@ const statusOptions = [
 
 export function ReportsFiltersV2({
   value,
-  onChange,
-  searchTerm = '',
-  onSearchChange,
-  onClear
+  onChange
 }: ReportsFiltersV2Props) {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -125,16 +119,6 @@ export function ReportsFiltersV2({
   console.log('Debug ReportsFiltersV2 - locationOptions:', locationOptions);
 
   // Render functions for reusable filters
-  const renderSearchFilter = () => (
-    <div className="space-y-2">
-      <Label htmlFor="search">Search Reports</Label>
-      <Input
-        value={searchTerm}
-        onChange={(e) => onSearchChange?.(e.target.value)}
-        placeholder="Search by work order, location, materials..."
-      />
-    </div>
-  );
 
   const renderStatusFilter = () => (
     <div className="space-y-2">
@@ -279,7 +263,6 @@ export function ReportsFiltersV2({
 
   const essentialFilters = (
     <div className="space-y-4">
-      {isMobile ? null : renderSearchFilter()}
       {renderStatusFilter()}
       {renderDateRangeFilter()}
     </div>
@@ -296,16 +279,18 @@ export function ReportsFiltersV2({
     </div>
   );
 
+  const handleClearFilters = () => {
+    onChange({});
+    setIsSheetOpen(false);
+    setIsDesktopSheetOpen(false);
+  };
+
   const sheetFooter = (
     <SheetFooter className="flex flex-row gap-2">
-      {activeFilterCount > 0 && onClear && (
+      {activeFilterCount > 0 && (
         <Button
           variant="outline"
-          onClick={() => {
-            onClear();
-            setIsSheetOpen(false);
-            setIsDesktopSheetOpen(false);
-          }}
+          onClick={handleClearFilters}
           className="flex-1"
         >
           Clear All
@@ -325,63 +310,9 @@ export function ReportsFiltersV2({
 
   if (isMobile) {
     return (
-      <div className="space-y-4">
-        {/* Always visible search on mobile */}
-        <Card className="p-4">
-          {renderSearchFilter()}
-        </Card>
-
-        {/* Mobile bottom sheet */}
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" className="w-full">
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[85vh] flex flex-col">
-            <SheetHeader>
-              <SheetTitle>Filter Reports</SheetTitle>
-            </SheetHeader>
-            
-            <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-6 py-4 pb-20">
-              <div>
-                <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
-                {essentialFilters}
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h3 className="text-sm font-medium mb-3">Advanced Filters</h3>
-                {advancedFilters}
-              </div>
-            </div>
-
-            {sheetFooter}
-          </SheetContent>
-        </Sheet>
-      </div>
-    );
-  }
-
-  // Desktop layout
-  return (
-    <div className="space-y-4">
-      {/* Always visible search on desktop */}
-      <Card className="p-4">
-        {renderSearchFilter()}
-      </Card>
-
-      {/* Desktop right sidebar */}
-      <Sheet open={isDesktopSheetOpen} onOpenChange={setIsDesktopSheetOpen}>
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetTrigger asChild>
-          <Button variant="outline">
+          <Button variant="outline" className="w-full">
             <Filter className="mr-2 h-4 w-4" />
             Filters
             {activeFilterCount > 0 && (
@@ -391,12 +322,12 @@ export function ReportsFiltersV2({
             )}
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" className="w-[480px] flex flex-col">
+        <SheetContent side="bottom" className="h-[85vh] flex flex-col">
           <SheetHeader>
             <SheetTitle>Filter Reports</SheetTitle>
           </SheetHeader>
           
-          <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-6 py-4">
+          <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-6 py-4 pb-20">
             <div>
               <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
               {essentialFilters}
@@ -413,6 +344,44 @@ export function ReportsFiltersV2({
           {sheetFooter}
         </SheetContent>
       </Sheet>
-    </div>
+    );
+  }
+
+  // Desktop layout - just the filters button
+  return (
+    <Sheet open={isDesktopSheetOpen} onOpenChange={setIsDesktopSheetOpen}>
+      <SheetTrigger asChild>
+        <Button variant="outline">
+          <Filter className="mr-2 h-4 w-4" />
+          Filters
+          {activeFilterCount > 0 && (
+            <Badge variant="secondary" className="ml-2">
+              {activeFilterCount}
+            </Badge>
+          )}
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-[480px] flex flex-col">
+        <SheetHeader>
+          <SheetTitle>Filter Reports</SheetTitle>
+        </SheetHeader>
+        
+        <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-6 py-4">
+          <div>
+            <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
+            {essentialFilters}
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <h3 className="text-sm font-medium mb-3">Advanced Filters</h3>
+            {advancedFilters}
+          </div>
+        </div>
+
+        {sheetFooter}
+      </SheetContent>
+    </Sheet>
   );
 }
