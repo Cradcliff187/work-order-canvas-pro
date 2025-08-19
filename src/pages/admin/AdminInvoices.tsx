@@ -393,9 +393,6 @@ const table = useReactTable({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="hidden sm:block text-sm text-muted-foreground mr-2">
-            Page {page} of {totalPages}
-          </div>
           <ColumnVisibilityDropdown
             columns={columnOptions}
             onToggleColumn={toggleColumn}
