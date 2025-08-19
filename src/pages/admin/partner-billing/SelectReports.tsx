@@ -19,6 +19,8 @@ import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PartnerBillingFilters, PartnerBillingFiltersValue } from '@/components/admin/partner-billing/PartnerBillingFilters';
 import { usePartnerBillingFilters, usePartnerBillingFilterCount } from '@/hooks/usePartnerBillingFilters';
+
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { usePartnerUnbilledReports } from '@/hooks/usePartnerUnbilledReports';
 import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration';
 import { usePartnerReportStats } from '@/hooks/usePartnerReportStats';
@@ -391,30 +393,93 @@ export default function SelectReports() {
           </Collapsible>
         )}
 
-        {/* Enhanced Filter System */}
+        {/* Modern Control Bar */}
         {selectedPartnerId && (
-          <div className="mb-6">
-            <PartnerBillingFilters
-              value={filters}
-              onChange={setFilters}
-              onClear={clearFilters}
-              filterCount={filterCount}
-              partnerOrgId={selectedPartnerId}
-            />
-          </div>
-        )}
+          <>
+            {/* Desktop Layout */}
+            <div className="hidden lg:flex gap-4 mb-6">
+              <div className="flex flex-1 gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search reports..."
+                    value={filters.search || ''}
+                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                    className="pl-10"
+                  />
+                </div>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Filter className="h-4 w-4" />
+                      Filter{filterCount > 0 && ` (${filterCount})`}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[400px] sm:w-[540px]">
+                    <PartnerBillingFilters
+                      value={filters}
+                      onChange={setFilters}
+                      onClear={clearFilters}
+                      filterCount={filterCount}
+                      partnerOrgId={selectedPartnerId}
+                    />
+                  </SheetContent>
+                </Sheet>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="default"
+                  disabled={selectedReportIds.size === 0}
+                  onClick={handleGenerateInvoice}
+                  className="gap-2"
+                >
+                  <Receipt className="h-4 w-4" />
+                  Generate Invoice ({selectedReportIds.size})
+                </Button>
+              </div>
+            </div>
 
-        {/* Action Bar */}
-        {selectedPartnerId && (
-          <div className="flex justify-end mb-6">
-            <Button 
-              variant="default"
-              disabled={selectedReportIds.size === 0}
-              onClick={handleGenerateInvoice}
-            >
-              Generate Invoice ({selectedReportIds.size})
-            </Button>
-          </div>
+            {/* Mobile Layout */}
+            <div className="lg:hidden space-y-3 mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search reports..."
+                  value={filters.search || ''}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" className="flex-1 gap-2">
+                      <Filter className="h-4 w-4" />
+                      Filter{filterCount > 0 && ` (${filterCount})`}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="h-[85vh]">
+                    <PartnerBillingFilters
+                      value={filters}
+                      onChange={setFilters}
+                      onClear={clearFilters}
+                      filterCount={filterCount}
+                      partnerOrgId={selectedPartnerId}
+                    />
+                  </SheetContent>
+                </Sheet>
+                <Button 
+                  variant="default"
+                  disabled={selectedReportIds.size === 0}
+                  onClick={handleGenerateInvoice}
+                  className="flex-1 gap-2"
+                >
+                  <Receipt className="h-4 w-4" />
+                  Generate Invoice ({selectedReportIds.size})
+                </Button>
+              </div>
+            </div>
+          </>
         )}
 
         {/* Reports Display */}
