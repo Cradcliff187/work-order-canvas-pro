@@ -487,6 +487,7 @@ export default function AdminWorkOrders() {
               filters={filters}
               onFiltersChange={setFilters}
               onClear={handleClearFilters}
+              filterCount={filterCount}
             />
           </div>
         </SheetContent>
@@ -503,6 +504,7 @@ export default function AdminWorkOrders() {
               filters={filters}
               onFiltersChange={setFilters}
               onClear={handleClearFilters}
+              filterCount={filterCount}
             />
           </div>
         </SheetContent>

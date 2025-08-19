@@ -29,6 +29,7 @@ interface UnifiedWorkOrderFiltersProps {
   filters: WorkOrderFiltersValue;
   onFiltersChange: (filters: WorkOrderFiltersValue) => void;
   onClear: () => void;
+  filterCount: number;
 }
 
 const statusOptions = [
@@ -49,7 +50,8 @@ const priorityOptions = [
 export function UnifiedWorkOrderFilters({
   filters,
   onFiltersChange,
-  onClear
+  onClear,
+  filterCount
 }: UnifiedWorkOrderFiltersProps) {
   // Data fetching hooks
   const { data: organizations } = useOrganizationsForWorkOrders();
@@ -75,26 +77,7 @@ export function UnifiedWorkOrderFilters({
   const [dateFromOpen, setDateFromOpen] = useState(false);
   const [dateToOpen, setDateToOpen] = useState(false);
 
-  // Calculate active filter count
-  const filterCount = useMemo(() => {
-    let count = 0;
-    
-    // Count array filters that have values
-    if (filters.status?.length) count++;
-    if (filters.priority?.length) count++;
-    if (filters.partner_organization_ids?.length) count++;
-    if (filters.completed_by?.length) count++;
-    if (filters.trade_id?.length) count++;
-    if (filters.location_filter?.length) count++;
-    
-    // Count string filters
-    if (filters.search?.trim()) count++;
-    
-    // Count date range
-    if (filters.date_range?.from || filters.date_range?.to) count++;
-    
-    return count;
-  }, [filters]);
+  // filterCount is now passed as prop from parent component
 
   // Prepare option arrays
   const organizationOptions = organizations?.map(org => ({

@@ -16,14 +16,13 @@ interface UnifiedUserFiltersProps {
   filters: UserFiltersValue;
   onFiltersChange: (filters: UserFiltersValue) => void;
   onClear: () => void;
+  filterCount: number;
 }
 
 const USER_ROLES = [
   { value: 'admin', label: 'Admin' },
-  { value: 'property_manager', label: 'Property Manager' },
-  { value: 'maintenance', label: 'Maintenance' },
-  { value: 'tenant', label: 'Tenant' },
-  { value: 'vendor', label: 'Vendor' }
+  { value: 'employee', label: 'Employee' },
+  { value: 'member', label: 'Member' }
 ];
 
 const USER_STATUSES = [
@@ -36,18 +35,12 @@ const USER_STATUSES = [
 export function UnifiedUserFilters({
   filters,
   onFiltersChange,
-  onClear
+  onClear,
+  filterCount
 }: UnifiedUserFiltersProps) {
   const { data: organizations = [] } = useOrganizations();
 
-  // Calculate filter count
-  const filterCount = useMemo(() => {
-    let count = 0;
-    if (filters.role && filters.role.length > 0) count++;
-    if (filters.status && filters.status.length > 0) count++;
-    if (filters.organization_id) count++;
-    return count;
-  }, [filters]);
+  // filterCount is now passed as prop from parent component
 
   // Filter change handlers
   const handleArrayFilterChange = (key: keyof UserFiltersValue, values: string[]) => {
