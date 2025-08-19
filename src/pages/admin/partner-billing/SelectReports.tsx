@@ -33,6 +33,7 @@ import { exportToCSV, ExportColumn } from '@/lib/utils/export';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
 import { calculateEstimateVariance, formatVariance } from '@/lib/validations/estimate-validations';
+import { PartnerUnbilledReport } from '@/hooks/usePartnerUnbilledReports';
 import { cn } from '@/lib/utils';
 import {
   Breadcrumb,
@@ -235,6 +236,23 @@ export default function SelectReports() {
     if (dateRange.start || dateRange.end) count++;
     return count;
   }, [searchQuery, amountRange, dateRange]);
+
+  // Helper function for variance calculation
+  const getVarianceData = (report: PartnerUnbilledReport) => {
+    const estimateAmount = report.work_orders?.internal_estimate_amount || 0;
+    const actualAmount = report.approved_subcontractor_invoice_amount || 0;
+    
+    if (estimateAmount === 0) {
+      return { hasEstimate: false, variance: null };
+    }
+    
+    const variance = calculateEstimateVariance(estimateAmount, actualAmount);
+    return { 
+      hasEstimate: true, 
+      variance,
+      percentageVariance: variance.percentage 
+    };
+  };
 
   const handleExportSelected = (exportFormat: 'csv' | 'excel') => {
     try {
@@ -661,14 +679,14 @@ export default function SelectReports() {
                                   </div>
                                 </TableCell>
                               )}
-                              {columnVisibility.description.visible && (
+                              {columnVisibility.description && (
                                 <TableCell>
                                   <div className="max-w-[200px] truncate" title={report.work_orders?.description || 'No description'}>
                                     {report.work_orders?.description || 'No description'}
                                   </div>
                                 </TableCell>
                               )}
-                              {columnVisibility.subcontractor.visible && (
+                              {columnVisibility.subcontractor && (
                                 <TableCell>
                                   {report.subcontractor_organization ? (
                                     <div className="space-y-1">
@@ -687,14 +705,14 @@ export default function SelectReports() {
                                   )}
                                 </TableCell>
                               )}
-                              {columnVisibility.location.visible && (
+                              {columnVisibility.location && (
                                 <TableCell>
                                   <div className="max-w-[120px] truncate" title={report.work_orders?.store_location || 'No location'}>
                                     {report.work_orders?.store_location || '-'}
                                   </div>
                                 </TableCell>
                               )}
-                              {columnVisibility.submitted.visible && (
+                              {columnVisibility.submitted && (
                                 <TableCell>
                                   <div className="space-y-1">
                                     <div>{format(new Date(report.submitted_at), 'MMM dd, yyyy')}</div>
@@ -704,7 +722,7 @@ export default function SelectReports() {
                                   </div>
                                 </TableCell>
                               )}
-                              {columnVisibility.invoices.visible && (
+                              {columnVisibility.invoices && (
                                 <TableCell>
                                   {reportInvoiceDetails && reportInvoiceDetails.invoice_count > 0 ? (
                                     <Tooltip>
@@ -728,36 +746,44 @@ export default function SelectReports() {
                                   )}
                                 </TableCell>
                               )}
-                              {columnVisibility.amount.visible && (
+                              {columnVisibility.amount && (
                                 <TableCell className="text-right">
                                   <div className="space-y-1">
                                     <div className="font-semibold">
                                       {formatCurrency(report.approved_subcontractor_invoice_amount || 0)}
                                     </div>
-                                    {report.work_orders?.estimated_cost && (
+                                    {report.work_orders?.internal_estimate_amount && (
                                       <div className="text-xs text-muted-foreground">
-                                        Est: {formatCurrency(report.work_orders.estimated_cost)}
+                                        Est: {formatCurrency(report.work_orders.internal_estimate_amount)}
                                       </div>
                                     )}
                                   </div>
                                 </TableCell>
                               )}
-                              {columnVisibility.variance.visible && (
+                              {columnVisibility.variance && (
                                 <TableCell className="text-right">
-                                  {variance.hasEstimate ? (
-                                    <div className={cn(
-                                      "text-sm font-medium",
-                                      variance.percentageVariance > 10 && "text-destructive",
-                                      variance.percentageVariance < -10 && "text-green-600"
-                                    )}>
-                                      {formatVariance(variance)}
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground">No estimate</span>
-                                  )}
+                                  {(() => {
+                                    const estimateAmount = report.work_orders?.internal_estimate_amount || 0;
+                                    const actualAmount = report.approved_subcontractor_invoice_amount || 0;
+                                    
+                                    if (estimateAmount === 0) {
+                                      return <span className="text-xs text-muted-foreground">No estimate</span>;
+                                    }
+                                    
+                                    const variance = calculateEstimateVariance(estimateAmount, actualAmount);
+                                    return (
+                                      <div className={cn(
+                                        "text-sm font-medium",
+                                        variance.percentage > 10 && "text-destructive",
+                                        variance.percentage < -10 && "text-green-600"
+                                      )}>
+                                        {formatVariance(variance.percentage)}
+                                      </div>
+                                    );
+                                  })()}
                                 </TableCell>
                               )}
-                              {columnVisibility.status.visible && (
+                              {columnVisibility.status && (
                                 <TableCell>
                                   <ReportStatusBadge status="approved" />
                                 </TableCell>
@@ -774,23 +800,21 @@ export default function SelectReports() {
                 <div className="md:hidden space-y-3">
                   {filteredAndSortedReports.map((report) => {
                     const isSelected = selectedReportIds.has(report.id);
-                    const variance = calculateEstimateVariance(report.work_orders?.estimated_cost, report.approved_subcontractor_invoice_amount);
 
                     return (
                       <MobileTableCard
                         key={report.id}
                         title={report.work_orders?.work_order_number || 'N/A'}
                         subtitle={report.work_orders?.title}
-                        fields={[
-                          { label: 'Location', value: report.work_orders?.store_location || '-' },
-                          { label: 'Subcontractor', value: report.subcontractor_organization?.name || 
-                            (report.subcontractor ? `${report.subcontractor.first_name} ${report.subcontractor.last_name}` : 'N/A') },
-                          { label: 'Submitted', value: format(new Date(report.submitted_at), 'MMM dd, yyyy') },
-                          { label: 'Amount', value: formatCurrency(report.approved_subcontractor_invoice_amount || 0) },
-                          { label: 'Status', value: 'Approved' }
-                        ]}
-                        isSelected={isSelected}
-                        onSelect={(selected) => handleReportToggle(report.id, selected)}
+                        data={{
+                          'Location': report.work_orders?.store_location || '-',
+                          'Subcontractor': report.subcontractor_organization?.name || 
+                            (report.subcontractor ? `${report.subcontractor.first_name} ${report.subcontractor.last_name}` : 'N/A'),
+                          'Submitted': format(new Date(report.submitted_at), 'MMM dd, yyyy'),
+                          'Amount': formatCurrency(report.approved_subcontractor_invoice_amount || 0),
+                          'Status': 'Approved'
+                        }}
+                        onClick={() => handleReportToggle(report.id, !isSelected)}
                         actions={[
                           {
                             label: isSelected ? 'Deselect' : 'Select',
@@ -798,15 +822,16 @@ export default function SelectReports() {
                             onClick: () => handleReportToggle(report.id, !isSelected),
                             show: true,
                           },
-                          {
-                            label: 'Deselect',
-                            icon: X,
-                            onClick: () => handleReportToggle(report.id, false),
-                            show: isSelected,
-                          },
                         ]}
                         className={isSelected ? 'bg-primary/10 border-l-2 border-l-primary' : ''}
-                      />
+                      >
+                        {isSelected && (
+                          <div className="flex items-center gap-2 text-xs text-primary">
+                            <CheckSquare className="w-3 h-3" />
+                            Selected for invoice
+                          </div>
+                        )}
+                      </MobileTableCard>
                     );
                   })}
                 </div>
