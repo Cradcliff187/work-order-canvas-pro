@@ -59,6 +59,8 @@ interface UserFilters {
 export default function AdminUsers() {
   const { toast } = useToast();
   
+  // Search state for the top control bar
+  const [searchTerm, setSearchTerm] = useState('');
   
   // View mode configuration
   const { viewMode, setViewMode, allowedModes } = useViewMode({
@@ -87,6 +89,12 @@ export default function AdminUsers() {
   );
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  // Sync search term with filters
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setFilters(prev => ({ ...prev, search: value }));
+  };
 
 
   // Fetch data
@@ -267,34 +275,67 @@ export default function AdminUsers() {
               : 'Manage system users and their access'}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0 overflow-x-auto no-scrollbar -mx-1 px-1" role="toolbar" aria-label="User actions">
+      </div>
+
+      {/* Desktop Top Control Bar */}
+      <div className="hidden lg:flex gap-4 mb-6">
+        <div className="flex flex-1 gap-2">
+          <SmartSearchInput
+            placeholder="Search users by name or email..."
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="flex-1"
+            storageKey="admin-users-search"
+          />
+          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
+            <Filter className="h-4 w-4 mr-2" />
+            Filters {filterCount > 0 && `(${filterCount})`}
+          </Button>
+        </div>
+        <div className="flex gap-2">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
             allowedModes={allowedModes}
-            className="h-9"
           />
-          <Button onClick={() => setCreateUserModalOpen(true)} className="h-9">
-            <Plus className="w-4 h-4 mr-2" />
+          <ColumnVisibilityDropdown
+            columns={visibilityOptions}
+            onToggleColumn={toggleColumn}
+            onResetToDefaults={resetToDefaults}
+            visibleCount={getVisibleColumnCount()}
+          />
+          <ExportDropdown onExport={handleExport} />
+          <Button onClick={() => setCreateUserModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
             New User
           </Button>
         </div>
       </div>
 
-      {/* Mobile Filter Button */}
-      <div className="lg:hidden mb-4">
-        <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="w-full">
-          <Filter className="h-4 w-4 mr-2" />
-          Filters {filterCount > 0 && `(${filterCount})`}
-        </Button>
-      </div>
-
-      {/* Desktop Filter Button */}
-      <div className="hidden lg:block mb-6">
-        <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
-          <Filter className="h-4 w-4 mr-2" />
-          Filters {filterCount > 0 && `(${filterCount})`}
-        </Button>
+      {/* Mobile Top Control Bar */}
+      <div className="lg:hidden space-y-3 mb-6">
+        <SmartSearchInput
+          placeholder="Search users by name or email..."
+          value={searchTerm}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="w-full"
+          storageKey="admin-users-search"
+        />
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters {filterCount > 0 && `(${filterCount})`}
+          </Button>
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+          />
+          <Button onClick={() => setCreateUserModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New User
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Bottom Sheet */}
@@ -304,18 +345,6 @@ export default function AdminUsers() {
             <SheetTitle>User Filters</SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4 overflow-y-auto">
-            <div className="space-y-2">
-              <Label htmlFor="mobile-search">Search</Label>
-              <SmartSearchInput
-                id="mobile-search"
-                value={filters.search || ''}
-                onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-                onSearchSubmit={(q) => setFilters((prev) => ({ ...prev, search: q }))}
-                placeholder="Search users by name, email, or organization…"
-                storageKey="admin-users-search"
-                className="w-full"
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="mobile-role">Role</Label>
               <Select
@@ -391,18 +420,6 @@ export default function AdminUsers() {
           </SheetHeader>
           <div className="mt-6 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="desktop-search">Search</Label>
-              <SmartSearchInput
-                id="desktop-search"
-                value={filters.search || ''}
-                onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-                onSearchSubmit={(q) => setFilters((prev) => ({ ...prev, search: q }))}
-                placeholder="Search users by name, email, or organization…"
-                storageKey="admin-users-search"
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="desktop-role">Role</Label>
               <Select
                 value={filters.roleFilter ? filters.roleFilter : 'all'}
@@ -471,15 +488,6 @@ export default function AdminUsers() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Users</CardTitle>
           <div className="flex items-center gap-2">
-            <ColumnVisibilityDropdown
-              columns={visibilityOptions}
-              onToggleColumn={toggleColumn}
-              onResetToDefaults={resetToDefaults}
-              size="sm"
-              variant="outline"
-              visibleCount={getVisibleColumnCount()}
-              totalCount={visibilityOptions.filter(c => c.canHide).length}
-            />
             <ExportDropdown
                onExport={handleExport}
                size="sm"
