@@ -285,6 +285,9 @@ export default function AdminUsers() {
             onChange={(e) => handleSearchChange(e.target.value)}
             className="flex-1"
             storageKey="admin-users-search"
+            workOrders={[]}
+            assignees={[]}
+            locations={[]}
           />
           <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
             <Filter className="h-4 w-4 mr-2" />
@@ -319,6 +322,9 @@ export default function AdminUsers() {
           onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full"
           storageKey="admin-users-search"
+          workOrders={[]}
+          assignees={[]}
+          locations={[]}
         />
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
@@ -339,7 +345,7 @@ export default function AdminUsers() {
 
       {/* Mobile Bottom Sheet */}
       <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[85vh]">
+        <SheetContent side="bottom" className="h-[85vh] z-[100]">
           <SheetHeader>
             <SheetTitle>User Filters</SheetTitle>
           </SheetHeader>
@@ -386,7 +392,7 @@ export default function AdminUsers() {
                 className="w-full"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 isolate">
               <Label>Organization Type</Label>
               <MultiSelectFilter
                 options={[
@@ -413,11 +419,11 @@ export default function AdminUsers() {
 
       {/* Desktop Right Sidebar */}
       <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-[420px]">
+        <SheetContent side="right" className="w-[420px] z-[100]">
           <SheetHeader>
             <SheetTitle>User Filters</SheetTitle>
           </SheetHeader>
-          <div className="mt-6 space-y-4 relative z-[60]">
+          <div className="mt-6 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="desktop-role">Role</Label>
               <Select
@@ -460,7 +466,7 @@ export default function AdminUsers() {
                 className="w-full"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 isolate">
               <Label>Organization Type</Label>
               <MultiSelectFilter
                 options={[
