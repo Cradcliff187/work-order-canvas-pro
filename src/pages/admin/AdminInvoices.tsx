@@ -37,7 +37,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { ChevronLeft, ChevronRight, FileText, DollarSign, Plus, RotateCcw, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, DollarSign, Plus, RotateCcw, CheckCircle, XCircle, Filter } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
@@ -54,6 +54,8 @@ import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import type { VisibilityState } from '@tanstack/react-table';
 
 export default function AdminInvoices() {
@@ -118,6 +120,10 @@ export default function AdminInvoices() {
   };
 
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
+
+  // Filter sheet state
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
@@ -392,37 +398,115 @@ const table = useReactTable({
             Manage and review subcontractor invoices
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || (data?.data?.length ?? 0) === 0} />
-          <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0} aria-label="Open bulk actions">
-            Bulk Actions{selectedCount > 0 ? ` (${selectedCount})` : ''}
-          </Button>
-          <Button onClick={() => navigate('/admin/submit-invoice')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Invoice
-          </Button>
+      </div>
+
+      {/* Top Control Bar */}
+      <div className="space-y-4">
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Search and Filter Group */}
+          <div className="flex flex-1 gap-2">
+            <SmartSearchInput
+              placeholder="Search invoices..."
+              value={filters.search || ''}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              className="flex-1"
+              storageKey="admin-invoices-search"
+            />
+            
+            {/* Filter Button */}
+            <Button
+              variant="outline"
+              onClick={() => isMobile ? setIsMobileFilterOpen(true) : setIsDesktopFilterOpen(true)}
+              className="gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              Filters
+              {filterCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+                  {filterCount}
+                </span>
+              )}
+            </Button>
+          </div>
+          
+          {/* Action Buttons Group */}
+          <div className="flex gap-2 flex-wrap lg:flex-nowrap">
+            <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || (data?.data?.length ?? 0) === 0} />
+            <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0} aria-label="Open bulk actions">
+              Bulk Actions{selectedCount > 0 ? ` (${selectedCount})` : ''}
+            </Button>
+            <Button onClick={() => navigate('/admin/submit-invoice')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Invoice
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <InvoiceFilters
-        value={filters as any}
-        onChange={(next) => {
-          // Guard against same value updates
-          if (JSON.stringify(filters) === JSON.stringify(next)) {
-            console.log('⚠️ Filter unchanged, skipping');
-            return;
-          }
-          
-          setFilters(next as any);
-          setPage(1);
-        }}
-        onClear={() => { 
-          clearFilters(); 
-          setPage(1); 
-        }}
-        filterCount={filterCount}
-      />
+      {/* Mobile Filter Sheet */}
+      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+        <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Invoice Filters</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            <InvoiceFilters
+              value={filters as any}
+              onChange={(next) => {
+                if (JSON.stringify(filters) === JSON.stringify(next)) return;
+                setFilters(next as any);
+                setPage(1);
+              }}
+              onClear={() => { 
+                clearFilters(); 
+                setPage(1); 
+              }}
+              filterCount={filterCount}
+            />
+            <Button 
+              onClick={() => setIsMobileFilterOpen(false)} 
+              className="w-full"
+            >
+              Apply Filters
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop Filter Sheet */}
+      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
+        <SheetContent side="right" className="w-[480px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Invoice Filters</SheetTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                clearFilters();
+                setPage(1);
+              }}
+              className="absolute right-12 top-4"
+            >
+              Clear All
+            </Button>
+          </SheetHeader>
+          <div className="mt-6">
+            <InvoiceFilters
+              value={filters as any}
+              onChange={(next) => {
+                if (JSON.stringify(filters) === JSON.stringify(next)) return;
+                setFilters(next as any);
+                setPage(1);
+              }}
+              onClear={() => { 
+                clearFilters(); 
+                setPage(1); 
+              }}
+              filterCount={filterCount}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Results */}
       <Card>
