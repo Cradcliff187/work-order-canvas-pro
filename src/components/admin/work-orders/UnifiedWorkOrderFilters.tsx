@@ -177,37 +177,14 @@ export function UnifiedWorkOrderFilters({
     });
   };
 
-  // Prepare suggestions for SmartSearchInput
-  const workOrderSuggestions = useMemo(() => {
-    // Could be populated from recent work orders or saved searches
-    return [];
-  }, []);
-
-  const assigneeSuggestions = useMemo(() => {
-    return assignees?.map(emp => ({
-      id: emp.id,
-      label: `${emp.first_name} ${emp.last_name}`.trim() || emp.email,
-      subtitle: emp.email
-    })) || [];
-  }, [assignees]);
-
-  const locationSuggestions = useMemo(() => {
-    return locationOptions.map(loc => ({
-      id: loc.value,
-      label: loc.label
-    }));
-  }, [locationOptions]);
 
   // Search slot component
   const searchSlot = (
     <SmartSearchInput
-      placeholder="Search work orders, locations, or descriptions..."
+      placeholder="Search work orders..."
       value={filters.search || ''}
       onChange={(e) => handleSearchChange(e.target.value)}
       onSearchSubmit={handleSearchChange}
-      workOrders={workOrderSuggestions}
-      assignees={assigneeSuggestions}
-      locations={locationSuggestions}
       storageKey="admin-work-orders-search"
       aria-label="Search work orders"
       className="w-full"
