@@ -409,7 +409,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
               </div>
             </SheetHeader>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            <div className="mt-6 space-y-4 overflow-y-auto max-h-[calc(85vh-8rem)] pb-20">
               {/* Essential filters */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
@@ -437,7 +437,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
               )}
             </div>
 
-            <SheetFooter className="p-4 border-t bg-background">
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
               <Button 
                 onClick={() => setIsSheetOpen(false)}
                 className="w-full h-11"
@@ -445,7 +445,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
                 Apply Filters
                 {activeFilterCount > 0 && ` (${activeFilterCount})`}
               </Button>
-            </SheetFooter>
+            </div>
           </SheetContent>
         </Sheet>
       </div>
@@ -509,7 +509,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
             </div>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          <div className="overflow-y-auto max-h-[calc(100vh-8rem)] p-4 space-y-6">
             {/* Essential filters */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
