@@ -4,16 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import MDEditor from '@uiw/react-md-editor';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, FileText, Loader2, AlertTriangle, Users, RotateCcw } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { ArrowLeft, FileText, Loader2, AlertTriangle, Users, RotateCcw, Paperclip, Eye, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useSuccessAnimation } from "@/hooks/useSuccessAnimation";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useAdminReportSubmission } from '@/hooks/useAdminReportSubmission';
 import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
+import { EnhancedUploadTrigger } from '@/components/ui/enhanced-upload-trigger';
 import { useAuth } from '@/contexts/AuthContext';
+import { ReportPreviewModal } from '@/components/reports/ReportPreviewModal';
+import { StepProgressIndicator } from '@/components/ui/step-progress-indicator';
 
 interface FormData {
   workPerformed: string;
@@ -28,7 +33,15 @@ export default function AdminSubmitReport() {
   const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const steps = [
+    { label: "Work Details", icon: FileText },
+    { label: "Attachments", icon: Paperclip },
+    { label: "Review", icon: Eye },
+    { label: "Submit", icon: Send }
+  ];
   const { profile } = useAuth();
+  const { showSuccess } = useSuccessAnimation();
   
   const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(workOrderId!);
   const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
@@ -44,6 +57,18 @@ export default function AdminSubmitReport() {
   });
 
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Dynamic step calculation based on form state
+  const getCurrentStep = () => {
+    if (isSubmitting) return 4;
+    if (showPreview) return 3;
+    if (formData.attachments.length > 0) return 2;
+    if (formData.workPerformed.trim()) return 2;
+    return 1;
+  };
+
+  const currentStep = getCurrentStep();
 
   if (!workOrderId) {
     return (
@@ -128,7 +153,7 @@ export default function AdminSubmitReport() {
     }
 
     if (!showConfirmation) {
-      setShowConfirmation(true);
+      setShowPreview(true);
       return;
     }
 
@@ -163,6 +188,9 @@ export default function AdminSubmitReport() {
         notes: formData.notes || undefined,
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
+
+      // Trigger success animation
+      showSuccess();
 
       // Success message based on assignment type
       const getSuccessMessage = () => {
@@ -309,7 +337,24 @@ export default function AdminSubmitReport() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <>
+      <ReportPreviewModal
+        isOpen={showPreview}
+        onEdit={() => setShowPreview(false)}
+        onConfirm={() => {
+          setShowPreview(false);
+          setShowConfirmation(true);
+        }}
+        formData={{
+          workPerformed: formData.workPerformed,
+          materialsUsed: formData.materialsUsed,
+          hoursWorked: formData.hoursWorked,
+          notes: formData.notes,
+          attachments: formData.attachments
+        }}
+      />
+      
+      <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button 
@@ -331,6 +376,13 @@ export default function AdminSubmitReport() {
           </p>
         </div>
       </div>
+
+      <StepProgressIndicator
+        currentStep={currentStep}
+        totalSteps={steps.length}
+        steps={steps}
+        className="mb-8"
+      />
 
       {/* Assignment Status Display */}
       {!isCompletelyUnassigned && (
@@ -408,13 +460,14 @@ export default function AdminSubmitReport() {
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
                 <Label htmlFor="workPerformed">Work Performed *</Label>
-                <Textarea
-                  id="workPerformed"
-                  placeholder="Describe the work performed in detail..."
+                <MDEditor
                   value={formData.workPerformed}
-                  onChange={(e) => setFormData(prev => ({ ...prev, workPerformed: e.target.value }))}
-                  className="min-h-[120px]"
-                  required
+                  onChange={(value) => setFormData(prev => ({ ...prev, workPerformed: value || '' }))}
+                  data-color-mode="light"
+                  height={200}
+                  preview="edit"
+                  hideToolbar={false}
+                  visibleDragbar={false}
                 />
               </div>
 
@@ -474,17 +527,15 @@ export default function AdminSubmitReport() {
                 <Label>Upload Files</Label>
                 <UniversalUploadSheet
                   trigger={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full h-20 border-dashed border-2 hover:border-primary/50"
-                    >
-                      <div className="text-center">
-                        <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm font-medium">Upload Files</p>
-                        <p className="text-xs text-muted-foreground">Click to select photos & documents</p>
-                      </div>
-                    </Button>
+                    <EnhancedUploadTrigger>
+                      <Button variant="outline" className="w-full h-20 border-dashed border-2 hover:border-primary/50 bg-background">
+                        <div className="text-center">
+                          <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm font-medium">Upload Files</p>
+                          <p className="text-xs text-muted-foreground">Click to select photos & documents</p>
+                        </div>
+                      </Button>
+                    </EnhancedUploadTrigger>
                   }
                   onFilesSelected={handleFilesSelected}
                   accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
@@ -525,6 +576,7 @@ export default function AdminSubmitReport() {
           </StandardFormLayout.Actions>
         </StandardFormLayout>
       </form>
-    </div>
+      </div>
+    </>
   );
 }

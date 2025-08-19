@@ -1542,11 +1542,15 @@ export type Database = {
           approved_subcontractor_invoice_amount: number | null
           hours_worked: number | null
           id: string
+          invoice_amount: number | null
+          invoice_number: string | null
           materials_used: string | null
           notes: string | null
           partner_billed_amount: number | null
           partner_billed_at: string | null
           partner_invoice_id: string | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
           photos: Json | null
           review_notes: string | null
           reviewed_at: string | null
@@ -1563,11 +1567,15 @@ export type Database = {
           approved_subcontractor_invoice_amount?: number | null
           hours_worked?: number | null
           id?: string
+          invoice_amount?: number | null
+          invoice_number?: string | null
           materials_used?: string | null
           notes?: string | null
           partner_billed_amount?: number | null
           partner_billed_at?: string | null
           partner_invoice_id?: string | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
           photos?: Json | null
           review_notes?: string | null
           reviewed_at?: string | null
@@ -1584,11 +1592,15 @@ export type Database = {
           approved_subcontractor_invoice_amount?: number | null
           hours_worked?: number | null
           id?: string
+          invoice_amount?: number | null
+          invoice_number?: string | null
           materials_used?: string | null
           notes?: string | null
           partner_billed_amount?: number | null
           partner_billed_at?: string | null
           partner_invoice_id?: string | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
           photos?: Json | null
           review_notes?: string | null
           reviewed_at?: string | null

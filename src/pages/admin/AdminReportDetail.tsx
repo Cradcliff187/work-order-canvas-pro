@@ -31,6 +31,8 @@ import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ReportFileManager } from '@/components/ReportFileManager';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
 export default function AdminReportDetail() {
@@ -39,6 +41,8 @@ export default function AdminReportDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [reviewNotes, setReviewNotes] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const { toast } = useToast();
   
   // Edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
@@ -77,6 +81,48 @@ export default function AdminReportDetail() {
   const { assignSubcontractor, isAssigning } = useSubcontractorAssignment();
   const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
 
+
+  const handleDownloadPDF = async () => {
+    if (!id || !isValidId) return;
+    
+    setIsGeneratingPDF(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-report-pdf', {
+        body: { reportId: id }
+      });
+      
+      if (error) {
+        console.error('PDF generation error:', error);
+        toast({
+          title: "PDF Generation Failed",
+          description: "There was an error generating the PDF. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (data.success && data.pdfUrl) {
+        // Open PDF in new tab
+        window.open(data.pdfUrl, '_blank');
+        toast({
+          title: "PDF Generated Successfully",
+          description: "The PDF has been generated and opened in a new tab.",
+        });
+      } else {
+        throw new Error(data.message || 'PDF generation failed');
+      }
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast({
+        title: "PDF Generation Failed",
+        description: "There was an error generating the PDF. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
 
   const handleReview = (status: 'approved' | 'rejected') => {
     if (!id || !isValidId) return;
@@ -212,6 +258,15 @@ export default function AdminReportDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleDownloadPDF}
+            disabled={isGeneratingPDF}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
+          </Button>
           {isEditMode ? (
             <>
               <Button 

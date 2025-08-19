@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,19 +11,32 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useAdminFilters } from '@/hooks/useAdminFilters';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
+import { useTrades } from '@/hooks/useWorkOrders';
+import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { 
   FileText, 
   Plus, 
   DollarSign,
   Clock,
   ReceiptText,
-  Building2
+  Building2,
+  Filter,
+  Download
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { KPICard } from '@/components/analytics/KPICard';
-import PipelineDashboard from '@/pages/admin/PipelineDashboard';
+import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
+import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { Invoice } from '@/hooks/useInvoices';
 
@@ -152,6 +165,56 @@ function useBillingMetrics() {
   });
 }
 
+// Filter interface for Pipeline tab - adapted to WorkOrderFilters format
+interface PipelineFiltersValue {
+  status?: string[];
+  trade_id?: string[];
+  partner_organization_ids?: string[];
+  completed_by?: string[];
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+  location_filter?: string[];
+}
+
+// Filter options for Pipeline
+const operationalStatusOptions = [
+  { value: 'new', label: 'New Orders' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'reports_pending', label: 'Reports Pending Review' },
+  { value: 'complete', label: 'Completed' }
+];
+
+const financialStatusOptions = [
+  { value: 'not_billed', label: 'No Invoice' },
+  { value: 'invoice_received', label: 'Invoice Received' },
+  { value: 'paid', label: 'Paid' }
+];
+
+const partnerBillingStatusOptions = [
+  { value: 'report_pending', label: 'Report Pending' },
+  { value: 'invoice_needed', label: 'Subcontractor Invoice Needed' },
+  { value: 'invoice_pending', label: 'Invoice Pending Approval' },
+  { value: 'ready_to_bill', label: 'Ready to Bill Partner' },
+  { value: 'billed', label: 'Partner Billed' },
+];
+
+const priorityOptions = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' }
+];
+
+const reportStatusOptions = [
+  { value: 'not_submitted', label: 'Not Submitted' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'reviewed', label: 'Under Review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Needs Revision' }
+];
+
 export default function BillingDashboard() {
   const navigate = useNavigate();
   const { data: metrics, isLoading, error, refetch } = useBillingMetrics();
@@ -169,6 +232,161 @@ export default function BillingDashboard() {
   // Modal state for invoice details
   const [selectedInvoice, setSelectedInvoice] = React.useState<Invoice | null>(null);
   const [invoiceModalOpen, setInvoiceModalOpen] = React.useState(false);
+
+  // Pipeline filter state
+  const { data: pipelineData, isLoading: pipelineLoading, isError: pipelineError } = useWorkOrderLifecycle();
+  const { data: trades } = useTrades();
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  
+  // Default filters - show all work orders
+  const initialFilters: PipelineFiltersValue = {
+    status: [],
+    trade_id: [],
+    partner_organization_ids: [],
+    completed_by: [],
+    search: '',
+    date_from: undefined,
+    date_to: undefined,
+    location_filter: []
+  };
+
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters(
+    'billing-pipeline-filters',
+    initialFilters,
+    { excludeKeys: [] }
+  );
+
+  const handleClearFilters = () => {
+    clearFilters();
+    setIsMobileFilterOpen(false);
+  };
+
+  // Debounce search input
+  const debouncedSearch = useDebounce(filters.search || '', 300);
+  
+  // Track search separately for WorkOrderFilters
+  const [searchTerm, setSearchTerm] = useState(filters.search || '');
+
+  // Extract unique locations for filter options
+  const locationOptions = useMemo(() => {
+    if (!pipelineData) return [];
+    
+    const locations = new Set<string>();
+    pipelineData.forEach(item => {
+      if (item.store_location) {
+        locations.add(item.store_location);
+      } else {
+        locations.add('No location');
+      }
+    });
+    
+    return Array.from(locations)
+      .sort()
+      .map(location => ({ value: location, label: location }));
+  }, [pipelineData]);
+
+  // Helper function to get operational status key for filtering
+  const getOperationalStatusKey = (item: WorkOrderPipelineItem): string => {
+    switch (item.status) {
+      case 'received':
+        return 'new';
+      case 'assigned':
+        return 'assigned';
+      case 'in_progress':
+        return 'in_progress';
+      case 'completed':
+        // Better logic: if work order is completed but reports need review/approval
+        if (item.report_status === 'submitted' || item.report_status === 'reviewed') {
+          return 'reports_pending';
+        }
+        // If report is approved or no report needed, it's complete
+        return 'complete';
+      default:
+        return 'new';
+    }
+  };
+
+  // Helper function to get partner billing status based on workflow
+  const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
+    // Based on the 4-step workflow: Report Created → Subcontractor Invoice → Invoice Approved → Bill Partner
+    if (item.status !== 'completed') {
+      return 'report_pending'; // Work not completed yet
+    }
+    
+    if (item.report_status !== 'approved') {
+      return 'invoice_needed'; // Report not approved yet
+    }
+    
+    if (item.invoice_status === 'submitted' || item.invoice_status === 'pending') {
+      return 'invoice_pending'; // Has pending subcontractor invoices
+    }
+    
+    if (item.partner_bill_status === 'billed' || item.partner_billed_at) {
+      return 'billed'; // Already billed to partner
+    }
+    
+    if (item.invoice_status === 'approved') {
+      return 'ready_to_bill'; // Has approved invoices, ready to bill partner
+    }
+    
+    return 'invoice_needed'; // Default - needs subcontractor invoice
+  };
+
+  // Apply client-side filtering with improved logic
+  const filteredPipelineData = useMemo(() => {
+    if (!pipelineData) return [];
+
+    return pipelineData.filter((item) => {
+      // Enhanced search filter (work order number, title, partner, location, assigned org)
+      if (searchTerm && searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase().trim();
+        const matchesSearch = 
+          item.work_order_number?.toLowerCase().includes(searchLower) ||
+          item.title?.toLowerCase().includes(searchLower) ||
+          item.partner_organization_name?.toLowerCase().includes(searchLower) ||
+          item.store_location?.toLowerCase().includes(searchLower) ||
+          item.assigned_organization_name?.toLowerCase().includes(searchLower);
+        if (!matchesSearch) return false;
+      }
+
+      // Status filter (maps to operational status)
+      if (filters.status && filters.status.length > 0) {
+        if (!filters.status.includes(item.status)) return false;
+      }
+
+      // Trade filter - Skip for now as trade info not in pipeline data
+      // if (filters.trade_id && filters.trade_id.length > 0) {
+      //   // Trade filtering would require additional join in pipeline query
+      // }
+
+      // Partner organization filter
+      if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
+        if (!item.organization_id || !filters.partner_organization_ids.includes(item.organization_id)) return false;
+      }
+
+      // Completed by filter (maps to assigned organization)
+      if (filters.completed_by && filters.completed_by.length > 0) {
+        const itemCompletedBy = item.assigned_organization_id === 'internal' ? 'internal' : item.assigned_organization_id;
+        if (!itemCompletedBy || !filters.completed_by.includes(itemCompletedBy)) return false;
+      }
+
+      // Date range filter
+      if (filters.date_from || filters.date_to) {
+        const itemDate = new Date(item.created_at);
+        if (filters.date_from && itemDate < new Date(filters.date_from)) return false;
+        if (filters.date_to && itemDate > new Date(filters.date_to)) return false;
+      }
+
+      // Location filter
+      if (filters.location_filter && filters.location_filter.length > 0) {
+        const itemLocation = item.store_location || 'No location';
+        if (!filters.location_filter.includes(itemLocation)) return false;
+      }
+
+      return true;
+    });
+  }, [pipelineData, searchTerm, filters]);
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -638,7 +856,87 @@ if (error) {
         </TabsContent>
 
         <TabsContent value="pipeline" className="space-y-6">
-          <PipelineDashboard />
+          {/* Top Control Bar */}
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search and Filter Group */}
+            <div className="flex flex-1 gap-2">
+              <SmartSearchInput
+                placeholder="Search work orders..."
+                value={filters.search || ''}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                className="flex-1"
+                storageKey="billing-pipeline-search"
+              />
+              
+              {/* Filter Button */}
+              <Button
+                variant="outline"
+                onClick={() => isMobile ? setIsMobileFilterOpen(true) : setIsDesktopFilterOpen(true)}
+                className="gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+                {filterCount > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+                    {filterCount}
+                  </span>
+                )}
+              </Button>
+            </div>
+            
+            {/* Action Buttons Group */}
+            <div className="flex gap-2 flex-wrap lg:flex-nowrap">
+              <ExportDropdown onExport={() => {}} variant="outline" size="sm" />
+              <Button onClick={() => navigate('/admin/work-orders/new')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Work Order
+              </Button>
+            </div>
+          </div>
+
+          <WorkOrderPipelineTable 
+            data={filteredPipelineData}
+            isLoading={pipelineLoading}
+            isError={pipelineError}
+          />
+
+          {/* Mobile Filter Sheet */}
+          <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+            <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Filter Pipeline</SheetTitle>
+              </SheetHeader>
+              <WorkOrderFilters
+                filters={filters}
+                searchTerm={searchTerm}
+                onFiltersChange={setFilters}
+                onSearchChange={(value) => {
+                  setSearchTerm(value);
+                  setFilters({ ...filters, search: value });
+                }}
+                onClearFilters={handleClearFilters}
+              />
+            </SheetContent>
+          </Sheet>
+
+          {/* Desktop Filter Sidebar */}
+          <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
+            <SheetContent side="right" className="w-[480px] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Filter Pipeline</SheetTitle>
+              </SheetHeader>
+              <WorkOrderFilters
+                filters={filters}
+                searchTerm={searchTerm}
+                onFiltersChange={setFilters}
+                onSearchChange={(value) => {
+                  setSearchTerm(value);
+                  setFilters({ ...filters, search: value });
+                }}
+                onClearFilters={clearFilters}
+              />
+            </SheetContent>
+          </Sheet>
         </TabsContent>
       </Tabs>
 

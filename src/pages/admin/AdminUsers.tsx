@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 
 import {
@@ -17,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
-import { Plus, RotateCcw, Users, Power, Edit } from 'lucide-react';
+import { Plus, RotateCcw, Users, Power, Edit, Filter } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useUsers, useUserMutations, User } from '@/hooks/useUsers';
@@ -43,6 +42,8 @@ import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Label } from '@/components/ui/label';
 
 
 interface UserFilters {
@@ -57,6 +58,8 @@ interface UserFilters {
 export default function AdminUsers() {
   const { toast } = useToast();
   
+  // Search state for the top control bar
+  const [searchTerm, setSearchTerm] = useState('');
   
   // View mode configuration
   const { viewMode, setViewMode, allowedModes } = useViewMode({
@@ -83,6 +86,14 @@ export default function AdminUsers() {
     'admin-users-filters-v1',
     { search: '', roleFilter: '', organizationId: '', status: '', organizationType: [] }
   );
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  // Sync search term with filters
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setFilters(prev => ({ ...prev, search: value }));
+  };
 
 
   // Fetch data
@@ -263,96 +274,219 @@ export default function AdminUsers() {
               : 'Manage system users and their access'}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0 overflow-x-auto no-scrollbar -mx-1 px-1" role="toolbar" aria-label="User actions">
+      </div>
+
+      {/* Desktop Top Control Bar */}
+      <div className="hidden lg:flex gap-4 mb-6">
+        <div className="flex flex-1 gap-2">
+          <SmartSearchInput
+            placeholder="Search users by name or email..."
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="flex-1"
+            storageKey="admin-users-search"
+          />
+          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
+            <Filter className="h-4 w-4 mr-2" />
+            Filters {filterCount > 0 && `(${filterCount})`}
+          </Button>
+        </div>
+        <div className="flex gap-2">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
             allowedModes={allowedModes}
-            className="h-9"
           />
-          <Button onClick={() => setCreateUserModalOpen(true)} className="h-9">
-            <Plus className="w-4 h-4 mr-2" />
+          <ColumnVisibilityDropdown
+            columns={visibilityOptions}
+            onToggleColumn={toggleColumn}
+            onResetToDefaults={resetToDefaults}
+            visibleCount={getVisibleColumnCount()}
+          />
+          <ExportDropdown onExport={handleExport} />
+          <Button onClick={() => setCreateUserModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
             New User
           </Button>
         </div>
       </div>
 
-       {/* Filters */}
-       <AdminFilterBar title="Filters" filterCount={filterCount} onClear={clearFilters}>
-         <SmartSearchInput
-           value={filters.search || ''}
-           onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-           onSearchSubmit={(q) => setFilters((prev) => ({ ...prev, search: q }))}
-           placeholder="Search users by name, email, or organization…"
-           aria-label="Search users"
-           storageKey="admin-users-search"
-           className="w-full"
-         />
-         <Select
-           value={filters.roleFilter ? filters.roleFilter : 'all'}
-           onValueChange={(v) => setFilters((prev) => ({ ...prev, roleFilter: v === 'all' ? '' : v }))}
-         >
-           <SelectTrigger aria-label="Filter by role">
-             <SelectValue placeholder="All roles" />
-           </SelectTrigger>
-           <SelectContent>
-             <SelectItem value="all">All roles</SelectItem>
-             <SelectItem value="admin">Admin</SelectItem>
-             <SelectItem value="employee">Employee</SelectItem>
-             <SelectItem value="member">Member</SelectItem>
-           </SelectContent>
-         </Select>
-         <Select
-           value={filters.status ? filters.status : 'all'}
-           onValueChange={(v) => setFilters((prev) => ({ ...prev, status: v === 'all' ? '' : v }))}
-         >
-           <SelectTrigger aria-label="Filter by status">
-             <SelectValue placeholder="All statuses" />
-           </SelectTrigger>
-           <SelectContent>
-             <SelectItem value="all">All statuses</SelectItem>
-             <SelectItem value="active">Active</SelectItem>
-             <SelectItem value="inactive">Inactive</SelectItem>
-           </SelectContent>
-         </Select>
-         <OrganizationSelector
-           value={filters.organizationId || undefined}
-           onChange={(v) => setFilters((prev) => ({ ...prev, organizationId: v || '' }))}
-           placeholder="All organizations"
-           className="w-full"
-         />
-         <MultiSelectFilter
-           options={[
-             { value: 'internal', label: 'Internal' },
-             { value: 'partner', label: 'Partner' },
-             { value: 'subcontractor', label: 'Subcontractor' },
-           ]}
-           selectedValues={filters.organizationType || []}
-           onSelectionChange={(vals) => setFilters((prev) => ({ ...prev, organizationType: vals }))}
-           placeholder="All organization types"
-         />
-       </AdminFilterBar>
+      {/* Mobile Top Control Bar */}
+      <div className="lg:hidden space-y-3 mb-6">
+        <SmartSearchInput
+          placeholder="Search users by name or email..."
+          value={searchTerm}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="w-full"
+          storageKey="admin-users-search"
+        />
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters {filterCount > 0 && `(${filterCount})`}
+          </Button>
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+          />
+          <Button onClick={() => setCreateUserModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New User
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Sheet */}
+      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+        <SheetContent side="bottom" className="h-[85vh]">
+          <SheetHeader>
+            <SheetTitle>User Filters</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-4 overflow-y-auto">
+            <div className="space-y-2">
+              <Label htmlFor="mobile-role">Role</Label>
+              <Select
+                value={filters.roleFilter ? filters.roleFilter : 'all'}
+                onValueChange={(v) => setFilters((prev) => ({ ...prev, roleFilter: v === 'all' ? '' : v }))}
+              >
+                <SelectTrigger id="mobile-role">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All roles</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="employee">Employee</SelectItem>
+                  <SelectItem value="member">Member</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mobile-status">Status</Label>
+              <Select
+                value={filters.status ? filters.status : 'all'}
+                onValueChange={(v) => setFilters((prev) => ({ ...prev, status: v === 'all' ? '' : v }))}
+              >
+                <SelectTrigger id="mobile-status">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mobile-organization">Organization</Label>
+              <OrganizationSelector
+                value={filters.organizationId || undefined}
+                onChange={(v) => setFilters((prev) => ({ ...prev, organizationId: v || '' }))}
+                placeholder="All organizations"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Organization Type</Label>
+              <MultiSelectFilter
+                options={[
+                  { value: 'internal', label: 'Internal' },
+                  { value: 'partner', label: 'Partner' },
+                  { value: 'subcontractor', label: 'Subcontractor' },
+                ]}
+                selectedValues={filters.organizationType || []}
+                onSelectionChange={(vals) => setFilters((prev) => ({ ...prev, organizationType: vals }))}
+                placeholder="All organization types"
+              />
+            </div>
+            {filterCount > 0 && (
+              <Button variant="outline" onClick={clearFilters} className="w-full">
+                Clear All Filters
+              </Button>
+            )}
+            <Button onClick={() => setIsMobileFilterOpen(false)} className="w-full">
+              Apply Filters
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop Right Sidebar */}
+      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
+        <SheetContent side="right" className="w-[420px]">
+          <SheetHeader>
+            <SheetTitle>User Filters</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="desktop-role">Role</Label>
+              <Select
+                value={filters.roleFilter ? filters.roleFilter : 'all'}
+                onValueChange={(v) => setFilters((prev) => ({ ...prev, roleFilter: v === 'all' ? '' : v }))}
+              >
+                <SelectTrigger id="desktop-role">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All roles</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="employee">Employee</SelectItem>
+                  <SelectItem value="member">Member</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="desktop-status">Status</Label>
+              <Select
+                value={filters.status ? filters.status : 'all'}
+                onValueChange={(v) => setFilters((prev) => ({ ...prev, status: v === 'all' ? '' : v }))}
+              >
+                <SelectTrigger id="desktop-status">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="desktop-organization">Organization</Label>
+              <OrganizationSelector
+                value={filters.organizationId || undefined}
+                onChange={(v) => setFilters((prev) => ({ ...prev, organizationId: v || '' }))}
+                placeholder="All organizations"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Organization Type</Label>
+              <MultiSelectFilter
+                options={[
+                  { value: 'internal', label: 'Internal' },
+                  { value: 'partner', label: 'Partner' },
+                  { value: 'subcontractor', label: 'Subcontractor' },
+                ]}
+                selectedValues={filters.organizationType || []}
+                onSelectionChange={(vals) => setFilters((prev) => ({ ...prev, organizationType: vals }))}
+                placeholder="All organization types"
+              />
+            </div>
+            {filterCount > 0 && (
+              <Button variant="outline" onClick={clearFilters} className="w-full">
+                Clear All Filters
+              </Button>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
        {/* Data Table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Users</CardTitle>
           <div className="flex items-center gap-2">
-            <ColumnVisibilityDropdown
-              columns={visibilityOptions}
-              onToggleColumn={toggleColumn}
-              onResetToDefaults={resetToDefaults}
-              size="sm"
-              variant="outline"
-              visibleCount={getVisibleColumnCount()}
-              totalCount={visibilityOptions.filter(c => c.canHide).length}
-            />
-            <ExportDropdown
-               onExport={handleExport}
-               size="sm"
-               variant="outline"
-               disabled={isLoading || (filteredUsers?.length ?? 0) === 0}
-             />
              {selectedRows.length > 0 && (
                <Button variant="outline" size="sm" onClick={handleClearSelection}>
                  Clear Selection ({selectedRows.length})

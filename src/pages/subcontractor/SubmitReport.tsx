@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import MDEditor from '@uiw/react-md-editor';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Save, ArrowLeft, FileText, Loader2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { Save, ArrowLeft, FileText, Loader2, Paperclip, Eye, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useSuccessAnimation } from "@/hooks/useSuccessAnimation";
 import { DraftIndicator } from '@/components/DraftIndicator';
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +21,9 @@ import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
+import { EnhancedUploadTrigger } from '@/components/ui/enhanced-upload-trigger';
+import { ReportPreviewModal } from '@/components/reports/ReportPreviewModal';
+import { StepProgressIndicator } from '@/components/ui/step-progress-indicator';
 import type { PhotoAttachment } from '@/types/offline';
 
 interface FormData {
@@ -33,6 +38,7 @@ export default function SubmitReport() {
   const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { showSuccess } = useSuccessAnimation();
   const { profile } = useAuth();
   const { isEmployee } = useUserProfile();
   const { submitReport } = useWorkOrderReportSubmission();
@@ -68,6 +74,25 @@ export default function SubmitReport() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [showUploadSheet, setShowUploadSheet] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const steps = [
+    { label: "Work Details", icon: FileText },
+    { label: "Attachments", icon: Paperclip },
+    { label: "Review", icon: Eye },
+    { label: "Submit", icon: Send }
+  ];
+
+  // Dynamic step calculation based on form state
+  const getCurrentStep = () => {
+    if (isSubmitting) return 4;
+    if (showPreview) return 3;
+    if (formData.attachments.length > 0) return 2;
+    if (formData.workPerformed.trim()) return 2;
+    return 1;
+  };
+
+  const currentStep = getCurrentStep();
 
   // Check for work order ID
   if (!workOrderId) {
@@ -77,6 +102,20 @@ export default function SubmitReport() {
       </Alert>
     );
   }
+
+  const canAdvanceToStep = (step: number) => {
+    if (step === 1) return true;
+    if (step === 2) return formData.workPerformed.trim().length > 0;
+    if (step === 3) return formData.workPerformed.trim().length > 0;
+    if (step === 4) return false; // Submit step is not manually accessible
+    return false;
+  };
+
+  const goToPreviousStep = () => {
+    if (showPreview) {
+      setShowPreview(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +138,12 @@ export default function SubmitReport() {
       return;
     }
 
+    setShowPreview(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
+    if (!workOrderId) return;
+
     setIsSubmitting(true);
     try {
       await submitReport.mutateAsync({
@@ -109,6 +154,9 @@ export default function SubmitReport() {
         notes: formData.notes || undefined,
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
+
+      // Trigger success animation
+      showSuccess();
 
       toast({
         title: "Report Submitted",
@@ -271,7 +319,24 @@ export default function SubmitReport() {
   const workOrder = workOrderQuery.data;
 
   return (
-    <div className="space-y-6">
+    <>
+      <ReportPreviewModal
+        isOpen={showPreview}
+        onEdit={() => setShowPreview(false)}
+        onConfirm={() => {
+          setShowPreview(false);
+          handleConfirmedSubmit();
+        }}
+        formData={{
+          workPerformed: formData.workPerformed,
+          materialsUsed: formData.materialsUsed,
+          hoursWorked: formData.hoursWorked,
+          notes: formData.notes,
+          attachments: formData.attachments
+        }}
+      />
+      
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -296,9 +361,17 @@ export default function SubmitReport() {
         />
       </div>
 
+      <StepProgressIndicator
+        currentStep={currentStep}
+        totalSteps={steps.length}
+        steps={steps}
+        className="mb-8"
+      />
+
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <StandardFormLayout>
+          {/* Work Details Section - Always visible */}
           <StandardFormLayout.Section 
             title="Work Details"
             description="Provide detailed information about the work performed"
@@ -306,13 +379,14 @@ export default function SubmitReport() {
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
                 <Label htmlFor="workPerformed">Work Performed *</Label>
-                <Textarea
-                  id="workPerformed"
-                  placeholder="Describe the work you performed in detail..."
+                <MDEditor
                   value={formData.workPerformed}
-                  onChange={(e) => setFormData(prev => ({ ...prev, workPerformed: e.target.value }))}
-                  className="min-h-[120px]"
-                  required
+                  onChange={(value) => setFormData(prev => ({ ...prev, workPerformed: value || '' }))}
+                  data-color-mode="light"
+                  height={200}
+                  preview="edit"
+                  hideToolbar={false}
+                  visibleDragbar={false}
                 />
               </div>
 
@@ -337,15 +411,8 @@ export default function SubmitReport() {
                   className="min-h-[80px]"
                 />
               </div>
-            </StandardFormLayout.FieldGroup>
-          </StandardFormLayout.Section>
 
-          {isEmployee() && (
-            <StandardFormLayout.Section 
-              title="Time Tracking"
-              description="Record hours worked for this assignment"
-            >
-              <StandardFormLayout.FieldGroup columns={1}>
+              {isEmployee() && (
                 <div className="space-y-2">
                   <Label htmlFor="hoursWorked">Hours Worked *</Label>
                   <Input
@@ -362,75 +429,102 @@ export default function SubmitReport() {
                     Enter total hours worked on this assignment for payroll tracking
                   </p>
                 </div>
+              )}
+            </StandardFormLayout.FieldGroup>
+          </StandardFormLayout.Section>
+
+          {/* Attachments Section - Show when work performed has content */}
+          {formData.workPerformed.trim() && (
+            <StandardFormLayout.Section 
+              title="Photos & Documentation"
+              description="Upload photos and documents related to the work"
+            >
+              <StandardFormLayout.FieldGroup>
+                <div className="space-y-2">
+                  <Label>Upload Files</Label>
+                  <UniversalUploadSheet
+                    trigger={
+                      <EnhancedUploadTrigger>
+                        <Button variant="outline" className="w-full h-20 border-dashed border-2 hover:border-primary/50 bg-background">
+                          <div className="text-center">
+                            <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                            <p className="text-sm font-medium">Upload Files</p>
+                            <p className="text-xs text-muted-foreground">Click to select photos & documents</p>
+                          </div>
+                        </Button>
+                      </EnhancedUploadTrigger>
+                    }
+                    onFilesSelected={handleFilesSelected}
+                    open={showUploadSheet}
+                    onOpenChange={setShowUploadSheet}
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+                    multiple={true}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Upload photos, PDF documents, Excel files, or Word documents
+                  </p>
+                </div>
               </StandardFormLayout.FieldGroup>
             </StandardFormLayout.Section>
           )}
 
-          <StandardFormLayout.Section 
-            title="Photos & Documentation"
-            description="Upload photos and documents related to the work"
-          >
-            <StandardFormLayout.FieldGroup>
-              <div className="space-y-2">
-                <Label>Upload Files</Label>
-                <UniversalUploadSheet
-                  trigger={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full h-20 border-dashed border-2 hover:border-primary/50"
-                    >
-                      <div className="text-center">
-                        <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm font-medium">Upload Files</p>
-                        <p className="text-xs text-muted-foreground">Click to select photos & documents</p>
-                      </div>
-                    </Button>
-                  }
-                  onFilesSelected={handleFilesSelected}
-                  open={showUploadSheet}
-                  onOpenChange={setShowUploadSheet}
-                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
-                  multiple={true}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Upload photos, PDF documents, Excel files, or Word documents
-                </p>
-              </div>
-            </StandardFormLayout.FieldGroup>
-          </StandardFormLayout.Section>
-
           <StandardFormLayout.Actions>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleSaveDraft}
-              disabled={isSubmitting}
-              className="min-h-[44px]"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Save Draft
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="min-h-[44px]"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Submit Report
-                </>
-              )}
-            </Button>
+            <div className="flex justify-between w-full">
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => navigate('/subcontractor/work-orders')}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                
+                {showPreview && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={goToPreviousStep}
+                    disabled={isSubmitting}
+                  >
+                    Back to Edit
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  onClick={handleSaveDraft}
+                  disabled={isSubmitting || !formData.workPerformed.trim()}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Draft
+                </Button>
+                
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting || !formData.workPerformed.trim()}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Review & Submit
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </StandardFormLayout.Actions>
         </StandardFormLayout>
       </form>
-    </div>
+      </div>
+    </>
   );
 }
