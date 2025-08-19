@@ -485,17 +485,12 @@ const table = useReactTable({
         {/* Row 2: Search and Filter Button */}
         <div className="flex gap-3">
           <div className="flex-1 max-w-xl">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <SmartSearchInput
-                placeholder="Search reports by work order, location, or subcontractor..."
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onSearchSubmit={handleSearchChange}
-                storageKey="admin-reports-search"
-                className="pl-10 h-10 w-full"
-              />
-            </div>
+            <SmartSearchInput
+              placeholder="Search reports by work order, location, or subcontractor..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="h-10"
+            />
           </div>
           <AdminFilterBar
             title="Filters"
