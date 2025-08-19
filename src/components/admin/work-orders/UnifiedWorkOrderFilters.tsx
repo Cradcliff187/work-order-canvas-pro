@@ -42,9 +42,7 @@ const statusOptions = [
 ];
 
 const priorityOptions = [
-  { value: 'low', label: 'Low' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'high', label: 'High' },
+  { value: 'standard', label: 'Standard' },
   { value: 'urgent', label: 'Urgent' },
 ];
 

@@ -34,7 +34,9 @@ interface WorkOrderFiltersProps {
     search?: string;
     date_from?: string;
     date_to?: string;
+    date_range?: { from?: string; to?: string };
     location_filter?: string[];
+    priority?: string[];
   };
   searchTerm: string;
   onFiltersChange: (filters: any) => void;
@@ -112,12 +114,14 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
 
   const { employees } = useAllAssignees();
 
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(
-    filters.date_from ? new Date(filters.date_from) : undefined
-  );
-  const [dateTo, setDateTo] = useState<Date | undefined>(
-    filters.date_to ? new Date(filters.date_to) : undefined
-  );
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(() => {
+    const fromDate = filters.date_range?.from || filters.date_from;
+    return fromDate ? new Date(fromDate) : undefined;
+  });
+  const [dateTo, setDateTo] = useState<Date | undefined>(() => {
+    const toDate = filters.date_range?.to || filters.date_to;
+    return toDate ? new Date(toDate) : undefined;
+  });
 
 
   const hasActiveFilters = Boolean(searchTerm) || Object.values(filters).some(value => 
@@ -136,17 +140,27 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
 
   const handleDateFromChange = (date: Date | undefined) => {
     setDateFrom(date);
+    const formattedDate = date ? format(date, 'yyyy-MM-dd') : undefined;
     onFiltersChange({ 
       ...filters, 
-      date_from: date ? format(date, 'yyyy-MM-dd') : undefined 
+      date_from: formattedDate,
+      date_range: {
+        ...filters.date_range,
+        from: formattedDate
+      }
     });
   };
 
   const handleDateToChange = (date: Date | undefined) => {
     setDateTo(date);
+    const formattedDate = date ? format(date, 'yyyy-MM-dd') : undefined;
     onFiltersChange({ 
       ...filters, 
-      date_to: date ? format(date, 'yyyy-MM-dd') : undefined 
+      date_to: formattedDate,
+      date_range: {
+        ...filters.date_range,
+        to: formattedDate
+      }
     });
   };
 

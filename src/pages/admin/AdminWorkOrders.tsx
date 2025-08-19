@@ -11,7 +11,7 @@ import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { createWorkOrderColumns, WORK_ORDER_COLUMN_METADATA } from '@/components/admin/work-orders/WorkOrderColumns';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
-import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
+import { UnifiedWorkOrderFilters, type WorkOrderFiltersValue } from '@/components/admin/work-orders/UnifiedWorkOrderFilters';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { BulkEditModal } from '@/components/admin/work-orders/BulkEditModal';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
@@ -35,18 +35,7 @@ import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransit
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 
 
-interface WorkOrderFiltersState {
-  status?: string[];
-  trade_id?: string[];
-  organization_id?: string;
-  search?: string;
-  date_from?: string;
-  date_to?: string;
-  location_filter?: string[];
-  priority?: string[];
-  unassigned?: boolean;
-  created_today?: boolean;
-}
+import { useAdminFilters } from '@/hooks/useAdminFilters';
 
 export default function AdminWorkOrders() {
   const { toast } = useToast();
@@ -86,14 +75,20 @@ export default function AdminWorkOrders() {
       return '';
     }
   });
-  const [filters, setFilters] = useState<WorkOrderFiltersState>(() => {
-    try {
-      const saved = localStorage.getItem('admin-workorders-filters-v1');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
+  // Use unified filters hook
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<WorkOrderFiltersValue>(
+    'admin-work-orders-filters-v3',
+    {
+      search: '',
+      status: [],
+      priority: [],
+      partner_organization_ids: [],
+      completed_by: [],
+      trade_id: [],
+      location_filter: [],
+      date_range: undefined
     }
-  });
+  );
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
@@ -169,9 +164,6 @@ export default function AdminWorkOrders() {
     try { localStorage.setItem('admin-workorders-search-v1', searchTerm || ''); } catch {}
   }, [searchTerm]);
   useEffect(() => {
-    try { localStorage.setItem('admin-workorders-filters-v1', JSON.stringify(filters)); } catch {}
-  }, [filters]);
-  useEffect(() => {
     try { localStorage.setItem('admin-workorders-sorting-v1', JSON.stringify(sorting)); } catch {}
   }, [sorting]);
   useEffect(() => {
@@ -184,13 +176,14 @@ export default function AdminWorkOrders() {
   }), [sorting]);
 
 
-  // Combine filters
-  const combinedFilters = useMemo(() => {
-    return {
-      ...filters,
-      search: debouncedSearchTerm || undefined
-    };
-  }, [filters, debouncedSearchTerm]);
+  // Transform for API compatibility
+  const apiFilters = useMemo(() => ({
+    ...filters,
+    date_from: filters.date_range?.from,
+    date_to: filters.date_range?.to,
+    date_range: undefined, // remove this field for API
+    search: debouncedSearchTerm || undefined
+  }), [filters, debouncedSearchTerm]);
 
   // Update filters when debounced search term changes
   useEffect(() => {
@@ -198,13 +191,13 @@ export default function AdminWorkOrders() {
       ...prev,
       search: debouncedSearchTerm || undefined
     }));
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, setFilters]);
 
   // Fetch data with server-side pagination and filtering
   const { data: workOrdersData, isLoading, error, refetch, isFetching, isRefetching } = useWorkOrders(
     pagination,
     sortingFormatted,
-    combinedFilters
+    apiFilters
   );
 
   const { deleteWorkOrder, bulkUpdateWorkOrders } = useWorkOrderMutations();
@@ -275,10 +268,9 @@ export default function AdminWorkOrders() {
   const handleClearFilters = () => {
     try {
       localStorage.removeItem('admin-workorders-search-v1');
-      localStorage.removeItem('admin-workorders-filters-v1');
     } catch {}
     setSearchTerm('');
-    setFilters({});
+    clearFilters();
     setRowSelection({});
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
@@ -411,7 +403,7 @@ export default function AdminWorkOrders() {
           />
           <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
             <Filter className="h-4 w-4 mr-2" />
-            Filters {Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length > 0 && `(${Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length})`}
+            Filters {filterCount > 0 && `(${filterCount})`}
           </Button>
         </div>
         <div className="flex gap-2">
@@ -455,7 +447,7 @@ export default function AdminWorkOrders() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
             <Filter className="h-4 w-4 mr-2" />
-            Filters {Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length > 0 && `(${Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length})`}
+            Filters {filterCount > 0 && `(${filterCount})`}
           </Button>
           <ViewModeSwitcher
             value={viewMode}
@@ -491,12 +483,10 @@ export default function AdminWorkOrders() {
             <SheetTitle>Filter Work Orders</SheetTitle>
           </SheetHeader>
           <div className="mt-6">
-            <WorkOrderFilters
+            <UnifiedWorkOrderFilters
               filters={filters}
-              searchTerm={searchTerm}
               onFiltersChange={setFilters}
-              onSearchChange={setSearchTerm}
-              onClearFilters={handleClearFilters}
+              onClear={handleClearFilters}
             />
           </div>
         </SheetContent>
@@ -509,12 +499,10 @@ export default function AdminWorkOrders() {
             <SheetTitle>Filter Work Orders</SheetTitle>
           </SheetHeader>
           <div className="mt-6">
-            <WorkOrderFilters
+            <UnifiedWorkOrderFilters
               filters={filters}
-              searchTerm={searchTerm}
               onFiltersChange={setFilters}
-              onSearchChange={setSearchTerm}
-              onClearFilters={handleClearFilters}
+              onClear={handleClearFilters}
             />
           </div>
         </SheetContent>
