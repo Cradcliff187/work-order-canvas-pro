@@ -10,6 +10,44 @@ export function useAdminFilters<T extends Record<string, any>>(
   initialFilters: T,
   options?: UseAdminFiltersOptions<T>
 ) {
+  // Sanitize filters before saving to localStorage
+  const sanitizeFilters = (filters: T): Partial<T> => {
+    return Object.entries(filters).reduce((acc, [key, value]) => {
+      // Check for malformed objects with _type property
+      if (value && typeof value === 'object' && '_type' in value) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🔧 Sanitizing corrupted filter: ${key}`, value);
+        }
+        return acc; // Skip corrupted values
+      }
+      
+      // Skip undefined and null values - they don't need to be persisted
+      if (value === undefined || value === null) {
+        return acc;
+      }
+      
+      // Keep valid values
+      acc[key as keyof T] = value;
+      return acc;
+    }, {} as Partial<T>);
+  };
+
+  // Validate and clean filters when loading from localStorage
+  const validateAndCleanFilters = (parsed: any): Partial<T> => {
+    const cleaned = { ...parsed };
+    
+    Object.keys(cleaned).forEach(key => {
+      // Remove corrupted objects with _type property
+      if (cleaned[key] && typeof cleaned[key] === 'object' && '_type' in cleaned[key]) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🔧 Removing corrupted filter during load: ${key}`, cleaned[key]);
+        }
+        delete cleaned[key];
+      }
+    });
+    
+    return cleaned;
+  };
   // Track mount count to detect excessive re-renders
   const mountCountRef = useRef(0);
   const lastLoadTimeRef = useRef(0);
@@ -31,13 +69,18 @@ export function useAdminFilters<T extends Record<string, any>>(
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
+        
+        // Clean any corrupted values
+        const cleanedParsed = validateAndCleanFilters(parsed);
+        
         if (process.env.NODE_ENV === 'development' && mountCountRef.current <= 3) {
           console.group(`📦 useAdminFilters(${storageKey})`);
-          console.log('Loaded from storage:', parsed);
+          console.log('Raw from storage:', parsed);
+          console.log('Cleaned filters:', cleanedParsed);
           console.log('Mount count:', mountCountRef.current);
           console.groupEnd();
         }
-        return { ...initialFilters, ...parsed };
+        return { ...initialFilters, ...cleanedParsed };
       }
     } catch (error) {
       console.error('Failed to load filters from storage:', error);
@@ -79,9 +122,11 @@ export function useAdminFilters<T extends Record<string, any>>(
   // Save to localStorage with debounce to prevent rapid writes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      localStorage.setItem(storageKey, JSON.stringify(filters));
+      // Sanitize filters before saving
+      const cleanFilters = sanitizeFilters(filters);
+      localStorage.setItem(storageKey, JSON.stringify(cleanFilters));
       if (process.env.NODE_ENV === 'development') {
-        console.log(`💾 ${storageKey}: Saved filters to storage`);
+        console.log(`💾 ${storageKey}: Saved sanitized filters to storage`, cleanFilters);
       }
     }, 500); // Debounce 500ms
 
