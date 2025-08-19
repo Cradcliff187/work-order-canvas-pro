@@ -15,6 +15,7 @@ export interface AdminFilterBarProps {
   collapsible?: boolean;
   searchSlot?: React.ReactNode;
   sheetSide?: 'left' | 'right' | 'bottom';
+  forceSheetOnDesktop?: boolean;
   sections?: {
     essential?: React.ReactNode;
     advanced?: React.ReactNode;
@@ -33,6 +34,7 @@ export function AdminFilterBar({
   collapsible = false,
   searchSlot,
   sheetSide = 'right',
+  forceSheetOnDesktop = false,
   sections
 }: AdminFilterBarProps) {
   const [open, setOpen] = useState(false);
@@ -60,6 +62,16 @@ export function AdminFilterBar({
           )}
         </div>
       </div>
+
+      {/* Desktop: Sheet trigger when forceSheetOnDesktop=true */}
+      {forceSheetOnDesktop && (
+        <div className="hidden sm:block">
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)} aria-label="Open filters">
+            {title}
+            {hasActive ? ` (${filterCount})` : ''}
+          </Button>
+        </div>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
@@ -111,8 +123,9 @@ export function AdminFilterBar({
         </SheetContent>
       </Sheet>
 
-      {/* Desktop: Inline card with header and actions */}
-      <div className="hidden sm:block mt-3 space-y-4">
+      {/* Desktop: Inline card with header and actions (only when not forcing sheet) */}
+      {!forceSheetOnDesktop && (
+        <div className="hidden sm:block mt-3 space-y-4">
         {searchSlot && (
           <div className="w-full">
             {searchSlot}
@@ -196,7 +209,8 @@ export function AdminFilterBar({
             )}
           </Card>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

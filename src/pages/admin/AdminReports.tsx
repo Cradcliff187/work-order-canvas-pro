@@ -498,6 +498,8 @@ const table = useReactTable({
             filterCount={filterCount}
             onClear={handleClearFilters}
             searchSlot={null}
+            forceSheetOnDesktop={true}
+            sheetSide="right"
             sections={{
               essential: (
                 <>
