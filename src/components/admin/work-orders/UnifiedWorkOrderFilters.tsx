@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
+
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { Input } from '@/components/ui/input';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
@@ -178,18 +178,6 @@ export function UnifiedWorkOrderFilters({
   };
 
 
-  // Search slot component
-  const searchSlot = (
-    <SmartSearchInput
-      placeholder="Search work orders..."
-      value={filters.search || ''}
-      onChange={(e) => handleSearchChange(e.target.value)}
-      onSearchSubmit={handleSearchChange}
-      storageKey="admin-work-orders-search"
-      aria-label="Search work orders"
-      className="w-full"
-    />
-  );
 
   // Essential filters (always visible in sections)
   const essentialFilters = (
