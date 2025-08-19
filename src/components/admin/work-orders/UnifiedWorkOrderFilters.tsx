@@ -72,6 +72,16 @@ export function UnifiedWorkOrderFilters({
   const { employees: assignees } = useAllAssignees();
   const { data: locations } = usePartnerLocations();
 
+  // Debug logging
+  console.log('🔍 UnifiedWorkOrderFilters - Data:', {
+    organizations: organizations?.length || 0,
+    trades: trades?.length || 0,
+    subcontractors: subcontractors?.length || 0,
+    assignees: assignees?.length || 0,
+    locations: locations?.length || 0,
+    filters
+  });
+
   // Local states
   const [locationTextInput, setLocationTextInput] = useState('');
   const [dateFromOpen, setDateFromOpen] = useState(false);
@@ -97,6 +107,15 @@ export function UnifiedWorkOrderFilters({
       label: sub.name
     })) || [])
   ];
+
+  // Debug prepared options
+  console.log('🔍 UnifiedWorkOrderFilters - Prepared Options:', {
+    statusOptions: statusOptions.length,
+    priorityOptions: priorityOptions.length,
+    organizationOptions: organizationOptions.length,
+    tradeOptions: tradeOptions.length,
+    completedByOptions: completedByOptions.length
+  });
 
   const locationOptions = useMemo(() => {
     const allLocations = (locations || []).map(loc => loc.location_name).filter(Boolean);
