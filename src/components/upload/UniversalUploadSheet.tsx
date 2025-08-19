@@ -199,9 +199,9 @@ export function UniversalUploadSheet({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(event.target.files || []);
     if (newFiles.length > 0) {
-      // Add haptic feedback on mobile
+      // Enhanced haptic feedback on mobile
       if (isMobile && 'vibrate' in navigator) {
-        navigator.vibrate(50);
+        navigator.vibrate([50, 25, 100]); // Success pattern
       }
       
       // Apply selection mode logic
@@ -243,6 +243,10 @@ export function UniversalUploadSheet({
     
     const inputRef = inputMap[optionId as keyof typeof inputMap];
     if (inputRef?.current) {
+      // Light haptic feedback on tap
+      if (isMobile && 'vibrate' in navigator) {
+        navigator.vibrate(25);
+      }
       inputRef.current.click();
     }
   };
@@ -286,25 +290,30 @@ export function UniversalUploadSheet({
         aria-describedby={`${option.id}-description`}
       >
         <CardContent className="p-4 text-center space-y-3 h-full flex flex-col justify-center">
-          <div className={cn(
-            "mx-auto w-12 h-12 rounded-full flex items-center justify-center",
-            (isProcessing || showSuccess) 
-              ? "bg-primary text-primary-foreground" 
-              : "bg-primary/10 text-primary"
-          )} aria-hidden="true">
-            {isProcessing ? (
-              <Loader2 className="w-6 h-6 animate-spin" />
-            ) : showSuccess ? (
-              <CheckCircle2 className="w-6 h-6" />
-            ) : (
-              <option.icon className="upload-icon-bounce w-6 h-6" />
-            )}
-          </div>
+            <div className={cn(
+              "mx-auto rounded-full flex items-center justify-center",
+              isMobile ? "w-16 h-16" : "w-12 h-12",
+              (isProcessing || showSuccess) 
+                ? "bg-primary text-primary-foreground" 
+                : "bg-primary/10 text-primary"
+            )} aria-hidden="true">
+              {isProcessing ? (
+                <Loader2 className={cn("animate-spin", isMobile ? "w-8 h-8" : "w-6 h-6")} />
+              ) : showSuccess ? (
+                <CheckCircle2 className={cn(isMobile ? "w-8 h-8" : "w-6 h-6")} />
+              ) : (
+                <option.icon className={cn("upload-icon-bounce upload-option-icon", isMobile ? "w-8 h-8" : "w-6 h-6")} />
+              )}
+            </div>
           <div>
-            <h3 className="font-medium text-sm leading-tight">
+            <h3 className={cn("font-medium leading-tight upload-option-title", 
+              isMobile ? "text-lg" : "text-sm"
+            )}>
               {isProcessing ? "Processing..." : showSuccess ? "Selected!" : option.title}
             </h3>
-            <p id={`${option.id}-description`} className="text-xs text-muted-foreground mt-1 leading-tight">
+            <p id={`${option.id}-description`} className={cn("text-muted-foreground mt-1 leading-tight upload-option-description",
+              isMobile ? "text-base" : "text-xs"
+            )}>
               {showSuccess 
                 ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} selected` 
                 : option.description || getOptionDescription()}

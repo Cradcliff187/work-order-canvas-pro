@@ -586,15 +586,64 @@ html, body, #root {
   transform: translateY(0);
 }
 
-/* Touch Target Improvements */
-@media (max-width: 768px) {
+/* Mobile Upload Optimizations */
+@media (max-width: 767px) {
   .upload-trigger-enhanced {
-    min-height: 56px;
-    padding: 12px 16px;
+    min-height: 80px !important;
+    padding: 16px 20px;
+    font-size: 16px; /* Prevent iOS zoom */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  .upload-trigger-enhanced .upload-icon {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .upload-trigger-enhanced span,
+  .upload-trigger-enhanced p {
+    font-size: 16px;
   }
   
   .upload-option-card {
-    min-height: 64px;
-    padding: 16px;
+    min-height: 80px;
+    padding: 20px 16px;
+    margin: 16px 0;
+    width: 100%;
+    font-size: 16px; /* Prevent iOS zoom */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  .upload-option-card .upload-option-icon {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .upload-option-card h3,
+  .upload-option-card .upload-option-title {
+    font-size: 18px;
+  }
+  
+  .upload-option-card p,
+  .upload-option-card .upload-option-description {
+    font-size: 16px;
+  }
+  
+  /* Mobile button enhancements */
+  .mobile-upload-trigger {
+    min-height: 80px;
+    padding: 20px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .mobile-upload-button {
+    min-height: 48px;
+    font-size: 16px;
+    padding: 12px 16px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 }

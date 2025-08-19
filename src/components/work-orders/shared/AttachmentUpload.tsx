@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Progress } from '@/components/ui/progress';
 import type { UploadProgress } from '@/hooks/useFileUpload';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 /**
  * AttachmentUpload - Form-integrated upload with business logic
@@ -83,6 +85,8 @@ export function AttachmentUpload({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isInternal, setIsInternal] = useState(false);
   const { profile: userProfile, isAdmin } = useUserProfile();
+  const { triggerHaptic, onFormSave } = useHapticFeedback();
+  const isMobile = useIsMobile();
 
   // Use legacy maxFileSize if provided, otherwise use maxSizeBytes
   const effectiveMaxSizeBytes = maxFileSize || maxSizeBytes;
@@ -100,24 +104,29 @@ export function AttachmentUpload({
   const handleFilesSelected = useCallback((files: File[]) => {
     setSelectedFiles(files);
     
+    // Haptic feedback for file selection
+    triggerHaptic({ pattern: 'medium' });
+    
     // In immediate mode, trigger upload right away (if not in form context)
     if (mode === 'immediate' && !isFormContext) {
       onUpload(files, isInternal);
     }
-  }, [mode, isFormContext, onUpload, isInternal]);
+  }, [mode, isFormContext, onUpload, isInternal, triggerHaptic]);
 
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length > 0) {
+      onFormSave(); // Haptic feedback for upload action
       await onUpload(selectedFiles, isInternal);
       setSelectedFiles([]);
       setIsInternal(false);
     }
-  }, [selectedFiles, onUpload, isInternal]);
+  }, [selectedFiles, onUpload, isInternal, onFormSave]);
 
   const clearSelection = useCallback(() => {
     setSelectedFiles([]);
     setIsInternal(false);
-  }, []);
+    triggerHaptic({ pattern: 'light' }); // Light haptic for clear action
+  }, [triggerHaptic]);
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -129,7 +138,8 @@ export function AttachmentUpload({
             type="button"
             variant="outline"
             className={cn(
-              "upload-trigger-enhanced w-full h-20 border-dashed border-2",
+              "upload-trigger-enhanced w-full border-dashed border-2",
+              isMobile ? "h-20 mobile-upload-trigger" : "h-20",
               isUploading && "processing",
               mode === 'immediate' && selectedFiles.length > 0 && !isUploading && "success"
             )}
@@ -137,25 +147,28 @@ export function AttachmentUpload({
           >
             <div className="text-center">
               {isUploading ? (
-                <Loader2 className="h-6 w-6 mx-auto mb-2 text-primary animate-spin" />
+                <Loader2 className={cn("mx-auto mb-2 text-primary animate-spin upload-icon", 
+                  isMobile ? "h-8 w-8" : "h-6 w-6")} />
               ) : mode === 'immediate' && selectedFiles.length > 0 ? (
-                <CheckCircle className="upload-success-icon h-6 w-6 mx-auto mb-2" />
+                <CheckCircle className={cn("upload-success-icon mx-auto mb-2", 
+                  isMobile ? "h-8 w-8" : "h-6 w-6")} />
               ) : (
-                <Upload className="upload-icon-bounce h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                <Upload className={cn("upload-icon-bounce mx-auto mb-2 text-muted-foreground upload-icon", 
+                  isMobile ? "h-8 w-8" : "h-6 w-6")} />
               )}
-              <p className="text-sm font-medium">
+              <p className={cn("font-medium", isMobile ? "text-base" : "text-sm")}>
                 {isUploading ? "Processing Files..." : mode === 'immediate' && selectedFiles.length > 0 ? (
                   "Files uploaded successfully"
                 ) : selectedFiles.length > 0 ? (
                   <span className="flex items-center gap-2 justify-center">
                     {selectionMode === 'accumulate' ? 'Add Files' : 'Select Files'}
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className={isMobile ? "text-sm" : "text-xs"}>
                       {selectedFiles.length}
                     </Badge>
                   </span>
                 ) : "Select Files"}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className={cn("text-muted-foreground", isMobile ? "text-sm" : "text-xs")}>
                 {isUploading ? "Please wait..." : mode === 'immediate' && selectedFiles.length > 0 ? (
                   "Ready for next upload"
                 ) : mode === 'staged' && selectedFiles.length > 0 ? 
@@ -214,25 +227,27 @@ export function AttachmentUpload({
             <div className="space-x-2">
               <Button 
                 variant="outline" 
-                size="sm"
+                size={isMobile ? "default" : "sm"}
                 onClick={clearSelection}
+                className={cn(isMobile ? "mobile-upload-button" : "")}
               >
                 Clear
               </Button>
               {mode === 'staged' && !isFormContext && (
                 <Button 
-                  size="sm"
+                  size={isMobile ? "default" : "sm"}
                   onClick={handleUpload}
                   disabled={isUploading}
                   className={cn(
                     "upload-trigger-enhanced",
-                    isUploading && "processing"
+                    isUploading && "processing",
+                    isMobile && "mobile-upload-button"
                   )}
                 >
                   {isUploading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className={cn("mr-2 animate-spin", isMobile ? "w-5 h-5" : "w-4 h-4")} />
                   ) : (
-                    <Upload className="upload-icon-bounce w-4 h-4 mr-2" />
+                    <Upload className={cn("upload-icon-bounce mr-2", isMobile ? "w-5 h-5" : "w-4 h-4")} />
                   )}
                   {isUploading ? "Uploading..." : "Upload Selected Files"}
                 </Button>
