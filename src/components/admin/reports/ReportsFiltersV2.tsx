@@ -117,6 +117,9 @@ export function ReportsFiltersV2({
   // Debug logging
   console.log('Debug ReportsFiltersV2 - locations:', locations);
   console.log('Debug ReportsFiltersV2 - locationOptions:', locationOptions);
+  console.log('Debug ReportsFiltersV2 - partnerOptions:', partnerOptions);
+  console.log('Debug ReportsFiltersV2 - subcontractorOptions:', subcontractorOptions);
+  console.log('Debug ReportsFiltersV2 - tradeOptions:', tradeOptions);
 
   // Render functions for reusable filters
 
