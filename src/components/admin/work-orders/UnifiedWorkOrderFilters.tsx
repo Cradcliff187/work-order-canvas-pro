@@ -342,18 +342,30 @@ export function UnifiedWorkOrderFilters({
   );
 
   return (
-    <AdminFilterBar
-      title="Filters"
-      filterCount={filterCount}
-      onClear={onClear}
-      searchSlot={searchSlot}
-      sheetSide="bottom"
-      collapsible={true}
-      sections={{
-        essential: essentialFilters,
-        advanced: advancedFilters
-      }}
-    />
+    <div className="space-y-4">
+      {/* Search always visible */}
+      <SmartSearchInput
+        placeholder="Search work orders..."
+        value={filters.search || ''}
+        onChange={(e) => handleSearchChange(e.target.value)}
+        onSearchSubmit={handleSearchChange}
+        storageKey="admin-work-orders-search"
+        aria-label="Search work orders"
+        className="w-full"
+      />
+      
+      {/* Essential Filters */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Essential</h3>
+        {essentialFilters}
+      </div>
+      
+      {/* Advanced Filters */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Advanced</h3>
+        {advancedFilters}
+      </div>
+    </div>
   );
 }
 
