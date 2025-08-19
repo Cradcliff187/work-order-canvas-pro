@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, FileText, Loader2, AlertTriangle, Users, RotateCcw } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useSuccessAnimation } from "@/hooks/useSuccessAnimation";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useAdminReportSubmission } from '@/hooks/useAdminReportSubmission';
@@ -30,6 +31,7 @@ export default function AdminSubmitReport() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { showSuccess } = useSuccessAnimation();
   
   const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(workOrderId!);
   const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
@@ -164,6 +166,9 @@ export default function AdminSubmitReport() {
         notes: formData.notes || undefined,
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
+
+      // Trigger success animation
+      showSuccess();
 
       // Success message based on assignment type
       const getSuccessMessage = () => {
