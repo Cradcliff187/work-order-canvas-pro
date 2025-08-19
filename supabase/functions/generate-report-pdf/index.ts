@@ -73,8 +73,17 @@ serve(async (req) => {
     // Generate professional PDF using jsPDF
     const pdfBlob = generateProfessionalPDF(reportData, attachments || []);
     
-    // Upload PDF to storage
-    const fileName = `report_${reportId}_${Date.now()}.pdf`;
+    // Generate readable filename
+    const workOrderNumber = reportData.work_orders?.work_order_number || 'UNKNOWN';
+    const submitterName = reportData.profiles?.first_name && reportData.profiles?.last_name
+      ? `${reportData.profiles.first_name}-${reportData.profiles.last_name}`
+      : 'Unknown';
+    const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+    const fileName = `WO-${workOrderNumber}-${submitterName}-${date}.pdf`
+      .replace(/[^a-zA-Z0-9-_.]/g, '-') // Sanitize
+      .replace(/--+/g, '-'); // Remove double dashes
+    
     const filePath = `reports/${fileName}`;
     
     const { data: uploadData, error: uploadError } = await supabase.storage
