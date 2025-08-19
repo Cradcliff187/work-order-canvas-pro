@@ -1,5 +1,3 @@
-// DEPRECATED: This component has been replaced by ReportsFiltersV2.tsx
-// TODO: Delete this file after confirming all references have been migrated
 import React, { useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';

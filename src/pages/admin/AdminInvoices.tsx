@@ -37,7 +37,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { ChevronLeft, ChevronRight, FileText, DollarSign, Plus, RotateCcw, CheckCircle, XCircle, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, DollarSign, Plus, RotateCcw, CheckCircle, XCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
@@ -54,8 +54,6 @@ import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import type { VisibilityState } from '@tanstack/react-table';
 
 export default function AdminInvoices() {
@@ -120,7 +118,6 @@ export default function AdminInvoices() {
   };
 
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
-
 
   
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
@@ -395,60 +392,49 @@ const table = useReactTable({
             Manage and review subcontractor invoices
           </p>
         </div>
-      </div>
-
-      {/* Top Control Bar */}
-      <div className="space-y-4">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Search and Filter Group */}
-          <div className="flex flex-1 gap-2">
-            <SmartSearchInput
-              placeholder="Search invoices..."
-              value={filters.search || ''}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="flex-1"
-              storageKey="admin-invoices-search"
-            />
-            
-            <AdminFilterBar
-              title="Filters"
-              filterCount={filterCount}
-              onClear={clearFilters}
-              collapsible={true}
-              sections={{
-                essential: (
-                  <InvoiceFilters
-                    value={filters as any}
-                    onChange={(next) => {
-                      if (JSON.stringify(filters) === JSON.stringify(next)) return;
-                      setFilters(next as any);
-                      setPage(1);
-                    }}
-                    onClear={() => { 
-                      clearFilters(); 
-                      setPage(1); 
-                    }}
-                    filterCount={filterCount}
-                  />
-                )
-              }}
-            />
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:block text-sm text-muted-foreground mr-2">
+            Page {page} of {totalPages}
           </div>
-          
-          {/* Action Buttons Group */}
-          <div className="flex gap-2 flex-wrap lg:flex-nowrap">
-            <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || (data?.data?.length ?? 0) === 0} />
-            <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0} aria-label="Open bulk actions">
-              Bulk Actions{selectedCount > 0 ? ` (${selectedCount})` : ''}
-            </Button>
-            <Button onClick={() => navigate('/admin/submit-invoice')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Invoice
-            </Button>
-          </div>
+          <ColumnVisibilityDropdown
+            columns={columnOptions}
+            onToggleColumn={toggleColumn}
+            onResetToDefaults={resetToDefaults}
+            variant="outline"
+            size="sm"
+            visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+            totalCount={columnOptions.filter(c => c.canHide).length}
+          />
+          <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || (data?.data?.length ?? 0) === 0} />
+          <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0} aria-label="Open bulk actions">
+            Bulk Actions{selectedCount > 0 ? ` (${selectedCount})` : ''}
+          </Button>
+          <Button onClick={() => navigate('/admin/submit-invoice')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Invoice
+          </Button>
         </div>
       </div>
 
+      {/* Filters */}
+      <InvoiceFilters
+        value={filters as any}
+        onChange={(next) => {
+          // Guard against same value updates
+          if (JSON.stringify(filters) === JSON.stringify(next)) {
+            console.log('⚠️ Filter unchanged, skipping');
+            return;
+          }
+          
+          setFilters(next as any);
+          setPage(1);
+        }}
+        onClear={() => { 
+          clearFilters(); 
+          setPage(1); 
+        }}
+        filterCount={filterCount}
+      />
 
       {/* Results */}
       <Card>
@@ -457,15 +443,9 @@ const table = useReactTable({
             <CardTitle>
               {data?.totalCount || 0} Invoice{(data?.totalCount || 0) !== 1 ? 's' : ''}
             </CardTitle>
-            <ColumnVisibilityDropdown
-              columns={columnOptions}
-              onToggleColumn={toggleColumn}
-              onResetToDefaults={resetToDefaults}
-              variant="outline"
-              size="sm"
-              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-              totalCount={columnOptions.filter(c => c.canHide).length}
-            />
+            <div className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </div>
           </div>
         </CardHeader>
         <CardContent>

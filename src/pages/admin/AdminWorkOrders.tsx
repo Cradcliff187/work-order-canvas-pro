@@ -4,19 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { PaginationState, SortingState, RowSelectionState } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-
-import { Plus, RotateCcw, CheckSquare, Filter } from 'lucide-react';
+import { Plus, RotateCcw, CheckSquare } from 'lucide-react';
 import { useWorkOrders, useWorkOrderMutations, WorkOrder } from '@/hooks/useWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { createWorkOrderColumns, WORK_ORDER_COLUMN_METADATA } from '@/components/admin/work-orders/WorkOrderColumns';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
-import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
-import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
+import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { BulkEditModal } from '@/components/admin/work-orders/BulkEditModal';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
@@ -37,8 +31,6 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useGlobalKeyboardShortcuts';
 import { KeyboardShortcutsTooltip } from '@/components/ui/keyboard-shortcuts-tooltip';
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
-import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 
 
 interface WorkOrderFiltersState {
@@ -390,7 +382,7 @@ export default function AdminWorkOrders() {
       <WorkOrderBreadcrumb />
       
       {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-3 mb-6" role="banner" aria-label="Work orders management header">
+      <header className="flex flex-wrap items-center justify-between gap-3" role="banner" aria-label="Work orders management header">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold">Work Orders Management</h1>
           <p className="text-muted-foreground">
@@ -402,149 +394,8 @@ export default function AdminWorkOrders() {
             </p>
           )}
         </div>
-      </header>
-
-      {/* Desktop Layout */}
-      <div className="hidden lg:flex gap-4 mb-6">
-        <div className="flex flex-1 gap-2">
-          <SmartSearchInput
-            placeholder="Search WO#, title, or location..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1"
-          />
-          <AdminFilterBar
-            title="Filters"
-            filterCount={Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length}
-            onClear={handleClearFilters}
-            collapsible={true}
-            sections={{
-              essential: (
-                <>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <MultiSelectFilter
-                      options={[
-                        { value: 'received', label: 'Received' },
-                        { value: 'assigned', label: 'Assigned' },
-                        { value: 'in_progress', label: 'In Progress' },
-                        { value: 'completed', label: 'Completed' },
-                        { value: 'cancelled', label: 'Cancelled' },
-                        { value: 'estimate_needed', label: 'Estimate Needed' },
-                        { value: 'estimate_approved', label: 'Estimate Approved' },
-                      ]}
-                      selectedValues={filters.status || []}
-                      onSelectionChange={(status) => setFilters({ ...filters, status })}
-                      placeholder="Select status"
-                      maxDisplayCount={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Organization</Label>
-                    <MultiSelectFilter
-                      options={[]} // Will be populated by actual data
-                      selectedValues={filters.organization_id ? [filters.organization_id] : []}
-                      onSelectionChange={(ids) => setFilters({ ...filters, organization_id: ids[0] })}
-                      placeholder="Select organization"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Priority</Label>
-                    <MultiSelectFilter
-                      options={[
-                        { value: 'low', label: 'Low' },
-                        { value: 'medium', label: 'Medium' },
-                        { value: 'high', label: 'High' },
-                        { value: 'urgent', label: 'Urgent' }
-                      ]}
-                      selectedValues={filters.priority || []}
-                      onSelectionChange={(priority) => setFilters({ ...filters, priority })}
-                      placeholder="Select priority"
-                      maxDisplayCount={2}
-                    />
-                  </div>
-                </>
-              ),
-              advanced: (
-                <>
-                  <div className="space-y-2">
-                    <Label>Trade</Label>
-                    <MultiSelectFilter
-                      options={[]} // Will be populated by actual data
-                      selectedValues={filters.trade_id || []}
-                      onSelectionChange={(trade_id) => setFilters({ ...filters, trade_id })}
-                      placeholder="Select trade"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Location</Label>
-                    <MultiSelectFilter
-                      options={[]} // Will be populated by actual data
-                      selectedValues={filters.location_filter || []}
-                      onSelectionChange={(location_filter) => setFilters({ ...filters, location_filter })}
-                      placeholder="Select location"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date Range</Label>
-                    <div className="flex gap-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !filters.date_from && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={filters.date_from ? new Date(filters.date_from) : undefined}
-                            onSelect={(date) => setFilters({ ...filters, date_from: date ? format(date, 'yyyy-MM-dd') : undefined })}
-                            initialFocus
-                            className="p-3 pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !filters.date_to && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={filters.date_to ? new Date(filters.date_to) : undefined}
-                            onSelect={(date) => setFilters({ ...filters, date_to: date ? format(date, 'yyyy-MM-dd') : undefined })}
-                            initialFocus
-                            className="p-3 pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                </>
-              )
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0 max-w-full justify-end" role="toolbar" aria-label="Work order actions">
+          <KeyboardShortcutsTooltip />
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
@@ -560,7 +411,18 @@ export default function AdminWorkOrders() {
             aria-pressed={bulkMode}
           >
             <CheckSquare className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Bulk Actions</span>
+            {/* Short labels on mobile */}
+            {bulkMode ? (
+              <>
+                <span className="hidden sm:inline">Exit Bulk Mode</span>
+                <span className="sm:hidden">Exit</span>
+              </>
+            ) : (
+              <>
+                <span className="hidden sm:inline">Bulk Actions</span>
+                <span className="sm:hidden">Bulk</span>
+              </>
+            )}
           </Button>
           <Button 
             size="sm" 
@@ -569,177 +431,25 @@ export default function AdminWorkOrders() {
             aria-label="Create new work order"
           >
             <Plus className="w-4 h-4 mr-2" />
-            New Work Order
+            <span className="hidden sm:inline">New Work Order</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
-      </div>
+      </header>
 
-      {/* Mobile Layout */}
-      <div className="lg:hidden space-y-3 mb-6">
-        <SmartSearchInput
-          placeholder="Search WO#, title, or location..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full"
-        />
-        <div className="flex gap-2">
-          <AdminFilterBar
-            title="Filters"
-            filterCount={Object.keys(filters).filter(key => key !== 'search' && filters[key as keyof WorkOrderFiltersState]).length}
-            onClear={handleClearFilters}
-            collapsible={true}
-            sections={{
-              essential: (
-                <>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <MultiSelectFilter
-                      options={[
-                        { value: 'received', label: 'Received' },
-                        { value: 'assigned', label: 'Assigned' },
-                        { value: 'in_progress', label: 'In Progress' },
-                        { value: 'completed', label: 'Completed' },
-                        { value: 'cancelled', label: 'Cancelled' },
-                        { value: 'estimate_needed', label: 'Estimate Needed' },
-                        { value: 'estimate_approved', label: 'Estimate Approved' },
-                      ]}
-                      selectedValues={filters.status || []}
-                      onSelectionChange={(status) => setFilters({ ...filters, status })}
-                      placeholder="Select status"
-                      maxDisplayCount={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Organization</Label>
-                    <MultiSelectFilter
-                      options={[]} // Will be populated by actual data
-                      selectedValues={filters.organization_id ? [filters.organization_id] : []}
-                      onSelectionChange={(ids) => setFilters({ ...filters, organization_id: ids[0] })}
-                      placeholder="Select organization"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Priority</Label>
-                    <MultiSelectFilter
-                      options={[
-                        { value: 'low', label: 'Low' },
-                        { value: 'medium', label: 'Medium' },
-                        { value: 'high', label: 'High' },
-                        { value: 'urgent', label: 'Urgent' }
-                      ]}
-                      selectedValues={filters.priority || []}
-                      onSelectionChange={(priority) => setFilters({ ...filters, priority })}
-                      placeholder="Select priority"
-                      maxDisplayCount={2}
-                    />
-                  </div>
-                </>
-              ),
-              advanced: (
-                <>
-                  <div className="space-y-2">
-                    <Label>Trade</Label>
-                    <MultiSelectFilter
-                      options={[]} // Will be populated by actual data
-                      selectedValues={filters.trade_id || []}
-                      onSelectionChange={(trade_id) => setFilters({ ...filters, trade_id })}
-                      placeholder="Select trade"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Location</Label>
-                    <MultiSelectFilter
-                      options={[]} // Will be populated by actual data
-                      selectedValues={filters.location_filter || []}
-                      onSelectionChange={(location_filter) => setFilters({ ...filters, location_filter })}
-                      placeholder="Select location"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date Range</Label>
-                    <div className="flex gap-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !filters.date_from && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={filters.date_from ? new Date(filters.date_from) : undefined}
-                            onSelect={(date) => setFilters({ ...filters, date_from: date ? format(date, 'yyyy-MM-dd') : undefined })}
-                            initialFocus
-                            className="p-3 pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !filters.date_to && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={filters.date_to ? new Date(filters.date_to) : undefined}
-                            onSelect={(date) => setFilters({ ...filters, date_to: date ? format(date, 'yyyy-MM-dd') : undefined })}
-                            initialFocus
-                            className="p-3 pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                </>
-              )
-            }}
+
+      {/* Filters */}
+      <section className="flex flex-col lg:flex-row gap-4" role="search" aria-label="Work order filters">
+        <div className="flex-1">
+          <WorkOrderFilters
+            filters={filters}
+            searchTerm={searchTerm}
+            onFiltersChange={setFilters}
+            onSearchChange={setSearchTerm}
+            onClearFilters={handleClearFilters}
           />
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
-            className="h-9"
-          />
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setBulkMode(!bulkMode)}
-            className={cn("h-9", bulkMode ? "border-primary text-primary" : "")}
-            aria-label={bulkMode ? 'Exit bulk selection mode' : 'Enter bulk selection mode'}
-            aria-pressed={bulkMode}
-          >
-            <CheckSquare className="w-4 h-4" />
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowCreateModal(true)} 
-            className="h-9"
-            aria-label="Create new work order"
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
         </div>
-      </div>
-
+      </section>
 
       {/* Work Order Table */}
       <WorkOrderTable

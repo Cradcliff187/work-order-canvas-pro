@@ -81,7 +81,7 @@ export function MultiSelectFilter({
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 z-[100] pointer-events-auto" align="start" sideOffset={5}>
+      <PopoverContent className="w-[300px] p-0 z-50 bg-popover" align="start">
         <div className="p-3 space-y-3">
           {/* Search input */}
           <div className="relative">
@@ -102,30 +102,25 @@ export function MultiSelectFilter({
           )}
 
           {/* Options list */}
-          <div className="max-h-[40vh] md:max-h-[300px] overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+          <div className="max-h-[200px] overflow-y-auto space-y-1">
             {filteredOptions.length === 0 ? (
               <div className="py-2 text-center text-sm text-muted-foreground">
                 No options found
               </div>
             ) : (
-            filteredOptions.map((option) => (
-              <div
-                key={option.value}
-                className="flex items-center space-x-2 p-2 hover:bg-accent rounded-sm"
-              >
-                <Checkbox
-                  checked={selectedValues.includes(option.value)}
-                  onCheckedChange={() => handleToggleOption(option.value)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <span 
-                  className="text-sm cursor-pointer"
+              filteredOptions.map((option) => (
+                <div
+                  key={option.value}
+                  className="flex items-center space-x-2 p-2 hover:bg-accent rounded-sm cursor-pointer"
                   onClick={() => handleToggleOption(option.value)}
                 >
-                  {option.label}
-                </span>
-              </div>
-            ))
+                  <Checkbox
+                    checked={selectedValues.includes(option.value)}
+                    onChange={() => handleToggleOption(option.value)}
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </div>
+              ))
             )}
           </div>
         </div>

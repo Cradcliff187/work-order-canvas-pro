@@ -1,13 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { AlertTriangle, Filter, ChevronDown, X } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 // Filter interface aligned with work order pipeline workflow
 export interface InvoiceFiltersValue {
@@ -63,10 +61,6 @@ const partnerBillingStatusOptions = [
 ];
 
 export function InvoiceFilters({ value, onChange, onClear, filterCount }: InvoiceFiltersProps) {
-  const isMobile = useIsMobile();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isDesktopSheetOpen, setIsDesktopSheetOpen] = useState(false);
-
   // Get partner locations for the selected partner organization
   const { data: partnerLocations } = usePartnerLocations(value.partner_organization_id);
 
@@ -80,317 +74,125 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
     }));
   }, [partnerLocations]);
 
-  // Calculate active filter count
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (value.overdue) count++;
-    if (value.partner_organization_id) count++;
-    if (value.location_filter?.length) count += value.location_filter.length;
-    if (value.subcontractor_organization_id) count++;
-    if (value.operational_status?.length) count += value.operational_status.length;
-    if (value.report_status?.length) count += value.report_status.length;
-    if (value.invoice_status?.length) count += value.invoice_status.length;
-    if (value.partner_billing_status?.length) count += value.partner_billing_status.length;
-    return count;
-  }, [value]);
-
   // Helper function to update filter values
   const set = (key: keyof InvoiceFiltersValue, newValue: any) => {
     onChange({ ...value, [key]: newValue });
   };
 
-  // Filter render functions
-  const renderSearchFilter = () => (
-    <SmartSearchInput
-      value={value.search || ''}
-      onChange={(e) => set('search', e.target.value)}
-      placeholder="Search invoices..."
-      storageKey="admin-invoices-search"
-    />
-  );
 
-  const renderOverdueFilter = () => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Quick Filter</label>
-      <Button
-        variant={value.overdue ? "default" : "outline"}
-        size="sm"
-        onClick={() => set('overdue', !value.overdue)}
-        className="w-full justify-start"
-      >
-        <AlertTriangle className="w-4 h-4 mr-2" />
-        Overdue Only
-      </Button>
-    </div>
-  );
-
-  const renderInvoiceStatusFilter = () => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Invoice Status</label>
-      <MultiSelectFilter
-        options={invoiceStatusOptions}
-        selectedValues={value.invoice_status || []}
-        onSelectionChange={(statuses) => set('invoice_status', statuses)}
-        placeholder="Invoice Status"
-        maxDisplayCount={2}
-      />
-    </div>
-  );
-
-  const renderPartnerOrganizationFilter = () => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Partner Organization</label>
-      <OrganizationSelector
-        value={value.partner_organization_id || ''}
-        onChange={(partnerId) => {
-          set('partner_organization_id', partnerId);
-          // Clear location filter when partner changes
-          if (value.location_filter?.length) {
-            set('location_filter', []);
-          }
-        }}
-        organizationType="partner"
-        placeholder="Select Partner"
-      />
-    </div>
-  );
-
-  const renderLocationFilter = () => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Locations</label>
-      <MultiSelectFilter
-        options={locationOptions}
-        selectedValues={value.location_filter || []}
-        onSelectionChange={(locations) => set('location_filter', locations)}
-        placeholder="Select Locations"
-        disabled={!value.partner_organization_id}
-        maxDisplayCount={2}
-      />
-    </div>
-  );
-
-  const renderSubcontractorFilter = () => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Subcontractor</label>
-      <OrganizationSelector
-        value={value.subcontractor_organization_id || ''}
-        onChange={(subcontractorId) => set('subcontractor_organization_id', subcontractorId)}
-        organizationType="subcontractor"
-        placeholder="Select Subcontractor"
-      />
-    </div>
-  );
-
-  const renderOperationalStatusFilter = () => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Work Status</label>
-      <MultiSelectFilter
-        options={operationalStatusOptions}
-        selectedValues={value.operational_status || []}
-        onSelectionChange={(statuses) => set('operational_status', statuses)}
-        placeholder="Work Status"
-        maxDisplayCount={2}
-      />
-    </div>
-  );
-
-  const renderReportStatusFilter = () => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Report Status</label>
-      <MultiSelectFilter
-        options={reportStatusOptions}
-        selectedValues={value.report_status || []}
-        onSelectionChange={(statuses) => set('report_status', statuses)}
-        placeholder="Report Status"
-        maxDisplayCount={2}
-      />
-    </div>
-  );
-
-  const renderPartnerBillingStatusFilter = () => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Partner Billing Status</label>
-      <MultiSelectFilter
-        options={partnerBillingStatusOptions}
-        selectedValues={value.partner_billing_status || []}
-        onSelectionChange={(statuses) => set('partner_billing_status', statuses)}
-        placeholder="Partner Billing Status"
-        maxDisplayCount={2}
-      />
-    </div>
-  );
-
-  // Mobile implementation
-  if (isMobile) {
-    return (
-      <div className="block lg:hidden">
-        <div className="space-y-4">
-          {/* Always visible search */}
-          <div className="bg-card rounded-lg p-4 border shadow-sm">
-            {renderSearchFilter()}
-          </div>
-
-          {/* Filter trigger */}
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  <span>Filters</span>
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                </div>
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </SheetTrigger>
-            
-            <SheetContent side="bottom" className="h-[85vh] flex flex-col">
-              <SheetHeader>
-                <div className="flex items-center justify-between">
-                  <SheetTitle>Filter Invoices</SheetTitle>
-                  {activeFilterCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        onClear();
-                        setIsSheetOpen(false);
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <X className="w-4 h-4" />
-                      Clear All
-                    </Button>
-                  )}
-                </div>
-              </SheetHeader>
-
-              <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-6 py-4 pb-20">
-                {/* Essential Filters Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-foreground border-b pb-2">Essential Filters</h3>
-                  {renderOverdueFilter()}
-                  {renderInvoiceStatusFilter()}
-                </div>
-
-                {/* Advanced Filters Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-foreground border-b pb-2">Advanced Filters</h3>
-                  {renderPartnerOrganizationFilter()}
-                  {value.partner_organization_id && renderLocationFilter()}
-                  {renderSubcontractorFilter()}
-                  {renderOperationalStatusFilter()}
-                  {renderReportStatusFilter()}
-                  {renderPartnerBillingStatusFilter()}
-                </div>
-              </div>
-
-              <SheetFooter className="border-t pt-4">
-                <Button 
-                  onClick={() => setIsSheetOpen(false)}
-                  className="w-full"
-                >
-                  Apply Filters
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </div>
-    );
-  }
-
-  // Desktop implementation
   return (
-    <div className="hidden lg:block">
-      <div className="space-y-4">
-        {/* Always visible search */}
-        <div className="bg-card rounded-lg p-4 border shadow-sm">
-          {renderSearchFilter()}
+    <AdminFilterBar
+      title="Invoice Filters"
+      filterCount={filterCount}
+      onClear={onClear}
+      collapsible
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* Smart Search Input */}
+        <div className="col-span-full sm:col-span-2">
+          <SmartSearchInput
+            value={value.search || ''}
+            onChange={(e) => set('search', e.target.value)}
+            placeholder="Search invoices..."
+            storageKey="admin-invoices-search"
+          />
         </div>
 
-        {/* Filter trigger */}
-        <Sheet open={isDesktopSheetOpen} onOpenChange={setIsDesktopSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4" />
-                <span>Filters</span>
-                {activeFilterCount > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </div>
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-          </SheetTrigger>
-          
-          <SheetContent side="right" className="w-[480px] flex flex-col">
-            <SheetHeader>
-              <div className="flex items-center justify-between">
-                <SheetTitle>Filter Invoices</SheetTitle>
-                {activeFilterCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      onClear();
-                      setIsDesktopSheetOpen(false);
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <X className="w-4 h-4" />
-                    Clear All
-                  </Button>
-                )}
-              </div>
-            </SheetHeader>
+        {/* Overdue Quick Filter */}
+        <div className="flex items-center">
+          <Button
+            variant={value.overdue ? "default" : "outline"}
+            size="sm"
+            onClick={() => set('overdue', !value.overdue)}
+            className="w-full"
+          >
+            <AlertTriangle className="w-4 h-4 mr-2" />
+            Overdue Only
+          </Button>
+        </div>
 
-            <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-6 py-4">
-              {/* Essential Filters Section */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b pb-2">Essential Filters</h3>
-                {renderOverdueFilter()}
-                {renderInvoiceStatusFilter()}
-              </div>
+        {/* Partner Organization Selector */}
+        <div>
+          <OrganizationSelector
+            value={value.partner_organization_id || ''}
+            onChange={(partnerId) => {
+              set('partner_organization_id', partnerId);
+              // Clear location filter when partner changes
+              if (value.location_filter?.length) {
+                set('location_filter', []);
+              }
+            }}
+            organizationType="partner"
+            placeholder="Select Partner"
+          />
+        </div>
 
-              {/* Advanced Filters Section */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b pb-2">Advanced Filters</h3>
-                {renderPartnerOrganizationFilter()}
-                {value.partner_organization_id && renderLocationFilter()}
-                {renderSubcontractorFilter()}
-                {renderOperationalStatusFilter()}
-                {renderReportStatusFilter()}
-                {renderPartnerBillingStatusFilter()}
-              </div>
-            </div>
+        {/* Location Filter (dependent on partner selection) */}
+        <div>
+          <MultiSelectFilter
+            options={locationOptions}
+            selectedValues={value.location_filter || []}
+            onSelectionChange={(locations) => set('location_filter', locations)}
+            placeholder="Select Locations"
+            disabled={!value.partner_organization_id}
+            maxDisplayCount={2}
+          />
+        </div>
 
-            <SheetFooter className="border-t pt-4">
-              <Button 
-                onClick={() => setIsDesktopSheetOpen(false)}
-                className="w-full"
-              >
-                Apply Filters
-                {activeFilterCount > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
+        {/* Subcontractor Organization Selector */}
+        <div>
+          <OrganizationSelector
+            value={value.subcontractor_organization_id || ''}
+            onChange={(subcontractorId) => set('subcontractor_organization_id', subcontractorId)}
+            organizationType="subcontractor"
+            placeholder="Select Subcontractor"
+          />
+        </div>
+
+        {/* Operational Status Multi-Select */}
+        <div>
+          <MultiSelectFilter
+            options={operationalStatusOptions}
+            selectedValues={value.operational_status || []}
+            onSelectionChange={(statuses) => set('operational_status', statuses)}
+            placeholder="Work Status"
+            maxDisplayCount={2}
+          />
+        </div>
+
+        {/* Report Status Multi-Select */}
+        <div>
+          <MultiSelectFilter
+            options={reportStatusOptions}
+            selectedValues={value.report_status || []}
+            onSelectionChange={(statuses) => set('report_status', statuses)}
+            placeholder="Report Status"
+            maxDisplayCount={2}
+          />
+        </div>
+
+        {/* Invoice Status Multi-Select */}
+        <div>
+          <MultiSelectFilter
+            options={invoiceStatusOptions}
+            selectedValues={value.invoice_status || []}
+            onSelectionChange={(statuses) => set('invoice_status', statuses)}
+            placeholder="Invoice Status"
+            maxDisplayCount={2}
+          />
+        </div>
+
+        {/* Partner Billing Status Multi-Select */}
+        <div>
+          <MultiSelectFilter
+            options={partnerBillingStatusOptions}
+            selectedValues={value.partner_billing_status || []}
+            onSelectionChange={(statuses) => set('partner_billing_status', statuses)}
+            placeholder="Partner Billing Status"
+            maxDisplayCount={2}
+          />
+        </div>
       </div>
-    </div>
+    </AdminFilterBar>
   );
 }

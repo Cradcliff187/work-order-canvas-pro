@@ -3,13 +3,10 @@ import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2, RotateCcw, Arrow
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Label } from '@/components/ui/label';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AddLocationModal } from '@/components/admin/partner-locations/AddLocationModal';
 import { EditLocationModal } from '@/components/admin/partner-locations/EditLocationModal';
@@ -25,16 +22,14 @@ import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
+import { PartnerLocationFilters } from '@/components/admin/partner-locations/PartnerLocationFilters';
 export default function AdminPartnerLocations() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrganization, setSelectedOrganization] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [deletingLocation, setDeletingLocation] = useState<any>(null);
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Persist filters
   useEffect(() => {
@@ -45,7 +40,6 @@ export default function AdminPartnerLocations() {
         if (typeof parsed.searchTerm === 'string') setSearchTerm(parsed.searchTerm);
         if (typeof parsed.selectedOrganization === 'string') setSelectedOrganization(parsed.selectedOrganization);
         if (typeof parsed.statusFilter === 'string') setStatusFilter(parsed.statusFilter);
-        if (Array.isArray(parsed.selectedLocations)) setSelectedLocations(parsed.selectedLocations);
       }
     } catch (e) {
       console.warn('Failed to parse partner locations filters', e);
@@ -56,10 +50,10 @@ export default function AdminPartnerLocations() {
     try {
       localStorage.setItem(
         'admin-partner-locations-filters-v1',
-        JSON.stringify({ searchTerm, selectedOrganization, statusFilter, selectedLocations })
+        JSON.stringify({ searchTerm, selectedOrganization, statusFilter })
       );
     } catch {}
-  }, [searchTerm, selectedOrganization, statusFilter, selectedLocations]);
+  }, [searchTerm, selectedOrganization, statusFilter]);
 // Fetch all partner locations (admin can see all)
   const { data: allLocations = [], isLoading: locationsLoading, error: locationsError, refetch: refetchLocations } = usePartnerLocations();
   const { data: organizations = [], isLoading: orgsLoading, error: orgsError, refetch: refetchOrgs } = useOrganizations();
@@ -74,39 +68,7 @@ export default function AdminPartnerLocations() {
     return acc;
   }, {} as Record<string, any>);
 
-  // Filter partner organizations
-  const partnerOrganizations = organizations.filter(org => org.organization_type === 'partner');
-
-  // Create location options for filter
-  const locationOptions = useMemo(() => {
-    const options = [{ value: 'all', label: 'All Locations' }];
-    const sortedLocations = [...allLocations].sort((a, b) => {
-      const orgA = organizationMap[a.organization_id]?.name || '';
-      const orgB = organizationMap[b.organization_id]?.name || '';
-      if (orgA !== orgB) return orgA.localeCompare(orgB);
-      return a.location_name.localeCompare(b.location_name);
-    });
-    
-    sortedLocations.forEach(location => {
-      const org = organizationMap[location.organization_id];
-      options.push({
-        value: location.id,
-        label: `${location.location_name} (${location.location_number}) - ${org?.name || 'Unknown Org'}`
-      });
-    });
-    
-    return options;
-  }, [allLocations, organizationMap]);
-
-  // Calculate active filter count
-  const filterCount = useMemo(() => [
-    searchTerm,
-    selectedOrganization !== 'all' ? selectedOrganization : null,
-    statusFilter !== 'all' ? statusFilter : null,
-    selectedLocations.length > 0 ? selectedLocations : null
-  ].filter(Boolean).length, [searchTerm, selectedOrganization, statusFilter, selectedLocations]);
-
-  // Filter locations based on search term, organization, status, and selected locations
+  // Filter locations based on search term, organization, and status
   const filteredLocations = allLocations.filter(location => {
     const org = organizationMap[location.organization_id];
     const matchesSearch = searchTerm === '' || 
@@ -123,10 +85,7 @@ export default function AdminPartnerLocations() {
       (statusFilter === 'active' && location.is_active) ||
       (statusFilter === 'inactive' && !location.is_active);
 
-    const matchesSelectedLocations = selectedLocations.length === 0 || 
-      selectedLocations.includes(location.id);
-
-    return matchesSearch && matchesOrganization && matchesStatus && matchesSelectedLocations;
+    return matchesSearch && matchesOrganization && matchesStatus;
   });
 
   // Sorting state and helpers
@@ -277,81 +236,20 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
     );
   }
 
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-  };
-
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setSelectedOrganization('all');
-    setStatusFilter('all');
-    setSelectedLocations([]);
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-3xl font-bold tracking-tight">Partner Locations</h1>
           <p className="text-muted-foreground">
             Manage all partner locations across organizations
           </p>
         </div>
-      </div>
-
-      {/* Top Control Bar */}
-      {/* Desktop Layout */}
-      <div className="hidden lg:flex gap-4 mb-6">
-        <div className="flex flex-1 gap-2">
-          <SmartSearchInput
-            placeholder="Search locations..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onSearchSubmit={handleSearchChange}
-            className="flex-1"
-            storageKey="admin-partner-locations-search"
-          />
-          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-        </div>
-        <div className="flex gap-2">
-          <ColumnVisibilityDropdown
-            columns={columnOptions}
-            onToggleColumn={toggleColumn}
-            onResetToDefaults={resetToDefaults}
-            visibleCount={getVisibleColumnCount()}
-          />
-          <ExportDropdown onExport={handleExport} />
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Location
-          </Button>
-        </div>
-      </div>
-
-      {/* Mobile Layout */}
-      <div className="lg:hidden space-y-3">
-        <SmartSearchInput
-          placeholder="Search locations..."
-          value={searchTerm}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          onSearchSubmit={handleSearchChange}
-          className="w-full"
-          storageKey="admin-partner-locations-search"
-        />
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Location
-          </Button>
-        </div>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Location
+        </Button>
       </div>
 
       {/* Statistics Cards */}
@@ -397,120 +295,41 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         </Card>
       </div>
 
-      {/* Mobile Bottom Sheet */}
-      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[85vh]">
-          <SheetHeader>
-            <SheetTitle>Location Filters</SheetTitle>
-          </SheetHeader>
-          <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-4 py-4 pb-20">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Organization</Label>
-              <Select value={selectedOrganization} onValueChange={setSelectedOrganization}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All organizations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
-                  {partnerOrganizations.map(org => (
-                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Locations</Label>
-              <MultiSelectFilter
-                placeholder="Select locations"
-                options={locationOptions}
-                selectedValues={selectedLocations}
-                onSelectionChange={setSelectedLocations}
-                maxDisplayCount={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={() => setIsMobileFilterOpen(false)} className="w-full">
-              Apply Filters
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Desktop Right Sidebar */}
-      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-[480px] flex flex-col">
-          <SheetHeader>
-            <SheetTitle>Location Filters</SheetTitle>
-          </SheetHeader>
-          <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-4 py-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Organization</Label>
-              <Select value={selectedOrganization} onValueChange={setSelectedOrganization}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All organizations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
-                  {partnerOrganizations.map(org => (
-                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Locations</Label>
-              <MultiSelectFilter
-                placeholder="Select locations"
-                options={locationOptions}
-                selectedValues={selectedLocations}
-                onSelectionChange={setSelectedLocations}
-                maxDisplayCount={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2 pt-4">
-              <Button onClick={() => setIsDesktopFilterOpen(false)} className="flex-1">
-                Apply Filters
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleClearFilters}
-              >
-                Clear All
-              </Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Filters */}
+      <PartnerLocationFilters
+        searchTerm={searchTerm}
+        selectedOrganization={selectedOrganization}
+        statusFilter={statusFilter}
+        onSearchChange={setSearchTerm}
+        onOrganizationChange={setSelectedOrganization}
+        onStatusChange={setStatusFilter}
+        onClearFilters={() => {
+          setSearchTerm('');
+          setSelectedOrganization('all');
+          setStatusFilter('all');
+          try {
+            localStorage.removeItem('admin-partner-locations-filters-v1');
+            localStorage.removeItem('admin-partner-locations-search');
+          } catch {}
+        }}
+      />
 
       {/* Locations Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex items-center justify-between">
           <CardTitle>Locations ({filteredLocations.length})</CardTitle>
+          <div className="flex items-center gap-2">
+            <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || filteredLocations.length === 0} />
+            <ColumnVisibilityDropdown
+              columns={columnOptions}
+              onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
+              onResetToDefaults={resetToDefaults}
+              variant="outline"
+              size="sm"
+              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+              totalCount={columnOptions.filter(c => c.canHide).length}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {/* Desktop Table */}

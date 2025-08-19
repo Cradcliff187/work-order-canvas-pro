@@ -19,9 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Label } from '@/components/ui/label';
-import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown, Filter } from 'lucide-react';
+import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
@@ -61,11 +59,7 @@ export default function AdminOrganizations() {
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [filters, setFilters] = useState<OrganizationFilters>({});
   const [search, setSearch] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(search, 500);
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   const { data: organizations, isLoading, error, refetch } = useOrganizations();
 
@@ -73,21 +67,7 @@ export default function AdminOrganizations() {
     setFilters({ search: debouncedSearch });
   }, [debouncedSearch]);
 
-  // Sync searchTerm with search state
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setSearch(value);
-  };
-
   const [typeFilter, setTypeFilter] = useState<'all' | 'internal' | 'partner' | 'subcontractor'>('all');
-
-  // Calculate active filter count
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (typeFilter !== 'all') count++;
-    if (statusFilter !== 'all') count++;
-    return count;
-  }, [typeFilter, statusFilter]);
   const [sort, setSort] = useState<{ key: 'name' | 'initials' | 'contact_email' | 'organization_type'; desc: boolean}>(() => {
     try {
       const raw = localStorage.getItem('admin-organizations-sort-v1');
@@ -96,14 +76,13 @@ export default function AdminOrganizations() {
     return { key: 'name', desc: false };
   });
 
-  // Persist filters in localStorage
+  // Persist type filter in localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem('admin-organizations-filters-v1');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed?.type) setTypeFilter(parsed.type);
-        if (parsed?.status) setStatusFilter(parsed.status);
       }
     } catch (e) {
       console.warn('Failed to parse org filters from localStorage', e);
@@ -112,12 +91,9 @@ export default function AdminOrganizations() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('admin-organizations-filters-v1', JSON.stringify({ 
-        type: typeFilter, 
-        status: statusFilter 
-      }));
+      localStorage.setItem('admin-organizations-filters-v1', JSON.stringify({ type: typeFilter }));
     } catch {}
-  }, [typeFilter, statusFilter]);
+  }, [typeFilter]);
 
   const { mutate: updateOrg } = useUpdateOrganization();
   const handleToggleActive = (org: Organization) => {
@@ -157,11 +133,6 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
     if (typeFilter !== 'all') {
       data = data.filter(o => o.organization_type === typeFilter);
     }
-    if (statusFilter === 'active') {
-      data = data.filter(o => o.is_active);
-    } else if (statusFilter === 'inactive') {
-      data = data.filter(o => !o.is_active);
-    }
     const sorted = [...data].sort((a, b) => {
       const aVal = String((a as any)[sort.key] ?? '').toLowerCase();
       const bVal = String((b as any)[sort.key] ?? '').toLowerCase();
@@ -169,7 +140,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
       return sort.desc ? -cmp : cmp;
     });
     return sorted;
-  }, [organizations, filters.search, typeFilter, statusFilter, sort]);
+  }, [organizations, filters.search, typeFilter, sort]);
 
   const exportColumns: ExportColumn[] = [
     { key: 'name', label: 'Organization Name', type: 'string' },
@@ -196,10 +167,8 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
 
   const handleClearFilters = () => {
     setSearch('');
-    setSearchTerm('');
     setFilters({});
     setTypeFilter('all');
-    setStatusFilter('all');
     try {
       localStorage.removeItem('admin-organizations-filters-v1');
       localStorage.removeItem('admin-organizations-search');
@@ -226,43 +195,66 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold">Organizations Management</h1>
-            <p className="text-muted-foreground">
-              {filteredOrganizations?.length ? `${filteredOrganizations.length} matching organizations` : (organizations?.length ? `${organizations.length} total organizations` : 'Manage all organizations')}
-            </p>
-          </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold">Organizations Management</h1>
+          <p className="text-muted-foreground">
+            {filteredOrganizations?.length ? `${filteredOrganizations.length} matching organizations` : (organizations?.length ? `${organizations.length} total organizations` : 'Manage all organizations')}
+          </p>
         </div>
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0" role="toolbar" aria-label="Organization actions">
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+            className="h-9"
+          />
+          <Button onClick={() => setShowCreateModal(true)} className="h-9">
+            <Plus className="w-4 h-4 mr-2" />
+            New Organization
+          </Button>
+        </div>
+      </div>
 
-        {/* Desktop Control Bar */}
-        <div className="hidden lg:flex gap-4 mb-6">
-          <div className="flex flex-1 gap-2">
-            <SmartSearchInput
-              placeholder="Search organizations..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onSearchSubmit={(q) => handleSearchChange(q)}
-              onSelectSuggestion={(item) => handleSearchChange(item.label)}
-              workOrders={[]}
-              assignees={[]}
-              locations={[]}
-              storageKey="admin-organizations-search"
-              className="flex-1"
-            />
-            <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
-              <Filter className="h-4 w-4 mr-2" />
-              Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
-            </Button>
-          </div>
-          <div className="flex gap-2">
-            <ViewModeSwitcher
-              value={viewMode}
-              onValueChange={setViewMode}
-              allowedModes={allowedModes}
-              className="h-9"
-            />
+      {/* Search */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex-1 min-w-[220px]">
+          <SmartSearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onSearchSubmit={(q) => setSearch(q)}
+            onSelectSuggestion={(item) => setSearch(item.label)}
+            workOrders={[]}
+            assignees={[]}
+            locations={[]}
+            storageKey="admin-organizations-search"
+            aria-label="Search organizations"
+          />
+        </div>
+        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All types</SelectItem>
+            <SelectItem value="internal">Internal</SelectItem>
+            <SelectItem value="partner">Partner</SelectItem>
+            <SelectItem value="subcontractor">Subcontractor</SelectItem>
+          </SelectContent>
+        </Select>
+        {(search || typeFilter !== 'all') && (
+          <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+            Clear
+          </Button>
+        )}
+      </div>
+
+      {/* Data Table */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Organizations</CardTitle>
+          <div className="flex items-center gap-2">
+            <ExportDropdown onExport={handleExport} disabled={isLoading || filteredOrganizations.length === 0} />
             <ColumnVisibilityDropdown
               columns={columnOptions}
               onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
@@ -270,143 +262,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
               visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
               totalCount={columnOptions.filter(c => c.canHide).length}
             />
-            <ExportDropdown 
-              onExport={handleExport} 
-              disabled={isLoading || filteredOrganizations.length === 0} 
-            />
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Organization
-            </Button>
           </div>
-        </div>
-
-        {/* Mobile Control Bar */}
-        <div className="lg:hidden space-y-3">
-          <SmartSearchInput
-            placeholder="Search organizations..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onSearchSubmit={(q) => handleSearchChange(q)}
-            onSelectSuggestion={(item) => handleSearchChange(item.label)}
-            workOrders={[]}
-            assignees={[]}
-            locations={[]}
-            storageKey="admin-organizations-search"
-            className="w-full"
-          />
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
-              <Filter className="h-4 w-4 mr-2" />
-              Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
-            </Button>
-            <ViewModeSwitcher
-              value={viewMode}
-              onValueChange={setViewMode}
-              allowedModes={allowedModes}
-              className="h-9"
-            />
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Organization
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Bottom Sheet */}
-      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[85vh]">
-          <SheetHeader>
-            <SheetTitle>Advanced Filters</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 space-y-4 overflow-y-auto">
-            <div className="space-y-2">
-              <Label htmlFor="mobile-type">Organization Type</Label>
-              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
-                <SelectTrigger id="mobile-type" className="w-full">
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="internal">Internal</SelectItem>
-                  <SelectItem value="partner">Partner</SelectItem>
-                  <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mobile-status">Status</Label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger id="mobile-status" className="w-full">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {activeFilterCount > 0 && (
-              <Button onClick={handleClearFilters} variant="outline" className="w-full">
-                Clear All Filters
-              </Button>
-            )}
-            <Button onClick={() => setIsMobileFilterOpen(false)} className="w-full">
-              Apply Filters
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Desktop Sidebar */}
-      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-[420px]">
-          <SheetHeader>
-            <SheetTitle>Advanced Filters</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="desktop-type">Organization Type</Label>
-              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
-                <SelectTrigger id="desktop-type" className="w-full">
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="internal">Internal</SelectItem>
-                  <SelectItem value="partner">Partner</SelectItem>
-                  <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="desktop-status">Status</Label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger id="desktop-status" className="w-full">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {activeFilterCount > 0 && (
-              <Button onClick={handleClearFilters} variant="outline" className="w-full">
-                Clear All Filters
-              </Button>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Data Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Organizations</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -418,7 +274,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                   <EmptyTableState
                     icon={ClipboardList}
                     title="No organizations found"
-                    description={(filters.search || typeFilter !== 'all' || statusFilter !== 'all') ? "Try adjusting your search or filters" : "Get started by creating your first organization"}
+                    description={(filters.search || typeFilter !== 'all') ? "Try adjusting your search or filters" : "Get started by creating your first organization"}
                     action={{
                       label: "Create Organization",
                       onClick: () => setShowCreateModal(true),

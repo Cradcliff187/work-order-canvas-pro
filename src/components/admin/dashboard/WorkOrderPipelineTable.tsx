@@ -16,24 +16,153 @@ import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { ComputedFinancialStatusBadge, FinancialStatusBadge, ReportStatusBadge, StatusBadge } from '@/components/ui/status-badge';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { useAdminFilters } from '@/hooks/useAdminFilters';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { ClipboardList, Copy } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
 import { cn } from '@/lib/utils';
+import { useTrades } from '@/hooks/useWorkOrders';
 
-interface WorkOrderPipelineTableProps {
-  data: WorkOrderPipelineItem[];
-  isLoading: boolean;
-  isError: boolean;
+// Filter interface
+interface PipelineFiltersValue {
+  search?: string;
+  operational_status?: string[];
+  financial_status?: string[];
+  partner_billing_status?: string[];
+  partner_organization_id?: string;
+  overdue?: boolean;
+  priority?: string[];
+  trade_id?: string[];
+  assigned_organization_id?: string[];
+  report_status?: string[];
+  location_filter?: string[];
+  date_from?: string;
+  date_to?: string;
+  age_range?: [number, number];
 }
 
-export function WorkOrderPipelineTable({ data, isLoading, isError }: WorkOrderPipelineTableProps) {
+// Smart filter options with correct mappings
+const operationalStatusOptions = [
+  { value: 'new', label: 'New Orders' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'reports_pending', label: 'Reports Pending Review' },
+  { value: 'complete', label: 'Completed' }
+];
+
+const financialStatusOptions = [
+  { value: 'not_billed', label: 'No Invoice' },
+  { value: 'invoice_received', label: 'Invoice Received' },
+  { value: 'paid', label: 'Paid' }
+];
+
+const partnerBillingStatusOptions = [
+  { value: 'report_pending', label: 'Report Pending' },
+  { value: 'invoice_needed', label: 'Subcontractor Invoice Needed' },
+  { value: 'invoice_pending', label: 'Invoice Pending Approval' },
+  { value: 'ready_to_bill', label: 'Ready to Bill Partner' },
+  { value: 'billed', label: 'Partner Billed' },
+];
+
+const priorityOptions = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' }
+];
+
+const reportStatusOptions = [
+  { value: 'not_submitted', label: 'Not Submitted' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'reviewed', label: 'Under Review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Needs Revision' }
+];
+
+export function WorkOrderPipelineTable() {
   const navigate = useNavigate();
+  const { data: pipelineData, isLoading, isError } = useWorkOrderLifecycle();
+  const { data: trades } = useTrades();
+  
+  // Smart default filters for actionable items
+  const initialFilters: PipelineFiltersValue = {
+    search: '',
+    operational_status: ['new', 'assigned', 'in_progress', 'reports_pending'], // Show actionable items by default
+    financial_status: [],
+    partner_billing_status: [],
+    partner_organization_id: '',
+    overdue: false,
+    priority: [],
+    trade_id: [],
+    assigned_organization_id: [],
+    report_status: [],
+    location_filter: []
+  };
+
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters(
+    'admin-pipeline-filters',
+    initialFilters,
+    { excludeKeys: [] }
+  );
+
+  const handleClearFilters = () => {
+    clearFilters();
+  };
+
+  // Debounce search input
+  const debouncedSearch = useDebounce(filters.search || '', 300);
+
+  // Extract unique locations for filter options
+  const locationOptions = useMemo(() => {
+    if (!pipelineData) return [];
+    
+    const locations = new Set<string>();
+    pipelineData.forEach(item => {
+      if (item.store_location) {
+        locations.add(item.store_location);
+      } else {
+        locations.add('No location');
+      }
+    });
+    
+    return Array.from(locations)
+      .sort()
+      .map(location => ({ value: location, label: location }));
+  }, [pipelineData]);
+
+  // Helper function to get operational status key for filtering
+  const getOperationalStatusKey = (item: WorkOrderPipelineItem): string => {
+    switch (item.status) {
+      case 'received':
+        return 'new';
+      case 'assigned':
+        return 'assigned';
+      case 'in_progress':
+        return 'in_progress';
+      case 'completed':
+        // Better logic: if work order is completed but reports need review/approval
+        if (item.report_status === 'submitted' || item.report_status === 'reviewed') {
+          return 'reports_pending';
+        }
+        // If report is approved or no report needed, it's complete
+        return 'complete';
+      default:
+        return 'new';
+    }
+  };
 
   // Helper function to get partner billing status based on workflow
   const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
@@ -60,6 +189,81 @@ export function WorkOrderPipelineTable({ data, isLoading, isError }: WorkOrderPi
     
     return 'invoice_needed'; // Default - needs subcontractor invoice
   };
+
+  // Apply client-side filtering with improved logic
+  const filteredData = useMemo(() => {
+    if (!pipelineData) return [];
+
+    return pipelineData.filter((item) => {
+      // Enhanced search filter (work order number, title, partner, location, assigned org)
+      if (debouncedSearch && debouncedSearch.trim()) {
+        const searchTerm = debouncedSearch.toLowerCase().trim();
+        const matchesSearch = 
+          item.work_order_number?.toLowerCase().includes(searchTerm) ||
+          item.title?.toLowerCase().includes(searchTerm) ||
+          item.partner_organization_name?.toLowerCase().includes(searchTerm) ||
+          item.store_location?.toLowerCase().includes(searchTerm) ||
+          item.assigned_organization_name?.toLowerCase().includes(searchTerm);
+        if (!matchesSearch) return false;
+      }
+
+      // Operational status filter
+      if (filters.operational_status && filters.operational_status.length > 0) {
+        const itemOperationalStatus = getOperationalStatusKey(item);
+        if (!filters.operational_status.includes(itemOperationalStatus)) return false;
+      }
+
+      // Financial status filter
+      if (filters.financial_status && filters.financial_status.length > 0) {
+        if (!filters.financial_status.includes(item.financial_status)) return false;
+      }
+
+      // Partner billing status filter
+      if (filters.partner_billing_status && filters.partner_billing_status.length > 0) {
+        const partnerBillingStatus = getPartnerBillingStatus(item);
+        if (!filters.partner_billing_status.includes(partnerBillingStatus)) return false;
+      }
+
+      // Partner organization filter
+      if (filters.partner_organization_id && filters.partner_organization_id.trim()) {
+        if (item.organization_id !== filters.partner_organization_id) return false;
+      }
+
+      // Overdue filter
+      if (filters.overdue) {
+        if (!item.is_overdue) return false;
+      }
+
+      // Priority filter (handle null values properly)
+      if (filters.priority && filters.priority.length > 0) {
+        const itemPriority = item.priority || 'medium';
+        if (!filters.priority.includes(itemPriority)) return false;
+      }
+
+      // Assigned organization filter (fix data type issue)
+      if (filters.assigned_organization_id && filters.assigned_organization_id.length > 0) {
+        if (!item.assigned_organization_id || 
+            !filters.assigned_organization_id.includes(item.assigned_organization_id)) return false;
+      }
+
+      // Report status filter
+      if (filters.report_status && filters.report_status.length > 0) {
+        const reportStatus = item.report_status || 'not_submitted';
+        if (!filters.report_status.includes(reportStatus)) return false;
+      }
+
+      // Location filter
+      if (filters.location_filter && filters.location_filter.length > 0) {
+        const itemLocation = item.store_location || 'No location';
+        if (!filters.location_filter.includes(itemLocation)) return false;
+      }
+
+      return true;
+    });
+  }, [pipelineData, debouncedSearch, filters]);
+
+  const data = useMemo(() => filteredData, [filteredData]);
+
 
   const columns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
     {
@@ -232,23 +436,13 @@ export function WorkOrderPipelineTable({ data, isLoading, isError }: WorkOrderPi
         
         const statusValue = getInvoiceStatusForBadge();
         
-        return <FinancialStatusBadge status={statusValue} size="sm" showIcon />;
-      },
-    },
-    {
-      id: 'amount',
-      header: 'Amount',
-      cell: ({ row }) => {
-        const item = row.original;
-        
         return (
-          <div className="text-right">
-            {item.subcontractor_invoice_amount ? (
-              <span className="font-medium">
+          <div className="space-y-1">
+            <FinancialStatusBadge status={statusValue} size="sm" showIcon />
+            {item.subcontractor_invoice_amount && (
+              <div className="text-xs text-muted-foreground">
                 ${item.subcontractor_invoice_amount.toLocaleString()}
-              </span>
-            ) : (
-              <span className="text-muted-foreground text-sm">—</span>
+              </div>
             )}
           </div>
         );
@@ -289,17 +483,123 @@ export function WorkOrderPipelineTable({ data, isLoading, isError }: WorkOrderPi
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Work Order Pipeline</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
+        {/* Filters */}
+        <AdminFilterBar
+          title="Filters"
+          filterCount={filterCount}
+          onClear={handleClearFilters}
+          className="mb-6"
+        >
+          <SmartSearchInput
+            value={filters.search || ''}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            placeholder="Search work orders, partners, locations..."
+            storageKey="pipeline-table-search"
+          />
+          
+          <MultiSelectFilter
+            options={locationOptions}
+            selectedValues={filters.location_filter || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, location_filter: values })
+            }
+            placeholder="All locations"
+            maxDisplayCount={2}
+          />
+
+          <MultiSelectFilter
+            options={operationalStatusOptions}
+            selectedValues={filters.operational_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, operational_status: values })
+            }
+            placeholder="Show actionable items"
+            maxDisplayCount={2}
+          />
+          
+          <MultiSelectFilter
+            options={financialStatusOptions}
+            selectedValues={filters.financial_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, financial_status: values })
+            }
+            placeholder="All invoice statuses"
+            maxDisplayCount={2}
+          />
+
+          <MultiSelectFilter
+            options={partnerBillingStatusOptions}
+            selectedValues={filters.partner_billing_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, partner_billing_status: values })
+            }
+            placeholder="All billing statuses"
+            maxDisplayCount={2}
+          />
+
+          <MultiSelectFilter
+            options={reportStatusOptions}
+            selectedValues={filters.report_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, report_status: values })
+            }
+            placeholder="All report statuses"
+            maxDisplayCount={2}
+          />
+
+          <OrganizationSelector
+            value={filters.partner_organization_id || ''}
+            onChange={(value) => 
+              setFilters({ ...filters, partner_organization_id: value })
+            }
+            organizationType="partner"
+            placeholder="All partners"
+          />
+
+          <MultiSelectFilter
+            options={priorityOptions}
+            selectedValues={filters.priority || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, priority: values })
+            }
+            placeholder="All priorities"
+            maxDisplayCount={2}
+          />
+
+          <OrganizationSelector
+            value={filters.assigned_organization_id?.[0] || ''}
+            onChange={(value) => 
+              setFilters({ ...filters, assigned_organization_id: value ? [value] : [] })
+            }
+            organizationType="subcontractor"
+            placeholder="All subcontractors"
+          />
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={filters.overdue || false}
+              onCheckedChange={(checked) => 
+                setFilters({ ...filters, overdue: checked })
+              }
+            />
+            <Label htmlFor="overdue-switch" className="text-sm font-medium">
+              Overdue Only
+            </Label>
+          </div>
+        </AdminFilterBar>
+
         {isLoading ? (
           <TableSkeleton rows={5} columns={4} />
         ) : data.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
-            title="No work orders found"
-            description="No work orders are currently in the pipeline."
+            title={filterCount > 0 ? "No matching work orders" : "No work orders found"}
+            description={
+              filterCount > 0 
+                ? "No work orders match your current filters. Try adjusting your criteria."
+                : "No work orders are currently in the pipeline."
+            }
             variant="card"
           />
         ) : (
@@ -409,27 +709,27 @@ export function WorkOrderPipelineTable({ data, isLoading, isError }: WorkOrderPi
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-3 py-1 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
                   Previous
-                </Button>
+                </button>
                 <div className="flex items-center gap-1">
                   <span className="text-sm text-muted-foreground">
                     Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
                   </span>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-3 py-1 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                 >
                   Next
-                </Button>
+                </button>
               </div>
             </div>
           </>

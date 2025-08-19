@@ -1,5 +1,6 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense } from 'react';
 import { Route, Navigate } from 'react-router-dom';
+import { LazyWrapper } from '@/components/LazyWrapper';
 import { SmartReceiptFlow } from '@/components/receipts/SmartReceiptFlow';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
@@ -347,16 +348,6 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <DirectMessagesPage />
-          </Suspense>
-        </AdminLayout>
-      </ProtectedRoute>
-    } />
-    
-    <Route path="/admin/testing" element={
-      <ProtectedRoute requiredUserType="admin">
-        <AdminLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            {React.createElement(lazy(() => import('@/pages/testing/TestingPage')))}
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>

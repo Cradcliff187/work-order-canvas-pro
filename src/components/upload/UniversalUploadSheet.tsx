@@ -199,9 +199,9 @@ export function UniversalUploadSheet({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(event.target.files || []);
     if (newFiles.length > 0) {
-      // Enhanced haptic feedback on mobile
+      // Add haptic feedback on mobile
       if (isMobile && 'vibrate' in navigator) {
-        navigator.vibrate([50, 25, 100]); // Success pattern
+        navigator.vibrate(50);
       }
       
       // Apply selection mode logic
@@ -243,10 +243,6 @@ export function UniversalUploadSheet({
     
     const inputRef = inputMap[optionId as keyof typeof inputMap];
     if (inputRef?.current) {
-      // Light haptic feedback on tap
-      if (isMobile && 'vibrate' in navigator) {
-        navigator.vibrate(25);
-      }
       inputRef.current.click();
     }
   };
@@ -273,7 +269,8 @@ export function UniversalUploadSheet({
       <Card
         key={option.id}
         className={cn(
-          "upload-option-card cursor-pointer min-h-[120px]",
+          "cursor-pointer transition-all duration-200 hover:shadow-md active:scale-95",
+          "border-2 hover:border-primary/50 min-h-[120px]",
           !option.available && "opacity-50 cursor-not-allowed",
           (isProcessing || showSuccess) && "border-primary bg-primary/5"
         )}
@@ -290,30 +287,25 @@ export function UniversalUploadSheet({
         aria-describedby={`${option.id}-description`}
       >
         <CardContent className="p-4 text-center space-y-3 h-full flex flex-col justify-center">
-            <div className={cn(
-              "mx-auto rounded-full flex items-center justify-center",
-              isMobile ? "w-16 h-16" : "w-12 h-12",
-              (isProcessing || showSuccess) 
-                ? "bg-primary text-primary-foreground" 
-                : "bg-primary/10 text-primary"
-            )} aria-hidden="true">
-              {isProcessing ? (
-                <Loader2 className={cn("animate-spin", isMobile ? "w-8 h-8" : "w-6 h-6")} />
-              ) : showSuccess ? (
-                <CheckCircle2 className={cn(isMobile ? "w-8 h-8" : "w-6 h-6")} />
-              ) : (
-                <option.icon className={cn("upload-icon-bounce upload-option-icon", isMobile ? "w-8 h-8" : "w-6 h-6")} />
-              )}
-            </div>
+          <div className={cn(
+            "mx-auto w-12 h-12 rounded-full flex items-center justify-center",
+            (isProcessing || showSuccess) 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-primary/10 text-primary"
+          )} aria-hidden="true">
+            {isProcessing ? (
+              <Loader2 className="w-6 h-6 animate-spin" />
+            ) : showSuccess ? (
+              <CheckCircle2 className="w-6 h-6" />
+            ) : (
+              <option.icon className="w-6 h-6" />
+            )}
+          </div>
           <div>
-            <h3 className={cn("font-medium leading-tight upload-option-title", 
-              isMobile ? "text-lg" : "text-sm"
-            )}>
+            <h3 className="font-medium text-sm leading-tight">
               {isProcessing ? "Processing..." : showSuccess ? "Selected!" : option.title}
             </h3>
-            <p id={`${option.id}-description`} className={cn("text-muted-foreground mt-1 leading-tight upload-option-description",
-              isMobile ? "text-base" : "text-xs"
-            )}>
+            <p id={`${option.id}-description`} className="text-xs text-muted-foreground mt-1 leading-tight">
               {showSuccess 
                 ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} selected` 
                 : option.description || getOptionDescription()}
@@ -343,10 +335,7 @@ export function UniversalUploadSheet({
     <Button
       type="button"
       variant="outline"
-      className={cn(
-        "upload-trigger-enhanced w-full h-20 border-dashed border-2",
-        isProcessing && "processing"
-      )}
+      className="w-full h-20 border-dashed border-2 hover:border-primary/50 transition-colors duration-200"
       disabled={disabled || isProcessing}
       aria-label={isProcessing ? "Processing files, please wait" : `Open file selection dialog. ${selectedFileCount > 0 ? `${selectedFileCount} file${selectedFileCount !== 1 ? 's' : ''} currently selected.` : 'No files selected.'}`}
       aria-describedby="upload-trigger-description"
@@ -355,7 +344,7 @@ export function UniversalUploadSheet({
         {isProcessing ? (
           <Loader2 className="h-6 w-6 mx-auto mb-2 text-primary animate-spin" aria-hidden="true" />
         ) : (
-          <Upload className="upload-icon-bounce h-6 w-6 mx-auto mb-2 text-muted-foreground" aria-hidden="true" />
+          <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" aria-hidden="true" />
         )}
         <p className="text-sm font-medium">
           {isProcessing ? "Processing..." : (buttonText || (selectedFileCount > 0 ? `${selectedFileCount} file${selectedFileCount !== 1 ? 's' : ''} selected` : "Select Files"))}

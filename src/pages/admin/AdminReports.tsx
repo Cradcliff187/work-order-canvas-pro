@@ -18,7 +18,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Eye, 
@@ -35,7 +36,6 @@ import {
   X,
   Trash
 } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
@@ -62,15 +62,7 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
-import { ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersV2';
-import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
-import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
+import { ReportsFilters, ReportsFiltersValue } from '@/components/admin/reports/ReportsFilters';
 
 export default function AdminReports() {
   const navigate = useNavigate();
@@ -94,40 +86,14 @@ export default function AdminReports() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Persist filters using the ReportsFiltersV2 structure
+  // Persist filters using the simple ReportsFilters structure
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<ReportsFiltersValue>(
-    'admin-reports-filters-v5',
+    'admin-reports-filters-v3',
     {},
     { excludeKeys: [] }
   );
 
-  // Data for filters
-  const { data: organizations = [] } = useOrganizationsForWorkOrders();
-  const { data: trades = [] } = useTrades();
-  
-  // Partner and Subcontractor organizations
-  const partnerOrganizations = organizations.filter(org => org.organization_type === 'partner');
-  const subcontractorOrganizations = organizations.filter(org => org.organization_type === 'subcontractor');
-  
-  // Partner locations (dependent on selected partners)
-  const { data: locations = [] } = useQuery({
-    queryKey: ['report-locations', filters.partner_organization_ids],
-    queryFn: async () => {
-      if (!filters.partner_organization_ids?.length) return [];
-      
-      const { data: partnerLocations } = await supabase
-        .from('partner_locations')
-        .select('*')
-        .in('organization_id', filters.partner_organization_ids);
-      
-      if (!partnerLocations) return [];
-      
-      return [...new Set(partnerLocations.map(loc => loc.location_name))].filter(Boolean).sort();
-    },
-    enabled: !!filters.partner_organization_ids?.length
-  });
-
-  
+  const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
   const { reviewReport, bulkReviewReports, deleteReport } = useAdminReportMutations();
   const { data: submittedCounts } = useSubmittedCounts();
 
@@ -349,48 +315,6 @@ const table = useReactTable({
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
-  // Helper function to update filters
-  const handleFilterChange = (key: keyof ReportsFiltersValue, filterValue: any) => {
-    handleFiltersChange({ ...filters, [key]: filterValue });
-  };
-
-  // Handle date changes
-  const handleDateFromChange = (date: Date | undefined) => {
-    handleFilterChange('date_from', date ? format(date, 'yyyy-MM-dd') : undefined);
-  };
-
-  const handleDateToChange = (date: Date | undefined) => {
-    handleFilterChange('date_to', date ? format(date, 'yyyy-MM-dd') : undefined);
-  };
-
-  // Status options and other filter data
-  const statusOptions = [
-    { value: 'submitted', label: 'Submitted' },
-    { value: 'reviewed', label: 'Reviewed' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'rejected', label: 'Rejected' },
-  ];
-
-  const partnerOptions = partnerOrganizations.map(org => ({
-    value: org.id,
-    label: org.name
-  }));
-
-  const subcontractorOptions = subcontractorOrganizations.map(org => ({
-    value: org.id,
-    label: org.name
-  }));
-
-  const tradeOptions = trades.map(trade => ({
-    value: trade.id,
-    label: trade.name
-  }));
-
-  const locationOptions = locations.map(location => ({
-    value: location,
-    label: location
-  }));
-
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
@@ -464,209 +388,98 @@ const table = useReactTable({
       </Card>
     </div>
   ) : (
-    <div className="flex flex-col min-h-screen bg-background">
-      {/* Clean Header - Industry Standard */}
-      <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-6 py-4 space-y-4">
-          {/* Row 1: Title and Stats */}
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h1 className="text-2xl font-semibold tracking-tight">Report Review</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'Review and approve subcontractor reports'}
-              </p>
-            </div>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Report Review</h1>
             {submittedCounts && submittedCounts.reportsCount > 0 && (
               <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                 {submittedCounts.reportsCount} pending
               </Badge>
             )}
           </div>
-
-          {/* Row 2: Prominent Search Bar */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 max-w-md">
-              <SmartSearchInput
-                placeholder="Search reports by work order, location, or subcontractor..."
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onSearchSubmit={handleSearchChange}
-                storageKey="admin-reports-search"
-                className="h-9"
-              />
-            </div>
-          <AdminFilterBar
-            title="Filters"
-            filterCount={filterCount}
-            onClear={handleClearFilters}
-            collapsible={true}
-            className="h-10"
-            sections={{
-              essential: (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label>Report Status</Label>
-                    <MultiSelectFilter
-                      options={statusOptions}
-                      selectedValues={filters.status || []}
-                      onSelectionChange={(status) => handleFilterChange('status', status)}
-                      placeholder="Select status"
-                      maxDisplayCount={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date From</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !filters.date_from && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={filters.date_from ? new Date(filters.date_from) : undefined}
-                          onSelect={handleDateFromChange}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date To</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !filters.date_to && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={filters.date_to ? new Date(filters.date_to) : undefined}
-                          onSelect={handleDateToChange}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Partner Organization</Label>
-                    <MultiSelectFilter
-                      options={partnerOptions}
-                      selectedValues={filters.partner_organization_ids || []}
-                      onSelectionChange={(ids) => handleFilterChange('partner_organization_ids', ids)}
-                      placeholder="Select partners"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Location</Label>
-                    <MultiSelectFilter
-                      options={locationOptions}
-                      selectedValues={filters.location_filter || []}
-                      onSelectionChange={(locations) => handleFilterChange('location_filter', locations)}
-                      placeholder={filters.partner_organization_ids?.length ? "Select locations" : "Select partner first"}
-                      disabled={!filters.partner_organization_ids?.length}
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Subcontractor Organization</Label>
-                    <MultiSelectFilter
-                      options={subcontractorOptions}
-                      selectedValues={filters.subcontractor_organization_ids || []}
-                      onSelectionChange={(ids) => handleFilterChange('subcontractor_organization_ids', ids)}
-                      placeholder="Select subcontractors"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Trade</Label>
-                    <MultiSelectFilter
-                      options={tradeOptions}
-                      selectedValues={filters.trade_ids || []}
-                      onSelectionChange={(ids) => handleFilterChange('trade_ids', ids)}
-                      placeholder="Select trades"
-                      maxDisplayCount={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="submitted-by">Submitted By</Label>
-                    <Input
-                      id="submitted-by"
-                      value={filters.submitted_by || ''}
-                      onChange={(e) => handleFilterChange('submitted_by', e.target.value || undefined)}
-                      placeholder="Enter name or email"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="work-order">Work Order</Label>
-                    <Input
-                      id="work-order"
-                      value={filters.work_order || ''}
-                      onChange={(e) => handleFilterChange('work_order', e.target.value || undefined)}
-                      placeholder="Enter work order number"
-                    />
-                  </div>
-                </div>
-              )
-            }}
+          <p className="text-muted-foreground">
+            {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'Review and approve subcontractor reports'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2" role="toolbar" aria-label="Report actions">
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+            className="h-9"
           />
         </div>
+      </div>
 
-          {/* Row 3: Controls and Actions */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <ViewModeSwitcher
-                value={viewMode}
-                onValueChange={setViewMode}
-                allowedModes={allowedModes}
-              />
-              {selectedRows.length > 0 && (
-                <div className="flex items-center gap-2 pl-3 border-l">
-                  <span className="text-sm text-muted-foreground">
-                    {selectedRows.length} selected
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleBulkApprove}
-                    disabled={bulkReviewReports.isPending}
-                    className="h-8"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Approve
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleBulkReject}
-                    disabled={bulkReviewReports.isPending}
-                    className="h-8"
-                  >
-                    <XCircle className="w-4 h-4 mr-1" />
-                    Reject
-                  </Button>
-                </div>
-              )}
+      {/* Filters */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Input
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search work orders, notes, or invoice numbers..."
+            className="flex-1"
+          />
+        </div>
+        <ReportsFilters
+          value={filters}
+          onChange={handleFiltersChange}
+        />
+        {(filterCount > 0 || searchTerm) && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleClearFilters}>
+              <X className="w-4 h-4 mr-2" />
+              Clear all filters
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {filterCount} filter{filterCount !== 1 ? 's' : ''} applied
+              {searchTerm && ' + search'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Bulk Actions */}
+      {selectedRows.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {selectedRows.length} report(s) selected
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkApprove}
+                  disabled={bulkReviewReports.isPending}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approve Selected
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkReject}
+                  disabled={bulkReviewReports.isPending}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Reject Selected
+                </Button>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Data Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Reports</CardTitle>
             <div className="flex items-center gap-2">
               <ColumnVisibilityDropdown
                 columns={columnOptions}
@@ -675,28 +488,18 @@ const table = useReactTable({
                 visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
                 totalCount={columnOptions.filter(c => c.canHide).length}
               />
-              <ExportDropdown 
-                onExport={handleExport} 
-                disabled={isLoading || (reportsData?.data?.length ?? 0) === 0}
-                size="sm"
-              />
+              <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 p-6">
-        {/* Data Table */}
-        <Card>
-          <CardContent className="p-0">
-            <ReportsTable
-              table={table}
-              columns={columns}
-              isLoading={isLoading}
-              viewMode={viewMode === 'card' ? 'card' : 'table'}
-              onRowClick={(report) => navigate(`/admin/reports/${(report as any).id}`)}
-              renderMobileCard={(report: any) => {
+        </CardHeader>
+        <CardContent>
+          <ReportsTable
+            table={table}
+            columns={columns}
+            isLoading={isLoading}
+            viewMode={viewMode === 'card' ? 'card' : 'table'}
+            onRowClick={(report) => navigate(`/admin/reports/${(report as any).id}`)}
+            renderMobileCard={(report: any) => {
               const workOrder = report.work_orders;
               const subcontractor = report.subcontractor;
               const subcontractorOrg = report.subcontractor_organization;
@@ -741,24 +544,23 @@ const table = useReactTable({
                   </MobileTableCard>
                 </SwipeableListItem>
               );
-              }}
-              emptyIcon={FileText}
-              emptyTitle="No reports found"
-              emptyDescription={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Reports will appear here when subcontractors submit them"}
-            />
-          </CardContent>
-        </Card>
+            }}
+            emptyIcon={FileText}
+            emptyTitle="No reports found"
+            emptyDescription={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Reports will appear here when subcontractors submit them"}
+          />
+        </CardContent>
+      </Card>
 
-        {/* Delete Confirmation Dialog */}
-        <DeleteConfirmationDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          onConfirm={handleDeleteConfirm}
-          itemName={reportToDelete ? `${reportToDelete.work_orders?.work_order_number || 'Report'} - ${reportToDelete.work_orders?.title || 'Work Order'}` : ''}
-          itemType="report"
-          isLoading={deleteReport.isPending}
-        />
-      </div>
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        itemName={reportToDelete ? `${reportToDelete.work_orders?.work_order_number || 'Report'} - ${reportToDelete.work_orders?.title || 'Work Order'}` : ''}
+        itemType="report"
+        isLoading={deleteReport.isPending}
+      />
     </div>
   );
 }
