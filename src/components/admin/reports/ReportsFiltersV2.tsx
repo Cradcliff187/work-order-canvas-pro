@@ -13,8 +13,7 @@ import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { useOrganizationsForWorkOrders } from '@/hooks/useWorkOrders';
 import { useTrades } from '@/hooks/useWorkOrders';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CalendarIcon, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
@@ -62,28 +61,11 @@ export function ReportsFiltersV2({
   // Data fetching
   const { data: organizations = [] } = useOrganizationsForWorkOrders();
   const { data: trades = [] } = useTrades();
+  const { data: locations = [] } = usePartnerLocations();
   
   // Partner and Subcontractor organizations
   const partnerOrganizations = organizations.filter(org => org.organization_type === 'partner');
   const subcontractorOrganizations = organizations.filter(org => org.organization_type === 'subcontractor');
-  
-  // Partner locations (dependent on selected partners)
-  const { data: locations = [] } = useQuery({
-    queryKey: ['report-locations', value.partner_organization_ids],
-    queryFn: async () => {
-      if (!value.partner_organization_ids?.length) return [];
-      
-      const { data: partnerLocations } = await supabase
-        .from('partner_locations')
-        .select('*')
-        .in('organization_id', value.partner_organization_ids);
-      
-      if (!partnerLocations) return [];
-      
-      return [...new Set(partnerLocations.map(loc => loc.location_name))].filter(Boolean).sort();
-    },
-    enabled: !!value.partner_organization_ids?.length
-  });
 
   // Helper function to update filters
   const handleFilterChange = (key: keyof ReportsFiltersValue, filterValue: any) => {
@@ -130,10 +112,13 @@ export function ReportsFiltersV2({
     label: trade.name
   }));
 
-  const locationOptions = locations.map(location => ({
-    value: location,
-    label: location
-  }));
+  const locationOptions = locations
+    .map(location => location.location_name)
+    .filter(Boolean)
+    .map(locationName => ({
+      value: locationName,
+      label: locationName
+    }));
 
   // Render functions for reusable filters
   const renderSearchFilter = () => (
@@ -232,8 +217,7 @@ export function ReportsFiltersV2({
         options={locationOptions}
         selectedValues={value.location_filter || []}
         onSelectionChange={(locations) => handleFilterChange('location_filter', locations)}
-        placeholder={value.partner_organization_ids?.length ? "Select locations" : "Select partner first"}
-        disabled={!value.partner_organization_ids?.length}
+        placeholder="All Locations"
         maxDisplayCount={1}
       />
     </div>
