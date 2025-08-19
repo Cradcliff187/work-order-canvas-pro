@@ -116,14 +116,14 @@ export function MultiSelectFilter({
                 <Checkbox
                   checked={selectedValues.includes(option.value)}
                   onCheckedChange={() => handleToggleOption(option.value)}
-                  onClick={(e) => e.stopPropagation()}
+                  id={`checkbox-${option.value}`}
                 />
-                <span 
-                  className="text-sm cursor-pointer"
-                  onClick={() => handleToggleOption(option.value)}
+                <label 
+                  htmlFor={`checkbox-${option.value}`}
+                  className="text-sm flex-1 cursor-pointer select-none"
                 >
                   {option.label}
-                </span>
+                </label>
               </div>
             ))
             )}
