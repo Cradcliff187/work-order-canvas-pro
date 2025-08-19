@@ -18,6 +18,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Eye, 
@@ -26,6 +28,7 @@ import {
   XCircle, 
   Clock, 
   FileText, 
+  CalendarIcon, 
   Search,
   Download,
   RotateCcw,
@@ -33,7 +36,7 @@ import {
   X,
   Trash
 } from 'lucide-react';
-
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
@@ -61,6 +64,8 @@ import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
 import { ReportsFiltersV2, ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersV2';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { cn } from '@/lib/utils';
 
 export default function AdminReports() {
   const navigate = useNavigate();
@@ -83,6 +88,8 @@ export default function AdminReports() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Persist filters using the ReportsFiltersV2 structure
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<ReportsFiltersValue>(
@@ -405,34 +412,34 @@ const table = useReactTable({
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden lg:space-y-4 mb-6">
-        <SmartSearchInput
-          placeholder="Search by work order, location, materials..."
-          value={searchTerm}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full"
-        />
-        <div className="flex justify-between items-center">
-          <ReportsFiltersV2 
-            value={filters} 
-            onChange={handleFiltersChange}
+      <div className="hidden lg:flex gap-4 mb-6">
+        <div className="flex flex-1 gap-2">
+          <SmartSearchInput
+            placeholder="Search by work order, location, materials..."
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="flex-1"
           />
-          <div className="flex gap-2">
-            <ViewModeSwitcher
-              value={viewMode}
-              onValueChange={setViewMode}
-              allowedModes={allowedModes}
-              className="h-9"
-            />
-            <ColumnVisibilityDropdown
-              columns={columnOptions}
-              onToggleColumn={toggleColumn}
-              onResetToDefaults={resetToDefaults}
-              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-              totalCount={columnOptions.filter(c => c.canHide).length}
-            />
-            <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
-          </div>
+          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
+            <Filter className="h-4 w-4 mr-2" />
+            Filters {filterCount > 0 && `(${filterCount})`}
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+            className="h-9"
+          />
+          <ColumnVisibilityDropdown
+            columns={columnOptions}
+            onToggleColumn={toggleColumn}
+            onResetToDefaults={resetToDefaults}
+            visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+            totalCount={columnOptions.filter(c => c.canHide).length}
+          />
+          <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
         </div>
       </div>
 
@@ -445,10 +452,10 @@ const table = useReactTable({
           className="w-full"
         />
         <div className="flex gap-2">
-          <ReportsFiltersV2 
-            value={filters} 
-            onChange={handleFiltersChange}
-          />
+          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters {filterCount > 0 && `(${filterCount})`}
+          </Button>
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
@@ -458,6 +465,180 @@ const table = useReactTable({
         </div>
       </div>
 
+      {/* Desktop Filter Sheet */}
+      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
+        <SheetContent side="right" className="w-80">
+          <SheetHeader>
+            <SheetTitle>Filter Reports</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-6">
+            <div>
+              <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Report Status</label>
+                  <MultiSelectFilter
+                    options={[
+                      { value: 'submitted', label: 'Submitted' },
+                      { value: 'reviewed', label: 'Reviewed' },
+                      { value: 'approved', label: 'Approved' },
+                      { value: 'rejected', label: 'Rejected' },
+                    ]}
+                    selectedValues={filters.status || []}
+                    onSelectionChange={(status) => handleFiltersChange({ ...filters, status })}
+                    placeholder="Select status"
+                    maxDisplayCount={2}
+                  />
+                </div>
+                {/* Date Range Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Date Range</label>
+                  <div className="flex gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !filters.date_from && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={filters.date_from ? new Date(filters.date_from) : undefined}
+                          onSelect={(date) => handleFiltersChange({ ...filters, date_from: date ? format(date, 'yyyy-MM-dd') : undefined })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !filters.date_to && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={filters.date_to ? new Date(filters.date_to) : undefined}
+                          onSelect={(date) => handleFiltersChange({ ...filters, date_to: date ? format(date, 'yyyy-MM-dd') : undefined })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {filterCount > 0 && (
+              <div className="pt-4 border-t">
+                <Button variant="outline" onClick={handleClearFilters} className="w-full">
+                  Clear All Filters
+                </Button>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Mobile Filter Sheet */}
+      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+        <SheetContent side="bottom" className="h-[80vh]">
+          <SheetHeader>
+            <SheetTitle>Filter Reports</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-6 max-h-[60vh] overflow-y-auto">
+            <div>
+              <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Report Status</label>
+                  <MultiSelectFilter
+                    options={[
+                      { value: 'submitted', label: 'Submitted' },
+                      { value: 'reviewed', label: 'Reviewed' },
+                      { value: 'approved', label: 'Approved' },
+                      { value: 'rejected', label: 'Rejected' },
+                    ]}
+                    selectedValues={filters.status || []}
+                    onSelectionChange={(status) => handleFiltersChange({ ...filters, status })}
+                    placeholder="Select status"
+                    maxDisplayCount={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Date Range</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !filters.date_from && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {filters.date_from ? format(new Date(filters.date_from), 'MMM dd, yyyy') : 'From date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={filters.date_from ? new Date(filters.date_from) : undefined}
+                          onSelect={(date) => handleFiltersChange({ ...filters, date_from: date ? format(date, 'yyyy-MM-dd') : undefined })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !filters.date_to && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {filters.date_to ? format(new Date(filters.date_to), 'MMM dd, yyyy') : 'To date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={filters.date_to ? new Date(filters.date_to) : undefined}
+                          onSelect={(date) => handleFiltersChange({ ...filters, date_to: date ? format(date, 'yyyy-MM-dd') : undefined })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {filterCount > 0 && (
+              <div className="sticky bottom-0 pt-4 border-t bg-background">
+                <Button variant="outline" onClick={() => { handleClearFilters(); setIsMobileFilterOpen(false); }} className="w-full">
+                  Clear All Filters
+                </Button>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Bulk Actions */}
       {selectedRows.length > 0 && (
