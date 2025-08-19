@@ -323,7 +323,7 @@ export function useWorkOrderLifecycleTesting() {
       updateResult('File Upload Integration', 'running');
       try {
         // Create a test blob to simulate file upload
-        const testBlob = new Blob(['test file content'], { type: 'text/plain' });
+        const testBlob = new Blob(['test file content for lifecycle testing'], { type: 'text/plain' });
         const testFile = new File([testBlob], 'test-file.txt', { type: 'text/plain' });
         
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -331,17 +331,26 @@ export function useWorkOrderLifecycleTesting() {
           .upload(`test/${Date.now()}_test-file.txt`, testFile);
 
         if (uploadError) {
-          updateResult('File Upload Integration', 'fail', uploadError.message);
+          updateResult('File Upload Integration', 'fail', `Upload failed: ${uploadError.message}`);
         } else {
-          // Clean up test file
-          await supabase.storage
+          // Test download functionality
+          const { data: downloadData, error: downloadError } = await supabase.storage
             .from('work-order-attachments')
-            .remove([uploadData.path]);
+            .download(uploadData.path);
           
-          updateResult('File Upload Integration', 'pass', 'File upload and cleanup successful');
+          if (downloadError) {
+            updateResult('File Upload Integration', 'fail', `Download failed: ${downloadError.message}`);
+          } else {
+            // Clean up test file
+            await supabase.storage
+              .from('work-order-attachments')
+              .remove([uploadData.path]);
+            
+            updateResult('File Upload Integration', 'pass', 'File upload, download, and cleanup successful');
+          }
         }
       } catch (error: any) {
-        updateResult('File Upload Integration', 'fail', error.message);
+        updateResult('File Upload Integration', 'fail', `File test error: ${error.message}`);
       }
 
     } catch (error: any) {

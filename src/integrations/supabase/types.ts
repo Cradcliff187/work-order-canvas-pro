@@ -1542,6 +1542,8 @@ export type Database = {
           approved_subcontractor_invoice_amount: number | null
           hours_worked: number | null
           id: string
+          invoice_amount: number | null
+          invoice_number: string | null
           materials_used: string | null
           notes: string | null
           partner_billed_amount: number | null
@@ -1565,6 +1567,8 @@ export type Database = {
           approved_subcontractor_invoice_amount?: number | null
           hours_worked?: number | null
           id?: string
+          invoice_amount?: number | null
+          invoice_number?: string | null
           materials_used?: string | null
           notes?: string | null
           partner_billed_amount?: number | null
@@ -1588,6 +1592,8 @@ export type Database = {
           approved_subcontractor_invoice_amount?: number | null
           hours_worked?: number | null
           id?: string
+          invoice_amount?: number | null
+          invoice_number?: string | null
           materials_used?: string | null
           notes?: string | null
           partner_billed_amount?: number | null
