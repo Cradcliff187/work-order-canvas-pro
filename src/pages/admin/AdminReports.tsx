@@ -464,34 +464,37 @@ const table = useReactTable({
       </Card>
     </div>
   ) : (
-    <div className="p-6 space-y-6">
-      {/* Header Section - Always Visible */}
-      <div className="space-y-4 mb-6">
-        {/* Row 1: Title and Stats */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold">Report Review</h1>
-            <p className="text-muted-foreground">
-              {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'Review and approve subcontractor reports'}
-            </p>
+    <div className="flex flex-col min-h-screen bg-background">
+      {/* Clean Header - Industry Standard */}
+      <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="px-6 py-4 space-y-4">
+          {/* Row 1: Title and Stats */}
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h1 className="text-2xl font-semibold tracking-tight">Report Review</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'Review and approve subcontractor reports'}
+              </p>
+            </div>
+            {submittedCounts && submittedCounts.reportsCount > 0 && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                {submittedCounts.reportsCount} pending
+              </Badge>
+            )}
           </div>
-          {submittedCounts && submittedCounts.reportsCount > 0 && (
-            <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-              {submittedCounts.reportsCount} pending
-            </Badge>
-          )}
-        </div>
 
-        {/* Row 2: Search and Filter Button */}
-        <div className="flex gap-3">
-          <div className="flex-1 max-w-xl">
-            <SmartSearchInput
-              placeholder="Search reports by work order, location, or subcontractor..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="h-10"
-            />
-          </div>
+          {/* Row 2: Prominent Search Bar */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 max-w-md">
+              <SmartSearchInput
+                placeholder="Search reports by work order, location, or subcontractor..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onSearchSubmit={handleSearchChange}
+                storageKey="admin-reports-search"
+                className="h-9"
+              />
+            </div>
           <AdminFilterBar
             title="Filters"
             filterCount={filterCount}
@@ -628,68 +631,43 @@ const table = useReactTable({
           />
         </div>
 
-        {/* Row 3: View Controls and Actions */}
-        <div className="flex justify-between items-center">
-          <div className="flex gap-2">
-            <ViewModeSwitcher
-              value={viewMode}
-              onValueChange={setViewMode}
-              allowedModes={allowedModes}
-            />
-          </div>
-          <div className="flex gap-2">
-            <ColumnVisibilityDropdown
-              columns={columnOptions}
-              onToggleColumn={toggleColumn}
-              onResetToDefaults={resetToDefaults}
-              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-              totalCount={columnOptions.filter(c => c.canHide).length}
-            />
-            <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
-          </div>
-        </div>
-      </div>
-
-
-      {/* Bulk Actions */}
-      {selectedRows.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                {selectedRows.length} report(s) selected
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkApprove}
-                  disabled={bulkReviewReports.isPending}
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve Selected
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkReject}
-                  disabled={bulkReviewReports.isPending}
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Reject Selected
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Data Table */}
-      <Card>
-        <CardHeader>
+          {/* Row 3: Controls and Actions */}
           <div className="flex items-center justify-between">
-            <CardTitle>Reports</CardTitle>
-            <div className="flex items-center gap-2 lg:hidden">
+            <div className="flex items-center gap-3">
+              <ViewModeSwitcher
+                value={viewMode}
+                onValueChange={setViewMode}
+                allowedModes={allowedModes}
+              />
+              {selectedRows.length > 0 && (
+                <div className="flex items-center gap-2 pl-3 border-l">
+                  <span className="text-sm text-muted-foreground">
+                    {selectedRows.length} selected
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkApprove}
+                    disabled={bulkReviewReports.isPending}
+                    className="h-8"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkReject}
+                    disabled={bulkReviewReports.isPending}
+                    className="h-8"
+                  >
+                    <XCircle className="w-4 h-4 mr-1" />
+                    Reject
+                  </Button>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
               <ColumnVisibilityDropdown
                 columns={columnOptions}
                 onToggleColumn={toggleColumn}
@@ -697,18 +675,28 @@ const table = useReactTable({
                 visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
                 totalCount={columnOptions.filter(c => c.canHide).length}
               />
-              <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
+              <ExportDropdown 
+                onExport={handleExport} 
+                disabled={isLoading || (reportsData?.data?.length ?? 0) === 0}
+                size="sm"
+              />
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <ReportsTable
-            table={table}
-            columns={columns}
-            isLoading={isLoading}
-            viewMode={viewMode === 'card' ? 'card' : 'table'}
-            onRowClick={(report) => navigate(`/admin/reports/${(report as any).id}`)}
-            renderMobileCard={(report: any) => {
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 p-6">
+        {/* Data Table */}
+        <Card>
+          <CardContent className="p-0">
+            <ReportsTable
+              table={table}
+              columns={columns}
+              isLoading={isLoading}
+              viewMode={viewMode === 'card' ? 'card' : 'table'}
+              onRowClick={(report) => navigate(`/admin/reports/${(report as any).id}`)}
+              renderMobileCard={(report: any) => {
               const workOrder = report.work_orders;
               const subcontractor = report.subcontractor;
               const subcontractorOrg = report.subcontractor_organization;
@@ -753,23 +741,24 @@ const table = useReactTable({
                   </MobileTableCard>
                 </SwipeableListItem>
               );
-            }}
-            emptyIcon={FileText}
-            emptyTitle="No reports found"
-            emptyDescription={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Reports will appear here when subcontractors submit them"}
-          />
-        </CardContent>
-      </Card>
+              }}
+              emptyIcon={FileText}
+              emptyTitle="No reports found"
+              emptyDescription={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Reports will appear here when subcontractors submit them"}
+            />
+          </CardContent>
+        </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDeleteConfirm}
-        itemName={reportToDelete ? `${reportToDelete.work_orders?.work_order_number || 'Report'} - ${reportToDelete.work_orders?.title || 'Work Order'}` : ''}
-        itemType="report"
-        isLoading={deleteReport.isPending}
-      />
+        {/* Delete Confirmation Dialog */}
+        <DeleteConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleDeleteConfirm}
+          itemName={reportToDelete ? `${reportToDelete.work_orders?.work_order_number || 'Report'} - ${reportToDelete.work_orders?.title || 'Work Order'}` : ''}
+          itemType="report"
+          isLoading={deleteReport.isPending}
+        />
+      </div>
     </div>
   );
 }
