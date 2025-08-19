@@ -58,7 +58,17 @@ export default function AdminSubmitReport() {
 
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
+
+  // Dynamic step calculation based on form state
+  const getCurrentStep = () => {
+    if (isSubmitting) return 4;
+    if (showPreview) return 3;
+    if (formData.attachments.length > 0) return 2;
+    if (formData.workPerformed.trim()) return 2;
+    return 1;
+  };
+
+  const currentStep = getCurrentStep();
 
   if (!workOrderId) {
     return (
