@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import MDEditor from '@uiw/react-md-editor';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, FileText, Loader2, AlertTriangle, Users, RotateCcw } from "lucide-react";
@@ -433,13 +434,14 @@ export default function AdminSubmitReport() {
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
                 <Label htmlFor="workPerformed">Work Performed *</Label>
-                <Textarea
-                  id="workPerformed"
-                  placeholder="Describe the work performed in detail..."
+                <MDEditor
                   value={formData.workPerformed}
-                  onChange={(e) => setFormData(prev => ({ ...prev, workPerformed: e.target.value }))}
-                  className="min-h-[120px]"
-                  required
+                  onChange={(value) => setFormData(prev => ({ ...prev, workPerformed: value || '' }))}
+                  data-color-mode="light"
+                  height={200}
+                  preview="edit"
+                  hideToolbar={false}
+                  visibleDragbar={false}
                 />
               </div>
 

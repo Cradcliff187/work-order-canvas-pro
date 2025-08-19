@@ -263,7 +263,7 @@ serve(async (req) => {
     // Upload to Supabase Storage
     console.log(`Uploading PDF to storage: ${filename}`);
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('work-order-reports')
+      .from('work-order-attachments')
       .upload(filename, pdfBuffer, {
         contentType: 'application/pdf',
         upsert: false
@@ -282,7 +282,7 @@ serve(async (req) => {
 
     // Get public URL
     const { data: urlData } = supabase.storage
-      .from('work-order-reports')
+      .from('work-order-attachments')
       .getPublicUrl(filename);
     
     const pdfUrl = urlData.publicUrl;
