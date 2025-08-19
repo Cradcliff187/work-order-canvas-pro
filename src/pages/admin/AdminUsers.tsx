@@ -339,7 +339,7 @@ export default function AdminUsers() {
 
       {/* Mobile Bottom Sheet */}
       <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[85vh] z-[55]">
+        <SheetContent side="bottom" className="h-[85vh]">
           <SheetHeader>
             <SheetTitle>User Filters</SheetTitle>
           </SheetHeader>
@@ -413,11 +413,11 @@ export default function AdminUsers() {
 
       {/* Desktop Right Sidebar */}
       <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-[420px] z-[55]">
+        <SheetContent side="right" className="w-[420px]">
           <SheetHeader>
             <SheetTitle>User Filters</SheetTitle>
           </SheetHeader>
-          <div className="mt-6 space-y-4">
+          <div className="mt-6 space-y-4 relative z-[60]">
             <div className="space-y-2">
               <Label htmlFor="desktop-role">Role</Label>
               <Select
