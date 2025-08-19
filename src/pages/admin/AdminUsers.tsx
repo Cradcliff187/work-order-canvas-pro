@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 
 import {
@@ -488,12 +487,6 @@ export default function AdminUsers() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Users</CardTitle>
           <div className="flex items-center gap-2">
-            <ExportDropdown
-               onExport={handleExport}
-               size="sm"
-               variant="outline"
-               disabled={isLoading || (filteredUsers?.length ?? 0) === 0}
-             />
              {selectedRows.length > 0 && (
                <Button variant="outline" size="sm" onClick={handleClearSelection}>
                  Clear Selection ({selectedRows.length})
