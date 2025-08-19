@@ -1547,6 +1547,8 @@ export type Database = {
           partner_billed_amount: number | null
           partner_billed_at: string | null
           partner_invoice_id: string | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
           photos: Json | null
           review_notes: string | null
           reviewed_at: string | null
@@ -1568,6 +1570,8 @@ export type Database = {
           partner_billed_amount?: number | null
           partner_billed_at?: string | null
           partner_invoice_id?: string | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
           photos?: Json | null
           review_notes?: string | null
           reviewed_at?: string | null
@@ -1589,6 +1593,8 @@ export type Database = {
           partner_billed_amount?: number | null
           partner_billed_at?: string | null
           partner_invoice_id?: string | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
           photos?: Json | null
           review_notes?: string | null
           reviewed_at?: string | null
