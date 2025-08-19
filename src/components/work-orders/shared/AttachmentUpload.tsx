@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, Lock, Loader2 } from 'lucide-react';
+import { Upload, Lock, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -128,31 +128,40 @@ export function AttachmentUpload({
           <Button
             type="button"
             variant="outline"
-            className="w-full h-20 border-dashed border-2 hover:border-primary/50 transition-colors duration-200"
+            className={cn(
+              "upload-trigger-enhanced w-full h-20 border-dashed border-2",
+              isUploading && "processing",
+              mode === 'immediate' && selectedFiles.length > 0 && !isUploading && "success"
+            )}
             disabled={disabled || isUploading}
           >
             <div className="text-center">
               {isUploading ? (
                 <Loader2 className="h-6 w-6 mx-auto mb-2 text-primary animate-spin" />
+              ) : mode === 'immediate' && selectedFiles.length > 0 ? (
+                <CheckCircle className="upload-success-icon h-6 w-6 mx-auto mb-2" />
               ) : (
-                <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                <Upload className="upload-icon-bounce h-6 w-6 mx-auto mb-2 text-muted-foreground" />
               )}
               <p className="text-sm font-medium">
-                {isUploading ? "Processing Files..." : (selectedFiles.length > 0 ? (
+                {isUploading ? "Processing Files..." : mode === 'immediate' && selectedFiles.length > 0 ? (
+                  "Files uploaded successfully"
+                ) : selectedFiles.length > 0 ? (
                   <span className="flex items-center gap-2 justify-center">
                     {selectionMode === 'accumulate' ? 'Add Files' : 'Select Files'}
                     <Badge variant="secondary" className="text-xs">
                       {selectedFiles.length}
                     </Badge>
                   </span>
-                ) : "Select Files")}
+                ) : "Select Files"}
               </p>
               <p className="text-xs text-muted-foreground">
-                {isUploading ? "Please wait..." : (
-                  mode === 'staged' && selectedFiles.length > 0 ? 
+                {isUploading ? "Please wait..." : mode === 'immediate' && selectedFiles.length > 0 ? (
+                  "Ready for next upload"
+                ) : mode === 'staged' && selectedFiles.length > 0 ? 
                     (selectionMode === 'accumulate' ? 'Adding to selection' : 'New selection will replace existing') :
                     "Click to select files"
-                )}
+                }
               </p>
             </div>
           </Button>
@@ -215,11 +224,15 @@ export function AttachmentUpload({
                   size="sm"
                   onClick={handleUpload}
                   disabled={isUploading}
+                  className={cn(
+                    "upload-trigger-enhanced",
+                    isUploading && "processing"
+                  )}
                 >
                   {isUploading ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
-                    <Upload className="w-4 h-4 mr-2" />
+                    <Upload className="upload-icon-bounce w-4 h-4 mr-2" />
                   )}
                   {isUploading ? "Uploading..." : "Upload Selected Files"}
                 </Button>

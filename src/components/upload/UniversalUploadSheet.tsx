@@ -269,8 +269,7 @@ export function UniversalUploadSheet({
       <Card
         key={option.id}
         className={cn(
-          "cursor-pointer transition-all duration-200 hover:shadow-md active:scale-95",
-          "border-2 hover:border-primary/50 min-h-[120px]",
+          "upload-option-card cursor-pointer min-h-[120px]",
           !option.available && "opacity-50 cursor-not-allowed",
           (isProcessing || showSuccess) && "border-primary bg-primary/5"
         )}
@@ -298,7 +297,7 @@ export function UniversalUploadSheet({
             ) : showSuccess ? (
               <CheckCircle2 className="w-6 h-6" />
             ) : (
-              <option.icon className="w-6 h-6" />
+              <option.icon className="upload-icon-bounce w-6 h-6" />
             )}
           </div>
           <div>
@@ -335,7 +334,10 @@ export function UniversalUploadSheet({
     <Button
       type="button"
       variant="outline"
-      className="w-full h-20 border-dashed border-2 hover:border-primary/50 transition-colors duration-200"
+      className={cn(
+        "upload-trigger-enhanced w-full h-20 border-dashed border-2",
+        isProcessing && "processing"
+      )}
       disabled={disabled || isProcessing}
       aria-label={isProcessing ? "Processing files, please wait" : `Open file selection dialog. ${selectedFileCount > 0 ? `${selectedFileCount} file${selectedFileCount !== 1 ? 's' : ''} currently selected.` : 'No files selected.'}`}
       aria-describedby="upload-trigger-description"
@@ -344,7 +346,7 @@ export function UniversalUploadSheet({
         {isProcessing ? (
           <Loader2 className="h-6 w-6 mx-auto mb-2 text-primary animate-spin" aria-hidden="true" />
         ) : (
-          <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" aria-hidden="true" />
+          <Upload className="upload-icon-bounce h-6 w-6 mx-auto mb-2 text-muted-foreground" aria-hidden="true" />
         )}
         <p className="text-sm font-medium">
           {isProcessing ? "Processing..." : (buttonText || (selectedFileCount > 0 ? `${selectedFileCount} file${selectedFileCount !== 1 ? 's' : ''} selected` : "Select Files"))}

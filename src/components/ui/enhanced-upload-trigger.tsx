@@ -6,12 +6,14 @@ export interface EnhancedUploadTriggerProps {
   onClick?: () => void;
   className?: string;
   disabled?: boolean;
+  isProcessing?: boolean;
+  isSuccess?: boolean;
 }
 
 const EnhancedUploadTrigger = React.forwardRef<
   HTMLDivElement,
   EnhancedUploadTriggerProps
->(({ children, onClick, className, disabled = false, ...props }, ref) => {
+>(({ children, onClick, className, disabled = false, isProcessing = false, isSuccess = false, ...props }, ref) => {
   const handleClick = (e: React.MouseEvent) => {
     if (disabled) return;
     
@@ -30,24 +32,12 @@ const EnhancedUploadTrigger = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        // Base wrapper styles
-        "relative",
+        // Enhanced upload trigger base
+        "upload-trigger-enhanced",
         
-        // Enhancement animations and transitions
-        "transition-all duration-300 ease-out",
-        
-        // Pulse animation (subtle)
-        !disabled && "animate-pulse [animation-duration:3s]",
-        
-        // Hover effects
-        !disabled && [
-          "hover:scale-[1.02]",
-          // Gradient overlay using before pseudo-element
-          "before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-r",
-          "before:from-primary/10 before:to-accent/10 before:opacity-0",
-          "before:transition-opacity before:duration-300 hover:before:opacity-100",
-          "before:pointer-events-none before:z-0"
-        ],
+        // State-based classes
+        isProcessing && "processing",
+        isSuccess && "success",
         
         // Disabled state
         disabled && "opacity-50 pointer-events-none",
