@@ -16,12 +16,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { usePartnerUnbilledReports } from '@/hooks/usePartnerUnbilledReports';
 import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration';
 import { usePartnerReportStats } from '@/hooks/usePartnerReportStats';
 import { useReportInvoiceDetails } from '@/hooks/useReportInvoiceDetails';
 import { ReportPipelineEmptyState } from '@/components/admin/partner-billing/ReportPipelineEmptyState';
-import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Eye, Download, X, Filter, Search } from 'lucide-react';
+import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Eye, Download, X, Filter, Search, Settings, ChevronDown } from 'lucide-react';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
@@ -30,6 +33,7 @@ import { exportToCSV, ExportColumn } from '@/lib/utils/export';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
 import { calculateEstimateVariance, formatVariance } from '@/lib/validations/estimate-validations';
+import { cn } from '@/lib/utils';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -52,6 +56,11 @@ export default function SelectReports() {
   const [invoiceDate, setInvoiceDate] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'));
   const [dueDate, setDueDate] = useState<string | ''>('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  
+  // Filter sheet states
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isMarkupCollapsed, setIsMarkupCollapsed] = useState(true);
   
   // Advanced filtering states
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -212,9 +221,20 @@ export default function SelectReports() {
     setAmountRange({ min: '', max: '' });
     setDateRange({ start: '', end: '' });
     setShowAdvancedFilters(false);
+    setIsDesktopFilterOpen(false);
+    setIsMobileFilterOpen(false);
     localStorage.removeItem('pb.selectedPartnerId');
     localStorage.removeItem('pb.markupPercentage');
   };
+
+  // Calculate active filter count
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (searchQuery.trim()) count++;
+    if (amountRange.min || amountRange.max) count++;
+    if (dateRange.start || dateRange.end) count++;
+    return count;
+  }, [searchQuery, amountRange, dateRange]);
 
   const handleExportSelected = (exportFormat: 'csv' | 'excel') => {
     try {
@@ -369,41 +389,108 @@ export default function SelectReports() {
         </CardContent>
       </Card>
 
-      {/* Markup Controls */}
+      {/* Compact Markup Configuration */}
       {selectedPartnerId && reports && reports.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Percent className="w-5 h-5" />
-              Markup Configuration
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <Label htmlFor="markup" className="text-sm font-medium">
-                  Markup Percentage:
-                </Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="markup"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={markupPercentage}
-                    onChange={(e) => setMarkupPercentage(Math.max(0, Math.min(100, Number(e.target.value))))}
-                    className="w-20"
-                  />
-                  <span className="text-sm text-muted-foreground">%</span>
+        <Collapsible open={!isMarkupCollapsed} onOpenChange={(open) => setIsMarkupCollapsed(!open)}>
+          <Card className="mb-6">
+            <CollapsibleTrigger className="w-full">
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    <CardTitle className="text-base">Markup Configuration</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Badge variant="secondary">
+                      Current: {markupPercentage}%
+                    </Badge>
+                    <ChevronDown className={cn(
+                      "h-4 w-4 transition-transform",
+                      isMarkupCollapsed && "rotate-180"
+                    )} />
+                  </div>
                 </div>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Standard markup helps cover administrative costs and provides profit margin on subcontractor work.
-              </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1 max-w-xs">
+                    <Label>Markup Percentage</Label>
+                    <Input 
+                      type="number" 
+                      value={markupPercentage}
+                      onChange={(e) => setMarkupPercentage(Math.max(0, Math.min(100, Number(e.target.value))))}
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                  <div className="text-sm text-muted-foreground max-w-md">
+                    Standard markup helps cover administrative costs and provides profit margin on subcontractor work.
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
+
+      {/* Modern Top Controls */}
+      {selectedPartnerId && (
+        <>
+          {/* Desktop Layout */}
+          <div className="hidden lg:flex gap-4 mb-6">
+            <div className="flex flex-1 gap-2">
+              <SmartSearchInput
+                placeholder="Search work orders, locations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1"
+              />
+              <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
+                <Filter className="h-4 w-4 mr-2" />
+                Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex gap-2">
+              <Button 
+                variant="default"
+                disabled={selectedReportIds.size === 0}
+                onClick={() => setShowConfirmDialog(true)}
+              >
+                Generate Invoice ({selectedReportIds.size})
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile Layout */}
+          <div className="lg:hidden space-y-3 mb-6">
+            <SmartSearchInput
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full"
+            />
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsMobileFilterOpen(true)}
+                className="flex-1"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+              </Button>
+              <Button 
+                variant="default"
+                disabled={selectedReportIds.size === 0}
+                onClick={() => setShowConfirmDialog(true)}
+                className="flex-1"
+              >
+                Generate ({selectedReportIds.size})
+              </Button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Reports Display */}
@@ -413,99 +500,18 @@ export default function SelectReports() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <FileBarChart className="w-5 h-5" />
-                Unbilled Approved Reports
+                Unbilled Approved Reports ({filteredAndSortedReports?.length || 0})
               </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  className="flex items-center gap-2"
-                >
-                  <Filter className="w-4 h-4" />
-                  Filters
-                </Button>
-                <ColumnVisibilityDropdown
-                  columns={getAllColumns()}
-                  onToggleColumn={toggleColumn}
-                  onResetToDefaults={resetColumnDefaults}
-                  variant="outline"
-                  size="sm"
-                />
-              </div>
+              <ColumnVisibilityDropdown
+                columns={getAllColumns()}
+                onToggleColumn={toggleColumn}
+                onResetToDefaults={resetColumnDefaults}
+                variant="outline"
+                size="sm"
+              />
             </div>
           </CardHeader>
           <CardContent>
-            {/* Search and Advanced Filters */}
-            <div className="space-y-4 mb-6">
-              {/* Basic Search */}
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Search work orders, descriptions, locations..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSearchQuery('')}
-                    className="px-2"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-
-              {/* Advanced Filters */}
-              {showAdvancedFilters && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Amount Range</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        placeholder="Min"
-                        value={amountRange.min}
-                        onChange={(e) => setAmountRange(prev => ({ ...prev, min: e.target.value }))}
-                        className="w-20"
-                      />
-                      <span className="text-muted-foreground">to</span>
-                      <Input
-                        type="number"
-                        placeholder="Max"
-                        value={amountRange.max}
-                        onChange={(e) => setAmountRange(prev => ({ ...prev, max: e.target.value }))}
-                        className="w-20"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Submitted Date Range</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="date"
-                        value={dateRange.start}
-                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                        className="w-32"
-                      />
-                      <span className="text-muted-foreground">to</span>
-                      <Input
-                        type="date"
-                        value={dateRange.end}
-                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                        className="w-32"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {error ? (
               <EmptyState
                 icon={FileBarChart}
@@ -572,284 +578,190 @@ export default function SelectReports() {
                   </div>
                 )}
 
-                {/* Desktop Table View */}
-                <div className="hidden lg:block">
-                  <ResponsiveTableWrapper stickyFirstColumn>
+                {/* Desktop Table */}
+                <div className="hidden md:block">
+                  <ResponsiveTableWrapper>
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-12">
                             <Checkbox
-                              checked={selectedReportIds.size === filteredAndSortedReports.length && filteredAndSortedReports.length > 0}
+                              checked={filteredAndSortedReports.length > 0 && selectedReportIds.size === filteredAndSortedReports.length}
                               onCheckedChange={handleSelectAll}
+                              aria-label="Select all visible reports"
                             />
                           </TableHead>
-                          {columnVisibility.work_order !== false && (
-                            <TableHead>
-                              <button type="button" onClick={() => toggleSort('work_order')} className="inline-flex items-center gap-2" aria-label={`Sort by Work Order${sortKey==='work_order'?` (${sortDir})`:''}`}>
-                                <span>Work Order</span>
-                                {sortKey==='work_order' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
-                              </button>
+                          {columnVisibility.work_order && (
+                            <TableHead className="min-w-[120px] cursor-pointer" onClick={() => toggleSort('work_order')}>
+                              <div className="flex items-center gap-1">
+                                Work Order
+                                {sortKey === 'work_order' && (
+                                  sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                                )}
+                              </div>
                             </TableHead>
                           )}
-                          {columnVisibility.description !== false && (
-                            <TableHead>Description</TableHead>
-                          )}
-                          {columnVisibility.subcontractor !== false && (
-                            <TableHead>Subcontractor</TableHead>
-                          )}
-                          {columnVisibility.location !== false && (
-                            <TableHead>Location</TableHead>
-                          )}
-                          {columnVisibility.submitted !== false && (
-                            <TableHead>
-                              <button type="button" onClick={() => toggleSort('submitted')} className="inline-flex items-center gap-2" aria-label={`Sort by Submitted${sortKey==='submitted'?` (${sortDir})`:''}`}>
-                                <span>Submitted</span>
-                                {sortKey==='submitted' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
-                              </button>
+                          {columnVisibility.description && <TableHead className="min-w-[200px]">Description</TableHead>}
+                          {columnVisibility.subcontractor && <TableHead className="min-w-[150px]">Subcontractor</TableHead>}
+                          {columnVisibility.location && <TableHead className="min-w-[120px]">Location</TableHead>}
+                          {columnVisibility.submitted && (
+                            <TableHead className="min-w-[120px] cursor-pointer" onClick={() => toggleSort('submitted')}>
+                              <div className="flex items-center gap-1">
+                                Submitted
+                                {sortKey === 'submitted' && (
+                                  sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                                )}
+                              </div>
                             </TableHead>
                           )}
-                          {columnVisibility.invoices !== false && (
-                            <TableHead>Invoices</TableHead>
+                          {columnVisibility.invoices && <TableHead className="min-w-[100px]">Invoices</TableHead>}
+                          {columnVisibility.amount && (
+                            <TableHead className="min-w-[130px] cursor-pointer text-right" onClick={() => toggleSort('amount')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Amount
+                                {sortKey === 'amount' && (
+                                  sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                                )}
+                              </div>
+                            </TableHead>
                           )}
-                           {columnVisibility.amount !== false && (
-                             <TableHead>
-                               <button type="button" onClick={() => toggleSort('amount')} className="inline-flex items-center gap-2" aria-label={`Sort by Amount${sortKey==='amount'?` (${sortDir})`:''}`}>
-                                 <span>Amount</span>
-                                 {sortKey==='amount' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
-                               </button>
-                             </TableHead>
-                           )}
-                           {columnVisibility.variance !== false && (
-                             <TableHead>
-                               <Tooltip>
-                                 <TooltipTrigger asChild>
-                                   <span className="cursor-help">Estimate Variance</span>
-                                 </TooltipTrigger>
-                                 <TooltipContent>
-                                   <p>Difference between estimate and actual cost</p>
-                                 </TooltipContent>
-                               </Tooltip>
-                             </TableHead>
-                           )}
-                           {columnVisibility.status !== false && (
-                             <TableHead>Status</TableHead>
-                           )}
-                          <TableHead className="w-12">Actions</TableHead>
+                          {columnVisibility.variance && <TableHead className="min-w-[120px] text-right">Variance</TableHead>}
+                          {columnVisibility.status && <TableHead className="min-w-[100px]">Status</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredAndSortedReports.map((report) => {
                           const isSelected = selectedReportIds.has(report.id);
+                          const variance = calculateEstimateVariance(report.work_orders?.internal_estimate_amount, report.approved_subcontractor_invoice_amount);
+                          const reportInvoiceDetails = invoiceDetails?.find(inv => inv.report_id === report.id);
+
                           return (
                             <TableRow 
-                              key={report.id}
-                              role="button"
-                              tabIndex={0}
-                              aria-label={`Toggle selection for work order ${report.work_orders?.work_order_number || report.id}`}
-                              className={`cursor-pointer hover:bg-muted/50 ${
-                                isSelected ? 'bg-primary/10 border-l-2 border-l-primary' : ''
-                              }`}
+                              key={report.id} 
+                              className={cn(
+                                "cursor-pointer hover:bg-muted/50",
+                                isSelected && "bg-primary/10 border-l-2 border-l-primary"
+                              )}
                               onClick={() => handleReportToggle(report.id, !isSelected)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  handleReportToggle(report.id, !isSelected);
-                                }
-                              }}
                             >
                               <TableCell onClick={(e) => e.stopPropagation()}>
                                 <Checkbox
                                   checked={isSelected}
-                                  onCheckedChange={(checked) => handleReportToggle(report.id, checked === true)}
+                                  onCheckedChange={(checked) => handleReportToggle(report.id, !!checked)}
+                                  aria-label={`Select report ${report.work_orders?.work_order_number}`}
                                 />
                               </TableCell>
-                              {columnVisibility.work_order !== false && (
+                              {columnVisibility.work_order && (
                                 <TableCell className="font-medium">
-                                  {report.work_orders?.work_order_number || 'N/A'}
-                                </TableCell>
-                              )}
-                              {columnVisibility.description !== false && (
-                                <TableCell className="max-w-[200px]">
-                                  <div className="space-y-2">
-                                    <p className="font-medium truncate">
-                                      {report.work_orders?.title || 'No title'}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground truncate">
-                                      {report.work_orders?.description || 'No description'}
-                                    </p>
+                                  <div className="space-y-1">
+                                    <div className="font-semibold">{report.work_orders?.work_order_number}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {report.work_orders?.title}
+                                    </div>
                                   </div>
                                 </TableCell>
                               )}
-                              {columnVisibility.subcontractor !== false && (
+                              {columnVisibility.description.visible && (
                                 <TableCell>
-                                  {(() => {
-                                    const subcontractor = report.subcontractor;
-                                    const subcontractorOrg = report.subcontractor_organization;
-                                    const submittedBy = report.submitted_by;
-                                    
-                                    // Determine what to display based on organization type
-                                    let displayName = 'N/A';
-                                    
-                                    // Check if subcontractor is from internal organization
-                                    const isInternalSubcontractor = subcontractor?.organization_members?.some(
-                                      (om) => om.organizations?.organization_type === 'internal'
-                                    );
-                                    
-                                    if (subcontractorOrg) {
-                                      // Organization-level assignment - always show organization name for subcontractors
-                                      displayName = subcontractorOrg.name;
-                                    } else if (subcontractor && isInternalSubcontractor) {
-                                      // Individual internal user - show their name
-                                      displayName = `${subcontractor.first_name} ${subcontractor.last_name}`;
-                                    } else if (subcontractor) {
-                                      // Individual subcontractor from subcontractor org - this shouldn't happen but fallback to org name
-                                      const subcontractorOrgFromMember = subcontractor.organization_members?.find(
-                                        (om) => om.organizations?.organization_type === 'subcontractor'
-                                      );
-                                      displayName = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
-                                    }
-
-                                    return (
-                                      <div>
-                                        <div className="font-medium">
-                                          {displayName}
-                                        </div>
-                                        {submittedBy && submittedBy.organization_members?.some((om) => om.organizations?.organization_type === 'internal') && (
-                                          <div className="text-xs text-muted-foreground font-medium">
-                                            Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
-                                          </div>
-                                        )}
+                                  <div className="max-w-[200px] truncate" title={report.work_orders?.description || 'No description'}>
+                                    {report.work_orders?.description || 'No description'}
+                                  </div>
+                                </TableCell>
+                              )}
+                              {columnVisibility.subcontractor.visible && (
+                                <TableCell>
+                                  {report.subcontractor_organization ? (
+                                    <div className="space-y-1">
+                                      <div className="font-medium">{report.subcontractor_organization.name}</div>
+                                      <div className="text-xs text-muted-foreground">Organization</div>
+                                    </div>
+                                  ) : report.subcontractor ? (
+                                    <div className="space-y-1">
+                                      <div className="font-medium">
+                                        {report.subcontractor.first_name} {report.subcontractor.last_name}
                                       </div>
-                                    );
-                                  })()}
-                                </TableCell>
-                              )}
-                              {columnVisibility.location !== false && (
-                                <TableCell>
-                                  {report.work_orders?.store_location || '-'}
-                                </TableCell>
-                              )}
-                              {columnVisibility.submitted !== false && (
-                                <TableCell>
-                                  {format(new Date(report.submitted_at), 'MMM d, yyyy')}
-                                </TableCell>
-                              )}
-                              {columnVisibility.invoices !== false && (
-                                <TableCell>
-                                  {(() => {
-                                    const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
-                                    const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
-                                    
-                                    return (
-                                      <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className="h-5 text-[10px] px-2">
-                                          {invoiceCount} invoice{invoiceCount !== 1 ? 's' : ''}
-                                        </Badge>
-                                        {invoiceCount > 0 && (
-                                          <Badge variant="default" className="h-5 text-[10px] px-2">
-                                            Approved
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    );
-                                  })()}
-                                </TableCell>
-                              )}
-                               {columnVisibility.amount !== false && (
-                                 <TableCell>
-                                   {report.approved_subcontractor_invoice_amount ? (
-                                     (() => {
-                                       const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
-                                       const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
-                                       
-                                       return (
-                                         <Tooltip>
-                                           <TooltipTrigger asChild>
-                                             <div className="flex items-center gap-2 cursor-help">
-                                               <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-2">
-                                                 {formatCurrency(report.approved_subcontractor_invoice_amount)}
-                                               </Badge>
-                                               {invoiceCount > 1 && (
-                                                 <Info className="w-3 h-3 text-muted-foreground" />
-                                               )}
-                                             </div>
-                                           </TooltipTrigger>
-                                           <TooltipContent className="z-50 bg-popover">
-                                             {invoiceCount > 1 ? (
-                                               <div className="space-y-2 text-xs">
-                                                 <p className="font-medium">Invoice Breakdown:</p>
-                                                 {reportInvoiceDetail?.invoices.map((invoice, index) => (
-                                                   <div key={invoice.invoice_id} className="flex justify-between gap-4">
-                                                     <span>{invoice.invoice_number}</span>
-                                                     <span>{formatCurrency(invoice.amount)}</span>
-                                                   </div>
-                                                 ))}
-                                                 <div className="border-t pt-2 flex justify-between gap-4 font-medium">
-                                                   <span>Total:</span>
-                                                   <span>{formatCurrency(reportInvoiceDetail?.total_amount || 0)}</span>
-                                                 </div>
-                                               </div>
-                                             ) : (
-                                               <p>Cost from approved subcontractor invoice</p>
-                                             )}
-                                           </TooltipContent>
-                                         </Tooltip>
-                                       );
-                                     })()
-                                   ) : (
-                                     '-'
+                                      <div className="text-xs text-muted-foreground">Individual</div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground">N/A</span>
                                   )}
-                                 </TableCell>
-                               )}
-                                {columnVisibility.variance !== false && (
-                                  <TableCell>
-                                    {(() => {
-                                      const workOrder = report.work_orders;
-                                      if (!workOrder?.internal_estimate_amount) return <span className="text-muted-foreground">-</span>;
-                                      
-                                      const estimateAmount = workOrder.internal_estimate_amount;
-                                      const actualAmount = report.approved_subcontractor_invoice_amount || 0;
-                                      const variance = calculateEstimateVariance(estimateAmount, actualAmount);
-                                      
-                                      const badgeVariant = variance.color === 'green' ? 'success' : 
-                                                           variance.color === 'yellow' ? 'warning' : 'destructive';
-                                      
-                                      return (
-                                        <Badge variant={badgeVariant} className="font-mono text-xs">
-                                          {formatVariance(variance.percentage)}
+                                </TableCell>
+                              )}
+                              {columnVisibility.location.visible && (
+                                <TableCell>
+                                  <div className="max-w-[120px] truncate" title={report.work_orders?.store_location || 'No location'}>
+                                    {report.work_orders?.store_location || '-'}
+                                  </div>
+                                </TableCell>
+                              )}
+                              {columnVisibility.submitted.visible && (
+                                <TableCell>
+                                  <div className="space-y-1">
+                                    <div>{format(new Date(report.submitted_at), 'MMM dd, yyyy')}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {format(new Date(report.submitted_at), 'h:mm a')}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                              )}
+                              {columnVisibility.invoices.visible && (
+                                <TableCell>
+                                  {reportInvoiceDetails && reportInvoiceDetails.invoice_count > 0 ? (
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <Badge variant="secondary" className="cursor-help">
+                                          {reportInvoiceDetails.invoice_count} invoice{reportInvoiceDetails.invoice_count !== 1 ? 's' : ''}
                                         </Badge>
-                                      );
-                                    })()}
-                                  </TableCell>
-                                )}
-                               {columnVisibility.status !== false && (
-                                 <TableCell>
-                                   <ReportStatusBadge status="approved" size="sm" />
-                                 </TableCell>
-                               )}
-                              <TableCell onClick={(e) => e.stopPropagation()}>
-                                <TableActionsDropdown
-                                  actions={[
-                                    {
-                                      label: 'View Details',
-                                      icon: Eye,
-                                      onClick: () => {
-                                        // Navigate to work order detail or report detail
-                                        navigate(`/admin/work-orders/${report.work_order_id}`);
-                                      },
-                                    },
-                                    {
-                                      label: 'Remove from Selection',
-                                      icon: X,
-                                      onClick: () => handleReportToggle(report.id, false),
-                                      show: isSelected,
-                                    },
-                                  ]}
-                                  align="end"
-                                  itemName={`report ${report.work_orders?.work_order_number || report.id}`}
-                                />
-                              </TableCell>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <div className="space-y-1">
+                                          {reportInvoiceDetails.invoices.map((inv) => (
+                                            <div key={inv.invoice_id} className="text-xs">
+                                              {inv.invoice_number}: {formatCurrency(inv.amount)}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">None</span>
+                                  )}
+                                </TableCell>
+                              )}
+                              {columnVisibility.amount.visible && (
+                                <TableCell className="text-right">
+                                  <div className="space-y-1">
+                                    <div className="font-semibold">
+                                      {formatCurrency(report.approved_subcontractor_invoice_amount || 0)}
+                                    </div>
+                                    {report.work_orders?.estimated_cost && (
+                                      <div className="text-xs text-muted-foreground">
+                                        Est: {formatCurrency(report.work_orders.estimated_cost)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              )}
+                              {columnVisibility.variance.visible && (
+                                <TableCell className="text-right">
+                                  {variance.hasEstimate ? (
+                                    <div className={cn(
+                                      "text-sm font-medium",
+                                      variance.percentageVariance > 10 && "text-destructive",
+                                      variance.percentageVariance < -10 && "text-green-600"
+                                    )}>
+                                      {formatVariance(variance)}
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">No estimate</span>
+                                  )}
+                                </TableCell>
+                              )}
+                              {columnVisibility.status.visible && (
+                                <TableCell>
+                                  <ReportStatusBadge status="approved" />
+                                </TableCell>
+                              )}
                             </TableRow>
                           );
                         })}
@@ -858,45 +770,36 @@ export default function SelectReports() {
                   </ResponsiveTableWrapper>
                 </div>
 
-                {/* Mobile Card View */}
-                <div className="block lg:hidden space-y-4">
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
                   {filteredAndSortedReports.map((report) => {
                     const isSelected = selectedReportIds.has(report.id);
-                    const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
-                    const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
+                    const variance = calculateEstimateVariance(report.work_orders?.estimated_cost, report.approved_subcontractor_invoice_amount);
 
                     return (
                       <MobileTableCard
                         key={report.id}
-                       data={{
-                          'Work Order': report.work_orders?.work_order_number || 'N/A',
-                          'Title': report.work_orders?.title || 'No title',
-                          'Location': report.work_orders?.store_location || '-',
-                          'Submitted': format(new Date(report.submitted_at), 'MMM d, yyyy'),
-                          'Amount': report.approved_subcontractor_invoice_amount ? formatCurrency(report.approved_subcontractor_invoice_amount) : '-',
-                          'Variance': (() => {
-                            const workOrder = report.work_orders;
-                            if (!workOrder?.internal_estimate_amount) return '-';
-                            
-                            const estimateAmount = workOrder.internal_estimate_amount;
-                            const actualAmount = report.approved_subcontractor_invoice_amount || 0;
-                            const variance = calculateEstimateVariance(estimateAmount, actualAmount);
-                            
-                            return formatVariance(variance.percentage);
-                          })(),
-                          'Status': 'Approved'
-                        }}
-                        badge={
-                          <ReportStatusBadge status="approved" size="sm" />
-                        }
+                        title={report.work_orders?.work_order_number || 'N/A'}
+                        subtitle={report.work_orders?.title}
+                        fields={[
+                          { label: 'Location', value: report.work_orders?.store_location || '-' },
+                          { label: 'Subcontractor', value: report.subcontractor_organization?.name || 
+                            (report.subcontractor ? `${report.subcontractor.first_name} ${report.subcontractor.last_name}` : 'N/A') },
+                          { label: 'Submitted', value: format(new Date(report.submitted_at), 'MMM dd, yyyy') },
+                          { label: 'Amount', value: formatCurrency(report.approved_subcontractor_invoice_amount || 0) },
+                          { label: 'Status', value: 'Approved' }
+                        ]}
+                        isSelected={isSelected}
+                        onSelect={(selected) => handleReportToggle(report.id, selected)}
                         actions={[
                           {
-                            label: 'View Details',
-                            icon: Eye,
-                            onClick: () => navigate(`/admin/work-orders/${report.work_order_id}`),
+                            label: isSelected ? 'Deselect' : 'Select',
+                            icon: isSelected ? X : CheckSquare,
+                            onClick: () => handleReportToggle(report.id, !isSelected),
+                            show: true,
                           },
                           {
-                            label: 'Remove from Selection',
+                            label: 'Deselect',
                             icon: X,
                             onClick: () => handleReportToggle(report.id, false),
                             show: isSelected,
@@ -991,6 +894,117 @@ export default function SelectReports() {
           </CardContent>
         </Card>
       )}
+
+      {/* Desktop Filter Sidebar */}
+      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
+        <SheetContent side="right" className="w-[480px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Billing Filters</SheetTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="absolute right-12 top-4"
+            >
+              Clear All
+            </Button>
+          </SheetHeader>
+          
+          <div className="mt-6 space-y-4">
+            {/* Amount Range */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Amount Range</label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="Min"
+                  value={amountRange.min}
+                  onChange={(e) => setAmountRange({...amountRange, min: e.target.value})}
+                />
+                <Input
+                  type="number"
+                  placeholder="Max"
+                  value={amountRange.max}
+                  onChange={(e) => setAmountRange({...amountRange, max: e.target.value})}
+                />
+              </div>
+            </div>
+
+            {/* Date Range */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date Range</label>
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+                />
+                <Input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Mobile Filter Bottom Sheet */}
+      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+        <SheetContent side="bottom" className="h-[85vh]">
+          <SheetHeader>
+            <SheetTitle>Billing Filters</SheetTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="absolute right-12 top-4"
+            >
+              Clear All
+            </Button>
+          </SheetHeader>
+          
+          <div className="mt-6 space-y-4">
+            {/* Amount Range */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Amount Range</label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="Min"
+                  value={amountRange.min}
+                  onChange={(e) => setAmountRange({...amountRange, min: e.target.value})}
+                />
+                <Input
+                  type="number"
+                  placeholder="Max"
+                  value={amountRange.max}
+                  onChange={(e) => setAmountRange({...amountRange, max: e.target.value})}
+                />
+              </div>
+            </div>
+
+            {/* Date Range */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date Range</label>
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+                />
+                <Input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+      
       </main>
     </TooltipProvider>
   );
