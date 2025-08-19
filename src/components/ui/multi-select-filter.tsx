@@ -81,7 +81,7 @@ export function MultiSelectFilter({
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 z-50 bg-popover" align="start">
+      <PopoverContent className="w-[300px] p-0 z-[60] bg-popover" align="start">
         <div className="p-3 space-y-3">
           {/* Search input */}
           <div className="relative">
@@ -102,7 +102,7 @@ export function MultiSelectFilter({
           )}
 
           {/* Options list */}
-          <div className="max-h-[200px] overflow-y-auto space-y-1">
+          <div className="max-h-[40vh] md:max-h-[300px] overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
             {filteredOptions.length === 0 ? (
               <div className="py-2 text-center text-sm text-muted-foreground">
                 No options found
