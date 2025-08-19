@@ -120,6 +120,10 @@ export function ReportsFiltersV2({
       label: locationName
     }));
 
+  // Debug logging
+  console.log('Debug ReportsFiltersV2 - locations:', locations);
+  console.log('Debug ReportsFiltersV2 - locationOptions:', locationOptions);
+
   // Render functions for reusable filters
   const renderSearchFilter = () => (
     <div className="space-y-2">
