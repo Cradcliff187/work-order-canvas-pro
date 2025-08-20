@@ -58,7 +58,7 @@ const EmployeeDashboard = () => {
       return;
     }
     
-    clockIn.mutate();
+    clockIn.mutate({ workOrderId });
   };
 
   const handleViewAssignmentDetails = (assignmentId: string) => {
@@ -69,7 +69,7 @@ const EmployeeDashboard = () => {
     if (isClocked) {
       clockOut.mutate();
     } else {
-      clockIn.mutate();
+      clockIn.mutate({});
     }
   };
 

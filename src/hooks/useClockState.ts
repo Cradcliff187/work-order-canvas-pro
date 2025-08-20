@@ -131,7 +131,7 @@ export const useClockState = () => {
 
   // Clock in mutation
   const clockIn = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ workOrderId, projectId }: { workOrderId?: string; projectId?: string } = {}) => {
       if (!profile?.id) throw new Error('No profile found');
 
       // Capture GPS location
@@ -152,17 +152,22 @@ export const useClockState = () => {
         console.warn('Failed to capture location for clock in:', error);
       }
 
-      // Get the most recent work order assignment
-      const { data: assignment, error: assignmentError } = await supabase
-        .from('work_order_assignments')
-        .select('work_order_id')
-        .eq('assigned_to', profile.id)
-        .order('assigned_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      let finalWorkOrderId = workOrderId;
+      
+      // If no work order or project specified, get the most recent work order assignment
+      if (!workOrderId && !projectId) {
+        const { data: assignment, error: assignmentError } = await supabase
+          .from('work_order_assignments')
+          .select('work_order_id')
+          .eq('assigned_to', profile.id)
+          .order('assigned_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (assignmentError) throw assignmentError;
-      if (!assignment) throw new Error('No work order assignments found. Please contact your supervisor.');
+        if (assignmentError) throw assignmentError;
+        if (!assignment) throw new Error('No work order assignments found. Please contact your supervisor.');
+        finalWorkOrderId = assignment.work_order_id;
+      }
 
       // Get user's hourly cost rate
       const { data: userProfile, error: profileError } = await supabase
@@ -179,7 +184,8 @@ export const useClockState = () => {
         .from('employee_reports')
         .insert({
           employee_user_id: profile.id,
-          work_order_id: assignment.work_order_id,
+          work_order_id: finalWorkOrderId || null,
+          project_id: projectId || null,
           report_date: new Date().toISOString().split('T')[0],
           clock_in_time: new Date().toISOString(),
           hourly_rate_snapshot: userProfile.hourly_cost_rate,
