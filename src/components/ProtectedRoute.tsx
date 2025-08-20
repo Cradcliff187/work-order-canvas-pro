@@ -59,7 +59,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
     if (isAdmin()) {
       redirectPath = '/admin/dashboard';
     } else if (isEmployee()) {
-      redirectPath = '/admin/employee-dashboard';
+      redirectPath = '/employee/dashboard';
     } else if (isPartner()) {
       redirectPath = '/partner/dashboard';
     } else if (isSubcontractor()) {
