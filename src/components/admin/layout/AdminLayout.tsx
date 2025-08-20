@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminSidebar } from './AdminSidebar';
 import { QuickActionsBar } from '@/components/employee/QuickActionsBar';
+import FloatingClockWidget from '@/components/employee/FloatingClockWidget';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -22,6 +23,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   
   // Show quick actions for employees on mobile
   const showQuickActions = isEmployee && isMobile;
+  
+  // Adjust padding for floating clock widget on mobile
+  const mainPaddingClass = showQuickActions 
+    ? 'pb-[140px]' // Space for both QuickActionsBar and FloatingClockWidget
+    : isEmployee && isMobile 
+      ? 'pb-[100px]' // Space for FloatingClockWidget only
+      : 'pb-20 md:pb-0'; // Default padding
   return (
     <SidebarProvider>
       <a
@@ -41,7 +49,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </header>
 
           {/* Main content with consistent container and padding */}
-          <main id="main-content" role="main" tabIndex={-1} className={`flex-1 overflow-auto ${showQuickActions ? 'pb-[80px]' : 'pb-20 md:pb-0'}`}>
+          <main id="main-content" role="main" tabIndex={-1} className={`flex-1 overflow-auto ${mainPaddingClass}`}>
             <div className={`container mx-auto ${contentPaddingClass} ${maxWidthClass}`}>
               {children}
             </div>
@@ -50,6 +58,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         
         {/* Quick Actions Bar for Employees on Mobile */}
         {showQuickActions && <QuickActionsBar />}
+        
+        {/* Floating Clock Widget for Employees */}
+        {isEmployee && <FloatingClockWidget />}
       </div>
     </SidebarProvider>
   );
