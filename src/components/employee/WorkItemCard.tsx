@@ -2,6 +2,7 @@ import React from 'react';
 import { MapPin, Briefcase, Star, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { AssignmentBadge } from './AssignmentBadge';
 
 interface ClockOption {
   id: string;
@@ -18,6 +19,7 @@ interface WorkItemCardProps {
   onSelect: (option: ClockOption) => void;
   className?: string;
   iconClassName?: string;
+  showAssignmentBadge?: boolean;
 }
 
 export function WorkItemCard({ 
@@ -25,7 +27,8 @@ export function WorkItemCard({
   isSelected, 
   onSelect, 
   className,
-  iconClassName 
+  iconClassName,
+  showAssignmentBadge = true
 }: WorkItemCardProps) {
   const getIcon = () => {
     if (option.section === 'assigned') {
@@ -65,10 +68,15 @@ export function WorkItemCard({
             <p className="font-medium text-sm truncate">
               {getDisplayNumber()} {option.title}
             </p>
-            {option.assigneeName && (
-              <p className="text-xs text-muted-foreground truncate">
-                Assigned to: {option.assigneeName}
-              </p>
+            {showAssignmentBadge && (
+              <div className="mt-1">
+                <AssignmentBadge 
+                  isAssignedToMe={option.section === 'assigned'} 
+                  assigneeName={option.assigneeName}
+                  showIcon={false}
+                  className="text-xs"
+                />
+              </div>
             )}
           </div>
           {isSelected && (

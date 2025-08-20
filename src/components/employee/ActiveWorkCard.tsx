@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Clock, MapPin, Eye } from 'lucide-react';
 import { WorkItem } from '@/hooks/useAllWorkItems';
+import { AssignmentBadge } from './AssignmentBadge';
 
 interface ActiveWorkCardProps {
   workItem: WorkItem;
@@ -36,9 +37,10 @@ export const ActiveWorkCard: React.FC<ActiveWorkCardProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <Badge className="bg-success text-success-foreground">
-                  ASSIGNED
-                </Badge>
+                <AssignmentBadge 
+                  isAssignedToMe={workItem.isAssignedToMe} 
+                  assigneeName={workItem.assigneeName}
+                />
                 <Badge variant="outline">
                   {workItem.type === 'work_order' ? 'WO' : 'PRJ'}
                 </Badge>
