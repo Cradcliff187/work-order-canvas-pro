@@ -89,6 +89,13 @@ export default function AdminUsers() {
     setFilters(prev => ({ ...prev, search: value }));
   };
 
+  const handleSearchClear = () => {
+    localStorage.removeItem('admin-users-search');
+    setSearchTerm('');
+    setFilters(prev => ({ ...prev, search: '' }));
+    setPagination(prev => ({ ...prev, pageIndex: 0 }));
+  };
+
 
   // Fetch data
   const { data: users, isLoading, error, refetch } = useUsers();
@@ -273,17 +280,22 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {/* Desktop Top Control Bar */}
+      {/* Desktop Layout */}
       <div className="hidden lg:flex gap-4 mb-6">
-        <div className="flex flex-1 gap-2">
+        <div className="flex flex-1 items-center gap-3">
           <SmartSearchInput
             placeholder="Search users by name or email..."
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="flex-1"
-            storageKey="admin-users-search"
+            onClear={handleSearchClear}
+            showClearButton={true}
+            className="flex-1 h-10"
           />
-          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsDesktopFilterOpen(true)}
+            className="h-10 px-4 whitespace-nowrap"
+          >
             <Filter className="h-4 w-4 mr-2" />
             Filters {filterCount > 0 && `(${filterCount})`}
           </Button>
@@ -293,6 +305,7 @@ export default function AdminUsers() {
             value={viewMode}
             onValueChange={setViewMode}
             allowedModes={allowedModes}
+            className="h-9"
           />
           <ColumnVisibilityDropdown
             columns={visibilityOptions}
@@ -301,21 +314,25 @@ export default function AdminUsers() {
             visibleCount={getVisibleColumnCount()}
           />
           <ExportDropdown onExport={handleExport} />
-          <Button onClick={() => setCreateUserModalOpen(true)}>
+          <Button 
+            onClick={() => setCreateUserModalOpen(true)}
+            className="h-9"
+          >
             <Plus className="h-4 w-4 mr-2" />
             New User
           </Button>
         </div>
       </div>
 
-      {/* Mobile Top Control Bar */}
+      {/* Mobile Layout */}
       <div className="lg:hidden space-y-3 mb-6">
         <SmartSearchInput
           placeholder="Search users by name or email..."
           value={searchTerm}
           onChange={(e) => handleSearchChange(e.target.value)}
+          onClear={handleSearchClear}
+          showClearButton={true}
           className="w-full"
-          storageKey="admin-users-search"
         />
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
@@ -326,6 +343,7 @@ export default function AdminUsers() {
             value={viewMode}
             onValueChange={setViewMode}
             allowedModes={allowedModes}
+            className="h-9"
           />
           <Button onClick={() => setCreateUserModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
