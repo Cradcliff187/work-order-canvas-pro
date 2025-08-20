@@ -460,7 +460,7 @@ const table = useReactTable({
             Bulk Actions
           </Button>
           <Button 
-            onClick={() => navigate('/admin/partner-billing/select-reports')}
+            onClick={() => navigate('/admin/invoices/create')}
             className="h-9"
           >
             <Plus className="h-4 w-4 mr-2" />
