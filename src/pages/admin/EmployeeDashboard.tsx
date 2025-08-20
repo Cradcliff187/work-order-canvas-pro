@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useEmployeeDashboard } from '@/hooks/useEmployeeDashboard';
+import { BasicClockButton } from '@/components/employee/BasicClockButton';
+import { useClockState } from '@/hooks/useClockState';
 import { 
   ClipboardList, 
   Clock, 
@@ -33,6 +35,16 @@ const EmployeeDashboard = () => {
     isError
   } = useEmployeeDashboard();
 
+  const { clockIn, clockOut, isClockingIn, isClockingOut, isClocked } = useClockState();
+
+  const handleClockAction = () => {
+    if (isClocked) {
+      clockOut.mutate();
+    } else {
+      clockIn.mutate();
+    }
+  };
+
   if (isError) {
     return (
       <div className="container mx-auto px-6 py-8">
@@ -50,6 +62,22 @@ const EmployeeDashboard = () => {
         <h1 className="text-3xl font-bold mb-2">Employee Dashboard</h1>
         <p className="text-muted-foreground">Track your assignments, hours, and expenses</p>
       </div>
+
+      {/* Clock In/Out Section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Time Clock</CardTitle>
+          <CardDescription>Clock in and out of your work assignments</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="max-w-xs mx-auto">
+            <BasicClockButton 
+              onClick={handleClockAction}
+              loading={isClockingIn || isClockingOut}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
