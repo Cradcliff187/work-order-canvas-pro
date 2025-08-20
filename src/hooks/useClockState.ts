@@ -50,19 +50,29 @@ export interface ClockState {
 export const useClockState = () => {
   const { profile } = useAuth();
   const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [isClockingIn, setIsClockingIn] = useState(false);
+  const [isClockingOut, setIsClockingOut] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { getCurrentLocation, getAddressFromLocation } = useLocation();
+
+  console.log('🔄 useClockState: Component initialized with profile ID:', profile?.id);
 
   const {
     data: clockData,
     isLoading,
     isError,
+    error: queryError,
     refetch
   } = useQuery({
     queryKey: ['employee-clock-state', profile?.id],
     queryFn: async (): Promise<ClockStateData | null> => {
-      if (!profile?.id) throw new Error('No employee ID available');
+      console.log('📊 useClockState: Fetching clock state for profile:', profile?.id);
+      
+      if (!profile?.id) {
+        console.log('❌ useClockState: No profile ID available');
+        throw new Error('No employee ID available');
+      }
 
       const { data, error } = await supabase
         .from('employee_reports')
@@ -74,11 +84,17 @@ export const useClockState = () => {
         .limit(1)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ useClockState: Query error:', error);
+        throw error;
+      }
       
-      if (!data?.clock_in_time) return null;
+      if (!data?.clock_in_time) {
+        console.log('✅ useClockState: No active clock-in found');
+        return null;
+      }
       
-      return {
+      const result = {
         id: data.id,
         clock_in_time: data.clock_in_time,
         work_order_id: data.work_order_id,
@@ -87,19 +103,41 @@ export const useClockState = () => {
         location_lng: data.location_lng,
         location_address: data.location_address
       };
+      
+      console.log('✅ useClockState: Active clock-in found:', result);
+      return result;
     },
     enabled: !!profile?.id,
     refetchInterval: 30000, // 30 seconds
     staleTime: 15000, // 15 seconds
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+
+  // Track derived state values
+  const isClocked = !!clockData;
+  const activeReportId = clockData?.id || null;
+
+  console.log('📈 useClockState: Current state:', {
+    isClocked,
+    activeReportId,
+    isLoading,
+    isError: !!queryError,
+    isClockingIn,
+    isClockingOut,
+    clockInTime: clockData?.clock_in_time,
+    elapsedTime
   });
 
   // Calculate elapsed time every second when clocked in
   useEffect(() => {
     if (!clockData?.clock_in_time) {
+      console.log('⏹️ useClockState: No active clock-in, resetting elapsed time');
       setElapsedTime(0);
       return;
     }
 
+    console.log('⏱️ useClockState: Starting elapsed time calculation for clock-in:', clockData.clock_in_time);
     const clockInTime = new Date(clockData.clock_in_time);
     
     const updateElapsedTime = () => {
@@ -118,8 +156,8 @@ export const useClockState = () => {
   }, [clockData?.clock_in_time]);
 
   const clockState: ClockState = {
-    isClocked: !!clockData,
-    activeReportId: clockData?.id || null,
+    isClocked,
+    activeReportId,
     clockInTime: clockData?.clock_in_time ? new Date(clockData.clock_in_time) : null,
     elapsedTime,
     workOrderId: clockData?.work_order_id || null,
@@ -132,73 +170,109 @@ export const useClockState = () => {
   // Clock in mutation
   const clockIn = useMutation({
     mutationFn: async ({ workOrderId, projectId }: { workOrderId?: string; projectId?: string } = {}) => {
-      if (!profile?.id) throw new Error('No profile found');
+      console.log('🔵 useClockState: Starting clock in process', { workOrderId, projectId, profileId: profile?.id });
+      
+      if (!profile?.id) {
+        console.error('❌ useClockState: No profile found for clock in');
+        throw new Error('No profile found');
+      }
 
-      // Capture GPS location
-      let locationData = null;
+      setIsClockingIn(true);
+
       try {
-        const location = await getCurrentLocation();
-        if (location) {
-          const address = await getAddressFromLocation(location);
-          locationData = {
-            location_lat: location.latitude,
-            location_lng: location.longitude,
-            location_address: address?.street ? 
-              `${address.street}, ${address.city}, ${address.state} ${address.zipCode}` : 
-              'Location captured'
-          };
+        // Capture GPS location
+        console.log('📍 useClockState: Capturing GPS location for clock in');
+        let locationData = null;
+        try {
+          const location = await getCurrentLocation();
+          if (location) {
+            const address = await getAddressFromLocation(location);
+            locationData = {
+              location_lat: location.latitude,
+              location_lng: location.longitude,
+              location_address: address?.street ? 
+                `${address.street}, ${address.city}, ${address.state} ${address.zipCode}` : 
+                'Location captured'
+            };
+            console.log('✅ useClockState: Location captured:', locationData);
+          }
+        } catch (error) {
+          console.warn('⚠️ useClockState: Failed to capture location for clock in:', error);
         }
-      } catch (error) {
-        console.warn('Failed to capture location for clock in:', error);
+
+        let finalWorkOrderId = workOrderId;
+        
+        // If no work order or project specified, get the most recent work order assignment
+        if (!workOrderId && !projectId) {
+          console.log('🔍 useClockState: Finding work order assignment');
+          const { data: assignment, error: assignmentError } = await supabase
+            .from('work_order_assignments')
+            .select('work_order_id')
+            .eq('assigned_to', profile.id)
+            .order('assigned_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (assignmentError) {
+            console.error('❌ useClockState: Assignment query error:', assignmentError);
+            throw assignmentError;
+          }
+          if (!assignment) {
+            console.error('❌ useClockState: No assignments found');
+            throw new Error('No work order assignments found. Please contact your supervisor.');
+          }
+          finalWorkOrderId = assignment.work_order_id;
+          console.log('✅ useClockState: Found work order assignment:', finalWorkOrderId);
+        }
+
+        // Get user's hourly cost rate
+        console.log('💰 useClockState: Getting hourly cost rate');
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('hourly_cost_rate')
+          .eq('id', profile.id)
+          .single();
+
+        if (profileError) {
+          console.error('❌ useClockState: Profile query error:', profileError);
+          throw profileError;
+        }
+        if (!userProfile?.hourly_cost_rate) {
+          console.error('❌ useClockState: No hourly rate set');
+          throw new Error('Hourly rate not set. Please contact administration.');
+        }
+
+        console.log('💰 useClockState: Hourly rate found:', userProfile.hourly_cost_rate);
+
+        // Create employee report with clock in time and location
+        console.log('💾 useClockState: Creating employee report');
+        const { error: reportError } = await supabase
+          .from('employee_reports')
+          .insert({
+            employee_user_id: profile.id,
+            work_order_id: finalWorkOrderId || null,
+            project_id: projectId || null,
+            report_date: new Date().toISOString().split('T')[0],
+            clock_in_time: new Date().toISOString(),
+            hourly_rate_snapshot: userProfile.hourly_cost_rate,
+            hours_worked: 0,
+            work_performed: '',
+            ...locationData
+          });
+
+        if (reportError) {
+          console.error('❌ useClockState: Report insert error:', reportError);
+          throw reportError;
+        }
+        
+        console.log('✅ useClockState: Clock in successful');
+        return locationData;
+      } finally {
+        setIsClockingIn(false);
       }
-
-      let finalWorkOrderId = workOrderId;
-      
-      // If no work order or project specified, get the most recent work order assignment
-      if (!workOrderId && !projectId) {
-        const { data: assignment, error: assignmentError } = await supabase
-          .from('work_order_assignments')
-          .select('work_order_id')
-          .eq('assigned_to', profile.id)
-          .order('assigned_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (assignmentError) throw assignmentError;
-        if (!assignment) throw new Error('No work order assignments found. Please contact your supervisor.');
-        finalWorkOrderId = assignment.work_order_id;
-      }
-
-      // Get user's hourly cost rate
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('hourly_cost_rate')
-        .eq('id', profile.id)
-        .single();
-
-      if (profileError) throw profileError;
-      if (!userProfile?.hourly_cost_rate) throw new Error('Hourly rate not set. Please contact administration.');
-
-      // Create employee report with clock in time and location
-      const { error: reportError } = await supabase
-        .from('employee_reports')
-        .insert({
-          employee_user_id: profile.id,
-          work_order_id: finalWorkOrderId || null,
-          project_id: projectId || null,
-          report_date: new Date().toISOString().split('T')[0],
-          clock_in_time: new Date().toISOString(),
-          hourly_rate_snapshot: userProfile.hourly_cost_rate,
-          hours_worked: 0,
-          work_performed: '',
-          ...locationData
-        });
-
-      if (reportError) throw reportError;
-      
-      return locationData;
     },
     onSuccess: (locationData) => {
+      console.log('🎉 useClockState: Clock in success callback');
       queryClient.invalidateQueries({ queryKey: ['employee-clock-state'] });
       const locationText = locationData?.location_address ? 
         ` at ${locationData.location_address}` : '';
@@ -208,6 +282,8 @@ export const useClockState = () => {
       });
     },
     onError: (error) => {
+      console.error('❌ useClockState: Clock in error callback:', error);
+      setIsClockingIn(false);
       toast({
         title: 'Clock In Failed',
         description: error instanceof Error ? error.message : 'Failed to clock in',
@@ -219,7 +295,7 @@ export const useClockState = () => {
   // Clock out mutation
   const clockOut = useMutation({
     mutationFn: async (forceClockOut: boolean = false) => {
-      console.log('Clock out mutation started:', { 
+      console.log('🔴 useClockState: Starting clock out process', { 
         clockDataId: clockData?.id, 
         clockInTime: clockData?.clock_in_time,
         profileId: profile?.id,
@@ -227,68 +303,92 @@ export const useClockState = () => {
       });
 
       // Enhanced validation
-      if (!profile?.id) throw new Error('No profile found. Please refresh and try again.');
+      if (!profile?.id) {
+        console.error('❌ useClockState: No profile found for clock out');
+        throw new Error('No profile found. Please refresh and try again.');
+      }
       
       // Verify authentication before proceeding
+      console.log('🔐 useClockState: Verifying authentication');
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
+        console.error('❌ useClockState: Authentication error:', authError);
         throw new Error('Authentication expired. Please refresh and log in again.');
       }
 
-      console.log('Authentication verified:', { userId: user.id, profileId: profile.id });
+      console.log('✅ useClockState: Authentication verified:', { userId: user.id, profileId: profile.id });
+      setIsClockingOut(true);
 
-      // Capture GPS location for clock out
-      let locationData = {};
       try {
-        const location = await getCurrentLocation();
-        if (location) {
-          const address = await getAddressFromLocation(location);
-          locationData = {
-            clock_out_location_lat: location.latitude,
-            clock_out_location_lng: location.longitude,
-            clock_out_location_address: address?.street ? 
-              `${address.street}, ${address.city}, ${address.state} ${address.zipCode}` : 
-              'Location captured'
-          };
+        // Capture GPS location for clock out
+        console.log('📍 useClockState: Capturing GPS location for clock out');
+        let locationData = {};
+        try {
+          const location = await getCurrentLocation();
+          if (location) {
+            const address = await getAddressFromLocation(location);
+            locationData = {
+              clock_out_location_lat: location.latitude,
+              clock_out_location_lng: location.longitude,
+              clock_out_location_address: address?.street ? 
+                `${address.street}, ${address.city}, ${address.state} ${address.zipCode}` : 
+                'Location captured'
+            };
+            console.log('✅ useClockState: Clock out location captured:', locationData);
+          }
+        } catch (error) {
+          console.warn('⚠️ useClockState: Failed to capture location for clock out:', error);
         }
-      } catch (error) {
-        console.warn('Failed to capture location for clock out:', error);
-      }
-      
-      if (!clockData?.id) {
-        if (forceClockOut) {
-          // Try to find any unclosed reports for this user
-          const { data: unclosedReports, error: searchError } = await supabase
-            .from('employee_reports')
-            .select('id, clock_in_time, work_order_id')
-            .eq('employee_user_id', profile.id)
-            .not('clock_in_time', 'is', null)
-            .is('clock_out_time', null)
-            .order('clock_in_time', { ascending: false })
-            .limit(1);
+        
+        if (!clockData?.id) {
+          console.log('⚠️ useClockState: No active clock data found');
+          if (forceClockOut) {
+            console.log('🔍 useClockState: Force clock out - searching for unclosed reports');
+            // Try to find any unclosed reports for this user
+            const { data: unclosedReports, error: searchError } = await supabase
+              .from('employee_reports')
+              .select('id, clock_in_time, work_order_id')
+              .eq('employee_user_id', profile.id)
+              .not('clock_in_time', 'is', null)
+              .is('clock_out_time', null)
+              .order('clock_in_time', { ascending: false })
+              .limit(1);
 
-          if (searchError) throw new Error(`Search error: ${searchError.message}`);
-          if (!unclosedReports?.length) throw new Error('No active clock sessions found');
-          
-          // Use the found record by creating a new ClockStateData object
-          const foundClockData: ClockStateData = {
-            id: unclosedReports[0].id,
-            clock_in_time: unclosedReports[0].clock_in_time,
-            work_order_id: unclosedReports[0].work_order_id
-          };
-          
-          // Use the found data for this operation
-          return await performClockOut(foundClockData, locationData, profile.id);
-        } else {
-          throw new Error('No active clock session found. Try refreshing the page.');
+            if (searchError) {
+              console.error('❌ useClockState: Search error:', searchError);
+              throw new Error(`Search error: ${searchError.message}`);
+            }
+            if (!unclosedReports?.length) {
+              console.error('❌ useClockState: No unclosed reports found');
+              throw new Error('No active clock sessions found');
+            }
+            
+            // Use the found record by creating a new ClockStateData object
+            const foundClockData: ClockStateData = {
+              id: unclosedReports[0].id,
+              clock_in_time: unclosedReports[0].clock_in_time,
+              work_order_id: unclosedReports[0].work_order_id
+            };
+            
+            console.log('✅ useClockState: Found unclosed report for force clock out:', foundClockData);
+            // Use the found data for this operation
+            return await performClockOut(foundClockData, locationData, profile.id);
+          } else {
+            console.error('❌ useClockState: No active clock session and not force clock out');
+            throw new Error('No active clock session found. Try refreshing the page.');
+          }
         }
+        
+        console.log('⚙️ useClockState: Performing normal clock out');
+        return await performClockOut(clockData, locationData, profile.id);
+      } finally {
+        setIsClockingOut(false);
       }
-      
-      return await performClockOut(clockData, locationData, profile.id);
     },
 
     // Helper function to perform the actual clock out
     onSuccess: (result) => {
+      console.log('🎉 useClockState: Clock out success callback:', result);
       queryClient.invalidateQueries({ queryKey: ['employee-clock-state'] });
       queryClient.invalidateQueries({ queryKey: ['employee-time-reports'] });
       const hasLocationAddress = result?.locationData && 'clock_out_location_address' in result.locationData;
@@ -301,7 +401,8 @@ export const useClockState = () => {
       });
     },
     onError: (error) => {
-      console.error('Clock out error:', error);
+      console.error('❌ useClockState: Clock out error callback:', error);
+      setIsClockingOut(false);
       const errorMessage = error instanceof Error ? error.message : 'Failed to clock out';
       toast({
         title: 'Clock Out Failed', 
@@ -345,18 +446,33 @@ export const useClockState = () => {
 
   // Force clock out function for edge cases
   const forceClockOut = () => {
+    console.log('🚨 useClockState: Force clock out initiated');
     clockOut.mutate(true);
   };
 
+  // Combined loading states
+  const isAnyLoading = isLoading || isClockingIn || isClockingOut;
+  const hasError = isError || !!queryError;
+
+  console.log('📤 useClockState: Returning final state:', {
+    isClocked,
+    activeReportId,
+    isAnyLoading,
+    hasError,
+    isClockingIn,
+    isClockingOut,
+    elapsedTime
+  });
+
   return {
     ...clockState,
-    isLoading,
-    isError,
+    isLoading: isAnyLoading,
+    isError: hasError,
     refetch,
     clockIn,
     clockOut,
     forceClockOut,
-    isClockingIn: clockIn.isPending,
-    isClockingOut: clockOut.isPending,
+    isClockingIn,
+    isClockingOut,
   };
 };
