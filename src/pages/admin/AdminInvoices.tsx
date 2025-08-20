@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useInvoices, Invoice } from '@/hooks/useInvoices';
-import { InvoiceFilters } from '@/components/admin/invoices/InvoiceFilters';
+import { UnifiedInvoiceFilters } from '@/components/admin/invoices/UnifiedInvoiceFilters';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createInvoiceColumns } from '@/components/admin/invoices/InvoiceColumns';
@@ -450,9 +450,9 @@ const table = useReactTable({
             <SheetTitle>Invoice Filters</SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
-            <InvoiceFilters
-              value={filters as any}
-              onChange={(next) => {
+            <UnifiedInvoiceFilters
+              filters={filters}
+              onFiltersChange={(next) => {
                 if (JSON.stringify(filters) === JSON.stringify(next)) return;
                 setFilters(next as any);
                 setPage(1);
@@ -461,7 +461,6 @@ const table = useReactTable({
                 clearFilters(); 
                 setPage(1); 
               }}
-              filterCount={filterCount}
             />
             <Button 
               onClick={() => setIsMobileFilterOpen(false)} 
@@ -491,9 +490,9 @@ const table = useReactTable({
             </Button>
           </SheetHeader>
           <div className="mt-6">
-            <InvoiceFilters
-              value={filters as any}
-              onChange={(next) => {
+            <UnifiedInvoiceFilters
+              filters={filters}
+              onFiltersChange={(next) => {
                 if (JSON.stringify(filters) === JSON.stringify(next)) return;
                 setFilters(next as any);
                 setPage(1);
@@ -502,7 +501,6 @@ const table = useReactTable({
                 clearFilters(); 
                 setPage(1); 
               }}
-              filterCount={filterCount}
             />
           </div>
         </SheetContent>
