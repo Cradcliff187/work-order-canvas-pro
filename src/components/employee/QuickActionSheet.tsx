@@ -73,7 +73,7 @@ export function QuickActionSheet({ isOpen, onClose }: QuickActionSheetProps) {
 
     try {
       triggerHaptic({ pattern: 'medium' });
-      await clockOut.mutateAsync();
+      await clockOut.mutateAsync(false);
       onSubmitSuccess();
       toast({
         title: "Break started",
@@ -103,7 +103,7 @@ export function QuickActionSheet({ isOpen, onClose }: QuickActionSheetProps) {
 
     try {
       triggerHaptic({ pattern: 'heavy' });
-      await clockOut.mutateAsync();
+      await clockOut.mutateAsync(false);
       onSubmitSuccess();
       toast({
         title: "Day ended",

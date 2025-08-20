@@ -130,7 +130,7 @@ export function FloatingClockWidget() {
 
     try {
       if (clockData.isClocked) {
-        await clockOut.mutateAsync();
+        await clockOut.mutateAsync(false);
         onSubmitSuccess();
         setIsSheetOpen(false);
       } else if (selectedOption) {

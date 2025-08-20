@@ -116,7 +116,7 @@ const EmployeeDashboard = () => {
   };
 
   const handleClockOut = () => {
-    clockOut.mutate();
+    clockOut.mutate(false);
   };
 
   const handleViewDetails = (id: string) => {

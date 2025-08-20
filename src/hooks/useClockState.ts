@@ -229,34 +229,6 @@ export const useClockState = () => {
       // Enhanced validation
       if (!profile?.id) throw new Error('No profile found. Please refresh and try again.');
       
-      if (!clockData?.id) {
-        if (forceClockOut) {
-          // Try to find any unclosed reports for this user
-          const { data: unclosedReports, error: searchError } = await supabase
-            .from('employee_reports')
-            .select('id, clock_in_time, work_order_id')
-            .eq('employee_user_id', profile.id)
-            .not('clock_in_time', 'is', null)
-            .is('clock_out_time', null)
-            .order('clock_in_time', { ascending: false })
-            .limit(1);
-
-          if (searchError) throw new Error(`Search error: ${searchError.message}`);
-          if (!unclosedReports?.length) throw new Error('No active clock sessions found');
-          
-          // Use the found record
-          clockData = {
-            id: unclosedReports[0].id,
-            clock_in_time: unclosedReports[0].clock_in_time,
-            work_order_id: unclosedReports[0].work_order_id
-          } as ClockStateData;
-        } else {
-          throw new Error('No active clock session found. Try refreshing the page.');
-        }
-      }
-      
-      if (!clockData?.clock_in_time) throw new Error('Invalid clock in time');
-
       // Verify authentication before proceeding
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
@@ -282,36 +254,40 @@ export const useClockState = () => {
       } catch (error) {
         console.warn('Failed to capture location for clock out:', error);
       }
+      
+      if (!clockData?.id) {
+        if (forceClockOut) {
+          // Try to find any unclosed reports for this user
+          const { data: unclosedReports, error: searchError } = await supabase
+            .from('employee_reports')
+            .select('id, clock_in_time, work_order_id')
+            .eq('employee_user_id', profile.id)
+            .not('clock_in_time', 'is', null)
+            .is('clock_out_time', null)
+            .order('clock_in_time', { ascending: false })
+            .limit(1);
 
-      const clockOutTime = new Date();
-      const clockInTime = new Date(clockData.clock_in_time);
-      const hoursWorked = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
-
-      console.log('Attempting clock out update:', {
-        reportId: clockData.id,
-        hoursWorked: Math.round(hoursWorked * 100) / 100,
-        clockOutTime: clockOutTime.toISOString()
-      });
-
-      // Update employee report with clock out time, hours worked, and location
-      const { error: updateError } = await supabase
-        .from('employee_reports')
-        .update({
-          clock_out_time: clockOutTime.toISOString(),
-          hours_worked: Math.round(hoursWorked * 100) / 100, // Round to 2 decimal places
-          ...locationData
-        })
-        .eq('id', clockData.id)
-        .eq('employee_user_id', profile.id); // Additional safety check
-
-      if (updateError) {
-        console.error('Clock out update failed:', updateError);
-        throw new Error(`Update failed: ${updateError.message}. Please try again or contact support.`);
+          if (searchError) throw new Error(`Search error: ${searchError.message}`);
+          if (!unclosedReports?.length) throw new Error('No active clock sessions found');
+          
+          // Use the found record by creating a new ClockStateData object
+          const foundClockData: ClockStateData = {
+            id: unclosedReports[0].id,
+            clock_in_time: unclosedReports[0].clock_in_time,
+            work_order_id: unclosedReports[0].work_order_id
+          };
+          
+          // Use the found data for this operation
+          return await performClockOut(foundClockData, locationData, profile.id);
+        } else {
+          throw new Error('No active clock session found. Try refreshing the page.');
+        }
       }
       
-      console.log('Clock out successful');
-      return { locationData, hoursWorked };
+      return await performClockOut(clockData, locationData, profile.id);
     },
+
+    // Helper function to perform the actual clock out
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['employee-clock-state'] });
       queryClient.invalidateQueries({ queryKey: ['employee-time-reports'] });
@@ -331,13 +307,41 @@ export const useClockState = () => {
         title: 'Clock Out Failed', 
         description: errorMessage,
         variant: 'destructive',
-        action: errorMessage.includes('No active clock session') ? {
-          altText: 'Force Clock Out',
-          onClick: () => clockOut.mutate(true),
-        } : undefined,
       });
     },
   });
+
+  // Helper function to perform clock out operation
+  const performClockOut = async (data: ClockStateData, locationData: any, employeeUserId: string) => {
+    const clockOutTime = new Date();
+    const clockInTime = new Date(data.clock_in_time);
+    const hoursWorked = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
+
+    console.log('Attempting clock out update:', {
+      reportId: data.id,
+      hoursWorked: Math.round(hoursWorked * 100) / 100,
+      clockOutTime: clockOutTime.toISOString()
+    });
+
+    // Update employee report with clock out time, hours worked, and location
+    const { error: updateError } = await supabase
+      .from('employee_reports')
+      .update({
+        clock_out_time: clockOutTime.toISOString(),
+        hours_worked: Math.round(hoursWorked * 100) / 100, // Round to 2 decimal places
+        ...locationData
+      })
+      .eq('id', data.id)
+      .eq('employee_user_id', employeeUserId); // Additional safety check
+
+    if (updateError) {
+      console.error('Clock out update failed:', updateError);
+      throw new Error(`Update failed: ${updateError.message}. Please try again or contact support.`);
+    }
+    
+    console.log('Clock out successful');
+    return { locationData, hoursWorked };
+  };
 
   // Force clock out function for edge cases
   const forceClockOut = () => {
