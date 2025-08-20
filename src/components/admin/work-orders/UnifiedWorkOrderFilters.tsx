@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 
-import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+
 import { Input } from '@/components/ui/input';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
 import { useQuery } from '@tanstack/react-query';
@@ -176,32 +176,44 @@ export function UnifiedWorkOrderFilters({
     <>
       <div className="space-y-2">
         <label className="text-sm font-medium">Status</label>
-        <MultiSelectFilter
-          placeholder="Select status"
-          options={statusOptions}
-          selectedValues={filters.status || []}
-          onSelectionChange={(values) => handleArrayFilterChange('status', values)}
-        />
+        <select 
+          className="w-full p-2 border rounded-md bg-background"
+          value={filters.status?.[0] || ''}
+          onChange={(e) => handleArrayFilterChange('status', e.target.value ? [e.target.value] : [])}
+        >
+          <option value="">Select status</option>
+          {statusOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Priority</label>
-        <MultiSelectFilter
-          placeholder="Select priority"
-          options={priorityOptions}
-          selectedValues={filters.priority || []}
-          onSelectionChange={(values) => handleArrayFilterChange('priority', values)}
-        />
+        <select 
+          className="w-full p-2 border rounded-md bg-background"
+          value={filters.priority?.[0] || ''}
+          onChange={(e) => handleArrayFilterChange('priority', e.target.value ? [e.target.value] : [])}
+        >
+          <option value="">Select priority</option>
+          {priorityOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Organization</label>
-        <MultiSelectFilter
-          placeholder="Select organization"
-          options={organizationOptions}
-          selectedValues={filters.partner_organization_ids || []}
-          onSelectionChange={(values) => handleArrayFilterChange('partner_organization_ids', values)}
-        />
+        <select 
+          className="w-full p-2 border rounded-md bg-background"
+          value={filters.partner_organization_ids?.[0] || ''}
+          onChange={(e) => handleArrayFilterChange('partner_organization_ids', e.target.value ? [e.target.value] : [])}
+        >
+          <option value="">Select organization</option>
+          {organizationOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
     </>
   );
@@ -211,32 +223,44 @@ export function UnifiedWorkOrderFilters({
     <>
       <div className="space-y-2">
         <label className="text-sm font-medium">Completed By</label>
-        <MultiSelectFilter
-          placeholder="Select assignee type"
-          options={completedByOptions}
-          selectedValues={filters.completed_by || []}
-          onSelectionChange={(values) => handleArrayFilterChange('completed_by', values)}
-        />
+        <select 
+          className="w-full p-2 border rounded-md bg-background"
+          value={filters.completed_by?.[0] || ''}
+          onChange={(e) => handleArrayFilterChange('completed_by', e.target.value ? [e.target.value] : [])}
+        >
+          <option value="">Select assignee type</option>
+          {completedByOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Trade</label>
-        <MultiSelectFilter
-          placeholder="Select trade"
-          options={tradeOptions}
-          selectedValues={filters.trade_id || []}
-          onSelectionChange={(values) => handleArrayFilterChange('trade_id', values)}
-        />
+        <select 
+          className="w-full p-2 border rounded-md bg-background"
+          value={filters.trade_id?.[0] || ''}
+          onChange={(e) => handleArrayFilterChange('trade_id', e.target.value ? [e.target.value] : [])}
+        >
+          <option value="">Select trade</option>
+          {tradeOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Location</label>
-        <MultiSelectFilter
-          placeholder="Select location"
-          options={locationOptions}
-          selectedValues={filters.location_filter || []}
-          onSelectionChange={(values) => handleArrayFilterChange('location_filter', values)}
-        />
+        <select 
+          className="w-full p-2 border rounded-md bg-background"
+          value={filters.location_filter?.[0] || ''}
+          onChange={(e) => handleArrayFilterChange('location_filter', e.target.value ? [e.target.value] : [])}
+        >
+          <option value="">Select location</option>
+          {locationOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
         <div className="flex gap-2">
           <Input
             placeholder="Add custom location"
