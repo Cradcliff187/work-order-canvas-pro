@@ -559,31 +559,17 @@ const table = useReactTable({
         </Card>
       )}
 
-      {/* Data Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Reports</CardTitle>
-            <div className="flex items-center gap-2 lg:hidden">
-              <ColumnVisibilityDropdown
-                columns={columnOptions}
-                onToggleColumn={toggleColumn}
-                onResetToDefaults={resetToDefaults}
-                visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-                totalCount={columnOptions.filter(c => c.canHide).length}
-              />
-              <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ReportsTable
-            table={table}
-            columns={columns}
-            isLoading={isLoading}
-            viewMode={viewMode === 'card' ? 'card' : 'table'}
-            onRowClick={(report) => navigate(`/admin/reports/${(report as any).id}`)}
-            renderMobileCard={(report: any) => {
+      <ReportsTable
+        table={table}
+        columns={columns}
+        isLoading={isLoading}
+        viewMode={viewMode === 'card' ? 'card' : 'table'}
+        onRowClick={(report) => navigate(`/admin/reports/${(report as any).id}`)}
+        columnVisibilityColumns={columnOptions}
+        onToggleColumn={toggleColumn}
+        onResetColumns={resetToDefaults}
+        onExportAll={handleExport}
+        renderMobileCard={(report: any) => {
               const workOrder = report.work_orders;
               const subcontractor = report.subcontractor;
               const subcontractorOrg = report.subcontractor_organization;
@@ -628,13 +614,11 @@ const table = useReactTable({
                   </MobileTableCard>
                 </SwipeableListItem>
               );
-            }}
-            emptyIcon={FileText}
-            emptyTitle="No reports found"
-            emptyDescription={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Reports will appear here when subcontractors submit them"}
-          />
-        </CardContent>
-      </Card>
+        }}
+        emptyIcon={FileText}
+        emptyTitle="No reports found"
+        emptyDescription={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Reports will appear here when subcontractors submit them"}
+      />
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
