@@ -30,9 +30,17 @@ interface WorkOrderPipelineTableProps {
   data: WorkOrderPipelineItem[];
   isLoading: boolean;
   isError: boolean;
+  viewMode?: 'table' | 'card' | 'list';
+  columnVisibility?: Record<string, boolean>;
 }
 
-export function WorkOrderPipelineTable({ data, isLoading, isError }: WorkOrderPipelineTableProps) {
+export function WorkOrderPipelineTable({ 
+  data, 
+  isLoading, 
+  isError, 
+  viewMode = 'table',
+  columnVisibility = {}
+}: WorkOrderPipelineTableProps) {
   const navigate = useNavigate();
 
   // Helper function to get partner billing status based on workflow

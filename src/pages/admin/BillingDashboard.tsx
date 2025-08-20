@@ -12,10 +12,8 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
-import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
@@ -41,6 +39,13 @@ import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailMod
 import { Invoice } from '@/hooks/useInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { useViewMode } from '@/hooks/useViewMode';
+import { exportWorkOrders } from '@/lib/utils/export';
 
 interface DashboardMetrics {
   unbilledReports: {
@@ -184,48 +189,43 @@ interface PipelineFiltersValue {
   report_status?: string[];
 }
 
-// Filter options for Pipeline
-const operationalStatusOptions = [
-  { value: 'new', label: 'New Orders' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'reports_pending', label: 'Reports Pending Review' },
-  { value: 'complete', label: 'Completed' }
-];
+export function BillingDashboard() {
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+  const isMobile = useIsMobile();
 
-const financialStatusOptions = [
-  { value: 'not_billed', label: 'No Invoice' },
-  { value: 'invoice_received', label: 'Invoice Received' },
-  { value: 'paid', label: 'Paid' }
-];
+  // Pipeline controls
+  const { viewMode, setViewMode } = useViewMode({
+    componentKey: 'billing-pipeline',
+    config: { mobile: ['card'], desktop: ['table', 'card'] },
+    defaultMode: 'table'
+  });
 
-const partnerBillingStatusOptions = [
-  { value: 'report_pending', label: 'Report Pending' },
-  { value: 'invoice_needed', label: 'Subcontractor Invoice Needed' },
-  { value: 'invoice_pending', label: 'Invoice Pending Approval' },
-  { value: 'ready_to_bill', label: 'Ready to Bill Partner' },
-  { value: 'billed', label: 'Partner Billed' },
-];
+  // Column visibility for pipeline table
+  const {
+    columnVisibility,
+    toggleColumn,
+    resetToDefaults,
+    getAllColumns
+  } = useColumnVisibility({
+    storageKey: 'admin-billing-pipeline-columns-v1',
+    columnMetadata: {
+      work_order: { label: 'Work Order', defaultVisible: true },
+      partner: { label: 'Partner/Location', defaultVisible: true },
+      status: { label: 'Status', defaultVisible: true },
+      financial: { label: 'Financial Status', defaultVisible: true },
+      billing: { label: 'Billing Status', defaultVisible: true },
+      invoice: { label: 'Invoice Status', defaultVisible: true },
+      date: { label: 'Date', defaultVisible: true },
+      amount: { label: 'Amount', defaultVisible: true },
+      actions: { label: 'Actions', defaultVisible: true }
+    }
+  });
 
-const priorityOptions = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' }
-];
-
-const reportStatusOptions = [
-  { value: 'not_submitted', label: 'Not Submitted' },
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'reviewed', label: 'Under Review' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Needs Revision' }
-];
-
-export default function BillingDashboard() {
   const navigate = useNavigate();
   const { data: metrics, isLoading, error, refetch } = useBillingMetrics();
-  const isMobile = useIsMobile();
   
   // Pull to refresh functionality for mobile
   const { handleRefresh, threshold } = usePullToRefresh({
@@ -235,10 +235,6 @@ export default function BillingDashboard() {
     },
     successMessage: 'Billing data refreshed'
   });
-  
-  // Modal state for invoice details
-  const [selectedInvoice, setSelectedInvoice] = React.useState<Invoice | null>(null);
-  const [invoiceModalOpen, setInvoiceModalOpen] = React.useState(false);
 
   // Pipeline filter state
   const { data: pipelineData, isLoading: pipelineLoading, isError: pipelineError } = useWorkOrderLifecycle();
@@ -269,33 +265,16 @@ export default function BillingDashboard() {
     clearFilters();
   };
 
+  // Export functionality
+  const handleExport = (format: 'csv' | 'excel') => {
+    exportWorkOrders(filteredPipelineData, format, `billing-pipeline-${new Date().toISOString().split('T')[0]}`);
+  };
+
   // Debounce search input
   const debouncedSearch = useDebounce(filters.search || '', 300);
   
   // Track search separately for WorkOrderFilters
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
-
-
-  // Helper function to get operational status key for filtering
-  const getOperationalStatusKey = (item: WorkOrderPipelineItem): string => {
-    switch (item.status) {
-      case 'received':
-        return 'new';
-      case 'assigned':
-        return 'assigned';
-      case 'in_progress':
-        return 'in_progress';
-      case 'completed':
-        // Better logic: if work order is completed but reports need review/approval
-        if (item.report_status === 'submitted' || item.report_status === 'reviewed') {
-          return 'reports_pending';
-        }
-        // If report is approved or no report needed, it's complete
-        return 'complete';
-      default:
-        return 'new';
-    }
-  };
 
   // Helper function to get financial status based on invoicing
   const getFinancialStatus = (item: WorkOrderPipelineItem): string => {
@@ -368,11 +347,6 @@ export default function BillingDashboard() {
         if (!filters.status.includes(item.status)) return false;
       }
 
-      // Trade filter - Skip for now as trade info not in pipeline data
-      // if (filters.trade_id && filters.trade_id.length > 0) {
-      //   // Trade filtering would require additional join in pipeline query
-      // }
-
       // Partner organization filter
       if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
         if (!item.organization_id || !filters.partner_organization_ids.includes(item.organization_id)) return false;
@@ -428,6 +402,7 @@ export default function BillingDashboard() {
       return true;
     });
   }, [pipelineData, searchTerm, filters]);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -491,17 +466,17 @@ export default function BillingDashboard() {
     canonical.setAttribute('href', window.location.href);
   }, []);
 
-if (error) {
-  return (
-    <EmptyState
-      icon={FileText}
-      title="We couldn't load billing data"
-      description="Please check your connection and try again."
-      action={{ label: 'Retry', onClick: () => refetch() }}
-      variant="full"
-    />
-  );
-}
+  if (error) {
+    return (
+      <EmptyState
+        icon={FileText}
+        title="We couldn't load billing data"
+        description="Please check your connection and try again."
+        action={{ label: 'Retry', onClick: () => refetch() }}
+        variant="full"
+      />
+    );
+  }
 
   const renderMobileInvoiceCard = (invoice: any, type: 'partner' | 'subcontractor') => {
     const isPartner = type === 'partner';
@@ -714,182 +689,182 @@ if (error) {
             <>
               {/* Desktop KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <KPICard
-              title="Unbilled Reports"
-              value={isLoading ? 0 : (metrics?.unbilledReports.count || 0)}
-              icon={Clock}
-              isLoading={isLoading}
-            />
-            <KPICard
-              title="Partner Invoices"
-              value={isLoading ? 0 : (metrics?.monthlyTotals.partnerInvoices || 0)}
-              icon={Building2}
-              isLoading={isLoading}
-            />
-            <KPICard
-              title="Subcontractor Invoices"
-              value={isLoading ? 0 : (metrics?.monthlyTotals.subcontractorInvoices || 0)}
-              icon={ReceiptText}
-              isLoading={isLoading}
-            />
-            <KPICard
-              title="Monthly Total"
-              value={isLoading ? 0 : (metrics?.monthlyTotals.totalValue || 0)}
-              format="currency"
-              icon={DollarSign}
-              isLoading={isLoading}
-            />
-          </div>
+                <KPICard
+                  title="Unbilled Reports"
+                  value={isLoading ? 0 : (metrics?.unbilledReports.count || 0)}
+                  icon={Clock}
+                  isLoading={isLoading}
+                />
+                <KPICard
+                  title="Partner Invoices"
+                  value={isLoading ? 0 : (metrics?.monthlyTotals.partnerInvoices || 0)}
+                  icon={Building2}
+                  isLoading={isLoading}
+                />
+                <KPICard
+                  title="Subcontractor Invoices"
+                  value={isLoading ? 0 : (metrics?.monthlyTotals.subcontractorInvoices || 0)}
+                  icon={ReceiptText}
+                  isLoading={isLoading}
+                />
+                <KPICard
+                  title="Monthly Total"
+                  value={isLoading ? 0 : (metrics?.monthlyTotals.totalValue || 0)}
+                  format="currency"
+                  icon={DollarSign}
+                  isLoading={isLoading}
+                />
+              </div>
 
               {/* Desktop Quick Actions */}
               <div role="region" aria-label="Quick actions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Button
-              onClick={() => navigate('/admin/invoices')}
-              aria-label="Enter Subcontractor Invoice"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Enter Subcontractor Invoice
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin/partner-billing/select-reports')}
-              aria-label="Generate Partner Invoices"
-            >
-              <Building2 className="h-4 w-4 mr-2" />
-              Generate Partner Invoices
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin/invoices')}
-              aria-label="View All Invoices"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              View All Invoices
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
-              aria-label="View Unbilled Reports"
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              View Unbilled Reports
-            </Button>
-          </div>
+                <Button
+                  onClick={() => navigate('/admin/invoices')}
+                  aria-label="Enter Subcontractor Invoice"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Enter Subcontractor Invoice
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/admin/partner-billing/select-reports')}
+                  aria-label="Generate Partner Invoices"
+                >
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Generate Partner Invoices
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/admin/invoices')}
+                  aria-label="View All Invoices"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  View All Invoices
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
+                  aria-label="View Unbilled Reports"
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  View Unbilled Reports
+                </Button>
+              </div>
 
               {/* Desktop Recent Activity */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Partner Invoices */}
-            <Card role="region" aria-label="Recent Partner Invoices">
-              <CardHeader>
-                <CardTitle>Recent Partner Invoices</CardTitle>
-                <CardDescription>Latest partner invoices generated</CardDescription>
-              </CardHeader>
-              <CardContent aria-busy={isLoading}>
-                {isLoading ? (
-                  <div className="space-y-4">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="flex justify-between items-center">
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-48" />
-                          <Skeleton className="h-3 w-24" />
-                        </div>
-                        <Skeleton className="h-5 w-16" />
+                {/* Recent Partner Invoices */}
+                <Card role="region" aria-label="Recent Partner Invoices">
+                  <CardHeader>
+                    <CardTitle>Recent Partner Invoices</CardTitle>
+                    <CardDescription>Latest partner invoices generated</CardDescription>
+                  </CardHeader>
+                  <CardContent aria-busy={isLoading}>
+                    {isLoading ? (
+                      <div className="space-y-4">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <div key={i} className="flex justify-between items-center">
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-48" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                            <Skeleton className="h-5 w-16" />
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : metrics?.recentPartnerInvoices && metrics.recentPartnerInvoices.length > 0 ? (
-                  <div className="space-y-4">
-                    {metrics.recentPartnerInvoices.map((invoice) => (
-                      <button
-                        key={invoice.id}
-                        type="button"
-                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
-                        className="w-full flex justify-between items-center rounded-md px-2 py-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
-                        aria-label={`View partner invoice ${invoice.invoice_number} for ${invoice.partner_organization.name} dated ${format(new Date(invoice.invoice_date), 'MMM d, yyyy')}`}
-                      >
-                        <div className="text-left">
-                          <p className="font-medium text-sm">{invoice.invoice_number}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {invoice.partner_organization.name} • {format(new Date(invoice.invoice_date), 'MMM d, yyyy')}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-sm">{formatCurrency(invoice.total_amount)}</p>
-                          <FinancialStatusBadge status={invoice.status} size="sm" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    icon={Building2}
-                    title="No recent partner invoices"
-                    description="Generate partner invoices from approved reports."
-                    action={{ label: 'Generate Partner Invoices', onClick: () => navigate('/admin/partner-billing/select-reports') }}
-                    variant="card"
-                  />
-                )}
-              </CardContent>
-            </Card>
+                    ) : metrics?.recentPartnerInvoices && metrics.recentPartnerInvoices.length > 0 ? (
+                      <div className="space-y-4">
+                        {metrics.recentPartnerInvoices.map((invoice) => (
+                          <button
+                            key={invoice.id}
+                            type="button"
+                            onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                            className="w-full flex justify-between items-center rounded-md px-2 py-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
+                            aria-label={`View partner invoice ${invoice.invoice_number} for ${invoice.partner_organization.name} dated ${format(new Date(invoice.invoice_date), 'MMM d, yyyy')}`}
+                          >
+                            <div className="text-left">
+                              <p className="font-medium text-sm">{invoice.invoice_number}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {invoice.partner_organization.name} • {format(new Date(invoice.invoice_date), 'MMM d, yyyy')}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-sm">{formatCurrency(invoice.total_amount)}</p>
+                              <FinancialStatusBadge status={invoice.status} size="sm" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyState
+                        icon={Building2}
+                        title="No recent partner invoices"
+                        description="Generate partner invoices from approved reports."
+                        action={{ label: 'Generate Partner Invoices', onClick: () => navigate('/admin/partner-billing/select-reports') }}
+                        variant="card"
+                      />
+                    )}
+                  </CardContent>
+                </Card>
 
-            {/* Recent Subcontractor Invoices */}
-            <Card role="region" aria-label="Recent Subcontractor Invoices">
-              <CardHeader>
-                <CardTitle>Recent Subcontractor Invoices</CardTitle>
-                <CardDescription>Latest subcontractor invoices processed</CardDescription>
-              </CardHeader>
-              <CardContent aria-busy={isLoading}>
-                {isLoading ? (
-                  <div className="space-y-4">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="flex justify-between items-center">
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-48" />
-                          <Skeleton className="h-3 w-24" />
-                        </div>
-                        <Skeleton className="h-5 w-16" />
+                {/* Recent Subcontractor Invoices */}
+                <Card role="region" aria-label="Recent Subcontractor Invoices">
+                  <CardHeader>
+                    <CardTitle>Recent Subcontractor Invoices</CardTitle>
+                    <CardDescription>Latest subcontractor invoices processed</CardDescription>
+                  </CardHeader>
+                  <CardContent aria-busy={isLoading}>
+                    {isLoading ? (
+                      <div className="space-y-4">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <div key={i} className="flex justify-between items-center">
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-48" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                            <Skeleton className="h-5 w-16" />
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : metrics?.recentSubcontractorInvoices && metrics.recentSubcontractorInvoices.length > 0 ? (
-                  <div className="space-y-4">
-                    {metrics.recentSubcontractorInvoices.map((invoice) => (
-                      <button
-                        key={invoice.id}
-                        type="button"
-                        onClick={() => handleInvoiceClick(invoice.id)}
-                        className="w-full flex justify-between items-center rounded-md px-2 py-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
-                        aria-label={`View subcontractor invoice ${invoice.internal_invoice_number} for ${invoice.subcontractor_organization?.name || 'Unknown'} dated ${format(new Date(invoice.submitted_at), 'MMM d, yyyy')}`}
-                      >
-                        <div className="text-left">
-                          <p className="font-medium text-sm">{invoice.internal_invoice_number}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {invoice.subcontractor_organization?.name || 'Unknown'} • {format(new Date(invoice.submitted_at), 'MMM d, yyyy')}
-                          </p>
-                          {invoice.work_order_numbers.length > 0 && (
-                            <p className="text-xs text-blue-600 mt-1">
-                              WO: {invoice.work_order_numbers.join(', ')}
-                            </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-sm">{formatCurrency(invoice.total_amount || 0)}</p>
-                          <FinancialStatusBadge status={invoice.status} size="sm" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    icon={ReceiptText}
-                    title="No recent subcontractor invoices"
-                    description="Enter a subcontractor invoice to see it here."
-                    action={{ label: 'Enter Subcontractor Invoice', onClick: () => navigate('/admin/invoices') }}
-                    variant="card"
-                  />
-                )}
-              </CardContent>
-            </Card>
+                    ) : metrics?.recentSubcontractorInvoices && metrics.recentSubcontractorInvoices.length > 0 ? (
+                      <div className="space-y-4">
+                        {metrics.recentSubcontractorInvoices.map((invoice) => (
+                          <button
+                            key={invoice.id}
+                            type="button"
+                            onClick={() => handleInvoiceClick(invoice.id)}
+                            className="w-full flex justify-between items-center rounded-md px-2 py-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
+                            aria-label={`View subcontractor invoice ${invoice.internal_invoice_number} for ${invoice.subcontractor_organization?.name || 'Unknown'} dated ${format(new Date(invoice.submitted_at), 'MMM d, yyyy')}`}
+                          >
+                            <div className="text-left">
+                              <p className="font-medium text-sm">{invoice.internal_invoice_number}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {invoice.subcontractor_organization?.name || 'Unknown'} • {format(new Date(invoice.submitted_at), 'MMM d, yyyy')}
+                              </p>
+                              {invoice.work_order_numbers.length > 0 && (
+                                <p className="text-xs text-blue-600 mt-1">
+                                  WO: {invoice.work_order_numbers.join(', ')}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-sm">{formatCurrency(invoice.total_amount || 0)}</p>
+                              <FinancialStatusBadge status={invoice.status} size="sm" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyState
+                        icon={ReceiptText}
+                        title="No recent subcontractor invoices"
+                        description="Enter a subcontractor invoice to see it here."
+                        action={{ label: 'Enter Subcontractor Invoice', onClick: () => navigate('/admin/invoices') }}
+                        variant="card"
+                      />
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </>
           )}
@@ -897,38 +872,90 @@ if (error) {
         </TabsContent>
 
         <TabsContent value="pipeline" className="space-y-6">
+          {/* Header */}
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Partner Billing Pipeline</h2>
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline">
-                  Filters {filterCount > 0 && `(${filterCount})`}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="flex flex-col">
-                <SheetHeader>
-                  <SheetTitle>Filter Pipeline</SheetTitle>
-                </SheetHeader>
-                <div className="flex-1 overflow-y-auto">
-                  <SimplePipelineFilters
-                    filters={filters}
-                    onFiltersChange={setFilters}
-                    onClear={handleClearFilters}
-                    organizations={organizations}
-                    subcontractors={subcontractors}
-                    locations={locationOptions}
-                    trades={trades}
-                  />
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
 
-          <WorkOrderPipelineTable 
-            data={filteredPipelineData}
-            isLoading={pipelineLoading}
-            isError={pipelineError}
-          />
+          {/* Top Control Bar */}
+          <div className="space-y-4">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Search and Filter Group */}
+              <div className="flex flex-1 gap-2">
+                <SmartSearchInput
+                  placeholder="Search pipeline..."
+                  value={filters.search || ''}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  className="flex-1"
+                />
+                <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Filters {filterCount > 0 && `(${filterCount})`}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="flex flex-col">
+                    <SheetHeader>
+                      <SheetTitle>Filter Pipeline</SheetTitle>
+                    </SheetHeader>
+                    <div className="flex-1 overflow-y-auto">
+                      <SimplePipelineFilters
+                        filters={filters}
+                        onFiltersChange={setFilters}
+                        onClear={handleClearFilters}
+                        organizations={organizations}
+                        subcontractors={subcontractors}
+                        locations={locationOptions}
+                        trades={trades}
+                      />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+              
+              {/* Action Buttons Group */}
+              <div className="flex gap-2 flex-wrap lg:flex-nowrap">
+                <ExportDropdown 
+                  onExport={handleExport} 
+                  variant="outline" 
+                  size="default"
+                  disabled={pipelineLoading || filteredPipelineData.length === 0} 
+                />
+                <ViewModeSwitcher 
+                  value={viewMode} 
+                  onValueChange={setViewMode} 
+                  allowedModes={['table', 'card']} 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Results Table */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>
+                  {filteredPipelineData.length} Work Order{filteredPipelineData.length !== 1 ? 's' : ''} in Pipeline
+                </CardTitle>
+                <ColumnVisibilityDropdown
+                  columns={getAllColumns()} 
+                  onToggleColumn={toggleColumn}
+                  onResetToDefaults={resetToDefaults}
+                  variant="outline"
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <WorkOrderPipelineTable 
+                data={filteredPipelineData}
+                isLoading={pipelineLoading}
+                isError={pipelineError}
+                viewMode={viewMode}
+                columnVisibility={columnVisibility}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -945,3 +972,5 @@ if (error) {
     </>
   );
 }
+
+export default BillingDashboard;

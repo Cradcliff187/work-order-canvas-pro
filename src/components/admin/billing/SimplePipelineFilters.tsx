@@ -22,22 +22,7 @@ export function SimplePipelineFilters({
   return (
     <div className="h-full overflow-y-auto">
       <div className="space-y-4 p-4 pb-6">
-      {/* Search */}
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
-          Search
-        </label>
-        <input
-          type="text"
-          className="w-full p-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-          value={filters.search || ''}
-          onChange={(e) => onFiltersChange({
-            ...filters,
-            search: e.target.value
-          })}
-          placeholder="Search work orders, locations..."
-        />
-      </div>
+      {/* Search removed - now above table */}
 
       {/* Operational Status */}
       <div>
