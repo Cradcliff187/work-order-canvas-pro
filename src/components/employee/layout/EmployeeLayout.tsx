@@ -127,34 +127,36 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({ children }) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <EmployeeSidebar />
-        
-        <div className="flex-1 flex flex-col">
-          {isMobile ? <MobileHeader /> : (
-            <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
-              <SidebarTrigger />
-              <div className="flex-1" />
-            </header>
-          )}
+      <div className="min-h-screen max-w-screen overflow-x-hidden bg-background">
+        <div className="relative flex h-screen">
+          <EmployeeSidebar />
+          
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {isMobile ? <MobileHeader /> : (
+              <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background flex-shrink-0">
+                <SidebarTrigger />
+                <div className="flex-1" />
+              </header>
+            )}
 
-          <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
-            <div className="mx-auto px-4 md:px-6 max-w-full lg:max-w-screen-xl py-6">
-              {children}
-            </div>
-          </main>
+            <main className="flex-1 overflow-y-auto overflow-x-hidden">
+              <div className={`px-4 space-y-4 ${isMobile ? 'pb-24' : 'pb-6'} pt-6 max-w-full`}>
+                {children}
+              </div>
+            </main>
+          </div>
+          
+          {isMobile && (
+            <MobileBottomNav navItems={employeeNavItems} />
+          )}
+          
+          <FloatingClockWidget />
+          
+          <QuickActionSheet 
+            isOpen={isQuickActionSheetOpen} 
+            onClose={() => setIsQuickActionSheetOpen(false)} 
+          />
         </div>
-        
-        {isMobile && (
-          <MobileBottomNav navItems={employeeNavItems} />
-        )}
-        
-        <FloatingClockWidget />
-        
-        <QuickActionSheet 
-          isOpen={isQuickActionSheetOpen} 
-          onClose={() => setIsQuickActionSheetOpen(false)} 
-        />
       </div>
     </SidebarProvider>
   );
