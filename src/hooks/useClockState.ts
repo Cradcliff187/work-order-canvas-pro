@@ -218,9 +218,52 @@ export const useClockState = () => {
 
   // Clock out mutation
   const clockOut = useMutation({
-    mutationFn: async () => {
-      if (!clockData?.id) throw new Error('No active clock session found');
+    mutationFn: async (forceClockOut: boolean = false) => {
+      console.log('Clock out mutation started:', { 
+        clockDataId: clockData?.id, 
+        clockInTime: clockData?.clock_in_time,
+        profileId: profile?.id,
+        forceClockOut 
+      });
+
+      // Enhanced validation
+      if (!profile?.id) throw new Error('No profile found. Please refresh and try again.');
+      
+      if (!clockData?.id) {
+        if (forceClockOut) {
+          // Try to find any unclosed reports for this user
+          const { data: unclosedReports, error: searchError } = await supabase
+            .from('employee_reports')
+            .select('id, clock_in_time, work_order_id')
+            .eq('employee_user_id', profile.id)
+            .not('clock_in_time', 'is', null)
+            .is('clock_out_time', null)
+            .order('clock_in_time', { ascending: false })
+            .limit(1);
+
+          if (searchError) throw new Error(`Search error: ${searchError.message}`);
+          if (!unclosedReports?.length) throw new Error('No active clock sessions found');
+          
+          // Use the found record
+          clockData = {
+            id: unclosedReports[0].id,
+            clock_in_time: unclosedReports[0].clock_in_time,
+            work_order_id: unclosedReports[0].work_order_id
+          } as ClockStateData;
+        } else {
+          throw new Error('No active clock session found. Try refreshing the page.');
+        }
+      }
+      
       if (!clockData?.clock_in_time) throw new Error('Invalid clock in time');
+
+      // Verify authentication before proceeding
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Authentication expired. Please refresh and log in again.');
+      }
+
+      console.log('Authentication verified:', { userId: user.id, profileId: profile.id });
 
       // Capture GPS location for clock out
       let locationData = {};
@@ -244,6 +287,12 @@ export const useClockState = () => {
       const clockInTime = new Date(clockData.clock_in_time);
       const hoursWorked = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
 
+      console.log('Attempting clock out update:', {
+        reportId: clockData.id,
+        hoursWorked: Math.round(hoursWorked * 100) / 100,
+        clockOutTime: clockOutTime.toISOString()
+      });
+
       // Update employee report with clock out time, hours worked, and location
       const { error: updateError } = await supabase
         .from('employee_reports')
@@ -252,10 +301,15 @@ export const useClockState = () => {
           hours_worked: Math.round(hoursWorked * 100) / 100, // Round to 2 decimal places
           ...locationData
         })
-        .eq('id', clockData.id);
+        .eq('id', clockData.id)
+        .eq('employee_user_id', profile.id); // Additional safety check
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Clock out update failed:', updateError);
+        throw new Error(`Update failed: ${updateError.message}. Please try again or contact support.`);
+      }
       
+      console.log('Clock out successful');
       return { locationData, hoursWorked };
     },
     onSuccess: (result) => {
@@ -271,13 +325,24 @@ export const useClockState = () => {
       });
     },
     onError: (error) => {
+      console.error('Clock out error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to clock out';
       toast({
         title: 'Clock Out Failed', 
-        description: error instanceof Error ? error.message : 'Failed to clock out',
+        description: errorMessage,
         variant: 'destructive',
+        action: errorMessage.includes('No active clock session') ? {
+          altText: 'Force Clock Out',
+          onClick: () => clockOut.mutate(true),
+        } : undefined,
       });
     },
   });
+
+  // Force clock out function for edge cases
+  const forceClockOut = () => {
+    clockOut.mutate(true);
+  };
 
   return {
     ...clockState,
@@ -286,6 +351,7 @@ export const useClockState = () => {
     refetch,
     clockIn,
     clockOut,
+    forceClockOut,
     isClockingIn: clockIn.isPending,
     isClockingOut: clockOut.isPending,
   };
