@@ -13,6 +13,7 @@ import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 import { FilterChips } from '@/components/employee/FilterChips';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useAssignmentCounts } from '@/hooks/useAssignmentCounts';
 import { ClockStatusCard } from '@/components/employee/ClockStatusCard';
 import { WorkProjectCard } from '@/components/employee/WorkProjectCard';
 import { 
@@ -48,6 +49,7 @@ const EmployeeDashboard = () => {
   const { data: allWorkItems, isLoading: workItemsLoading } = useAllWorkItems();
   const { data: todayHours, isLoading: todayHoursLoading } = useTodayHours();
   const { filters, updateFilter } = useDashboardFilters();
+  const { data: assignmentCounts = { workOrders: 0, projects: 0, total: 0 } } = useAssignmentCounts();
 
   const isLoading = dashboardLoading || workItemsLoading || todayHoursLoading;
 
@@ -181,8 +183,11 @@ const EmployeeDashboard = () => {
           <Card className="bg-card">
             <CardContent className="p-3">
               <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-1">Work & Projects</p>
-                <p className="text-lg font-bold">{myAssignments.length}</p>
+                <p className="text-xs text-muted-foreground mb-1">Assigned</p>
+                <p className="text-lg font-bold">{assignmentCounts.total}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {assignmentCounts.projects}p, {assignmentCounts.workOrders}w
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -338,29 +343,24 @@ const EmployeeDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Work & Projects Assigned</CardTitle>
+            <CardTitle className="text-sm font-medium">Assigned Work</CardTitle>
             <Star className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-8 w-16 mb-1" />
             ) : (
-              <div className="text-2xl font-bold">{myAssignments.length}</div>
+              <div className="text-2xl font-bold">{assignmentCounts.total}</div>
             )}
             <p className="text-xs text-muted-foreground">
-              {(() => {
-                const projects = myAssignments.filter(item => item.type === 'project').length;
-                const workOrders = myAssignments.filter(item => item.type === 'work_order').length;
-                if (projects > 0 && workOrders > 0) {
-                  return `${projects} projects, ${workOrders} work orders`;
-                } else if (projects > 0) {
-                  return `${projects} projects`;
-                } else if (workOrders > 0) {
-                  return `${workOrders} work orders`;
-                } else {
-                  return 'Assigned to me';
-                }
-              })()}
+              {assignmentCounts.projects > 0 && assignmentCounts.workOrders > 0
+                ? `${assignmentCounts.projects} projects, ${assignmentCounts.workOrders} work orders`
+                : assignmentCounts.projects > 0
+                ? `${assignmentCounts.projects} projects`
+                : assignmentCounts.workOrders > 0
+                ? `${assignmentCounts.workOrders} work orders`
+                : 'None assigned'
+              }
             </p>
           </CardContent>
         </Card>
