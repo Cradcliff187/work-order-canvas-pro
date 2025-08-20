@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
@@ -874,7 +875,18 @@ export function BillingDashboard() {
         <TabsContent value="pipeline" className="space-y-6">
           {/* Header */}
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Partner Billing Pipeline</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold">Partner Billing Pipeline</h2>
+              <Badge variant="secondary" className="text-xs">
+                {filteredPipelineData.length} Work Order{filteredPipelineData.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
+            <ColumnVisibilityDropdown
+              columns={getAllColumns()} 
+              onToggleColumn={toggleColumn}
+              onResetToDefaults={resetToDefaults}
+              variant="outline"
+            />
           </div>
 
           {/* Top Control Bar */}
@@ -932,30 +944,13 @@ export function BillingDashboard() {
           </div>
 
           {/* Results Table */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>
-                  {filteredPipelineData.length} Work Order{filteredPipelineData.length !== 1 ? 's' : ''} in Pipeline
-                </CardTitle>
-                <ColumnVisibilityDropdown
-                  columns={getAllColumns()} 
-                  onToggleColumn={toggleColumn}
-                  onResetToDefaults={resetToDefaults}
-                  variant="outline"
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <WorkOrderPipelineTable 
-                data={filteredPipelineData}
-                isLoading={pipelineLoading}
-                isError={pipelineError}
-                viewMode={viewMode}
-                columnVisibility={columnVisibility}
-              />
-            </CardContent>
-          </Card>
+          <WorkOrderPipelineTable 
+            data={filteredPipelineData}
+            isLoading={pipelineLoading}
+            isError={pipelineError}
+            viewMode={viewMode}
+            columnVisibility={columnVisibility}
+          />
         </TabsContent>
       </Tabs>
 
