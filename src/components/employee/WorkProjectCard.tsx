@@ -73,20 +73,21 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
             {/* Content */}
             <div className="flex-1 min-w-0">
               {/* Header with badges */}
-              <div className="flex items-center gap-1 mb-2 flex-wrap">
+              <div className="flex items-center gap-1 mb-2 flex-wrap max-w-[calc(100%-2rem)] min-w-0">
                 <AssignmentBadge 
                   isAssignedToMe={workItem.isAssignedToMe} 
                   assigneeName={workItem.assigneeName}
-                  className="text-xs px-1.5 py-0.5"
                 />
                 <Badge 
                   variant={workItem.type === 'project' ? "default" : (isAssigned ? "default" : "secondary")}
                   className={cn(
-                    "text-xs px-1.5 py-0.5",
+                    "text-[10px] px-1 py-0.5 shrink-0",
                     workItem.type === 'project' && "bg-purple-500 text-white hover:bg-purple-600"
                   )}
                 >
-                  {workItem.type === 'work_order' ? 'WO' : 'PROJECT'}
+                  <span className="xs:hidden">{workItem.type === 'work_order' ? 'W' : 'P'}</span>
+                  <span className="hidden xs:inline sm:hidden">{workItem.type === 'work_order' ? 'WO' : 'PRJ'}</span>
+                  <span className="hidden sm:inline">{workItem.type === 'work_order' ? 'WO' : 'PROJECT'}</span>
                 </Badge>
               </div>
 
@@ -103,7 +104,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
           </div>
 
           {/* Mobile Actions Footer */}
-          <div className="flex gap-2 pt-2 border-t border-border/20">
+          <div className="flex gap-1 pt-2 border-t border-border/20">
             <Button
               size="sm"
               onClick={(e) => {
@@ -111,12 +112,11 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
                 handleClockIn();
               }}
               disabled={isDisabled}
-              className="text-xs px-2 py-1 flex-1"
+              className="text-[10px] px-1.5 py-1 flex-1 min-w-0"
               variant={isAssigned ? "default" : "outline"}
             >
-              <Clock className="h-3 w-3 mr-1" />
-              <span className="sm:hidden">In</span>
-              <span className="hidden sm:inline">{isAssigned ? 'Clock In' : 'Jump In'}</span>
+              <Clock className="h-2.5 w-2.5 mr-0.5" />
+              <span className="truncate">In</span>
             </Button>
             {isAssigned && (
               <Button
@@ -126,11 +126,11 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
                   e.stopPropagation();
                   onViewDetails(workItem.id);
                 }}
-                className="text-xs px-2 py-1"
+                className="text-[10px] px-1.5 py-1 shrink-0"
               >
-                <Eye className="h-3 w-3 mr-1" />
-                <span className="sm:hidden">Info</span>
-                <span className="hidden sm:inline">Details</span>
+                <Eye className="h-2.5 w-2.5 mr-0.5" />
+                <span className="hidden xs:inline">Info</span>
+                <span className="xs:hidden">•</span>
               </Button>
             )}
           </div>
@@ -152,16 +152,15 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
             {/* Content */}
             <div className="flex-1 min-w-0">
               {/* Header with badges */}
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <div className="flex items-center gap-1.5 mb-1 flex-wrap max-w-[calc(100%-8rem)] min-w-0">
                 <AssignmentBadge 
                   isAssignedToMe={workItem.isAssignedToMe} 
                   assigneeName={workItem.assigneeName}
-                  className="text-xs"
                 />
                 <Badge 
                   variant={workItem.type === 'project' ? "default" : (isAssigned ? "default" : "secondary")}
                   className={cn(
-                    "text-xs",
+                    "text-xs shrink-0",
                     workItem.type === 'project' && "bg-purple-500 text-white hover:bg-purple-600"
                   )}
                 >
@@ -169,7 +168,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
                 </Badge>
                 <Badge 
                   variant="success" 
-                  className="text-xs"
+                  className="text-xs shrink-0"
                 >
                   Active
                 </Badge>
@@ -194,7 +193,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
           </div>
 
           {/* Desktop Actions */}
-          <div className="flex flex-col gap-2 ml-2 shrink-0">
+          <div className="flex flex-col gap-2 ml-2 shrink-0 min-w-0">
             <Button
               size="sm"
               onClick={(e) => {
@@ -202,11 +201,11 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
                 handleClockIn();
               }}
               disabled={isDisabled}
-              className="text-xs px-2 py-1"
+              className="text-xs px-2 py-1 min-w-[72px]"
               variant={isAssigned ? "default" : "outline"}
             >
               <Clock className="h-3 w-3 mr-1" />
-              {isAssigned ? 'Clock In' : 'Jump In'}
+              <span className="truncate">{isAssigned ? 'Clock In' : 'Jump In'}</span>
             </Button>
             {isAssigned && (
               <Button
@@ -216,10 +215,10 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
                   e.stopPropagation();
                   onViewDetails(workItem.id);
                 }}
-                className="text-xs px-2 py-1"
+                className="text-xs px-2 py-1 min-w-[72px]"
               >
                 <Eye className="h-3 w-3 mr-1" />
-                Details
+                <span className="truncate">Details</span>
               </Button>
             )}
           </div>
