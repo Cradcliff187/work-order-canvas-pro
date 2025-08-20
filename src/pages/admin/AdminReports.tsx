@@ -66,7 +66,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
-import { ReportsFiltersContent, ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersContent';
+import { SimpleReportFilters } from '@/components/admin/reports/SimpleReportFilters';
+import { ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersContent';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { cn } from '@/lib/utils';
 
@@ -506,9 +507,9 @@ const table = useReactTable({
             <SheetHeader>
               <SheetTitle>Filter Reports</SheetTitle>
             </SheetHeader>
-            <ReportsFiltersContent
-              value={filters}
-              onChange={handleFiltersChange}
+            <SimpleReportFilters
+              filters={filters}
+              onFiltersChange={handleFiltersChange}
               onClear={handleClearFilters}
             />
           </SheetContent>
@@ -520,9 +521,9 @@ const table = useReactTable({
             <SheetHeader>
               <SheetTitle>Filter Reports</SheetTitle>
             </SheetHeader>
-            <ReportsFiltersContent
-              value={filters}
-              onChange={handleFiltersChange}
+            <SimpleReportFilters
+              filters={filters}
+              onFiltersChange={handleFiltersChange}
               onClear={handleClearFilters}
             />
           </SheetContent>
