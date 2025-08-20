@@ -4,16 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import type { Database } from '@/integrations/supabase/types';
 
-// Extend the existing types to include new fields
-type EmployeeReportWithClockFields = Database['public']['Tables']['employee_reports']['Row'] & {
-  clock_in_time?: string | null;
-  clock_out_time?: string | null;
-  location_lat?: number | null;
-  location_lng?: number | null;
-  location_address?: string | null;
-  is_overtime?: boolean | null;
-  project_id?: string | null;
-};
+type EmployeeReport = Database['public']['Tables']['employee_reports']['Row'];
 
 interface ClockStateData {
   id: string;
@@ -57,16 +48,13 @@ export const useClockState = () => {
 
       if (error) throw error;
       
-      // Type assertion to handle the missing fields in current types
-      const typedData = data as unknown as EmployeeReportWithClockFields | null;
-      
-      if (!typedData?.clock_in_time) return null;
+      if (!data?.clock_in_time) return null;
       
       return {
-        id: typedData.id,
-        clock_in_time: typedData.clock_in_time,
-        work_order_id: typedData.work_order_id,
-        project_id: typedData.project_id
+        id: data.id,
+        clock_in_time: data.clock_in_time,
+        work_order_id: data.work_order_id,
+        project_id: data.project_id
       };
     },
     enabled: !!profile?.id,
