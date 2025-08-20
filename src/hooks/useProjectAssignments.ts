@@ -13,7 +13,26 @@ export function useProjectAssignments() {
     queryKey: ['project-assignments'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      console.log('🔐 useProjectAssignments - Auth User:', user?.id || 'NULL');
+      
+      if (!user) {
+        console.log('❌ No authenticated user in useProjectAssignments');
+        return [];
+      }
+
+      // Get current user's profile ID
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        console.log('❌ Profile error in useProjectAssignments:', profileError);
+        return [];
+      }
+
+      console.log('✅ Profile ID for project assignments:', profile.id);
 
       const { data, error } = await supabase
         .from('project_assignments')
@@ -26,16 +45,25 @@ export function useProjectAssignments() {
             location_address
           )
         `)
-        .eq('assigned_to', user.id);
+        .eq('assigned_to', profile.id);
 
-      if (error) throw error;
+      console.log('📊 Project assignments query result:', { data, error });
 
-      return data?.map(assignment => ({
+      if (error) {
+        console.log('❌ Project assignments error:', error);
+        throw error;
+      }
+
+      const assignments = data?.map(assignment => ({
         id: assignment.projects.id,
         name: assignment.projects.name,
         project_number: assignment.projects.project_number,
         location_address: assignment.projects.location_address
       })) || [];
+
+      console.log('🏗️ Processed project assignments:', assignments);
+      
+      return assignments;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

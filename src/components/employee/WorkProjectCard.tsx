@@ -80,10 +80,13 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
                   className="text-xs px-1.5 py-0.5"
                 />
                 <Badge 
-                  variant={isAssigned ? "default" : "secondary"}
-                  className="text-xs px-1.5 py-0.5"
+                  variant={workItem.type === 'project' ? "default" : (isAssigned ? "default" : "secondary")}
+                  className={cn(
+                    "text-xs px-1.5 py-0.5",
+                    workItem.type === 'project' && "bg-purple-500 text-white hover:bg-purple-600"
+                  )}
                 >
-                  {workItem.type === 'work_order' ? 'WO' : 'PRJ'}
+                  {workItem.type === 'work_order' ? 'WO' : 'PROJECT'}
                 </Badge>
               </div>
 
@@ -156,10 +159,13 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
                   className="text-xs"
                 />
                 <Badge 
-                  variant={isAssigned ? "default" : "secondary"}
-                  className="text-xs"
+                  variant={workItem.type === 'project' ? "default" : (isAssigned ? "default" : "secondary")}
+                  className={cn(
+                    "text-xs",
+                    workItem.type === 'project' && "bg-purple-500 text-white hover:bg-purple-600"
+                  )}
                 >
-                  {workItem.type === 'work_order' ? 'WO' : 'PRJ'}
+                  {workItem.type === 'work_order' ? 'WO' : 'PROJECT'}
                 </Badge>
                 <Badge 
                   variant="success" 
