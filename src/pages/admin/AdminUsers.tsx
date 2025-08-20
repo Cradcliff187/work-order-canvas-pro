@@ -307,13 +307,6 @@ export default function AdminUsers() {
             allowedModes={allowedModes}
             className="h-9"
           />
-          <ColumnVisibilityDropdown
-            columns={visibilityOptions}
-            onToggleColumn={toggleColumn}
-            onResetToDefaults={resetToDefaults}
-            visibleCount={getVisibleColumnCount()}
-          />
-          <ExportDropdown onExport={handleExport} />
           <Button 
             onClick={() => setCreateUserModalOpen(true)}
             className="h-9"
