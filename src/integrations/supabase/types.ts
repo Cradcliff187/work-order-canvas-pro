@@ -408,12 +408,19 @@ export type Database = {
       }
       employee_reports: {
         Row: {
+          clock_in_time: string | null
+          clock_out_time: string | null
           created_at: string
           employee_user_id: string
           hourly_rate_snapshot: number
           hours_worked: number
           id: string
+          is_overtime: boolean | null
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
           notes: string | null
+          project_id: string | null
           report_date: string
           total_labor_cost: number | null
           updated_at: string
@@ -421,12 +428,19 @@ export type Database = {
           work_performed: string
         }
         Insert: {
+          clock_in_time?: string | null
+          clock_out_time?: string | null
           created_at?: string
           employee_user_id: string
           hourly_rate_snapshot: number
           hours_worked: number
           id?: string
+          is_overtime?: boolean | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           notes?: string | null
+          project_id?: string | null
           report_date: string
           total_labor_cost?: number | null
           updated_at?: string
@@ -434,12 +448,19 @@ export type Database = {
           work_performed: string
         }
         Update: {
+          clock_in_time?: string | null
+          clock_out_time?: string | null
           created_at?: string
           employee_user_id?: string
           hourly_rate_snapshot?: number
           hours_worked?: number
           id?: string
+          is_overtime?: boolean | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           notes?: string | null
+          project_id?: string | null
           report_date?: string
           total_labor_cost?: number | null
           updated_at?: string
@@ -452,6 +473,13 @@ export type Database = {
             columns: ["employee_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -1015,6 +1043,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_employee: boolean
+          is_overtime_eligible: boolean | null
           last_name: string
           phone: string | null
           updated_at: string
@@ -1031,6 +1060,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_employee?: boolean
+          is_overtime_eligible?: boolean | null
           last_name: string
           phone?: string | null
           updated_at?: string
@@ -1047,12 +1077,121 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_employee?: boolean
+          is_overtime_eligible?: boolean | null
           last_name?: string
           phone?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      project_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          assigned_to: string | null
+          assignment_type: string | null
+          created_at: string | null
+          id: string
+          project_id: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          assigned_to?: string | null
+          assignment_type?: string | null
+          created_at?: string | null
+          id?: string
+          project_id?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          assigned_to?: string | null
+          assignment_type?: string | null
+          created_at?: string | null
+          id?: string
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_assignments_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
+          name: string
+          organization_id: string | null
+          project_number: string | null
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          name: string
+          organization_id?: string | null
+          project_number?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          name?: string
+          organization_id?: string | null
+          project_number?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       receipt_line_items: {
         Row: {
