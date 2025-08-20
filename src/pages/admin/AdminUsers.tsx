@@ -45,11 +45,13 @@ import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 
 
 export default function AdminUsers() {
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   
   // Search state for the top control bar
@@ -569,11 +571,11 @@ export default function AdminUsers() {
               )}
 
               {/* Pagination */}
-              <div className="flex items-center justify-between space-x-2 py-4">
+              <div className={`flex items-center py-4 ${isMobile ? 'flex-col space-y-4' : 'justify-between space-x-2'}`}>
                 <div className="flex-1 text-sm text-muted-foreground">
                   {selectedRows.length > 0 && (
                     <span>
-                      {selectedRows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
+                      {selectedRows.length} of {table.getFilteredRowModel().rows.length} {isMobile ? 'items' : 'row(s)'} selected.
                     </span>
                   )}
                 </div>
