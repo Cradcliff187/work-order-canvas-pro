@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
 type EmployeeReport = Database['public']['Tables']['employee_reports']['Row'];
@@ -25,6 +26,8 @@ export interface ClockState {
 export const useClockState = () => {
   const { profile } = useAuth();
   const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const {
     data: clockData,
@@ -95,10 +98,110 @@ export const useClockState = () => {
     projectId: clockData?.project_id || null
   };
 
+  // Clock in mutation
+  const clockIn = useMutation({
+    mutationFn: async () => {
+      if (!profile?.id) throw new Error('No profile found');
+
+      // Get the most recent work order assignment
+      const { data: assignment, error: assignmentError } = await supabase
+        .from('work_order_assignments')
+        .select('work_order_id')
+        .eq('assigned_to', profile.id)
+        .order('assigned_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (assignmentError) throw assignmentError;
+      if (!assignment) throw new Error('No work order assignments found. Please contact your supervisor.');
+
+      // Get user's hourly cost rate
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('hourly_cost_rate')
+        .eq('id', profile.id)
+        .single();
+
+      if (profileError) throw profileError;
+      if (!userProfile?.hourly_cost_rate) throw new Error('Hourly rate not set. Please contact administration.');
+
+      // Create employee report with clock in time
+      const { error: reportError } = await supabase
+        .from('employee_reports')
+        .insert({
+          employee_user_id: profile.id,
+          work_order_id: assignment.work_order_id,
+          report_date: new Date().toISOString().split('T')[0],
+          clock_in_time: new Date().toISOString(),
+          hourly_rate_snapshot: userProfile.hourly_cost_rate,
+          hours_worked: 0,
+          work_performed: '',
+        });
+
+      if (reportError) throw reportError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-clock-state'] });
+      toast({
+        title: 'Clocked In',
+        description: 'Successfully clocked in to your work assignment.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Clock In Failed',
+        description: error instanceof Error ? error.message : 'Failed to clock in',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Clock out mutation
+  const clockOut = useMutation({
+    mutationFn: async () => {
+      if (!clockData?.id) throw new Error('No active clock session found');
+      if (!clockData?.clock_in_time) throw new Error('Invalid clock in time');
+
+      const clockOutTime = new Date();
+      const clockInTime = new Date(clockData.clock_in_time);
+      const hoursWorked = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
+
+      // Update employee report with clock out time and hours worked
+      const { error: updateError } = await supabase
+        .from('employee_reports')
+        .update({
+          clock_out_time: clockOutTime.toISOString(),
+          hours_worked: Math.round(hoursWorked * 100) / 100, // Round to 2 decimal places
+        })
+        .eq('id', clockData.id);
+
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-clock-state'] });
+      queryClient.invalidateQueries({ queryKey: ['employee-time-reports'] });
+      toast({
+        title: 'Clocked Out',
+        description: 'Successfully clocked out and time recorded.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Clock Out Failed', 
+        description: error instanceof Error ? error.message : 'Failed to clock out',
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     ...clockState,
     isLoading,
     isError,
-    refetch
+    refetch,
+    clockIn,
+    clockOut,
+    isClockingIn: clockIn.isPending,
+    isClockingOut: clockOut.isPending,
   };
 };
