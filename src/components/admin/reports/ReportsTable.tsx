@@ -46,6 +46,8 @@ export interface ReportsTableProps<TData = any> {
   // Selection props
   rowSelection?: RowSelectionState;
   onClearSelection?: () => void;
+  // Mobile props
+  isMobile?: boolean;
 }
 
 export function ReportsTable<TData = any>({
@@ -65,6 +67,7 @@ export function ReportsTable<TData = any>({
   onExport,
   rowSelection,
   onClearSelection,
+  isMobile = false,
 }: ReportsTableProps<TData>) {
   const rows = table.getRowModel().rows;
   const hasRows = rows?.length > 0;
@@ -101,7 +104,7 @@ export function ReportsTable<TData = any>({
               Clear Selection ({selectedRows.length})
             </Button>
           )}
-          {columnVisibilityColumns && onToggleColumn && onResetColumns && (
+          {!isMobile && columnVisibilityColumns && onToggleColumn && onResetColumns && (
             <ColumnVisibilityDropdown
               columns={columnVisibilityColumns}
               onToggleColumn={onToggleColumn}
@@ -110,7 +113,7 @@ export function ReportsTable<TData = any>({
               size="sm"
             />
           )}
-          {onExportAll && (
+          {!isMobile && onExportAll && (
             <ExportDropdown
               onExport={onExportAll}
               variant="outline"

@@ -62,6 +62,7 @@ import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/li
 import { ReportsTable } from '@/components/admin/reports/ReportsTable';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
@@ -72,6 +73,7 @@ import { cn } from '@/lib/utils';
 export default function AdminReports() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   // View mode configuration
   const { viewMode, setViewMode, allowedModes } = useViewMode({
@@ -569,6 +571,7 @@ const table = useReactTable({
         onToggleColumn={toggleColumn}
         onResetColumns={resetToDefaults}
         onExportAll={handleExport}
+        isMobile={isMobile}
         renderMobileCard={(report: any) => {
               const workOrder = report.work_orders;
               const subcontractor = report.subcontractor;
