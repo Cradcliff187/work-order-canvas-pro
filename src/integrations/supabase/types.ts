@@ -409,6 +409,9 @@ export type Database = {
       employee_reports: {
         Row: {
           clock_in_time: string | null
+          clock_out_location_address: string | null
+          clock_out_location_lat: number | null
+          clock_out_location_lng: number | null
           clock_out_time: string | null
           created_at: string
           employee_user_id: string
@@ -429,6 +432,9 @@ export type Database = {
         }
         Insert: {
           clock_in_time?: string | null
+          clock_out_location_address?: string | null
+          clock_out_location_lat?: number | null
+          clock_out_location_lng?: number | null
           clock_out_time?: string | null
           created_at?: string
           employee_user_id: string
@@ -449,6 +455,9 @@ export type Database = {
         }
         Update: {
           clock_in_time?: string | null
+          clock_out_location_address?: string | null
+          clock_out_location_lat?: number | null
+          clock_out_location_lng?: number | null
           clock_out_time?: string | null
           created_at?: string
           employee_user_id?: string
