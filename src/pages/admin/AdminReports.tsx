@@ -65,7 +65,7 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
-import { ReportsFiltersV2, ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersV2';
+import { ReportsFiltersContent, ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersContent';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { cn } from '@/lib/utils';
 
@@ -498,180 +498,33 @@ const table = useReactTable({
         </div>
       </div>
 
-      {/* Desktop Filter Sheet */}
-      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-80">
-          <SheetHeader>
-            <SheetTitle>Filter Reports</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 space-y-6">
-            <div>
-              <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Report Status</label>
-                  <MultiSelectFilter
-                    options={[
-                      { value: 'submitted', label: 'Submitted' },
-                      { value: 'reviewed', label: 'Reviewed' },
-                      { value: 'approved', label: 'Approved' },
-                      { value: 'rejected', label: 'Rejected' },
-                    ]}
-                    selectedValues={filters.status || []}
-                    onSelectionChange={(status) => handleFiltersChange({ ...filters, status })}
-                    placeholder="Select status"
-                    maxDisplayCount={2}
-                  />
-                </div>
-                {/* Date Range Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Date Range</label>
-                  <div className="flex gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !filters.date_from && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={filters.date_from ? new Date(filters.date_from) : undefined}
-                          onSelect={(date) => handleFiltersChange({ ...filters, date_from: date ? format(date, 'yyyy-MM-dd') : undefined })}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !filters.date_to && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={filters.date_to ? new Date(filters.date_to) : undefined}
-                          onSelect={(date) => handleFiltersChange({ ...filters, date_to: date ? format(date, 'yyyy-MM-dd') : undefined })}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {filterCount > 0 && (
-              <div className="pt-4 border-t">
-                <Button variant="outline" onClick={handleClearFilters} className="w-full">
-                  Clear All Filters
-                </Button>
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+        {/* Desktop Filter Sheet */}
+        <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
+          <SheetContent side="right" className="w-80 overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Filter Reports</SheetTitle>
+            </SheetHeader>
+            <ReportsFiltersContent
+              value={filters}
+              onChange={handleFiltersChange}
+              onClear={handleClearFilters}
+            />
+          </SheetContent>
+        </Sheet>
 
-      {/* Mobile Filter Sheet */}
-      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[80vh]">
-          <SheetHeader>
-            <SheetTitle>Filter Reports</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 space-y-6 max-h-[60vh] overflow-y-auto">
-            <div>
-              <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Report Status</label>
-                  <MultiSelectFilter
-                    options={[
-                      { value: 'submitted', label: 'Submitted' },
-                      { value: 'reviewed', label: 'Reviewed' },
-                      { value: 'approved', label: 'Approved' },
-                      { value: 'rejected', label: 'Rejected' },
-                    ]}
-                    selectedValues={filters.status || []}
-                    onSelectionChange={(status) => handleFiltersChange({ ...filters, status })}
-                    placeholder="Select status"
-                    maxDisplayCount={2}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Date Range</label>
-                  <div className="grid grid-cols-1 gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !filters.date_from && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {filters.date_from ? format(new Date(filters.date_from), 'MMM dd, yyyy') : 'From date'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={filters.date_from ? new Date(filters.date_from) : undefined}
-                          onSelect={(date) => handleFiltersChange({ ...filters, date_from: date ? format(date, 'yyyy-MM-dd') : undefined })}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !filters.date_to && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {filters.date_to ? format(new Date(filters.date_to), 'MMM dd, yyyy') : 'To date'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={filters.date_to ? new Date(filters.date_to) : undefined}
-                          onSelect={(date) => handleFiltersChange({ ...filters, date_to: date ? format(date, 'yyyy-MM-dd') : undefined })}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {filterCount > 0 && (
-              <div className="sticky bottom-0 pt-4 border-t bg-background">
-                <Button variant="outline" onClick={() => { handleClearFilters(); setIsMobileFilterOpen(false); }} className="w-full">
-                  Clear All Filters
-                </Button>
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+        {/* Mobile Filter Sheet */}
+        <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+          <SheetContent side="bottom" className="h-[80vh]">
+            <SheetHeader>
+              <SheetTitle>Filter Reports</SheetTitle>
+            </SheetHeader>
+            <ReportsFiltersContent
+              value={filters}
+              onChange={handleFiltersChange}
+              onClear={handleClearFilters}
+            />
+          </SheetContent>
+        </Sheet>
 
       {/* Bulk Actions */}
       {selectedRows.length > 0 && (
