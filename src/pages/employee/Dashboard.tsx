@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useEmployeeDashboard } from '@/hooks/useEmployeeDashboard';
 import { useClockState } from '@/hooks/useClockState';
@@ -13,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 import { SlimHeader } from '@/components/employee/SlimHeader';
-import { FilterChips } from '@/components/employee/FilterChips';
+import { SimpleFilterChips } from '@/components/employee/SimpleFilterChips';
 import { ClockStatusCard } from '@/components/employee/ClockStatusCard';
 import { CompactStatsRow } from '@/components/employee/CompactStatsRow';
 import { SlimStatsBar } from '@/components/employee/SlimStatsBar';
@@ -63,10 +62,8 @@ const EmployeeDashboard = () => {
   const filteredWorkItems = React.useMemo(() => {
     let items = allWorkItems || [];
     
-    // Apply completed filter
-    if (filters.hideCompleted) {
-      items = items.filter(item => !item.isCompleted);
-    }
+    // Never show completed items (replacing hideCompleted filter)
+    items = items.filter(item => !item.isCompleted);
     
     // Apply work type filters
     items = items.filter(item => {
@@ -75,12 +72,13 @@ const EmployeeDashboard = () => {
       return true;
     });
     
+    // Apply assignment filter (replaces tab navigation)
+    if (filters.showMyWorkOnly) {
+      items = items.filter(item => item.isAssignedToMe);
+    }
+    
     return items;
   }, [allWorkItems, filters]);
-
-  // Filter work items by assignment status
-  const myAssignments = filteredWorkItems.filter(item => item.isAssignedToMe);
-  const otherWork = filters.showMyWorkOnly ? [] : filteredWorkItems.filter(item => !item.isAssignedToMe);
 
   // Debug assignment counts
   React.useEffect(() => {
@@ -88,7 +86,7 @@ const EmployeeDashboard = () => {
       console.log('🔍 Assignment Debug Info:');
       console.log('Profile ID:', profile?.id);
       console.log('All work items count:', allWorkItems.length);
-      console.log('My assignments count:', myAssignments.length);
+      console.log('Filtered work items count:', filteredWorkItems.length);
       console.log('Work items breakdown:', {
         projects: allWorkItems.filter(item => item.type === 'project').length,
         workOrders: allWorkItems.filter(item => item.type === 'work_order').length,
@@ -96,14 +94,14 @@ const EmployeeDashboard = () => {
       });
       console.log('All work items:', allWorkItems);
     }
-  }, [allWorkItems, myAssignments.length, profile?.id]);
+  }, [allWorkItems, filteredWorkItems.length, profile?.id]);
 
   // Calculate work counts for filter chips
   const workCounts = React.useMemo(() => {
-    const all = allWorkItems || [];
+    const all = (allWorkItems || []).filter(item => !item.isCompleted);
     return {
       myWork: all.filter(item => item.isAssignedToMe).length,
-      totalWork: all.length,
+      total: all.length,
       projects: all.filter(item => item.type === 'project').length,
       workOrders: all.filter(item => item.type === 'work_order').length,
     };
@@ -159,91 +157,44 @@ const EmployeeDashboard = () => {
           isLoading={dashboardLoading}
         />
 
-        {/* Filter Chips */}
-        <FilterChips 
+        {/* Simple Filter Chips */}
+        <SimpleFilterChips 
           filters={filters}
           onFilterChange={updateFilter}
-          workCounts={{
-            myWork: myAssignments.length,
-            available: otherWork.length,
-            projects: workCounts.projects,
-            workOrders: workCounts.workOrders,
-          }}
+          workCounts={workCounts}
         />
 
-        {/* Tabbed Work Section */}
-        <Tabs defaultValue="my-work" className="w-full">
-          <TabsList className="grid grid-cols-2 w-auto bg-muted/50 p-1 h-8 mb-2">
-            <TabsTrigger value="my-work" className="text-xs">
-              My Work ({myAssignments.length})
-            </TabsTrigger>
-            <TabsTrigger value="available" className="text-xs">
-              Available ({otherWork.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="my-work" className="mt-2">
-            {isLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <Skeleton key={i} className="h-20 w-full rounded-lg" />
-                ))}
-              </div>
-            ) : myAssignments.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {myAssignments.slice(0, 5).map((workItem) => (
-                  <WorkProjectCard
-                    key={workItem.id}
-                    workItem={workItem}
-                    onClockIn={handleClockIn}
-                    onViewDetails={handleViewDetails}
-                    isDisabled={isClockingIn || isClockingOut}
-                    variant="assigned"
-                    className="w-full"
-                  />
-                ))}
-              </div>
-            ) : (
-              <Card className="w-full bg-muted/30">
-                <CardContent className="p-4 text-center">
-                  <Star className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No assignments yet</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="available" className="mt-2">
-            {isLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full rounded-lg" />
-                ))}
-              </div>
-            ) : otherWork.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {otherWork.slice(0, 5).map((workItem) => (
-                  <WorkProjectCard
-                    key={workItem.id}
-                    workItem={workItem}
-                    onClockIn={handleClockIn}
-                    onViewDetails={handleViewDetails}
-                    isDisabled={isClockingIn || isClockingOut}
-                    variant="available"
-                    className="w-full"
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={CheckCircle}
-                title="All work is assigned!"
-                description="Ask your manager if you want to help with other tasks"
-                variant="card"
+        {/* Work Items Section */}
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : filteredWorkItems.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {filteredWorkItems.slice(0, 8).map((workItem) => (
+              <WorkProjectCard
+                key={workItem.id}
+                workItem={workItem}
+                onClockIn={handleClockIn}
+                onViewDetails={handleViewDetails}
+                isDisabled={isClockingIn || isClockingOut}
+                variant={workItem.isAssignedToMe ? "assigned" : "available"}
+                className="w-full"
               />
-            )}
-          </TabsContent>
-        </Tabs>
+            ))}
+          </div>
+        ) : (
+          <Card className="w-full bg-muted/30">
+            <CardContent className="p-4 text-center">
+              <Star className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                {filters.showMyWorkOnly ? "No assignments yet" : "No work available"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Compact Quick Actions */}
         <div className="flex gap-2">
@@ -284,92 +235,49 @@ const EmployeeDashboard = () => {
         todayHours={todayHours || 0}
         weekHours={totalHoursThisWeek || 0}
         assignedCount={assignmentCounts.total || 0}
-        availableCount={otherWork.length || 0}
+        availableCount={filteredWorkItems.length || 0}
         isLoading={dashboardLoading}
       />
 
-      {/* Filter Chips */}
-      <FilterChips 
+      {/* Simple Filter Chips */}
+      <SimpleFilterChips 
         filters={filters}
         onFilterChange={updateFilter}
-        workCounts={{
-          myWork: myAssignments.length,
-          available: otherWork.length,
-          projects: workCounts.projects,
-          workOrders: workCounts.workOrders,
-        }}
+        workCounts={workCounts}
       />
 
-      {/* Tabbed Work Section */}
-      <Tabs defaultValue="my-work" className="w-full">
-        <TabsList className="grid grid-cols-2 w-auto bg-muted/50 p-1 h-9 mb-3">
-          <TabsTrigger value="my-work">
-            My Work ({myAssignments.length})
-          </TabsTrigger>
-          <TabsTrigger value="available">
-            Available ({otherWork.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="my-work" className="mt-0">
-          {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-lg" />
-              ))}
-            </div>
-          ) : myAssignments.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {myAssignments.map((workItem) => (
-                <WorkProjectCard
-                  key={workItem.id}
-                  workItem={workItem}
-                  onClockIn={handleClockIn}
-                  onViewDetails={handleViewDetails}
-                  isDisabled={isClockingIn || isClockingOut}
-                  variant="assigned"
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p>No assignments yet</p>
-              <p className="text-sm">Check back later or browse available work</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="available" className="mt-0">
-          {isLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-lg" />
-              ))}
-            </div>
-          ) : otherWork.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {otherWork.slice(0, 8).map((workItem) => (
-                <WorkProjectCard
-                  key={workItem.id}
-                  workItem={workItem}
-                  onClockIn={handleClockIn}
-                  onViewDetails={handleViewDetails}
-                  isDisabled={isClockingIn || isClockingOut}
-                  variant="available"
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={CheckCircle}
-              title="All work is assigned!"
-              description="Ask your manager if you want to help with other tasks"
-              variant="full"
+      {/* Work Items Section */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : filteredWorkItems.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {filteredWorkItems.map((workItem) => (
+            <WorkProjectCard
+              key={workItem.id}
+              workItem={workItem}
+              onClockIn={handleClockIn}
+              onViewDetails={handleViewDetails}
+              isDisabled={isClockingIn || isClockingOut}
+              variant={workItem.isAssignedToMe ? "assigned" : "available"}
             />
-          )}
-        </TabsContent>
-      </Tabs>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center text-muted-foreground py-8">
+          <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p>{filters.showMyWorkOnly ? "No assignments yet" : "No work available"}</p>
+          <p className="text-sm">
+            {filters.showMyWorkOnly 
+              ? "Toggle 'My Work' off to see available work" 
+              : "Try adjusting your filters"
+            }
+          </p>
+        </div>
+      )}
 
       {/* Compact Quick Actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

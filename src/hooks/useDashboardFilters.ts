@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react';
 
 export interface DashboardFilters {
   showMyWorkOnly: boolean;
-  hideCompleted: boolean;
   showProjects: boolean;
   showWorkOrders: boolean;
 }
 
 const DEFAULT_FILTERS: DashboardFilters = {
-  showMyWorkOnly: false,
-  hideCompleted: true,
+  showMyWorkOnly: true,
   showProjects: true,
   showWorkOrders: true,
 };

@@ -1,64 +1,58 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { DashboardFilters } from '@/hooks/useDashboardFilters';
-import { Check, X } from 'lucide-react';
+import { User, Briefcase, FileText } from 'lucide-react';
 
-interface FilterChipsProps {
+interface SimpleFilterChipsProps {
   filters: DashboardFilters;
   onFilterChange: (key: keyof DashboardFilters, value: boolean) => void;
   workCounts?: {
     myWork: number;
-    available: number;
+    total: number;
     projects: number;
     workOrders: number;
   };
 }
 
-export function FilterChips({ filters, onFilterChange, workCounts }: FilterChipsProps) {
-  const chipData = [
+export function SimpleFilterChips({ filters, onFilterChange, workCounts }: SimpleFilterChipsProps) {
+  const chips = [
     {
       key: 'showMyWorkOnly' as keyof DashboardFilters,
       label: 'My Work',
-      count: workCounts?.myWork,
+      icon: User,
+      count: filters.showMyWorkOnly ? workCounts?.myWork : workCounts?.total,
       active: filters.showMyWorkOnly,
     },
     {
       key: 'showProjects' as keyof DashboardFilters,
       label: 'Projects',
+      icon: Briefcase,
       count: workCounts?.projects,
       active: filters.showProjects,
     },
     {
       key: 'showWorkOrders' as keyof DashboardFilters,
       label: 'Work Orders',
+      icon: FileText,
       count: workCounts?.workOrders,
       active: filters.showWorkOrders,
-    },
-    {
-      key: 'hideCompleted' as keyof DashboardFilters,
-      label: 'Hide Completed',
-      active: filters.hideCompleted,
     },
   ];
 
   return (
     <div className="flex flex-wrap gap-2 py-2">
-      {chipData.map(({ key, label, count, active }) => (
+      {chips.map(({ key, label, icon: Icon, count, active }) => (
         <Badge
           key={key}
-          variant={active ? "default" : "secondary"}
-          className="cursor-pointer transition-all duration-200 hover:scale-105 select-none"
+          variant={active ? "default" : "outline"}
+          className="cursor-pointer transition-all duration-200 hover:scale-105 select-none px-3 py-1.5 text-sm"
           onClick={() => onFilterChange(key, !active)}
         >
-          <span className="flex items-center gap-1">
-            {active ? (
-              <Check className="h-3 w-3" />
-            ) : (
-              <X className="h-3 w-3 opacity-50" />
-            )}
+          <span className="flex items-center gap-2">
+            <Icon className="h-3 w-3" />
             {label}
             {count !== undefined && (
-              <span className="ml-1 text-xs opacity-75">({count})</span>
+              <span className="text-xs font-medium">({count})</span>
             )}
           </span>
         </Badge>
