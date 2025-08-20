@@ -32,7 +32,7 @@ export const useOrganizationNavigation = () => {
       ];
     } else if (isEmployee()) {
       return [
-        { label: 'Dashboard', path: '/admin/employee-dashboard', icon: HardHat, visible: true },
+        { label: 'Dashboard', path: '/employee/dashboard', icon: HardHat, visible: true },
         { label: 'Work Orders', path: '/admin/work-orders', icon: ClipboardList, visible: hasPermission('employee') },
         { label: 'Reports', path: '/admin/reports', icon: FileChartLine, visible: true },
       ];

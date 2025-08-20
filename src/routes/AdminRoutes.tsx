@@ -6,7 +6,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
   AdminDashboard,
-  EmployeeDashboard,
+  
   PipelineDashboard,
   AdminUsers,
   AdminOrganizations,
@@ -22,8 +22,6 @@ import {
   AdminProfile,
   AdminEmployees,
   AdminInvoices,
-  EmployeeTimeReports,
-  EmployeeTimeReport,
   ReceiptHistory,
   SystemHealthCheck,
   TestEmailPage,
@@ -69,15 +67,6 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
 
-    <Route path="/admin/employee-dashboard" element={
-      <ProtectedRoute requiredUserType="employee">
-        <AdminLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            <EmployeeDashboard />
-          </Suspense>
-        </AdminLayout>
-      </ProtectedRoute>
-    } />
     
     <Route path="/admin/work-orders" element={
       <ProtectedRoute requiredUserType="employee">
@@ -230,35 +219,7 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
-    <Route path="/admin/time-reports" element={
-      <ProtectedRoute requiredUserType="employee">
-        <AdminLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            <EmployeeTimeReports />
-          </Suspense>
-        </AdminLayout>
-      </ProtectedRoute>
-    } />
     
-    <Route path="/admin/time-reports/submit/:workOrderId" element={
-      <ProtectedRoute requiredUserType="employee">
-        <AdminLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            <EmployeeTimeReport />
-          </Suspense>
-        </AdminLayout>
-      </ProtectedRoute>
-    } />
-    
-    <Route path="/admin/receipts" element={
-      <ProtectedRoute requiredUserType="employee">
-        <AdminLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            <ReceiptHistory />
-          </Suspense>
-        </AdminLayout>
-      </ProtectedRoute>
-    } />
     
     <Route path="/admin/receipts/upload" element={
       <ProtectedRoute requiredUserType="employee">

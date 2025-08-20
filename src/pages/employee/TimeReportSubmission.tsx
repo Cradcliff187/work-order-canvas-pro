@@ -29,7 +29,7 @@ const timeReportSchema = z.object({
 
 type TimeReportFormData = z.infer<typeof timeReportSchema>;
 
-export default function EmployeeTimeReport() {
+export default function TimeReportSubmission() {
   const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
   const { getWorkOrder, getExistingTimeReport, submitTimeReport, employeeProfile } = useEmployeeReports();
@@ -110,7 +110,7 @@ export default function EmployeeTimeReport() {
         existingReportId: editingReport?.id,
       });
 
-      navigate("/admin/time-reports");
+      navigate("/employee/time-reports");
     } catch (error) {
       console.error("Error submitting time report:", error);
     }
@@ -140,7 +140,7 @@ export default function EmployeeTimeReport() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Link to="/admin/work-orders">
+          <Link to="/employee/time-reports">
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
@@ -162,7 +162,7 @@ export default function EmployeeTimeReport() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to={`/admin/work-orders/${workOrderId}`}>
+        <Link to="/employee/time-reports">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -402,7 +402,7 @@ export default function EmployeeTimeReport() {
 
               {/* Submit Button */}
               <div className="flex justify-end gap-4">
-                <Link to={`/admin/work-orders/${workOrderId}`}>
+                <Link to="/employee/time-reports">
                   <Button variant="outline" type="button">
                     Cancel
                   </Button>

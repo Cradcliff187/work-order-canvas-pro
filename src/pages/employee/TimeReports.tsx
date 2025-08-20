@@ -113,7 +113,7 @@ export default function EmployeeTimeReports() {
                     <p className="text-sm text-muted-foreground">{workOrder.title}</p>
                     <p className="text-xs text-muted-foreground">{workOrder.store_location}</p>
                   </div>
-                  <Link to={`/admin/time-reports/submit/${workOrder.id}`}>
+                  <Link to={`/employee/time-reports/submit/${workOrder.id}`}>
                     <Button size="sm">
                       <Plus className="h-4 w-4 mr-2" />
                       Submit Report
@@ -156,7 +156,7 @@ export default function EmployeeTimeReports() {
                       <TableRow 
                         key={report.id}
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => window.location.href = `/admin/time-reports/submit/${report.work_order_id}`}
+                        onClick={() => window.location.href = `/employee/time-reports/submit/${report.work_order_id}`}
                       >
                         <TableCell>
                           {format(new Date(report.report_date), "PP")}
@@ -195,7 +195,7 @@ export default function EmployeeTimeReports() {
                         {format(new Date(report.report_date), "PP")}
                       </div>
                     }
-                    onClick={() => window.location.href = `/admin/time-reports/submit/${report.work_order_id}`}
+                    onClick={() => window.location.href = `/employee/time-reports/submit/${report.work_order_id}`}
                   >
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Hours:</span>

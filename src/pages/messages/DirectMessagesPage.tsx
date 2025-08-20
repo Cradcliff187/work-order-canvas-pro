@@ -19,7 +19,7 @@ const DirectMessagesPage: React.FC = () => {
   const { isAdmin: isAdminFn, isEmployee: isEmployeeFn, isPartner: isPartnerFn, isSubcontractor: isSubcontractorFn } = useUserProfile();
   const dashboardPath = useMemo(() => {
     if (isAdmin) return '/admin/dashboard';
-    if (isEmployee) return '/admin/employee-dashboard';
+    if (isEmployee) return '/employee/dashboard';
     if (isPartner) return '/partner/dashboard';
     if (isSubcontractor) return '/subcontractor/dashboard';
     return '/auth';

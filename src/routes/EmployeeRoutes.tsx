@@ -9,6 +9,7 @@ import {
   EmployeeReceiptsPage as EmployeeReceipts,
 } from '@/pages/LazyPages';
 import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
+import TimeReportSubmission from '@/pages/employee/TimeReportSubmission';
 
 export const EmployeeRoutes = () => (
   <>
@@ -49,6 +50,16 @@ export const EmployeeRoutes = () => (
         <EmployeeLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <DirectMessagesPage />
+          </Suspense>
+        </EmployeeLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/employee/time-reports/submit/:workOrderId" element={
+      <ProtectedRoute requiredUserType="employee">
+        <EmployeeLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <TimeReportSubmission />
           </Suspense>
         </EmployeeLayout>
       </ProtectedRoute>

@@ -2,7 +2,6 @@ import { lazy } from 'react';
 
 // Admin Pages
 export const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
-export const EmployeeDashboard = lazy(() => import('@/pages/admin/EmployeeDashboard'));
 
 // Employee Pages
 export const EmployeeDashboardEmployee = lazy(() => import('@/pages/employee/Dashboard'));
@@ -21,8 +20,6 @@ export const AdminEmailTemplates = lazy(() => import('@/pages/admin/AdminEmailTe
 export const AdminProfile = lazy(() => import('@/pages/admin/AdminProfile'));
 export const AdminEmployees = lazy(() => import('@/pages/admin/AdminEmployees'));
 export const AdminInvoices = lazy(() => import('@/pages/admin/AdminInvoices'));
-export const EmployeeTimeReports = lazy(() => import('@/pages/admin/EmployeeTimeReports'));
-export const EmployeeTimeReport = lazy(() => import('@/pages/admin/EmployeeTimeReport'));
 export const ReceiptHistory = lazy(() => import('@/pages/admin/ReceiptHistory'));
 export const AdminReceipts = lazy(() => import('@/pages/admin/AdminReceipts'));
 export const AdminUtilities = lazy(() => import('@/pages/admin/AdminUtilities'));

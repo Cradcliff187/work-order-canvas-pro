@@ -32,7 +32,7 @@ export const Auth = () => {
           if (role === 'admin') {
             navigate('/admin/dashboard');
           } else {
-            navigate('/admin/employee-dashboard');
+            navigate('/employee/dashboard');
           }
         } else if (orgType === 'partner') {
           navigate('/partner/dashboard');
