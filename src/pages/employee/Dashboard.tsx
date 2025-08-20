@@ -138,7 +138,7 @@ const EmployeeDashboard = () => {
   if (isMobile) {
     // Mobile-first design
     return (
-      <div className="space-y-4 pb-4">
+      <div className="w-full max-w-full overflow-hidden space-y-4 pb-4">
         {/* Welcome Header */}
         <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-4 mb-4">
           <div className="flex items-center gap-3">

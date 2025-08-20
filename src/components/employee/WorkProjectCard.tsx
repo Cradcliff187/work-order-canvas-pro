@@ -46,7 +46,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
   return (
     <Card 
       className={cn(
-        "transition-all cursor-pointer",
+        "w-full max-w-full overflow-hidden transition-all cursor-pointer",
         isAssigned 
           ? "bg-gradient-to-r from-success/5 to-success/10 border-success/30 hover:shadow-md" 
           : "opacity-90 hover:opacity-100 border-border/50 hover:border-border hover:shadow-sm"
@@ -90,12 +90,12 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
               </div>
 
               {/* Title */}
-              <h4 className="font-semibold text-sm leading-tight mb-1">
+              <h4 className="font-semibold text-sm leading-tight mb-1 truncate">
                 {workItem.title}
               </h4>
 
               {/* Subtitle with number */}
-              <p className="text-xs text-muted-foreground mb-2">
+              <p className="text-xs text-muted-foreground mb-2 truncate">
                 {getNumber()}
               </p>
 
