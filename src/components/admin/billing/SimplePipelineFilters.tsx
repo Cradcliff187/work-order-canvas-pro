@@ -20,7 +20,8 @@ export function SimplePipelineFilters({
   trades = []
 }: SimplePipelineFiltersProps) {
   return (
-    <div className="space-y-4 p-4">
+    <div className="h-full overflow-y-auto">
+      <div className="space-y-4 p-4 pb-6">
       {/* Search */}
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">
@@ -280,6 +281,7 @@ export function SimplePipelineFilters({
       >
         Clear All Filters
       </button>
+      </div>
     </div>
   );
 }

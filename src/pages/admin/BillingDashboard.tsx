@@ -868,19 +868,21 @@ if (error) {
                   Filters {filterCount > 0 && `(${filterCount})`}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right">
+              <SheetContent side="right" className="flex flex-col">
                 <SheetHeader>
                   <SheetTitle>Filter Pipeline</SheetTitle>
                 </SheetHeader>
-                <SimplePipelineFilters
-                  filters={filters}
-                  onFiltersChange={setFilters}
-                  onClear={handleClearFilters}
-                  organizations={organizations}
-                  subcontractors={subcontractors}
-                  locations={locationOptions}
-                  trades={trades}
-                />
+                <div className="flex-1 overflow-y-auto">
+                  <SimplePipelineFilters
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    onClear={handleClearFilters}
+                    organizations={organizations}
+                    subcontractors={subcontractors}
+                    locations={locationOptions}
+                    trades={trades}
+                  />
+                </div>
               </SheetContent>
             </Sheet>
           </div>
