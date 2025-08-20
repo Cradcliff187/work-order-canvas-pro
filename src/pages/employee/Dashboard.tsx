@@ -75,6 +75,22 @@ const EmployeeDashboard = () => {
   const myAssignments = filteredWorkItems.filter(item => item.isAssignedToMe);
   const otherWork = filters.showMyWorkOnly ? [] : filteredWorkItems.filter(item => !item.isAssignedToMe);
 
+  // Debug assignment counts
+  React.useEffect(() => {
+    if (allWorkItems) {
+      console.log('🔍 Assignment Debug Info:');
+      console.log('Profile ID:', profile?.id);
+      console.log('All work items count:', allWorkItems.length);
+      console.log('My assignments count:', myAssignments.length);
+      console.log('Work items breakdown:', {
+        projects: allWorkItems.filter(item => item.type === 'project').length,
+        workOrders: allWorkItems.filter(item => item.type === 'work_order').length,
+        assignedToMe: allWorkItems.filter(item => item.isAssignedToMe).length,
+      });
+      console.log('All work items:', allWorkItems);
+    }
+  }, [allWorkItems, myAssignments.length, profile?.id]);
+
   // Calculate work counts for filter chips
   const workCounts = React.useMemo(() => {
     const all = allWorkItems || [];
@@ -166,7 +182,7 @@ const EmployeeDashboard = () => {
           <Card className="bg-card">
             <CardContent className="p-3">
               <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-1">Assigned</p>
+                <p className="text-xs text-muted-foreground mb-1">Work & Projects</p>
                 <p className="text-lg font-bold">{myAssignments.length}</p>
               </div>
             </CardContent>
@@ -320,7 +336,7 @@ const EmployeeDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Assignments</CardTitle>
+            <CardTitle className="text-sm font-medium">Work & Projects Assigned</CardTitle>
             <Star className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
@@ -329,7 +345,21 @@ const EmployeeDashboard = () => {
             ) : (
               <div className="text-2xl font-bold">{myAssignments.length}</div>
             )}
-            <p className="text-xs text-muted-foreground">Assigned to me</p>
+            <p className="text-xs text-muted-foreground">
+              {(() => {
+                const projects = myAssignments.filter(item => item.type === 'project').length;
+                const workOrders = myAssignments.filter(item => item.type === 'work_order').length;
+                if (projects > 0 && workOrders > 0) {
+                  return `${projects} projects, ${workOrders} work orders`;
+                } else if (projects > 0) {
+                  return `${projects} projects`;
+                } else if (workOrders > 0) {
+                  return `${workOrders} work orders`;
+                } else {
+                  return 'Assigned to me';
+                }
+              })()}
+            </p>
           </CardContent>
         </Card>
 
