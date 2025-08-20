@@ -1,6 +1,8 @@
 import React from 'react';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { Button } from '@/components/ui/button';
+import { RotateCcw } from 'lucide-react';
 
 export interface UserFiltersValue {
   search?: string;
@@ -140,6 +142,19 @@ export function UnifiedUserFilters({
 
   return (
     <div className="space-y-4">
+      {/* Clear All Filters Button */}
+      {filterCount > 0 && (
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={onClear}
+          className="w-full"
+        >
+          <RotateCcw className="h-4 w-4 mr-2" />
+          Clear All Filters ({filterCount})
+        </Button>
+      )}
+
       {/* Essential Filters */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-muted-foreground">Essential</h3>
