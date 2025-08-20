@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { UnifiedUserFilters } from '@/components/admin/users/UnifiedUserFilters';
+import { UnifiedUserFilters, type UserFiltersValue } from '@/components/admin/users/UnifiedUserFilters';
 
 import {
   useReactTable,
@@ -47,13 +47,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Label } from '@/components/ui/label';
 
 
-interface UserFilters {
-  search?: string;
-  roleFilter?: string[];
-  organizationId?: string;
-  status?: string[];
-  organizationType?: string[];
-}
 
 
 export default function AdminUsers() {
@@ -83,8 +76,8 @@ export default function AdminUsers() {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<UserFilters>(
-    'admin-users-filters-v1',
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<UserFiltersValue>(
+    'admin-users-filters-v2',
     { search: '', roleFilter: [], organizationId: '', status: [], organizationType: [] }
   );
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
