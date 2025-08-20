@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useOrganizations } from '@/hooks/useOrganizations';
@@ -104,21 +103,6 @@ export function UnifiedInvoiceFilters({
     }));
   }, [partnerLocations]);
 
-  // Calculate filter count
-  const filterCount = useMemo(() => {
-    let count = 0;
-    if (filters.overdue) count++;
-    if (filters.invoice_status && filters.invoice_status.length > 0) count++;
-    if (filters.payment_status && filters.payment_status.length > 0) count++;
-    if (filters.partner_organization_id) count++;
-    if (filters.location_filter && filters.location_filter.length > 0) count++;
-    if (filters.subcontractor_organization_id) count++;
-    if (filters.operational_status && filters.operational_status.length > 0) count++;
-    if (filters.report_status && filters.report_status.length > 0) count++;
-    if (filters.partner_billing_status && filters.partner_billing_status.length > 0) count++;
-    if (filters.amount_range?.min || filters.amount_range?.max) count++;
-    return count;
-  }, [filters]);
 
   // Filter change handlers
   const handleSingleSelectChange = (key: keyof InvoiceFiltersValue, value: string) => {
@@ -398,14 +382,18 @@ export function UnifiedInvoiceFilters({
   );
 
   return (
-    <AdminFilterBar
-      title="Invoice Filters"
-      filterCount={filterCount}
-      onClear={onClear}
-      sections={{
-        essential: essentialFilters,
-        advanced: advancedFilters
-      }}
-    />
+    <div className="space-y-4">
+      {/* Essential Filters */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Essential</h3>
+        {essentialFilters}
+      </div>
+      
+      {/* Advanced Filters */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Advanced</h3>
+        {advancedFilters}
+      </div>
+    </div>
   );
 }
