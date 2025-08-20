@@ -19,18 +19,19 @@ export const AssignmentBadge: React.FC<AssignmentBadgeProps> = ({
   if (isAssignedToMe) {
     return (
       <Badge variant="success" className={className}>
-        {showIcon && <Star className="h-3 w-3 mr-1" />}
-        ASSIGNED TO YOU
+        {showIcon && <Star className="h-3 w-3 mr-1 hidden sm:inline" />}
+        <span className="sm:hidden">YOURS</span>
+        <span className="hidden sm:inline">ASSIGNED TO YOU</span>
       </Badge>
     );
   }
 
-  // Assigned to someone else
+  // Assigned to someone else  
   if (assigneeName) {
     return (
       <Badge variant="secondary" className={className}>
-        {showIcon && <User className="h-3 w-3 mr-1" />}
-        {assigneeName}
+        {showIcon && <User className="h-3 w-3 mr-1 hidden sm:inline" />}
+        <span className="truncate max-w-[80px] sm:max-w-none">{assigneeName}</span>
       </Badge>
     );
   }
@@ -38,8 +39,9 @@ export const AssignmentBadge: React.FC<AssignmentBadgeProps> = ({
   // Available/Unassigned
   return (
     <Badge variant="warning" className={className}>
-      {showIcon && <Clock className="h-3 w-3 mr-1" />}
-      AVAILABLE
+      {showIcon && <Clock className="h-3 w-3 mr-1 hidden sm:inline" />}
+      <span className="sm:hidden">OPEN</span>
+      <span className="hidden sm:inline">AVAILABLE</span>
     </Badge>
   );
 };

@@ -56,8 +56,85 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
       )}
       onClick={handleClockIn}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
+      <CardContent className="p-3 sm:p-4">
+        {/* Mobile Layout */}
+        <div className="sm:hidden">
+          <div className="flex items-start gap-3 mb-3">
+            {/* Icon */}
+            <div className={cn(
+              "rounded-full p-2 flex-shrink-0",
+              isAssigned 
+                ? "bg-success/20 text-success" 
+                : "bg-muted text-muted-foreground"
+            )}>
+              {getIcon()}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              {/* Header with badges */}
+              <div className="flex items-center gap-1 mb-2 flex-wrap">
+                <AssignmentBadge 
+                  isAssignedToMe={workItem.isAssignedToMe} 
+                  assigneeName={workItem.assigneeName}
+                  className="text-xs px-1.5 py-0.5"
+                />
+                <Badge 
+                  variant={isAssigned ? "default" : "secondary"}
+                  className="text-xs px-1.5 py-0.5"
+                >
+                  {workItem.type === 'work_order' ? 'WO' : 'PRJ'}
+                </Badge>
+              </div>
+
+              {/* Title */}
+              <h4 className="font-semibold text-sm leading-tight mb-1 truncate">
+                {workItem.title}
+              </h4>
+
+              {/* Subtitle with number */}
+              <p className="text-xs text-muted-foreground truncate">
+                {getNumber()}
+              </p>
+            </div>
+          </div>
+
+          {/* Mobile Actions Footer */}
+          <div className="flex gap-2 pt-2 border-t border-border/20">
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClockIn();
+              }}
+              disabled={isDisabled}
+              className="text-xs px-2 py-1 flex-1"
+              variant={isAssigned ? "default" : "outline"}
+            >
+              <Clock className="h-3 w-3 mr-1" />
+              <span className="sm:hidden">In</span>
+              <span className="hidden sm:inline">{isAssigned ? 'Clock In' : 'Jump In'}</span>
+            </Button>
+            {isAssigned && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewDetails(workItem.id);
+                }}
+                className="text-xs px-2 py-1"
+              >
+                <Eye className="h-3 w-3 mr-1" />
+                <span className="sm:hidden">Info</span>
+                <span className="hidden sm:inline">Details</span>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden sm:flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
             {/* Icon */}
             <div className={cn(
@@ -110,7 +187,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Desktop Actions */}
           <div className="flex flex-col gap-2 ml-2 shrink-0">
             <Button
               size="sm"
