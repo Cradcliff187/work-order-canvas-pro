@@ -32,11 +32,11 @@ export function CompactStatsRow({
     <div className="flex items-center justify-center p-3 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg">
       <div className="flex items-center gap-2 sm:gap-4 text-sm font-medium">
         <span className="text-foreground">
-          Today: <span className="font-bold text-primary">{todayHours || 0}h</span>
+          Today: <span className="font-bold text-primary">{todayHours ? `${todayHours}h` : '0h'}</span>
         </span>
         <Separator orientation="vertical" className="h-4" />
         <span className="text-foreground">
-          Week: <span className="font-bold text-primary">{weekHours || 0}h</span>
+          Week: <span className="font-bold text-primary">{weekHours ? `${weekHours}h` : '0h'}</span>
         </span>
         <Separator orientation="vertical" className="h-4" />
         <span className="text-foreground">

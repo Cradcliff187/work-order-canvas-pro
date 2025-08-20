@@ -12,15 +12,15 @@ import { useTodayHours } from '@/hooks/useTodayHours';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
-import { FilterDropdown } from '@/components/employee/FilterDropdown';
-import { CompactStatsRow } from '@/components/employee/CompactStatsRow';
 import { SlimHeader } from '@/components/employee/SlimHeader';
+import { FilterChips } from '@/components/employee/FilterChips';
+import { ClockStatusCard } from '@/components/employee/ClockStatusCard';
+import { CompactStatsRow } from '@/components/employee/CompactStatsRow';
 import { SlimStatsBar } from '@/components/employee/SlimStatsBar';
+import { WorkProjectCard } from '@/components/employee/WorkProjectCard';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAssignmentCounts } from '@/hooks/useAssignmentCounts';
-import { ClockStatusCard } from '@/components/employee/ClockStatusCard';
-import { WorkProjectCard } from '@/components/employee/WorkProjectCard';
 import { 
   ClipboardList, 
   Clock, 
@@ -141,7 +141,7 @@ const EmployeeDashboard = () => {
 
   if (isMobile) {
     return (
-      <div className="space-y-3 max-w-full">
+      <div className="space-y-2 max-w-full">
         {/* Slim Header */}
         <SlimHeader firstName={profile?.first_name} isMobile={true} />
 
@@ -159,23 +159,28 @@ const EmployeeDashboard = () => {
           isLoading={dashboardLoading}
         />
 
+        {/* Filter Chips */}
+        <FilterChips 
+          filters={filters}
+          onFilterChange={updateFilter}
+          workCounts={{
+            myWork: myAssignments.length,
+            available: otherWork.length,
+            projects: workCounts.projects,
+            workOrders: workCounts.workOrders,
+          }}
+        />
+
         {/* Tabbed Work Section */}
         <Tabs defaultValue="my-work" className="w-full">
-          <div className="flex items-center justify-between mb-2">
-            <TabsList className="grid grid-cols-2 w-auto">
-              <TabsTrigger value="my-work" className="text-xs">
-                My Work ({myAssignments.length})
-              </TabsTrigger>
-              <TabsTrigger value="available" className="text-xs">
-                Available ({otherWork.length})
-              </TabsTrigger>
-            </TabsList>
-            <FilterDropdown 
-              filters={filters} 
-              onFilterChange={updateFilter}
-              workCounts={workCounts}
-            />
-          </div>
+          <TabsList className="grid grid-cols-2 w-auto bg-muted/50 p-1 h-8 mb-2">
+            <TabsTrigger value="my-work" className="text-xs">
+              My Work ({myAssignments.length})
+            </TabsTrigger>
+            <TabsTrigger value="available" className="text-xs">
+              Available ({otherWork.length})
+            </TabsTrigger>
+          </TabsList>
 
           <TabsContent value="my-work" className="mt-2">
             {isLoading ? (
@@ -263,9 +268,8 @@ const EmployeeDashboard = () => {
     );
   }
 
-  // Desktop design
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Slim Header */}
       <SlimHeader firstName={profile?.first_name} isMobile={false} />
 
@@ -284,23 +288,28 @@ const EmployeeDashboard = () => {
         isLoading={dashboardLoading}
       />
 
+      {/* Filter Chips */}
+      <FilterChips 
+        filters={filters}
+        onFilterChange={updateFilter}
+        workCounts={{
+          myWork: myAssignments.length,
+          available: otherWork.length,
+          projects: workCounts.projects,
+          workOrders: workCounts.workOrders,
+        }}
+      />
+
       {/* Tabbed Work Section */}
       <Tabs defaultValue="my-work" className="w-full">
-        <div className="flex items-center justify-between mb-3">
-          <TabsList className="grid grid-cols-2 w-auto">
-            <TabsTrigger value="my-work">
-              My Work ({myAssignments.length})
-            </TabsTrigger>
-            <TabsTrigger value="available">
-              Available ({otherWork.length})
-            </TabsTrigger>
-          </TabsList>
-          <FilterDropdown 
-            filters={filters} 
-            onFilterChange={updateFilter}
-            workCounts={workCounts}
-          />
-        </div>
+        <TabsList className="grid grid-cols-2 w-auto bg-muted/50 p-1 h-9 mb-3">
+          <TabsTrigger value="my-work">
+            My Work ({myAssignments.length})
+          </TabsTrigger>
+          <TabsTrigger value="available">
+            Available ({otherWork.length})
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="my-work" className="mt-0">
           {isLoading ? (
