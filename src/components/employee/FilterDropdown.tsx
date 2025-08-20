@@ -40,7 +40,7 @@ export function FilterDropdown({ filters, onFilterChange, workCounts }: FilterDr
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 bg-background border shadow-lg z-50">
         <DropdownMenuLabel>Filter Options</DropdownMenuLabel>
         <DropdownMenuSeparator />
         

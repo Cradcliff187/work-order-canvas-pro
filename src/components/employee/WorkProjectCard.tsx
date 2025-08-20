@@ -48,7 +48,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
   return (
     <Card 
       className={cn(
-        "w-full max-w-full overflow-hidden transition-all cursor-pointer border-2 border-green-500",
+        "w-full max-w-full overflow-hidden transition-all cursor-pointer",
         isAssigned 
           ? "bg-gradient-to-r from-success/5 to-success/10 border-success/30 hover:shadow-md" 
           : "opacity-90 hover:opacity-100 border-border/50 hover:border-border hover:shadow-sm",

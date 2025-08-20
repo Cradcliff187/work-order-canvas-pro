@@ -23,7 +23,7 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
     return (
       <>
         <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="bg-primary/20 rounded-full p-3">
@@ -50,7 +50,7 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
 
   return (
     <Card className="bg-gradient-to-r from-success/10 to-success/20 border-success/30">
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="bg-success/20 rounded-full p-3">

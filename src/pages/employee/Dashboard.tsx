@@ -139,7 +139,7 @@ const EmployeeDashboard = () => {
   if (isMobile) {
     // Mobile-first design
     return (
-      <div className="w-full max-w-full overflow-hidden space-y-4 pb-4">
+      <div className="w-full max-w-full overflow-x-hidden px-4 pb-20 space-y-4">
         {/* Welcome Header - Compact */}
         <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-3 mb-3">
           <div className="flex items-center justify-between">
@@ -257,10 +257,10 @@ const EmployeeDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-wrap gap-2">
           <Button 
             variant="outline" 
-            className="h-14 flex flex-col gap-1 text-xs"
+            className="h-14 flex-1 min-w-[120px] flex flex-col gap-1 text-xs"
             onClick={() => navigate('/employee/time-reports')}
           >
             <Plus className="h-4 w-4" />
@@ -268,7 +268,7 @@ const EmployeeDashboard = () => {
           </Button>
           <Button 
             variant="outline" 
-            className="h-14 flex flex-col gap-1 text-xs"
+            className="h-14 flex-1 min-w-[120px] flex flex-col gap-1 text-xs"
             onClick={() => navigate('/employee/receipts')}
           >
             <Receipt className="h-4 w-4" />
