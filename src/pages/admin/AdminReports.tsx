@@ -34,7 +34,9 @@ import {
   RotateCcw,
   Filter,
   X,
-  Trash
+  Trash,
+  Plus,
+  CheckSquare
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
@@ -90,6 +92,7 @@ export default function AdminReports() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
 
   // Persist filters using the ReportsFiltersV2 structure
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<ReportsFiltersValue>(
@@ -325,6 +328,11 @@ const table = useReactTable({
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
+  const handleSearchClear = () => {
+    setSearchTerm('');
+    setPagination(prev => ({ ...prev, pageIndex: 0 }));
+  };
+
   const handleClearFilters = () => {
     clearFilters();
     setSearchTerm('');
@@ -393,12 +401,12 @@ const table = useReactTable({
       </Card>
     </div>
   ) : (
-    <div className="p-6 space-y-6">
+    <div className={cn("p-6 space-y-6", bulkMode && selectedRows.length > 0 && "pb-24")}>
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">Report Review</h1>
+            <h1 className="text-2xl font-bold">Reports Management</h1>
             {submittedCounts && submittedCounts.reportsCount > 0 && (
               <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                 {submittedCounts.reportsCount} pending
@@ -408,19 +416,30 @@ const table = useReactTable({
           <p className="text-muted-foreground">
             {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'Review and approve subcontractor reports'}
           </p>
+          {bulkMode && selectedRows.length > 0 && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {selectedRows.length} report{selectedRows.length !== 1 ? 's' : ''} selected
+            </p>
+          )}
         </div>
       </div>
 
       {/* Desktop Layout */}
       <div className="hidden lg:flex gap-4 mb-6">
-        <div className="flex flex-1 gap-2">
+        <div className="flex flex-1 items-center gap-3">
           <SmartSearchInput
             placeholder="Search by work order, location, materials..."
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="flex-1"
+            onClear={handleSearchClear}
+            showClearButton={true}
+            className="flex-1 h-10"
           />
-          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsDesktopFilterOpen(true)}
+            className="h-10 px-4 whitespace-nowrap"
+          >
             <Filter className="h-4 w-4 mr-2" />
             Filters {filterCount > 0 && `(${filterCount})`}
           </Button>
@@ -432,14 +451,21 @@ const table = useReactTable({
             allowedModes={allowedModes}
             className="h-9"
           />
-          <ColumnVisibilityDropdown
-            columns={columnOptions}
-            onToggleColumn={toggleColumn}
-            onResetToDefaults={resetToDefaults}
-            visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-            totalCount={columnOptions.filter(c => c.canHide).length}
-          />
-          <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
+          <Button
+            variant={bulkMode ? "default" : "outline"}
+            onClick={() => setBulkMode(!bulkMode)}
+            className="h-9"
+          >
+            <CheckSquare className="h-4 w-4 mr-2" />
+            Bulk Actions
+          </Button>
+          <Button 
+            onClick={() => navigate('/admin/partner-billing/select-reports')}
+            className="h-9"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Generate Partner Billing
+          </Button>
         </div>
       </div>
 
@@ -456,12 +482,19 @@ const table = useReactTable({
             <Filter className="h-4 w-4 mr-2" />
             Filters {filterCount > 0 && `(${filterCount})`}
           </Button>
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
+          <Button
+            variant={bulkMode ? "default" : "outline"}
+            onClick={() => setBulkMode(!bulkMode)}
             className="h-9"
-          />
+          >
+            <CheckSquare className="h-4 w-4" />
+          </Button>
+          <Button 
+            onClick={() => navigate('/admin/partner-billing/select-reports')}
+            className="h-9"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
