@@ -50,8 +50,8 @@ const DashboardRouter: React.FC = () => {
   
   if (isEmployee()) {
     console.log('DashboardRouter - Employee access granted');
-    return <Navigate to="/admin/employee-dashboard" replace />;
-  } 
+    return <Navigate to="/employee/dashboard" replace />;
+  }
   
   if (isPartner()) {
     console.log('DashboardRouter - Partner access granted');

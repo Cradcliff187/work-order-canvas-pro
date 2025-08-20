@@ -4,6 +4,7 @@ import { PublicRoutes } from './PublicRoutes';
 import { AdminRoutes } from './AdminRoutes';
 import { PartnerRoutes } from './PartnerRoutes';
 import { SubcontractorRoutes } from './SubcontractorRoutes';
+import { EmployeeRoutes } from './EmployeeRoutes';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import NotFound from '@/pages/NotFound';
 import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
@@ -12,7 +13,8 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 
 function RoleMessagesRedirect() {
   const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
-  if (isAdmin() || isEmployee()) return <Navigate to="/admin/messages" replace />;
+  if (isAdmin()) return <Navigate to="/admin/messages" replace />;
+  if (isEmployee()) return <Navigate to="/employee/messages" replace />;
   if (isPartner()) return <Navigate to="/partner/messages" replace />;
   if (isSubcontractor()) return <Navigate to="/subcontractor/messages" replace />;
   return <Navigate to="/messages" replace />; // fallback
@@ -26,6 +28,7 @@ export const AppRouter: React.FC = () => (
       {AdminRoutes()}
       {PartnerRoutes()}
       {SubcontractorRoutes()}
+      {EmployeeRoutes()}
       
       {/* Generic messages redirect */}
       <Route path="/messages" element={<ProtectedRoute><RoleMessagesRedirect /></ProtectedRoute>} />

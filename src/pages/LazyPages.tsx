@@ -3,6 +3,11 @@ import { lazy } from 'react';
 // Admin Pages
 export const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
 export const EmployeeDashboard = lazy(() => import('@/pages/admin/EmployeeDashboard'));
+
+// Employee Pages
+export const EmployeeDashboardEmployee = lazy(() => import('@/pages/employee/Dashboard'));
+export const EmployeeTimeReportsPage = lazy(() => import('@/pages/employee/TimeReports'));
+export const EmployeeReceiptsPage = lazy(() => import('@/pages/employee/Receipts'));
 export const PipelineDashboard = lazy(() => import('@/pages/admin/PipelineDashboard'));
 export const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 export const AdminOrganizations = lazy(() => import('@/pages/admin/AdminOrganizations'));

@@ -12,10 +12,10 @@ interface QuickAction {
 }
 
 const actions: QuickAction[] = [
-  { id: 'clock', label: 'Clock', icon: Clock, path: '/admin/employee-dashboard' },
-  { id: 'reports', label: 'Reports', icon: FileText, path: '/admin/employee-time-reports' },
-  { id: 'photo', label: 'Photo', icon: Camera, path: '/admin/work-orders' },
-  { id: 'receipt', label: 'Receipt', icon: Receipt, path: '/admin/receipts' }
+  { id: 'clock', label: 'Clock', icon: Clock, path: '/employee/dashboard' },
+  { id: 'reports', label: 'Reports', icon: FileText, path: '/employee/time-reports' },
+  { id: 'photo', label: 'Photo', icon: Camera, path: '/employee/time-reports' },
+  { id: 'receipt', label: 'Receipt', icon: Receipt, path: '/employee/receipts' }
 ];
 
 export const QuickActionsBar: React.FC = () => {
@@ -26,8 +26,8 @@ export const QuickActionsBar: React.FC = () => {
   if (!isMobile) return null;
 
   const isActive = (path: string): boolean => {
-    if (path === '/admin/employee-dashboard') {
-      return location.pathname === '/admin/employee-dashboard';
+    if (path === '/employee/dashboard') {
+      return location.pathname === '/employee/dashboard';
     }
     return location.pathname.startsWith(path);
   };
