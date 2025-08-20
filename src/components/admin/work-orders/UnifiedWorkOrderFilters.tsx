@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, X } from 'lucide-react';
+import { Calendar as CalendarIcon, X, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 
 
@@ -347,6 +347,19 @@ export function UnifiedWorkOrderFilters({
 
   return (
     <div className="space-y-4">
+      {/* Clear All Filters Button */}
+      {filterCount > 0 && (
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={onClear}
+          className="w-full"
+        >
+          <RotateCcw className="h-4 w-4 mr-2" />
+          Clear All Filters ({filterCount})
+        </Button>
+      )}
+
       {/* Essential Filters */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-muted-foreground">Essential</h3>
