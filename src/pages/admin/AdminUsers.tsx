@@ -49,9 +49,9 @@ import { Label } from '@/components/ui/label';
 
 interface UserFilters {
   search?: string;
-  roleFilter?: string;
+  roleFilter?: string[];
   organizationId?: string;
-  status?: string;
+  status?: string[];
   organizationType?: string[];
 }
 
@@ -85,7 +85,7 @@ export default function AdminUsers() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<UserFilters>(
     'admin-users-filters-v1',
-    { search: '', roleFilter: '', organizationId: '', status: '', organizationType: [] }
+    { search: '', roleFilter: [], organizationId: '', status: [], organizationType: [] }
   );
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -138,8 +138,11 @@ export default function AdminUsers() {
       const haystack = `${u.first_name || ''} ${u.last_name || ''} ${u.email || ''} ${(u as any).phone || ''} ${orgNames}`.toLowerCase();
 
       const matchesSearch = q ? haystack.includes(q) : true;
-      const matchesRole = filters.roleFilter ? role === filters.roleFilter : true;
-      const matchesStatus = filters.status ? (filters.status === 'active' ? (u as any).is_active : !(u as any).is_active) : true;
+      const matchesRole = filters.roleFilter && filters.roleFilter.length ? filters.roleFilter.includes(role) : true;
+      const matchesStatus = filters.status && filters.status.length ? 
+        (filters.status.includes('active') ? (u as any).is_active : true) &&
+        (filters.status.includes('inactive') ? !(u as any).is_active : true) &&
+        (filters.status.includes('pending') || filters.status.includes('suspended') ? false : true) : true;
       const matchesOrgId = filters.organizationId ? orgIds.includes(filters.organizationId) : true;
       const matchesOrgType = filters.organizationType && filters.organizationType.length ? filters.organizationType.some((t) => orgTypes.includes(t)) : true;
       return matchesSearch && matchesRole && matchesStatus && matchesOrgId && matchesOrgType;

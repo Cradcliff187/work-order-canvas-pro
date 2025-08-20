@@ -4,8 +4,8 @@ import { useOrganizations } from '@/hooks/useOrganizations';
 
 export interface UserFiltersValue {
   search?: string;
-  roleFilter?: string;
-  status?: string;
+  roleFilter?: string[];
+  status?: string[];
   organizationId?: string;
   organizationType?: string[];
 }
@@ -25,7 +25,9 @@ const USER_ROLES = [
 
 const USER_STATUSES = [
   { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' }
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'suspended', label: 'Suspended' }
 ];
 
 const ORGANIZATION_TYPES = [
@@ -48,18 +50,18 @@ export function UnifiedUserFilters({
     label: org.name
   })) || [];
 
-  // Filter change handlers
+  // Handle filter changes
+  const handleArrayFilterChange = (key: keyof UserFiltersValue, value: string[]) => {
+    onFiltersChange({
+      ...filters,
+      [key]: value.length > 0 ? value : undefined
+    });
+  };
+
   const handleSingleFilterChange = (key: keyof UserFiltersValue, value: string) => {
     onFiltersChange({
       ...filters,
       [key]: value || undefined
-    });
-  };
-
-  const handleArrayFilterChange = (key: keyof UserFiltersValue, values: string[]) => {
-    onFiltersChange({
-      ...filters,
-      [key]: values.length > 0 ? values : undefined
     });
   };
 
@@ -74,28 +76,28 @@ export function UnifiedUserFilters({
   const essentialFilters = (
     <>
       <div className="space-y-2">
-        <label className="text-sm font-medium">Role</label>
+        <label className="text-sm font-medium">Status</label>
         <select 
           className="w-full p-2 border rounded-md bg-background"
-          value={filters.roleFilter || ''}
-          onChange={(e) => handleSingleFilterChange('roleFilter', e.target.value)}
+          value={filters.status?.[0] || ''}
+          onChange={(e) => handleArrayFilterChange('status', e.target.value ? [e.target.value] : [])}
         >
-          <option value="">All roles</option>
-          {USER_ROLES.map(opt => (
+          <option value="">Select status</option>
+          {USER_STATUSES.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Status</label>
+        <label className="text-sm font-medium">Role</label>
         <select 
           className="w-full p-2 border rounded-md bg-background"
-          value={filters.status || ''}
-          onChange={(e) => handleSingleFilterChange('status', e.target.value)}
+          value={filters.roleFilter?.[0] || ''}
+          onChange={(e) => handleArrayFilterChange('roleFilter', e.target.value ? [e.target.value] : [])}
         >
-          <option value="">All statuses</option>
-          {USER_STATUSES.map(opt => (
+          <option value="">Select role</option>
+          {USER_ROLES.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
@@ -127,7 +129,7 @@ export function UnifiedUserFilters({
           value={filters.organizationType?.[0] || ''}
           onChange={(e) => handleArrayFilterChange('organizationType', e.target.value ? [e.target.value] : [])}
         >
-          <option value="">All organization types</option>
+          <option value="">Select organization type</option>
           {ORGANIZATION_TYPES.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
