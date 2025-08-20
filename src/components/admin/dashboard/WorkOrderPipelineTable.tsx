@@ -430,28 +430,30 @@ export function WorkOrderPipelineTable({
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between space-x-2 py-4 mt-4">
+            <div className={`flex items-center py-4 mt-4 ${isMobile ? 'flex-col space-y-4' : 'justify-between space-x-2'}`}>
               <div className="flex items-center gap-4">
                 <div className="text-sm text-muted-foreground">
-                  Showing {table.getRowModel().rows.length} of {data.length} work orders
+                  Showing {table.getRowModel().rows.length} of {data.length} {isMobile ? 'items' : 'work orders'}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Rows per page:</span>
-                  <Select
-                    value={table.getState().pagination.pageSize.toString()}
-                    onValueChange={(value) => table.setPageSize(Number(value))}
-                  >
-                    <SelectTrigger className="w-16 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="20">20</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {!isMobile && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Rows per page:</span>
+                    <Select
+                      value={table.getState().pagination.pageSize.toString()}
+                      onValueChange={(value) => table.setPageSize(Number(value))}
+                    >
+                      <SelectTrigger className="w-16 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Button
