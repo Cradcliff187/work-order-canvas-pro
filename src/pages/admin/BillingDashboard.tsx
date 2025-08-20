@@ -881,12 +881,6 @@ export function BillingDashboard() {
                 {filteredPipelineData.length} Work Order{filteredPipelineData.length !== 1 ? 's' : ''}
               </Badge>
             </div>
-            <ColumnVisibilityDropdown
-              columns={getAllColumns()} 
-              onToggleColumn={toggleColumn}
-              onResetToDefaults={resetToDefaults}
-              variant="outline"
-            />
           </div>
 
           {/* Top Control Bar */}
