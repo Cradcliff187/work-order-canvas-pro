@@ -167,11 +167,11 @@ export function FloatingClockWidget() {
   );
 
   const fabClasses = cn(
-    "h-16 w-16 rounded-full shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl",
-    "flex items-center justify-center text-white",
+    "h-20 w-20 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-[0_20px_40px_-12px_hsl(var(--primary)/0.4)] animate-bounce-in",
+    "flex items-center justify-center text-white font-semibold",
     clockData.isClocked 
-      ? "bg-green-600 animate-pulse shadow-green-600/25" 
-      : "bg-primary hover:bg-primary/90"
+      ? "bg-gradient-to-br from-success to-emerald-600 animate-pulse shadow-[0_15px_30px_-5px_hsl(var(--success)/0.5)]" 
+      : "bg-gradient-to-br from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-[0_15px_30px_-5px_hsl(var(--primary)/0.4)]"
   );
 
   return (
