@@ -23,6 +23,7 @@ export const AdminInvoices = lazy(() => import('@/pages/admin/AdminInvoices'));
 export const ReceiptHistory = lazy(() => import('@/pages/admin/ReceiptHistory'));
 export const AdminReceipts = lazy(() => import('@/pages/admin/AdminReceipts'));
 export const AdminUtilities = lazy(() => import('@/pages/admin/AdminUtilities'));
+export const AdminProjects = lazy(() => import('@/pages/admin/Projects'));
 
 // Partner Billing Pages
 export const SelectReports = lazy(() => import('@/pages/admin/partner-billing/SelectReports'));
