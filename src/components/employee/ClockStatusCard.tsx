@@ -2,10 +2,12 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, MapPin, Play, DollarSign } from 'lucide-react';
+import { Clock, MapPin, Play, DollarSign, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { useClockState } from '@/hooks/useClockState';
+import { useRecentlyClocked } from '@/hooks/useRecentlyClocked';
 import { FloatingClockWidget } from '@/components/employee/FloatingClockWidget';
+import { WorkItemClockCard } from '@/components/employee/WorkItemClockCard';
 
 interface ClockStatusCardProps {
   onClockOut: () => void;
@@ -40,37 +42,70 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
   onClockOut,
   isClockingOut
 }) => {
-  const { isClocked, clockInTime, workOrderId, locationAddress, elapsedTime, hourlyRate } = useClockState();
+  const { isClocked, clockInTime, workOrderId, locationAddress, elapsedTime, hourlyRate, clockIn, isClockingIn } = useClockState();
+  const { data: recentItems = [], isLoading: isLoadingRecent } = useRecentlyClocked();
   const [showClockWidget, setShowClockWidget] = React.useState(false);
+
+  const handleQuickClockIn = (workOrderId?: string, projectId?: string) => {
+    clockIn.mutate({ workOrderId, projectId });
+  };
 
   if (!isClocked) {
     return (
       <>
-        <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10 border-primary/30 shadow-xl hover:shadow-2xl transition-all duration-300">
-          <CardContent className="p-8 sm:p-12">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="bg-gradient-to-br from-primary/30 to-primary/10 rounded-full p-4">
-                  <Play className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold mb-2">Ready to Clock In</h3>
-                  <p className="text-base text-muted-foreground">
-                    Select a work item to start tracking time
-                  </p>
-                </div>
-              </div>
-              <Button 
-                onClick={() => setShowClockWidget(true)} 
-                size="lg"
-                className="h-14 px-8 text-lg font-semibold animate-pulse hover:animate-none transition-all duration-300 shadow-lg hover:shadow-xl"
-              >
-                <Play className="h-6 w-6 mr-3" />
-                Clock In
-              </Button>
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-2">Select Work to Begin</h2>
+            <p className="text-muted-foreground">Tap any item to clock in instantly</p>
+          </div>
+
+          {isLoadingRecent ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="p-6">
+                    <div className="space-y-3">
+                      <div className="h-4 bg-muted rounded w-20"></div>
+                      <div className="h-5 bg-muted rounded w-full"></div>
+                      <div className="h-3 bg-muted rounded w-3/4"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          ) : recentItems.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {recentItems.map((item) => (
+                <WorkItemClockCard
+                  key={`${item.type}_${item.id}`}
+                  item={item}
+                  onClockIn={handleQuickClockIn}
+                  isLoading={isClockingIn}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="bg-gradient-to-br from-muted/50 to-muted/30 border-dashed border-2">
+              <CardContent className="p-8 text-center">
+                <div className="bg-gradient-to-br from-muted to-muted/50 rounded-full p-4 w-fit mx-auto mb-4">
+                  <Search className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">No Recent Work</h3>
+                <p className="text-muted-foreground mb-6">
+                  Search for work items to get started
+                </p>
+                <Button 
+                  onClick={() => setShowClockWidget(true)}
+                  size="lg"
+                  className="shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <Search className="h-5 w-5 mr-2" />
+                  Find Work Items
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
         {showClockWidget && <FloatingClockWidget />}
       </>
     );
