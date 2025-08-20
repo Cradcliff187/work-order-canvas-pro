@@ -14,8 +14,7 @@ import { FilterChips } from '@/components/employee/FilterChips';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { ClockStatusCard } from '@/components/employee/ClockStatusCard';
-import { ActiveWorkCard } from '@/components/employee/ActiveWorkCard';
-import { AvailableWorkCard } from '@/components/employee/AvailableWorkCard';
+import { WorkProjectCard } from '@/components/employee/WorkProjectCard';
 import { 
   ClipboardList, 
   Clock, 
@@ -212,12 +211,13 @@ const EmployeeDashboard = () => {
           ) : myAssignments.length > 0 ? (
             <div className="space-y-2">
               {myAssignments.slice(0, 3).map((workItem) => (
-                <ActiveWorkCard
+                <WorkProjectCard
                   key={workItem.id}
                   workItem={workItem}
                   onClockIn={handleClockIn}
                   onViewDetails={handleViewDetails}
                   isDisabled={isClockingIn || isClockingOut}
+                  variant="assigned"
                 />
               ))}
             </div>
@@ -247,11 +247,13 @@ const EmployeeDashboard = () => {
           ) : otherWork.length > 0 ? (
             <div className="space-y-2">
               {otherWork.slice(0, 5).map((workItem) => (
-                <AvailableWorkCard
+                <WorkProjectCard
                   key={workItem.id}
                   workItem={workItem}
-                  onJumpIn={handleClockIn}
+                  onClockIn={handleClockIn}
+                  onViewDetails={handleViewDetails}
                   isDisabled={isClockingIn || isClockingOut}
+                  variant="available"
                 />
               ))}
             </div>
@@ -408,12 +410,13 @@ const EmployeeDashboard = () => {
               ) : myAssignments.length > 0 ? (
                 <div className="space-y-3">
                   {myAssignments.map((workItem) => (
-                    <ActiveWorkCard
+                    <WorkProjectCard
                       key={workItem.id}
                       workItem={workItem}
                       onClockIn={handleClockIn}
                       onViewDetails={handleViewDetails}
                       isDisabled={isClockingIn || isClockingOut}
+                      variant="assigned"
                     />
                   ))}
                 </div>
@@ -448,11 +451,13 @@ const EmployeeDashboard = () => {
               ) : otherWork.length > 0 ? (
                 <div className="space-y-2">
                   {otherWork.slice(0, 8).map((workItem) => (
-                    <AvailableWorkCard
+                    <WorkProjectCard
                       key={workItem.id}
                       workItem={workItem}
-                      onJumpIn={handleClockIn}
+                      onClockIn={handleClockIn}
+                      onViewDetails={handleViewDetails}
                       isDisabled={isClockingIn || isClockingOut}
+                      variant="available"
                     />
                   ))}
                 </div>
