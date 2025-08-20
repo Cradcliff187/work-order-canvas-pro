@@ -928,12 +928,6 @@ export function BillingDashboard() {
               
               {/* Action Buttons Group */}
               <div className="flex gap-2 flex-wrap lg:flex-nowrap">
-                <ExportDropdown 
-                  onExport={handleExport} 
-                  variant="outline" 
-                  size="default"
-                  disabled={pipelineLoading || filteredPipelineData.length === 0} 
-                />
                 <ViewModeSwitcher 
                   value={viewMode} 
                   onValueChange={setViewMode} 
@@ -950,6 +944,10 @@ export function BillingDashboard() {
             isError={pipelineError}
             viewMode={viewMode}
             columnVisibility={columnVisibility}
+            onExport={handleExport}
+            onToggleColumn={toggleColumn}
+            onResetColumns={resetToDefaults}
+            columns={getAllColumns()}
           />
         </TabsContent>
       </Tabs>

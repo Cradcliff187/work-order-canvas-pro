@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import {
   useReactTable,
   getCoreRowModel,
@@ -32,6 +34,15 @@ interface WorkOrderPipelineTableProps {
   isError: boolean;
   viewMode?: 'table' | 'card' | 'list';
   columnVisibility?: Record<string, boolean>;
+  onExport?: (format: 'csv' | 'excel') => void;
+  onToggleColumn?: (columnId: string) => void;
+  onResetColumns?: () => void;
+  columns?: Array<{
+    id: string;
+    label: string;
+    visible: boolean;
+    canHide: boolean;
+  }>;
 }
 
 export function WorkOrderPipelineTable({ 
@@ -39,7 +50,11 @@ export function WorkOrderPipelineTable({
   isLoading, 
   isError, 
   viewMode = 'table',
-  columnVisibility = {}
+  columnVisibility = {},
+  onExport,
+  onToggleColumn,
+  onResetColumns,
+  columns: columnOptions = []
 }: WorkOrderPipelineTableProps) {
   const navigate = useNavigate();
 
@@ -69,7 +84,7 @@ export function WorkOrderPipelineTable({
     return 'invoice_needed'; // Default - needs subcontractor invoice
   };
 
-  const columns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
+  const tableColumns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
     {
       id: 'work_order_number',
       header: 'Work Order #',
@@ -266,7 +281,7 @@ export function WorkOrderPipelineTable({
 
   const table = useReactTable({
     data,
-    columns,
+    columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -298,7 +313,27 @@ export function WorkOrderPipelineTable({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Work Order Pipeline</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Work Order Pipeline</CardTitle>
+          <div className="flex gap-2">
+            {onExport && (
+              <ExportDropdown 
+                onExport={onExport} 
+                variant="outline" 
+                size="sm"
+                disabled={isLoading || data.length === 0} 
+              />
+            )}
+            {onToggleColumn && onResetColumns && (
+              <ColumnVisibilityDropdown
+                columns={columnOptions}
+                onToggleColumn={onToggleColumn}
+                onResetToDefaults={onResetColumns}
+                variant="outline"
+              />
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
