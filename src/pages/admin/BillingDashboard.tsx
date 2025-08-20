@@ -297,6 +297,21 @@ export default function BillingDashboard() {
     }
   };
 
+  // Helper function to get financial status based on invoicing
+  const getFinancialStatus = (item: WorkOrderPipelineItem): string => {
+    // Check if partner has been billed
+    if (item.partner_bill_status === 'paid' || item.partner_billed_at) {
+      return 'paid';
+    }
+    
+    // Check if subcontractor invoice exists
+    if (item.invoice_status === 'submitted' || item.invoice_status === 'approved' || item.invoice_status === 'paid') {
+      return 'invoice_received';
+    }
+    
+    return 'not_billed'; // Default - no invoice received
+  };
+
   // Helper function to get partner billing status based on workflow
   const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
     // Based on the 4-step workflow: Report Created → Subcontractor Invoice → Invoice Approved → Bill Partner
@@ -380,6 +395,28 @@ export default function BillingDashboard() {
       if (filters.location_filter && filters.location_filter.length > 0) {
         const itemLocation = item.store_location || 'No location';
         if (!filters.location_filter.includes(itemLocation)) return false;
+      }
+
+      // Financial status filter
+      if (filters.financial_status && filters.financial_status.length > 0) {
+        const itemFinancialStatus = getFinancialStatus(item);
+        if (!filters.financial_status.includes(itemFinancialStatus)) return false;
+      }
+
+      // Partner billing status filter
+      if (filters.partner_billing_status && filters.partner_billing_status.length > 0) {
+        const itemBillingStatus = getPartnerBillingStatus(item);
+        if (!filters.partner_billing_status.includes(itemBillingStatus)) return false;
+      }
+
+      // Priority filter
+      if (filters.priority && filters.priority.length > 0) {
+        if (!item.priority || !filters.priority.includes(item.priority)) return false;
+      }
+
+      // Report status filter
+      if (filters.report_status && filters.report_status.length > 0) {
+        if (!item.report_status || !filters.report_status.includes(item.report_status)) return false;
       }
 
       // Show overdue only filter
