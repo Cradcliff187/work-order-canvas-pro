@@ -66,6 +66,9 @@ html, body, #root {
     --destructive: 0 72% 51%;            /* #E11D48 Issue red */
     --destructive-foreground: 0 0% 100%;
 
+    --project: 271 91% 65%;              /* #A855F7 Project purple */
+    --project-foreground: 0 0% 100%;
+
     --radius: 0.5rem;
 
     /* Update Gradients */

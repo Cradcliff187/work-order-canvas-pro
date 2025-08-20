@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, BarChart } from 'lucide-react';
+import { MapPin, Clock, BarChart, Briefcase, FileText } from 'lucide-react';
 import { WorkItem } from '@/hooks/useAllWorkItems';
 import { AssignmentBadge } from './AssignmentBadge';
 import { StatusDot } from './StatusDot';
@@ -74,14 +74,16 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
               {/* Type badge - ultra compact on mobile */}
               <div className="shrink-0">
                 {workItem.type === 'work_order' ? (
-                  <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 text-[10px] font-medium px-1 py-0.5 shrink-0">
-                    <span className="sm:hidden">W</span>
-                    <span className="hidden sm:inline">WO</span>
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-medium px-1 py-0.5 shrink-0">
+                    <FileText className="h-2 w-2 hidden sm:inline" />
+                    <span className="sm:hidden">WO</span>
+                    <span className="hidden sm:inline">WORK ORDER</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 text-[10px] font-medium px-1 py-0.5 shrink-0">
-                    <span className="sm:hidden">P</span>
-                    <span className="hidden sm:inline">PRJ</span>
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-medium px-1 py-0.5 shrink-0">
+                    <Briefcase className="h-2 w-2 hidden sm:inline" />
+                    <span className="sm:hidden">PRJ</span>
+                    <span className="hidden sm:inline">PROJECT</span>
                   </span>
                 )}
               </div>

@@ -53,6 +53,10 @@ export default {
 					DEFAULT: 'hsl(var(--warning))',
 					foreground: 'hsl(var(--warning-foreground))'
 				},
+				project: {
+					DEFAULT: 'hsl(var(--project))',
+					foreground: 'hsl(var(--project-foreground))'
+				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
 					foreground: 'hsl(var(--popover-foreground))'
