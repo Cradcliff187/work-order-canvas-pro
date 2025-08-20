@@ -7,6 +7,7 @@ import { useBranding } from '@/hooks/useBranding';
 import { StandardHeader } from '@/components/layout/StandardHeader';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { UserProfileDropdown } from '@/components/admin/layout/UserProfileDropdown';
+import FloatingClockWidget from '@/components/employee/FloatingClockWidget';
 import {
   Sidebar,
   SidebarContent,
@@ -137,6 +138,8 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({ children }) => {
         {isMobile && (
           <MobileBottomNav navItems={employeeNavItems} />
         )}
+        
+        <FloatingClockWidget />
       </div>
     </SidebarProvider>
   );
