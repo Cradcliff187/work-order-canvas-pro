@@ -7,6 +7,7 @@ interface SimplePipelineFiltersProps {
   organizations?: Array<{ id: string; name: string }>;
   subcontractors?: Array<{ id: string; name: string }>;
   locations?: string[];
+  trades?: Array<{ id: string; name: string }>;
 }
 
 export function SimplePipelineFilters({ 
@@ -15,7 +16,8 @@ export function SimplePipelineFilters({
   onClear, 
   organizations = [],
   subcontractors = [],
-  locations = []
+  locations = [],
+  trades = []
 }: SimplePipelineFiltersProps) {
   return (
     <div className="space-y-4 p-4">
@@ -147,6 +149,111 @@ export function SimplePipelineFilters({
             date_to: e.target.value
           })}
         />
+      </div>
+
+      {/* Financial Status */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">
+          Financial Status
+        </label>
+        <select 
+          className="w-full p-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+          value={filters.financial_status?.[0] || ''}
+          onChange={(e) => onFiltersChange({
+            ...filters,
+            financial_status: e.target.value ? [e.target.value] : []
+          })}
+        >
+          <option value="">All Financial Status</option>
+          <option value="not_billed">No Invoice</option>
+          <option value="invoice_received">Invoice Received</option>
+          <option value="paid">Paid</option>
+        </select>
+      </div>
+
+      {/* Partner Billing Status */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">
+          Partner Billing Status
+        </label>
+        <select 
+          className="w-full p-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+          value={filters.partner_billing_status?.[0] || ''}
+          onChange={(e) => onFiltersChange({
+            ...filters,
+            partner_billing_status: e.target.value ? [e.target.value] : []
+          })}
+        >
+          <option value="">All Billing Status</option>
+          <option value="report_pending">Report Pending</option>
+          <option value="invoice_needed">Subcontractor Invoice Needed</option>
+          <option value="invoice_pending">Invoice Pending Approval</option>
+          <option value="ready_to_bill">Ready to Bill Partner</option>
+          <option value="billed">Partner Billed</option>
+        </select>
+      </div>
+
+      {/* Priority */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">
+          Priority
+        </label>
+        <select 
+          className="w-full p-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+          value={filters.priority?.[0] || ''}
+          onChange={(e) => onFiltersChange({
+            ...filters,
+            priority: e.target.value ? [e.target.value] : []
+          })}
+        >
+          <option value="">All Priorities</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+
+      {/* Report Status */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">
+          Report Status
+        </label>
+        <select 
+          className="w-full p-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+          value={filters.report_status?.[0] || ''}
+          onChange={(e) => onFiltersChange({
+            ...filters,
+            report_status: e.target.value ? [e.target.value] : []
+          })}
+        >
+          <option value="">All Report Status</option>
+          <option value="not_submitted">Not Submitted</option>
+          <option value="submitted">Submitted</option>
+          <option value="reviewed">Under Review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Needs Revision</option>
+        </select>
+      </div>
+
+      {/* Trade */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">
+          Trade
+        </label>
+        <select 
+          className="w-full p-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+          value={filters.trade_id?.[0] || ''}
+          onChange={(e) => onFiltersChange({
+            ...filters,
+            trade_id: e.target.value ? [e.target.value] : []
+          })}
+        >
+          <option value="">All Trades</option>
+          {trades.map(trade => (
+            <option key={trade.id} value={trade.id}>{trade.name}</option>
+          ))}
+        </select>
       </div>
 
       {/* Show Overdue Only */}

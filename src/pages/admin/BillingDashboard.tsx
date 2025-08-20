@@ -178,6 +178,10 @@ interface PipelineFiltersValue {
   date_to?: string;
   location_filter?: string[];
   showOverdueOnly?: boolean;
+  financial_status?: string[];
+  partner_billing_status?: string[];
+  priority?: string[];
+  report_status?: string[];
 }
 
 // Filter options for Pipeline
@@ -875,6 +879,7 @@ if (error) {
                   organizations={organizations}
                   subcontractors={subcontractors}
                   locations={locationOptions}
+                  trades={trades}
                 />
               </SheetContent>
             </Sheet>
