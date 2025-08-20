@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
@@ -36,9 +36,11 @@ import {
 import { format } from 'date-fns';
 import { KPICard } from '@/components/analytics/KPICard';
 import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
-import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
+import { SimplePipelineFilters } from '@/components/admin/billing/SimplePipelineFilters';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { Invoice } from '@/hooks/useInvoices';
+import { useOrganizations } from '@/hooks/useOrganizations';
+import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
 
 interface DashboardMetrics {
   unbilledReports: {
@@ -175,6 +177,7 @@ interface PipelineFiltersValue {
   date_from?: string;
   date_to?: string;
   location_filter?: string[];
+  showOverdueOnly?: boolean;
 }
 
 // Filter options for Pipeline
@@ -236,6 +239,9 @@ export default function BillingDashboard() {
   // Pipeline filter state
   const { data: pipelineData, isLoading: pipelineLoading, isError: pipelineError } = useWorkOrderLifecycle();
   const { data: trades } = useTrades();
+  const { data: organizationsData } = useOrganizations();
+  const { data: subcontractors } = useSubcontractorOrganizations();
+  const organizations = organizationsData?.filter(org => org.organization_type === 'partner');
   
   // Default filters - show all work orders
   const initialFilters: PipelineFiltersValue = {
@@ -265,23 +271,6 @@ export default function BillingDashboard() {
   // Track search separately for WorkOrderFilters
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
 
-  // Extract unique locations for filter options
-  const locationOptions = useMemo(() => {
-    if (!pipelineData) return [];
-    
-    const locations = new Set<string>();
-    pipelineData.forEach(item => {
-      if (item.store_location) {
-        locations.add(item.store_location);
-      } else {
-        locations.add('No location');
-      }
-    });
-    
-    return Array.from(locations)
-      .sort()
-      .map(location => ({ value: location, label: location }));
-  }, [pipelineData]);
 
   // Helper function to get operational status key for filtering
   const getOperationalStatusKey = (item: WorkOrderPipelineItem): string => {
@@ -330,14 +319,22 @@ export default function BillingDashboard() {
     return 'invoice_needed'; // Default - needs subcontractor invoice
   };
 
+  // Get unique locations for filter dropdown
+  const locationOptions = useMemo(() => {
+    if (!pipelineData) return [];
+    const locations = [...new Set(pipelineData.map(item => item.store_location || 'No location'))];
+    return locations.sort();
+  }, [pipelineData]);
+
   // Apply client-side filtering with improved logic
   const filteredPipelineData = useMemo(() => {
     if (!pipelineData) return [];
 
     return pipelineData.filter((item) => {
       // Enhanced search filter (work order number, title, partner, location, assigned org)
-      if (searchTerm && searchTerm.trim()) {
-        const searchLower = searchTerm.toLowerCase().trim();
+      const searchValue = filters.search || searchTerm;
+      if (searchValue && searchValue.trim()) {
+        const searchLower = searchValue.toLowerCase().trim();
         const matchesSearch = 
           item.work_order_number?.toLowerCase().includes(searchLower) ||
           item.title?.toLowerCase().includes(searchLower) ||
@@ -379,6 +376,12 @@ export default function BillingDashboard() {
       if (filters.location_filter && filters.location_filter.length > 0) {
         const itemLocation = item.store_location || 'No location';
         if (!filters.location_filter.includes(itemLocation)) return false;
+      }
+
+      // Show overdue only filter
+      if (filters.showOverdueOnly) {
+        // Add overdue logic here if needed
+        // This would require overdue date calculation based on business rules
       }
 
       return true;
@@ -853,13 +856,29 @@ if (error) {
         </TabsContent>
 
         <TabsContent value="pipeline" className="space-y-6">
-          <WorkOrderFilters
-            filters={filters}
-            searchTerm={searchTerm}
-            onFiltersChange={setFilters}
-            onSearchChange={setSearchTerm}
-            onClearFilters={handleClearFilters}
-          />
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold">Partner Billing Pipeline</h2>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline">
+                  Filters {filterCount > 0 && `(${filterCount})`}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right">
+                <SheetHeader>
+                  <SheetTitle>Filter Pipeline</SheetTitle>
+                </SheetHeader>
+                <SimplePipelineFilters
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  onClear={handleClearFilters}
+                  organizations={organizations}
+                  subcontractors={subcontractors}
+                  locations={locationOptions}
+                />
+              </SheetContent>
+            </Sheet>
+          </div>
 
           <WorkOrderPipelineTable 
             data={filteredPipelineData}
