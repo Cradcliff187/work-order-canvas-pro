@@ -185,7 +185,7 @@ const EmployeeDashboard = () => {
                 ))}
               </div>
             ) : myAssignments.length > 0 ? (
-              <div className="space-y-2">
+              <div className="flex flex-col gap-3">
                 {myAssignments.slice(0, 5).map((workItem) => (
                   <WorkProjectCard
                     key={workItem.id}
@@ -216,7 +216,7 @@ const EmployeeDashboard = () => {
                 ))}
               </div>
             ) : otherWork.length > 0 ? (
-              <div className="space-y-2">
+              <div className="flex flex-col gap-3">
                 {otherWork.slice(0, 5).map((workItem) => (
                   <WorkProjectCard
                     key={workItem.id}
@@ -310,7 +310,7 @@ const EmployeeDashboard = () => {
               ))}
             </div>
           ) : myAssignments.length > 0 ? (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               {myAssignments.map((workItem) => (
                 <WorkProjectCard
                   key={workItem.id}
@@ -339,7 +339,7 @@ const EmployeeDashboard = () => {
               ))}
             </div>
           ) : otherWork.length > 0 ? (
-            <div className="space-y-2">
+            <div className="flex flex-col gap-3">
               {otherWork.slice(0, 8).map((workItem) => (
                 <WorkProjectCard
                   key={workItem.id}

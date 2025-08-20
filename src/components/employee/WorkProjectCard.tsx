@@ -1,10 +1,11 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Briefcase, ClipboardList, Clock, Eye } from 'lucide-react';
+import { MapPin, Clock, BarChart } from 'lucide-react';
 import { WorkItem } from '@/hooks/useAllWorkItems';
 import { AssignmentBadge } from './AssignmentBadge';
+import { StatusDot } from './StatusDot';
+import { useWorkItemMetrics } from '@/hooks/useWorkItemMetrics';
 import { cn } from '@/lib/utils';
 
 interface WorkProjectCardProps {
@@ -24,201 +25,129 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
   variant = 'available',
   className
 }) => {
+  const { data: metrics } = useWorkItemMetrics(workItem.id, workItem.type);
+  
   const handleClockIn = () => {
     if (workItem.type === 'work_order') {
       onClockIn(workItem.id);
-    } else {
+    } else if (workItem.type === 'project') {
       onClockIn(undefined, workItem.id);
     }
   };
 
-  const getIcon = () => {
-    return workItem.type === 'project' 
-      ? <Briefcase className="h-4 w-4" />
-      : <ClipboardList className="h-4 w-4" />;
+  // Map work item status to status dot status
+  const getStatusDotStatus = () => {
+    if (workItem.isAssignedToMe) {
+      return workItem.status === 'in_progress' ? 'in_progress' : 'active';
+    }
+    if (workItem.status === 'estimate_needed') return 'pending';
+    return 'available';
   };
-
-  const getNumber = () => {
-    const prefix = workItem.type === 'project' ? 'PRJ' : 'WO';
-    return `${prefix}-${workItem.number}`;
-  };
-
-  const isAssigned = variant === 'assigned';
 
   return (
-    <Card 
-      className={cn(
-        "w-full max-w-full overflow-hidden transition-all cursor-pointer",
-        isAssigned 
-          ? "bg-gradient-to-r from-success/5 to-success/10 border-success/30 hover:shadow-md" 
-          : "opacity-90 hover:opacity-100 border-border/50 hover:border-border hover:shadow-sm",
-        className
-      )}
-      onClick={handleClockIn}
-    >
-      <CardContent className="p-3 sm:p-4">
-        {/* Mobile Layout */}
-        <div className="sm:hidden">
-          <div className="flex items-start gap-3 mb-3">
-            {/* Icon */}
-            <div className={cn(
-              "rounded-full p-2 flex-shrink-0",
-              isAssigned 
-                ? "bg-success/20 text-success" 
-                : "bg-muted text-muted-foreground"
-            )}>
-              {getIcon()}
+    <Card className={cn(
+      "relative w-full max-w-full overflow-hidden border transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 min-w-0 group",
+      "shadow-sm hover:border-primary/20",
+      variant === 'assigned' && "bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 shadow-md",
+      className
+    )}>
+      {/* Status Dot */}
+      <StatusDot 
+        status={getStatusDotStatus()}
+        className="absolute top-2 left-2 z-10"
+        size="sm"
+      />
+      
+      <CardContent className="p-3 min-w-0">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          {/* Left side - Work info */}
+          <div className="flex items-center gap-2 min-w-0 flex-1 pl-3">
+            {/* Badge container with proper constraints */}
+            <div className="flex items-center gap-1 shrink-0 max-w-[70%]">
+              <AssignmentBadge 
+                isAssignedToMe={workItem.isAssignedToMe}
+                assigneeName={workItem.assigneeName}
+                showIcon={false}
+                className="shrink-0"
+              />
+              
+              {/* Type badge - ultra compact on mobile */}
+              <div className="shrink-0">
+                {workItem.type === 'work_order' ? (
+                  <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 text-[10px] font-medium px-1 py-0.5 shrink-0">
+                    <span className="sm:hidden">W</span>
+                    <span className="hidden sm:inline">WO</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 text-[10px] font-medium px-1 py-0.5 shrink-0">
+                    <span className="sm:hidden">P</span>
+                    <span className="hidden sm:inline">PRJ</span>
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              {/* Header with badges */}
-              <div className="flex items-center gap-1 mb-2 flex-wrap max-w-[calc(100%-2rem)] min-w-0">
-                <AssignmentBadge 
-                  isAssignedToMe={workItem.isAssignedToMe} 
-                  assigneeName={workItem.assigneeName}
-                />
-                <Badge 
-                  variant={workItem.type === 'project' ? "default" : (isAssigned ? "default" : "secondary")}
-                  className={cn(
-                    "text-[10px] px-1 py-0.5 shrink-0",
-                    workItem.type === 'project' && "bg-purple-500 text-white hover:bg-purple-600"
-                  )}
-                >
-                  <span className="xs:hidden">{workItem.type === 'work_order' ? 'W' : 'P'}</span>
-                  <span className="hidden xs:inline sm:hidden">{workItem.type === 'work_order' ? 'WO' : 'PRJ'}</span>
-                  <span className="hidden sm:inline">{workItem.type === 'work_order' ? 'WO' : 'PROJECT'}</span>
-                </Badge>
+            {/* Work details - with proper truncation */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                <span className="font-medium text-foreground text-sm truncate">
+                  {workItem.number}
+                </span>
               </div>
-
-              {/* Title */}
-              <h4 className="font-semibold text-sm leading-tight mb-1 truncate">
-                {workItem.title}
-              </h4>
-
-              {/* Subtitle with number */}
               <p className="text-xs text-muted-foreground truncate">
-                {getNumber()}
-              </p>
-            </div>
-          </div>
-
-          {/* Mobile Actions Footer */}
-          <div className="flex gap-1 pt-2 border-t border-border/20">
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClockIn();
-              }}
-              disabled={isDisabled}
-              className="text-[10px] px-1.5 py-1 flex-1 min-w-0"
-              variant={isAssigned ? "default" : "outline"}
-            >
-              <Clock className="h-2.5 w-2.5 mr-0.5" />
-              <span className="truncate">In</span>
-            </Button>
-            {isAssigned && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewDetails(workItem.id);
-                }}
-                className="text-[10px] px-1.5 py-1 shrink-0"
-              >
-                <Eye className="h-2.5 w-2.5 mr-0.5" />
-                <span className="hidden xs:inline">Info</span>
-                <span className="xs:hidden">•</span>
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Desktop Layout */}
-        <div className="hidden sm:flex items-start justify-between">
-          <div className="flex items-start gap-3 flex-1">
-            {/* Icon */}
-            <div className={cn(
-              "rounded-full p-2 flex-shrink-0",
-              isAssigned 
-                ? "bg-success/20 text-success" 
-                : "bg-muted text-muted-foreground"
-            )}>
-              {getIcon()}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              {/* Header with badges */}
-              <div className="flex items-center gap-1.5 mb-1 flex-wrap max-w-[calc(100%-8rem)] min-w-0">
-                <AssignmentBadge 
-                  isAssignedToMe={workItem.isAssignedToMe} 
-                  assigneeName={workItem.assigneeName}
-                />
-                <Badge 
-                  variant={workItem.type === 'project' ? "default" : (isAssigned ? "default" : "secondary")}
-                  className={cn(
-                    "text-xs shrink-0",
-                    workItem.type === 'project' && "bg-purple-500 text-white hover:bg-purple-600"
-                  )}
-                >
-                  {workItem.type === 'work_order' ? 'WO' : 'PROJECT'}
-                </Badge>
-                <Badge 
-                  variant="success" 
-                  className="text-xs shrink-0"
-                >
-                  Active
-                </Badge>
-              </div>
-
-              {/* Title */}
-              <h4 className="font-semibold text-sm leading-tight mb-1 truncate">
                 {workItem.title}
-              </h4>
-
-              {/* Subtitle with number */}
-              <p className="text-xs text-muted-foreground mb-2 truncate">
-                {getNumber()}
               </p>
-
-              {/* Status */}
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span>{isAssigned ? 'Ready for work' : 'Available'}</span>
-              </div>
+              
+              {/* Mini metrics - show on larger screens */}
+              {metrics && (
+                <div className="hidden sm:flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                  {metrics.lastWorked && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-2.5 w-2.5" />
+                      <span className="truncate max-w-[80px]">{metrics.lastWorked}</span>
+                    </div>
+                  )}
+                  {metrics.location && (
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-2.5 w-2.5" />
+                      <span className="truncate max-w-[100px]">{metrics.location}</span>
+                    </div>
+                  )}
+                  {metrics.hoursLogged && (
+                    <div className="flex items-center gap-1">
+                      <BarChart className="h-2.5 w-2.5" />
+                      <span>{metrics.hoursLogged}h</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Desktop Actions */}
-          <div className="flex flex-col gap-2 ml-2 shrink-0 min-w-0">
+          {/* Right side - Actions */}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Clock In button */}
             <Button
               size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClockIn();
-              }}
+              onClick={handleClockIn}
               disabled={isDisabled}
-              className="text-xs px-2 py-1 min-w-[72px]"
-              variant={isAssigned ? "default" : "outline"}
+              className="h-7 px-2 text-xs shrink-0 hover:scale-105 transition-all duration-200 hover:shadow-md"
             >
               <Clock className="h-3 w-3 mr-1" />
-              <span className="truncate">{isAssigned ? 'Clock In' : 'Jump In'}</span>
+              <span className="hidden xs:inline">Clock In</span>
+              <span className="xs:hidden">In</span>
             </Button>
-            {isAssigned && (
+            
+            {/* Details button - only show if assigned */}
+            {workItem.isAssignedToMe && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewDetails(workItem.id);
-                }}
-                className="text-xs px-2 py-1 min-w-[72px]"
+                onClick={() => onViewDetails(workItem.id)}
+                className="h-7 px-2 text-xs shrink-0 hover:scale-105 transition-all duration-200 hover:shadow-sm"
               >
-                <Eye className="h-3 w-3 mr-1" />
-                <span className="truncate">Details</span>
+                <span className="hidden sm:inline">Details</span>
+                <span className="sm:hidden">?</span>
               </Button>
             )}
           </div>

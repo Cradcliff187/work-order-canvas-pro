@@ -9,6 +9,7 @@ export interface WorkItem {
   assigneeName?: string;
   isAssignedToMe: boolean;
   isCompleted: boolean;
+  status: string;
 }
 
 export function useAllWorkItems() {
@@ -157,7 +158,8 @@ export function useAllWorkItems() {
             title: wo.title,
             assigneeName,
             isAssignedToMe,
-            isCompleted
+            isCompleted,
+            status: wo.status || 'unknown'
           });
         }
       });
@@ -193,7 +195,8 @@ export function useAllWorkItems() {
             title: project.name,
             assigneeName,
             isAssignedToMe,
-            isCompleted
+            isCompleted,
+            status: project.status || 'unknown'
           });
         }
       });
