@@ -911,14 +911,16 @@ export function BillingDashboard() {
                 </Sheet>
               </div>
               
-              {/* Action Buttons Group */}
-              <div className="flex gap-2 flex-wrap lg:flex-nowrap">
-                <ViewModeSwitcher 
-                  value={viewMode} 
-                  onValueChange={setViewMode} 
-                  allowedModes={['table', 'card']} 
-                />
-              </div>
+              {/* Action Buttons Group - Hidden on mobile since mobile always uses cards */}
+              {!isMobile && (
+                <div className="flex gap-2 flex-wrap lg:flex-nowrap">
+                  <ViewModeSwitcher 
+                    value={viewMode} 
+                    onValueChange={setViewMode} 
+                    allowedModes={['table', 'card']} 
+                  />
+                </div>
+              )}
             </div>
           </div>
 
