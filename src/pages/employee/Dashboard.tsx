@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useEmployeeDashboard } from '@/hooks/useEmployeeDashboard';
 import { useClockState } from '@/hooks/useClockState';
 import { useAllWorkItems } from '@/hooks/useAllWorkItems';
@@ -28,7 +29,8 @@ import {
   Eye,
   User,
   Flame,
-  ChevronRight
+  ChevronRight,
+  CheckCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -263,12 +265,12 @@ const EmployeeDashboard = () => {
               ))}
             </div>
           ) : (
-            <Card className="bg-muted/30">
-              <CardContent className="p-4 text-center">
-                <ClipboardList className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No other work available</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={CheckCircle}
+              title="All work is assigned!"
+              description="Ask your manager if you want to help with other tasks"
+              variant="card"
+            />
           )}
         </div>
 
@@ -462,10 +464,12 @@ const EmployeeDashboard = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center text-muted-foreground py-8">
-                  <ClipboardList className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm">No other work available</p>
-                </div>
+                <EmptyState
+                  icon={CheckCircle}
+                  title="All work is assigned!"
+                  description="Ask your manager if you want to help with other tasks"
+                  variant="full"
+                />
               )}
             </CardContent>
           </Card>
