@@ -87,7 +87,7 @@ export function useAllWorkItems() {
           status,
           work_order_assignments(
             assigned_to,
-            profiles!assigned_to(
+            profiles!work_order_assignments_assigned_to_fkey(
               first_name,
               last_name
             )
@@ -109,7 +109,7 @@ export function useAllWorkItems() {
           status,
           project_assignments(
             assigned_to,
-            profiles!assigned_to(
+            profiles!project_assignments_assigned_to_fkey(
               first_name,
               last_name
             )
@@ -124,6 +124,8 @@ export function useAllWorkItems() {
       console.log('Fetched work orders:', workOrders?.length || 0);
       console.log('Fetched projects:', projects?.length || 0);
 
+      console.log('🔍 Debug: Current profile.id for comparison:', profile.id);
+
       const workItems: WorkItem[] = [];
 
       // Process work orders
@@ -135,8 +137,18 @@ export function useAllWorkItems() {
 
         // Find all assignments for this work order
         const assignments = wo.work_order_assignments || [];
+        
+        // Enhanced debug logging for assignment matching
+        console.log(`🔍 Work Order ${wo.work_order_number} assignments:`, assignments.map(a => ({
+          assigned_to: a.assigned_to,
+          profile_data: a.profiles,
+          matches_current_user: a.assigned_to === profile.id
+        })));
+        
         const myAssignment = assignments.find(a => a.assigned_to === profile.id);
         const isAssignedToMe = !!myAssignment;
+        
+        console.log(`📋 WO ${wo.work_order_number}: isAssignedToMe=${isAssignedToMe}, myAssignment:`, myAssignment);
         
         // Show work order if:
         // 1. It's assigned to me, OR
@@ -172,8 +184,18 @@ export function useAllWorkItems() {
 
         // Find all assignments for this project
         const assignments = project.project_assignments || [];
+        
+        // Enhanced debug logging for assignment matching
+        console.log(`🔍 Project ${project.project_number} assignments:`, assignments.map(a => ({
+          assigned_to: a.assigned_to,
+          profile_data: a.profiles,
+          matches_current_user: a.assigned_to === profile.id
+        })));
+        
         const myAssignment = assignments.find(a => a.assigned_to === profile.id);
         const isAssignedToMe = !!myAssignment;
+        
+        console.log(`📋 Project ${project.project_number}: isAssignedToMe=${isAssignedToMe}, myAssignment:`, myAssignment);
         
         // Show project if:
         // 1. It's assigned to me, OR
