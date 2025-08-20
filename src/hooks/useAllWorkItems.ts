@@ -16,24 +16,65 @@ export function useAllWorkItems() {
     queryKey: ['all-work-items'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('🔐 Auth User:', user?.id || 'NULL');
+      
       if (!user) {
-        console.log('No authenticated user found');
+        console.log('❌ No authenticated user found');
         return [];
       }
 
-      // Get current user's profile ID
+      // Get current user's profile ID and organization memberships
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id')
+        .select(`
+          id,
+          first_name,
+          last_name,
+          email
+        `)
         .eq('user_id', user.id)
         .single();
 
       if (profileError || !profile) {
-        console.log('Profile error or not found:', profileError);
+        console.log('❌ Profile error or not found:', profileError);
         return [];
       }
 
-      console.log('Current user profile ID:', profile.id);
+      console.log('✅ Current user profile:', {
+        id: profile.id,
+        name: `${profile.first_name} ${profile.last_name}`,
+        email: profile.email
+      });
+
+      // Get user's organization memberships  
+      const { data: orgMemberships, error: orgError } = await supabase
+        .from('organization_members')
+        .select(`
+          organization_id,
+          role,
+          organizations!inner(
+            name,
+            organization_type
+          )
+        `)
+        .eq('user_id', profile.id);
+
+      if (orgError) {
+        console.log('❌ Organization memberships error:', orgError);
+      } else {
+        console.log('🏢 User organizations:', orgMemberships?.map(om => ({
+          org: om.organizations.name,
+          type: om.organizations.organization_type,
+          role: om.role
+        })) || []);
+      }
+
+      const isInternalEmployee = orgMemberships?.some(om => 
+        om.organizations.organization_type === 'internal' && 
+        ['admin', 'manager', 'employee'].includes(om.role)
+      ) || false;
+
+      console.log('👤 Is Internal Employee:', isInternalEmployee);
 
       // Fetch ALL work orders with their assignments
       const { data: workOrders, error: woError } = await supabase
@@ -86,62 +127,92 @@ export function useAllWorkItems() {
 
       // Process work orders
       workOrders?.forEach(wo => {
+        // Skip completed work orders for clock selector
+        const completedStatuses = ['work_completed', 'completed', 'cancelled', 'closed'];
+        const isCompleted = completedStatuses.includes(wo.status);
+        if (isCompleted) return;
+
         // Find all assignments for this work order
         const assignments = wo.work_order_assignments || [];
         const myAssignment = assignments.find(a => a.assigned_to === profile.id);
         const isAssignedToMe = !!myAssignment;
         
-        // Get name of first assignee (if not assigned to me)
-        const otherAssignment = assignments.find(a => a.assigned_to !== profile.id);
-        const assigneeName = !isAssignedToMe && otherAssignment?.profiles 
-          ? `${otherAssignment.profiles.first_name} ${otherAssignment.profiles.last_name}`
-          : undefined;
+        // Show work order if:
+        // 1. It's assigned to me, OR
+        // 2. I'm internal employee and (no assignments exist OR it's available)
+        const hasNoAssignments = assignments.length === 0;
+        const shouldShow = isAssignedToMe || (isInternalEmployee && (hasNoAssignments || true));
+        
+        if (shouldShow) {
+          // Get name of first assignee (if not assigned to me)
+          const otherAssignment = assignments.find(a => a.assigned_to !== profile.id);
+          const assigneeName = !isAssignedToMe && otherAssignment?.profiles 
+            ? `${otherAssignment.profiles.first_name} ${otherAssignment.profiles.last_name}`
+            : undefined;
 
-        // Determine if work order is completed
-        const completedStatuses = ['work_completed', 'completed', 'cancelled', 'closed'];
-        const isCompleted = completedStatuses.includes(wo.status);
-
-        workItems.push({
-          id: wo.id,
-          type: 'work_order',
-          number: wo.work_order_number,
-          title: wo.title,
-          assigneeName,
-          isAssignedToMe,
-          isCompleted
-        });
+          workItems.push({
+            id: wo.id,
+            type: 'work_order',
+            number: wo.work_order_number,
+            title: wo.title,
+            assigneeName,
+            isAssignedToMe,
+            isCompleted
+          });
+        }
       });
 
-      // Process projects
+      // Process projects  
       projects?.forEach(project => {
+        // Skip completed projects for clock selector
+        const isCompleted = project.status === 'completed';
+        if (isCompleted) return;
+
         // Find all assignments for this project
         const assignments = project.project_assignments || [];
         const myAssignment = assignments.find(a => a.assigned_to === profile.id);
         const isAssignedToMe = !!myAssignment;
         
-        // Get name of first assignee (if not assigned to me)
-        const otherAssignment = assignments.find(a => a.assigned_to !== profile.id);
-        const assigneeName = !isAssignedToMe && otherAssignment?.profiles 
-          ? `${otherAssignment.profiles.first_name} ${otherAssignment.profiles.last_name}`
-          : undefined;
+        // Show project if:
+        // 1. It's assigned to me, OR
+        // 2. I'm internal employee and (no assignments exist OR it's available)
+        const hasNoAssignments = assignments.length === 0;
+        const shouldShow = isAssignedToMe || (isInternalEmployee && (hasNoAssignments || true));
+        
+        if (shouldShow) {
+          // Get name of first assignee (if not assigned to me)
+          const otherAssignment = assignments.find(a => a.assigned_to !== profile.id);
+          const assigneeName = !isAssignedToMe && otherAssignment?.profiles 
+            ? `${otherAssignment.profiles.first_name} ${otherAssignment.profiles.last_name}`
+            : undefined;
 
-        // Projects with status 'completed' are considered completed
-        const isCompleted = project.status === 'completed';
-
-        workItems.push({
-          id: project.id,
-          type: 'project',
-          number: project.project_number,
-          title: project.name,
-          assigneeName,
-          isAssignedToMe,
-          isCompleted
-        });
+          workItems.push({
+            id: project.id,
+            type: 'project',
+            number: project.project_number,
+            title: project.name,
+            assigneeName,
+            isAssignedToMe,
+            isCompleted
+          });
+        }
       });
 
-      console.log('Total work items processed:', workItems.length);
-      console.log('My assignments:', workItems.filter(item => item.isAssignedToMe).length);
-      console.log('Other work:', workItems.filter(item => !item.isAssignedToMe).length);
+      console.log('📊 Work Items Summary:');
+      console.log('  • Total work items processed:', workItems.length);
+      console.log('  • My assignments:', workItems.filter(item => item.isAssignedToMe).length);
+      console.log('  • Available work:', workItems.filter(item => !item.isAssignedToMe).length);
+      console.log('  • Projects in results:', workItems.filter(item => item.type === 'project').length);
+      console.log('  • Work orders in results:', workItems.filter(item => item.type === 'work_order').length);
+      
+      // Log specific work items for debugging
+      console.log('🔍 Work Items Detail:', workItems.map(item => ({
+        type: item.type,
+        number: item.number,
+        title: item.title,
+        isAssignedToMe: item.isAssignedToMe,
+        assigneeName: item.assigneeName
+      })));
 
       return workItems;
     },
