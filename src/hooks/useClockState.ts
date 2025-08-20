@@ -13,6 +13,9 @@ interface ClockStateData {
   clock_in_time: string;
   work_order_id: string;
   project_id?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  location_address?: string | null;
 }
 
 interface LocationData {
@@ -39,6 +42,9 @@ export interface ClockState {
   elapsedTime: number; // in milliseconds
   workOrderId: string | null;
   projectId?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  locationAddress?: string | null;
 }
 
 export const useClockState = () => {
@@ -60,7 +66,7 @@ export const useClockState = () => {
 
       const { data, error } = await supabase
         .from('employee_reports')
-        .select('id, clock_in_time, clock_out_time, work_order_id, project_id')
+        .select('id, clock_in_time, clock_out_time, work_order_id, project_id, location_lat, location_lng, location_address')
         .eq('employee_user_id', profile.id)
         .not('clock_in_time', 'is', null)
         .is('clock_out_time', null)
@@ -76,7 +82,10 @@ export const useClockState = () => {
         id: data.id,
         clock_in_time: data.clock_in_time,
         work_order_id: data.work_order_id,
-        project_id: data.project_id
+        project_id: data.project_id,
+        location_lat: data.location_lat,
+        location_lng: data.location_lng,
+        location_address: data.location_address
       };
     },
     enabled: !!profile?.id,
@@ -114,7 +123,10 @@ export const useClockState = () => {
     clockInTime: clockData?.clock_in_time ? new Date(clockData.clock_in_time) : null,
     elapsedTime,
     workOrderId: clockData?.work_order_id || null,
-    projectId: clockData?.project_id || null
+    projectId: clockData?.project_id || null,
+    locationLat: clockData?.location_lat || null,
+    locationLng: clockData?.location_lng || null,
+    locationAddress: clockData?.location_address || null
   };
 
   // Clock in mutation

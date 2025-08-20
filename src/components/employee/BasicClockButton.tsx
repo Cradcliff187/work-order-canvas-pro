@@ -1,8 +1,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Loader2 } from 'lucide-react';
+import { Clock, Loader2, MapPin } from 'lucide-react';
 import { useClockState } from '@/hooks/useClockState';
+import { useLocation } from '@/hooks/useLocation';
 import { cn } from '@/lib/utils';
 
 interface BasicClockButtonProps {
@@ -26,7 +27,26 @@ const formatElapsedTime = (milliseconds: number): string => {
 };
 
 export function BasicClockButton({ onClick, loading = false, className }: BasicClockButtonProps) {
-  const { isClocked, elapsedTime } = useClockState();
+  const { isClocked, elapsedTime, locationLat, locationLng } = useClockState();
+  const { calculateDistance } = useLocation();
+
+  // Calculate distance from work site (using mock coordinates for now)
+  const getDistanceFromSite = (): string | null => {
+    if (!locationLat || !locationLng) return null;
+    
+    // Mock work site coordinates - can be enhanced to use actual work order location
+    const workSiteLat = 40.7128; // Example: NYC coordinates
+    const workSiteLng = -74.0060;
+    
+    try {
+      const distance = calculateDistance(locationLat, locationLng, workSiteLat, workSiteLng);
+      return `${distance.toFixed(1)} mi from site`;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const distanceText = getDistanceFromSite();
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -56,13 +76,23 @@ export function BasicClockButton({ onClick, loading = false, className }: BasicC
       </Button>
       
       {isClocked && elapsedTime > 0 && (
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
           <Badge 
             variant="outline" 
             className="text-sm font-medium px-3 py-1 bg-background/80 backdrop-blur-sm"
           >
             {formatElapsedTime(elapsedTime)}
           </Badge>
+          
+          {distanceText && (
+            <Badge 
+              variant="outline" 
+              className="text-xs font-medium px-2 py-1 bg-background/60 backdrop-blur-sm text-muted-foreground"
+            >
+              <MapPin className="h-3 w-3 mr-1" />
+              {distanceText}
+            </Badge>
+          )}
         </div>
       )}
     </div>
