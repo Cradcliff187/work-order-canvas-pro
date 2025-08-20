@@ -873,15 +873,6 @@ export function BillingDashboard() {
         </TabsContent>
 
         <TabsContent value="pipeline" className="space-y-6">
-          {/* Header */}
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold">Partner Billing Pipeline</h2>
-              <Badge variant="secondary" className="text-xs">
-                {filteredPipelineData.length} Work Order{filteredPipelineData.length !== 1 ? 's' : ''}
-              </Badge>
-            </div>
-          </div>
 
           {/* Top Control Bar */}
           <div className="space-y-4">
