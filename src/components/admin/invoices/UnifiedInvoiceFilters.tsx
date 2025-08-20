@@ -9,17 +9,12 @@ export interface InvoiceFiltersValue {
   search?: string;
   overdue?: boolean;
   invoice_status?: string[];
-  payment_status?: string[];
   partner_organization_id?: string;
   location_filter?: string[];
   subcontractor_organization_id?: string;
   operational_status?: string[];
   report_status?: string[];
   partner_billing_status?: string[];
-  amount_range?: {
-    min?: number;
-    max?: number;
-  };
 }
 
 interface UnifiedInvoiceFiltersProps {
@@ -37,12 +32,6 @@ const INVOICE_STATUSES = [
   { value: 'rejected', label: 'Rejected' }
 ];
 
-const PAYMENT_STATUSES = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'cancelled', label: 'Cancelled' }
-];
 
 const OPERATIONAL_STATUS_OPTIONS = [
   { value: 'new', label: 'New Orders' },
@@ -77,8 +66,6 @@ export function UnifiedInvoiceFilters({
   const { data: subcontractorOrganizations = [] } = useSubcontractorOrganizations();
   const { data: partnerLocations = [] } = usePartnerLocations(filters.partner_organization_id);
   
-  const [minAmount, setMinAmount] = useState(filters.amount_range?.min?.toString() || '');
-  const [maxAmount, setMaxAmount] = useState(filters.amount_range?.max?.toString() || '');
   const [locationTextInput, setLocationTextInput] = useState('');
 
   // Create organization options
@@ -119,44 +106,6 @@ export function UnifiedInvoiceFilters({
     });
   };
 
-  const handleAmountRangeUpdate = (min: string, max: string) => {
-    const minValue = min ? parseFloat(min) : undefined;
-    const maxValue = max ? parseFloat(max) : undefined;
-    
-    if (minValue || maxValue) {
-      onFiltersChange({
-        ...filters,
-        amount_range: {
-          min: minValue,
-          max: maxValue
-        }
-      });
-    } else {
-      onFiltersChange({
-        ...filters,
-        amount_range: undefined
-      });
-    }
-  };
-
-  const handleMinAmountChange = (value: string) => {
-    setMinAmount(value);
-    handleAmountRangeUpdate(value, maxAmount);
-  };
-
-  const handleMaxAmountChange = (value: string) => {
-    setMaxAmount(value);
-    handleAmountRangeUpdate(minAmount, value);
-  };
-
-  const clearAmountRange = () => {
-    setMinAmount('');
-    setMaxAmount('');
-    onFiltersChange({
-      ...filters,
-      amount_range: undefined
-    });
-  };
 
   const handleLocationTextSubmit = () => {
     if (locationTextInput.trim()) {
@@ -202,21 +151,6 @@ export function UnifiedInvoiceFilters({
         </select>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Payment Status</label>
-        <select 
-          className="w-full p-2 border rounded-md bg-background"
-          value={filters.payment_status?.[0] || ''}
-          onChange={(e) => handleSingleSelectChange('payment_status', e.target.value)}
-        >
-          <option value="">All Payment Statuses</option>
-          {PAYMENT_STATUSES.map(status => (
-            <option key={status.value} value={status.value}>
-              {status.label}
-            </option>
-          ))}
-        </select>
-      </div>
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Partner Organization</label>
@@ -348,36 +282,6 @@ export function UnifiedInvoiceFilters({
         </select>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Amount Range</label>
-        <div className="flex gap-2">
-          <Input
-            type="number"
-            placeholder="Min amount"
-            value={minAmount}
-            onChange={(e) => handleMinAmountChange(e.target.value)}
-            className="flex-1"
-          />
-          <Input
-            type="number"
-            placeholder="Max amount"
-            value={maxAmount}
-            onChange={(e) => handleMaxAmountChange(e.target.value)}
-            className="flex-1"
-          />
-        </div>
-        
-        {(filters.amount_range?.min || filters.amount_range?.max) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearAmountRange}
-            className="w-full"
-          >
-            Clear amount range
-          </Button>
-        )}
-      </div>
     </div>
   );
 
