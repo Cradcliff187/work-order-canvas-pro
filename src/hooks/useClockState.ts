@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useLocation } from '@/hooks/useLocation';
 import type { Database } from '@/integrations/supabase/types';
 
 type EmployeeReport = Database['public']['Tables']['employee_reports']['Row'];
@@ -12,6 +13,23 @@ interface ClockStateData {
   clock_in_time: string;
   work_order_id: string;
   project_id?: string | null;
+}
+
+interface LocationData {
+  location_lat: number;
+  location_lng: number;
+  location_address: string;
+}
+
+interface ClockOutLocationData {
+  clock_out_location_lat: number;
+  clock_out_location_lng: number;
+  clock_out_location_address: string;
+}
+
+interface ClockOutResult {
+  locationData: ClockOutLocationData | {};
+  hoursWorked: number;
 }
 
 export interface ClockState {
@@ -28,6 +46,7 @@ export const useClockState = () => {
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { getCurrentLocation, getAddressFromLocation } = useLocation();
 
   const {
     data: clockData,
@@ -103,6 +122,24 @@ export const useClockState = () => {
     mutationFn: async () => {
       if (!profile?.id) throw new Error('No profile found');
 
+      // Capture GPS location
+      let locationData = null;
+      try {
+        const location = await getCurrentLocation();
+        if (location) {
+          const address = await getAddressFromLocation(location);
+          locationData = {
+            location_lat: location.latitude,
+            location_lng: location.longitude,
+            location_address: address?.street ? 
+              `${address.street}, ${address.city}, ${address.state} ${address.zipCode}` : 
+              'Location captured'
+          };
+        }
+      } catch (error) {
+        console.warn('Failed to capture location for clock in:', error);
+      }
+
       // Get the most recent work order assignment
       const { data: assignment, error: assignmentError } = await supabase
         .from('work_order_assignments')
@@ -125,7 +162,7 @@ export const useClockState = () => {
       if (profileError) throw profileError;
       if (!userProfile?.hourly_cost_rate) throw new Error('Hourly rate not set. Please contact administration.');
 
-      // Create employee report with clock in time
+      // Create employee report with clock in time and location
       const { error: reportError } = await supabase
         .from('employee_reports')
         .insert({
@@ -136,15 +173,20 @@ export const useClockState = () => {
           hourly_rate_snapshot: userProfile.hourly_cost_rate,
           hours_worked: 0,
           work_performed: '',
+          ...locationData
         });
 
       if (reportError) throw reportError;
+      
+      return locationData;
     },
-    onSuccess: () => {
+    onSuccess: (locationData) => {
       queryClient.invalidateQueries({ queryKey: ['employee-clock-state'] });
+      const locationText = locationData?.location_address ? 
+        ` at ${locationData.location_address}` : '';
       toast({
         title: 'Clocked In',
-        description: 'Successfully clocked in to your work assignment.',
+        description: `Successfully clocked in to your work assignment${locationText}.`,
       });
     },
     onError: (error) => {
@@ -162,27 +204,52 @@ export const useClockState = () => {
       if (!clockData?.id) throw new Error('No active clock session found');
       if (!clockData?.clock_in_time) throw new Error('Invalid clock in time');
 
+      // Capture GPS location for clock out
+      let locationData = {};
+      try {
+        const location = await getCurrentLocation();
+        if (location) {
+          const address = await getAddressFromLocation(location);
+          locationData = {
+            clock_out_location_lat: location.latitude,
+            clock_out_location_lng: location.longitude,
+            clock_out_location_address: address?.street ? 
+              `${address.street}, ${address.city}, ${address.state} ${address.zipCode}` : 
+              'Location captured'
+          };
+        }
+      } catch (error) {
+        console.warn('Failed to capture location for clock out:', error);
+      }
+
       const clockOutTime = new Date();
       const clockInTime = new Date(clockData.clock_in_time);
       const hoursWorked = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
 
-      // Update employee report with clock out time and hours worked
+      // Update employee report with clock out time, hours worked, and location
       const { error: updateError } = await supabase
         .from('employee_reports')
         .update({
           clock_out_time: clockOutTime.toISOString(),
           hours_worked: Math.round(hoursWorked * 100) / 100, // Round to 2 decimal places
+          ...locationData
         })
         .eq('id', clockData.id);
 
       if (updateError) throw updateError;
+      
+      return { locationData, hoursWorked };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['employee-clock-state'] });
       queryClient.invalidateQueries({ queryKey: ['employee-time-reports'] });
+      const hasLocationAddress = result?.locationData && 'clock_out_location_address' in result.locationData;
+      const locationText = hasLocationAddress ? 
+        ` at ${(result.locationData as ClockOutLocationData).clock_out_location_address}` : '';
+      const hours = Math.round((result?.hoursWorked || 0) * 100) / 100;
       toast({
         title: 'Clocked Out',
-        description: 'Successfully clocked out and time recorded.',
+        description: `Successfully clocked out${locationText}. Time worked: ${hours} hours.`,
       });
     },
     onError: (error) => {
