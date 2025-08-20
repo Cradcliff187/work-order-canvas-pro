@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import {
@@ -57,6 +58,7 @@ export function WorkOrderPipelineTable({
   columns: columnOptions = []
 }: WorkOrderPipelineTableProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Helper function to get partner billing status based on workflow
   const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
@@ -324,7 +326,7 @@ export function WorkOrderPipelineTable({
                 disabled={isLoading || data.length === 0} 
               />
             )}
-            {onToggleColumn && onResetColumns && (
+            {!isMobile && onToggleColumn && onResetColumns && (
               <ColumnVisibilityDropdown
                 columns={columnOptions}
                 onToggleColumn={onToggleColumn}
