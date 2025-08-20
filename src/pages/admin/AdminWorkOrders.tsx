@@ -297,6 +297,14 @@ export default function AdminWorkOrders() {
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
+  const handleSearchClear = () => {
+    try {
+      localStorage.removeItem('admin-workorders-search-v1');
+    } catch {}
+    setSearchTerm('');
+    setPagination(prev => ({ ...prev, pageIndex: 0 }));
+  };
+
 
   const handleExportAll = async (format: 'csv' | 'excel') => {
     try {
@@ -421,6 +429,8 @@ export default function AdminWorkOrders() {
             placeholder="Search WO#, title, or location..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onClear={handleSearchClear}
+            showClearButton={true}
             className="flex-1"
           />
           <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
@@ -464,6 +474,8 @@ export default function AdminWorkOrders() {
           placeholder="Search WO#, title, or location..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          onClear={handleSearchClear}
+          showClearButton={true}
           className="w-full"
         />
         <div className="flex gap-2">

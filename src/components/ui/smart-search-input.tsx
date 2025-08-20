@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 
 import { cn } from "@/lib/utils"
-import { Clock, ClipboardList, Users, MapPin } from "lucide-react"
+import { Clock, ClipboardList, Users, MapPin, X } from "lucide-react"
 
 // Types
 export type SmartSearchCategory = "recent" | "work_order" | "assignee" | "location"
@@ -24,6 +24,8 @@ interface SmartSearchInputProps extends Omit<React.InputHTMLAttributes<HTMLInput
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   onSearchSubmit?: (query: string) => void
   onSelectSuggestion?: (item: SuggestionItem) => void
+  onClear?: () => void
+  showClearButton?: boolean
   workOrders?: SuggestionSourceItem[]
   assignees?: SuggestionSourceItem[]
   locations?: SuggestionSourceItem[]
@@ -87,6 +89,8 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
   onChange,
   onSearchSubmit,
   onSelectSuggestion,
+  onClear,
+  showClearButton = false,
   workOrders = [],
   assignees = [],
   locations = [],
@@ -227,52 +231,63 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
   }, [open])
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={false}>
-      <PopoverAnchor asChild>
-        <Input
-          ref={(el) => {
-            triggerRef.current = el
-          }}
-          role="combobox"
-          aria-expanded={open}
-          aria-autocomplete="list"
-          autoComplete="off"
-          value={value}
-          onChange={(e) => {
-            onChange(e)
-            if (!open) setOpen(true)
-          }}
-          onFocus={(e) => {
-            setOpen(true)
-            onFocus?.(e)
-          }}
-          onBlur={(e) => {
-            onBlur?.(e)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              if (activeIndex >= 0 && activeIndex < flatList.length) {
-                handleSelect(flatList[activeIndex])
-              } else if (value?.trim()) {
-                handleSubmit(value.trim())
-              }
-            } else if (e.key === 'ArrowDown') {
-              e.preventDefault()
-              setActiveIndex((idx) => (flatList.length ? (idx + 1) % flatList.length : -1))
+    <div className="relative">
+      <Popover open={open} onOpenChange={setOpen} modal={false}>
+        <PopoverAnchor asChild>
+          <Input
+            ref={(el) => {
+              triggerRef.current = el
+            }}
+            role="combobox"
+            aria-expanded={open}
+            aria-autocomplete="list"
+            autoComplete="off"
+            value={value}
+            onChange={(e) => {
+              onChange(e)
               if (!open) setOpen(true)
-            } else if (e.key === 'ArrowUp') {
-              e.preventDefault()
-              setActiveIndex((idx) => (flatList.length ? (idx - 1 + flatList.length) % flatList.length : -1))
-            } else if (e.key === 'Escape') {
-              e.preventDefault()
-              setOpen(false)
-            }
-          }}
-          className={className}
-          {...rest}
-        />
-      </PopoverAnchor>
+            }}
+            onFocus={(e) => {
+              setOpen(true)
+              onFocus?.(e)
+            }}
+            onBlur={(e) => {
+              onBlur?.(e)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                if (activeIndex >= 0 && activeIndex < flatList.length) {
+                  handleSelect(flatList[activeIndex])
+                } else if (value?.trim()) {
+                  handleSubmit(value.trim())
+                }
+              } else if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                setActiveIndex((idx) => (flatList.length ? (idx + 1) % flatList.length : -1))
+                if (!open) setOpen(true)
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                setActiveIndex((idx) => (flatList.length ? (idx - 1 + flatList.length) % flatList.length : -1))
+              } else if (e.key === 'Escape') {
+                e.preventDefault()
+                setOpen(false)
+              }
+            }}
+            className={cn(showClearButton && value && "pr-10", className)}
+            {...rest}
+          />
+        </PopoverAnchor>
+        {showClearButton && value && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground h-4 w-4 flex items-center justify-center z-10"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       <PopoverContent align="start" sideOffset={6} className="p-0 w-[28rem] max-w-[90vw] z-50" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()} onFocusOutside={(e) => { const target = e.target as HTMLElement; if (triggerRef.current && (target === triggerRef.current || triggerRef.current.contains(target))) { e.preventDefault(); } }} onPointerDownOutside={(e) => {
         const target = e.target as HTMLElement
         if (triggerRef.current && (target === triggerRef.current || triggerRef.current.contains(target))) {
@@ -339,8 +354,9 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
             )}
           </div>
         )}
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }
 
