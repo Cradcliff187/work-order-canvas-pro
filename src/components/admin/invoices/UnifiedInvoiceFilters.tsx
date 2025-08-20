@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useOrganizations } from '@/hooks/useOrganizations';
-import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 
 export interface InvoiceFiltersValue {
@@ -11,10 +10,10 @@ export interface InvoiceFiltersValue {
   invoice_status?: string[];
   partner_organization_id?: string;
   location_filter?: string[];
-  subcontractor_organization_id?: string;
-  operational_status?: string[];
-  report_status?: string[];
-  partner_billing_status?: string[];
+  amount_range?: {
+    min?: number;
+    max?: number;
+  };
 }
 
 interface UnifiedInvoiceFiltersProps {
@@ -33,29 +32,6 @@ const INVOICE_STATUSES = [
 ];
 
 
-const OPERATIONAL_STATUS_OPTIONS = [
-  { value: 'new', label: 'New Orders' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'reports_pending', label: 'Reports Pending Review' },
-  { value: 'complete', label: 'Completed' }
-];
-
-const REPORT_STATUS_OPTIONS = [
-  { value: 'not_submitted', label: 'Not Submitted' },
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'reviewed', label: 'Under Review' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Needs Revision' }
-];
-
-const PARTNER_BILLING_STATUS_OPTIONS = [
-  { value: 'report_pending', label: 'Report Pending' },
-  { value: 'invoice_needed', label: 'Subcontractor Invoice Needed' },
-  { value: 'invoice_pending', label: 'Invoice Pending Approval' },
-  { value: 'ready_to_bill', label: 'Ready to Bill Partner' },
-  { value: 'billed', label: 'Partner Billed' }
-];
 
 export function UnifiedInvoiceFilters({
   filters,
@@ -63,9 +39,10 @@ export function UnifiedInvoiceFilters({
   onClear
 }: UnifiedInvoiceFiltersProps) {
   const { data: organizations = [] } = useOrganizations();
-  const { data: subcontractorOrganizations = [] } = useSubcontractorOrganizations();
   const { data: partnerLocations = [] } = usePartnerLocations(filters.partner_organization_id);
   
+  const [minAmount, setMinAmount] = useState(filters.amount_range?.min?.toString() || '');
+  const [maxAmount, setMaxAmount] = useState(filters.amount_range?.max?.toString() || '');
   const [locationTextInput, setLocationTextInput] = useState('');
 
   // Create organization options
@@ -75,12 +52,6 @@ export function UnifiedInvoiceFilters({
       .map(org => ({ value: org.id, label: org.name }));
   }, [organizations]);
 
-  const subcontractorOptions = useMemo(() => {
-    return subcontractorOrganizations.map(org => ({ 
-      value: org.id, 
-      label: org.name 
-    }));
-  }, [subcontractorOrganizations]);
 
   // Create location options
   const locationOptions = useMemo(() => {
@@ -104,6 +75,36 @@ export function UnifiedInvoiceFilters({
       ...filters,
       [key]: value
     });
+  };
+
+  const handleAmountRangeUpdate = (min: string, max: string) => {
+    const minValue = min ? parseFloat(min) : undefined;
+    const maxValue = max ? parseFloat(max) : undefined;
+    
+    if (minValue || maxValue) {
+      onFiltersChange({
+        ...filters,
+        amount_range: {
+          min: minValue,
+          max: maxValue
+        }
+      });
+    } else {
+      onFiltersChange({
+        ...filters,
+        amount_range: undefined
+      });
+    }
+  };
+
+  const handleMinAmountChange = (value: string) => {
+    setMinAmount(value);
+    handleAmountRangeUpdate(value, maxAmount);
+  };
+
+  const handleMaxAmountChange = (value: string) => {
+    setMaxAmount(value);
+    handleAmountRangeUpdate(minAmount, value);
   };
 
 
@@ -219,67 +220,41 @@ export function UnifiedInvoiceFilters({
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Subcontractor Organization</label>
-        <select 
-          className="w-full p-2 border rounded-md bg-background"
-          value={filters.subcontractor_organization_id || ''}
-          onChange={(e) => handleSingleValueChange('subcontractor_organization_id', e.target.value || undefined)}
-        >
-          <option value="">All Subcontractors</option>
-          {subcontractorOptions.map(org => (
-            <option key={org.value} value={org.value}>
-              {org.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Operational Status</label>
-        <select 
-          className="w-full p-2 border rounded-md bg-background"
-          value={filters.operational_status?.[0] || ''}
-          onChange={(e) => handleSingleSelectChange('operational_status', e.target.value)}
-        >
-          <option value="">All Work Statuses</option>
-          {OPERATIONAL_STATUS_OPTIONS.map(status => (
-            <option key={status.value} value={status.value}>
-              {status.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Report Status</label>
-        <select 
-          className="w-full p-2 border rounded-md bg-background"
-          value={filters.report_status?.[0] || ''}
-          onChange={(e) => handleSingleSelectChange('report_status', e.target.value)}
-        >
-          <option value="">All Report Statuses</option>
-          {REPORT_STATUS_OPTIONS.map(status => (
-            <option key={status.value} value={status.value}>
-              {status.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Partner Billing Status</label>
-        <select 
-          className="w-full p-2 border rounded-md bg-background"
-          value={filters.partner_billing_status?.[0] || ''}
-          onChange={(e) => handleSingleSelectChange('partner_billing_status', e.target.value)}
-        >
-          <option value="">All Billing Statuses</option>
-          {PARTNER_BILLING_STATUS_OPTIONS.map(status => (
-            <option key={status.value} value={status.value}>
-              {status.label}
-            </option>
-          ))}
-        </select>
+        <label className="text-sm font-medium">Amount Range</label>
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            placeholder="Min amount"
+            value={minAmount}
+            onChange={(e) => handleMinAmountChange(e.target.value)}
+            className="flex-1"
+          />
+          <Input
+            type="number"
+            placeholder="Max amount"
+            value={maxAmount}
+            onChange={(e) => handleMaxAmountChange(e.target.value)}
+            className="flex-1"
+          />
+        </div>
+        
+        {(filters.amount_range?.min || filters.amount_range?.max) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setMinAmount('');
+              setMaxAmount('');
+              onFiltersChange({
+                ...filters,
+                amount_range: undefined
+              });
+            }}
+            className="w-full"
+          >
+            Clear amount range
+          </Button>
+        )}
       </div>
 
     </div>
