@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { UnifiedUserFilters } from '@/components/admin/users/UnifiedUserFilters';
 
 import {
   useReactTable,
@@ -341,143 +342,32 @@ export default function AdminUsers() {
       <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
         <SheetContent side="bottom" className="h-[85vh]">
           <SheetHeader>
-            <SheetTitle>User Filters</SheetTitle>
+            <SheetTitle>Filter Users</SheetTitle>
           </SheetHeader>
-          <div className="mt-6 space-y-4 overflow-y-auto">
-            <div className="space-y-2">
-              <Label htmlFor="mobile-role">Role</Label>
-              <Select
-                value={filters.roleFilter ? filters.roleFilter : 'all'}
-                onValueChange={(v) => setFilters((prev) => ({ ...prev, roleFilter: v === 'all' ? '' : v }))}
-              >
-                <SelectTrigger id="mobile-role">
-                  <SelectValue placeholder="All roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="employee">Employee</SelectItem>
-                  <SelectItem value="member">Member</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mobile-status">Status</Label>
-              <Select
-                value={filters.status ? filters.status : 'all'}
-                onValueChange={(v) => setFilters((prev) => ({ ...prev, status: v === 'all' ? '' : v }))}
-              >
-                <SelectTrigger id="mobile-status">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mobile-organization">Organization</Label>
-              <OrganizationSelector
-                value={filters.organizationId || undefined}
-                onChange={(v) => setFilters((prev) => ({ ...prev, organizationId: v || '' }))}
-                placeholder="All organizations"
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Organization Type</Label>
-              <MultiSelectFilter
-                options={[
-                  { value: 'internal', label: 'Internal' },
-                  { value: 'partner', label: 'Partner' },
-                  { value: 'subcontractor', label: 'Subcontractor' },
-                ]}
-                selectedValues={filters.organizationType || []}
-                onSelectionChange={(vals) => setFilters((prev) => ({ ...prev, organizationType: vals }))}
-                placeholder="All organization types"
-              />
-            </div>
-            {filterCount > 0 && (
-              <Button variant="outline" onClick={clearFilters} className="w-full">
-                Clear All Filters
-              </Button>
-            )}
-            <Button onClick={() => setIsMobileFilterOpen(false)} className="w-full">
-              Apply Filters
-            </Button>
+          <div className="mt-6 overflow-y-auto">
+            <UnifiedUserFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              onClear={clearFilters}
+              filterCount={filterCount}
+            />
           </div>
         </SheetContent>
       </Sheet>
 
       {/* Desktop Right Sidebar */}
       <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-[420px]">
+        <SheetContent side="right" className="w-80">
           <SheetHeader>
-            <SheetTitle>User Filters</SheetTitle>
+            <SheetTitle>Filter Users</SheetTitle>
           </SheetHeader>
-          <div className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="desktop-role">Role</Label>
-              <Select
-                value={filters.roleFilter ? filters.roleFilter : 'all'}
-                onValueChange={(v) => setFilters((prev) => ({ ...prev, roleFilter: v === 'all' ? '' : v }))}
-              >
-                <SelectTrigger id="desktop-role">
-                  <SelectValue placeholder="All roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="employee">Employee</SelectItem>
-                  <SelectItem value="member">Member</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="desktop-status">Status</Label>
-              <Select
-                value={filters.status ? filters.status : 'all'}
-                onValueChange={(v) => setFilters((prev) => ({ ...prev, status: v === 'all' ? '' : v }))}
-              >
-                <SelectTrigger id="desktop-status">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="desktop-organization">Organization</Label>
-              <OrganizationSelector
-                value={filters.organizationId || undefined}
-                onChange={(v) => setFilters((prev) => ({ ...prev, organizationId: v || '' }))}
-                placeholder="All organizations"
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Organization Type</Label>
-              <MultiSelectFilter
-                options={[
-                  { value: 'internal', label: 'Internal' },
-                  { value: 'partner', label: 'Partner' },
-                  { value: 'subcontractor', label: 'Subcontractor' },
-                ]}
-                selectedValues={filters.organizationType || []}
-                onSelectionChange={(vals) => setFilters((prev) => ({ ...prev, organizationType: vals }))}
-                placeholder="All organization types"
-              />
-            </div>
-            {filterCount > 0 && (
-              <Button variant="outline" onClick={clearFilters} className="w-full">
-                Clear All Filters
-              </Button>
-            )}
+          <div className="mt-6 overflow-y-auto">
+            <UnifiedUserFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              onClear={clearFilters}
+              filterCount={filterCount}
+            />
           </div>
         </SheetContent>
       </Sheet>

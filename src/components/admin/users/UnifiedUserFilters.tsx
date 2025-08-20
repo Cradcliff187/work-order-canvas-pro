@@ -1,15 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
-import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
-import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import React from 'react';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { useOrganizations } from '@/hooks/useOrganizations';
 
 export interface UserFiltersValue {
   search?: string;
-  role?: string[];
-  status?: string[];
-  organization_id?: string;
+  roleFilter?: string;
+  status?: string;
+  organizationId?: string;
+  organizationType?: string[];
 }
 
 interface UnifiedUserFiltersProps {
@@ -27,9 +25,13 @@ const USER_ROLES = [
 
 const USER_STATUSES = [
   { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'suspended', label: 'Suspended' }
+  { value: 'inactive', label: 'Inactive' }
+];
+
+const ORGANIZATION_TYPES = [
+  { value: 'internal', label: 'Internal' },
+  { value: 'partner', label: 'Partner' },
+  { value: 'subcontractor', label: 'Subcontractor' }
 ];
 
 export function UnifiedUserFilters({
@@ -40,9 +42,20 @@ export function UnifiedUserFilters({
 }: UnifiedUserFiltersProps) {
   const { data: organizations = [] } = useOrganizations();
 
-  // filterCount is now passed as prop from parent component
+  // Prepare organization options
+  const organizationOptions = organizations?.map(org => ({
+    value: org.id,
+    label: org.name
+  })) || [];
 
   // Filter change handlers
+  const handleSingleFilterChange = (key: keyof UserFiltersValue, value: string) => {
+    onFiltersChange({
+      ...filters,
+      [key]: value || undefined
+    });
+  };
+
   const handleArrayFilterChange = (key: keyof UserFiltersValue, values: string[]) => {
     onFiltersChange({
       ...filters,
@@ -50,82 +63,92 @@ export function UnifiedUserFilters({
     });
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const search = e.target.value;
-    onFiltersChange({
-      ...filters,
-      search: search || undefined
-    });
-  };
-
   const handleOrganizationChange = (organizationId: string | undefined) => {
     onFiltersChange({
       ...filters,
-      organization_id: organizationId
+      organizationId: organizationId || undefined
     });
   };
 
-  // Search slot
-  const searchSlot = (
-    <SmartSearchInput
-      value={filters.search || ''}
-      onChange={handleSearchChange}
-      placeholder="Search users..."
-      storageKey="admin-users-search"
-      className="flex-1"
-    />
-  );
-
   // Essential filters
   const essentialFilters = (
-    <div className="flex flex-col gap-4">
+    <>
       <div className="space-y-2">
         <label className="text-sm font-medium">Role</label>
-        <MultiSelectFilter
-          options={USER_ROLES}
-          selectedValues={filters.role || []}
-          onSelectionChange={(values) => handleArrayFilterChange('role', values)}
-          placeholder="All roles"
-        />
+        <select 
+          className="w-full p-2 border rounded-md bg-background"
+          value={filters.roleFilter || ''}
+          onChange={(e) => handleSingleFilterChange('roleFilter', e.target.value)}
+        >
+          <option value="">All roles</option>
+          {USER_ROLES.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
-      
+
       <div className="space-y-2">
         <label className="text-sm font-medium">Status</label>
-        <MultiSelectFilter
-          options={USER_STATUSES}
-          selectedValues={filters.status || []}
-          onSelectionChange={(values) => handleArrayFilterChange('status', values)}
-          placeholder="All statuses"
-        />
+        <select 
+          className="w-full p-2 border rounded-md bg-background"
+          value={filters.status || ''}
+          onChange={(e) => handleSingleFilterChange('status', e.target.value)}
+        >
+          <option value="">All statuses</option>
+          {USER_STATUSES.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
-    </div>
+    </>
   );
 
   // Advanced filters
   const advancedFilters = (
-    <div className="flex flex-col gap-4">
+    <>
       <div className="space-y-2">
         <label className="text-sm font-medium">Organization</label>
-        <OrganizationSelector
-          value={filters.organization_id}
-          onChange={handleOrganizationChange}
-          placeholder="All organizations"
-          className="w-full"
-        />
+        <select 
+          className="w-full p-2 border rounded-md bg-background"
+          value={filters.organizationId || ''}
+          onChange={(e) => handleOrganizationChange(e.target.value || undefined)}
+        >
+          <option value="">All organizations</option>
+          {organizationOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       </div>
-    </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Organization Type</label>
+        <select 
+          className="w-full p-2 border rounded-md bg-background"
+          value={filters.organizationType?.[0] || ''}
+          onChange={(e) => handleArrayFilterChange('organizationType', e.target.value ? [e.target.value] : [])}
+        >
+          <option value="">All organization types</option>
+          {ORGANIZATION_TYPES.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+    </>
   );
 
   return (
-    <AdminFilterBar
-      title="User Filters"
-      filterCount={filterCount}
-      onClear={onClear}
-      searchSlot={searchSlot}
-      sections={{
-        essential: essentialFilters,
-        advanced: advancedFilters
-      }}
-    />
+    <div className="space-y-4">
+      {/* Essential Filters */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Essential</h3>
+        {essentialFilters}
+      </div>
+      
+      {/* Advanced Filters */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Advanced</h3>
+        {advancedFilters}
+      </div>
+    </div>
   );
 }
