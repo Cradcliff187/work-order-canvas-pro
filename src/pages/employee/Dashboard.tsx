@@ -11,7 +11,8 @@ import { useTodayHours } from '@/hooks/useTodayHours';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
-import { FilterChips } from '@/components/employee/FilterChips';
+import { FilterDropdown } from '@/components/employee/FilterDropdown';
+import { CompactStatsRow } from '@/components/employee/CompactStatsRow';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAssignmentCounts } from '@/hooks/useAssignmentCounts';
@@ -139,19 +140,21 @@ const EmployeeDashboard = () => {
     // Mobile-first design
     return (
       <div className="w-full max-w-full overflow-hidden space-y-4 pb-4">
-        {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/20 rounded-full p-2">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold">
-                Welcome back, {profile?.first_name || 'Employee'}!
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {format(new Date(), 'EEEE, MMMM d')}
-              </p>
+        {/* Welcome Header - Compact */}
+        <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-3 mb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="bg-primary/20 rounded-full p-1.5">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-sm font-semibold">
+                  Welcome back, {profile?.first_name || 'Employee'}!
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(), 'EEEE, MMMM d')}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -162,42 +165,17 @@ const EmployeeDashboard = () => {
           isClockingOut={isClockingOut}
         />
 
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-3 gap-3 border-2 border-red-500">
-          <Card className="bg-card border-2 border-blue-500">
-            <CardContent className="p-3">
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-1">Today</p>
-                <p className="text-lg font-bold">{todayHours || 0}h</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-card border-2 border-blue-500">
-            <CardContent className="p-3">
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-1">This Week</p>
-                <p className="text-lg font-bold">{totalHoursThisWeek || 0}h</p>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Compact Stats Row */}
+        <CompactStatsRow 
+          todayHours={todayHours || 0}
+          weekHours={totalHoursThisWeek || 0}
+          activeCount={assignmentCounts.total || 0}
+          isLoading={dashboardLoading}
+        />
 
-          <Card className="bg-card border-2 border-blue-500">
-            <CardContent className="p-3">
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-1">Assigned</p>
-                <p className="text-lg font-bold">{assignmentCounts.total}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {assignmentCounts.projects}p, {assignmentCounts.workOrders}w
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filter Chips */}
-        <div className="border-2 border-red-500">
-          <FilterChips 
+        {/* Filter Dropdown */}
+        <div className="flex justify-end">
+          <FilterDropdown 
             filters={filters} 
             onFilterChange={updateFilter}
             workCounts={workCounts}
@@ -205,7 +183,7 @@ const EmployeeDashboard = () => {
         </div>
 
         {/* My Active Assignments */}
-        <div className="w-full overflow-x-hidden space-y-3 border-2 border-red-500">
+        <div className="w-full overflow-x-hidden space-y-3">
           <div className="flex items-center gap-2">
             <Flame className="h-5 w-5 text-success" />
             <h2 className="font-semibold text-base">My Active Assignments</h2>
@@ -218,7 +196,7 @@ const EmployeeDashboard = () => {
               ))}
             </div>
           ) : myAssignments.length > 0 ? (
-            <div className="space-y-2 border-2 border-blue-500">
+            <div className="space-y-2">
               {myAssignments.slice(0, 3).map((workItem) => (
                 <WorkProjectCard
                   key={workItem.id}
@@ -227,12 +205,12 @@ const EmployeeDashboard = () => {
                   onViewDetails={handleViewDetails}
                   isDisabled={isClockingIn || isClockingOut}
                   variant="assigned"
-                  className="w-full mb-3 border-2 border-green-500"
+                  className="w-full mb-3"
                 />
               ))}
             </div>
           ) : (
-            <Card className="w-full mb-3 bg-muted/30 border-2 border-green-500">
+            <Card className="w-full mb-3 bg-muted/30">
               <CardContent className="p-4 text-center">
                 <Star className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">No assignments yet</p>
@@ -242,7 +220,7 @@ const EmployeeDashboard = () => {
         </div>
 
         {/* Other Available Work */}
-        <div className="w-full overflow-x-hidden space-y-3 border-2 border-red-500">
+        <div className="w-full overflow-x-hidden space-y-3">
           <div className="flex items-center gap-2">
             <Eye className="h-5 w-5 text-muted-foreground" />
             <h2 className="font-semibold text-base">Other Available Work</h2>
@@ -255,7 +233,7 @@ const EmployeeDashboard = () => {
               ))}
             </div>
           ) : otherWork.length > 0 ? (
-            <div className="space-y-2 border-2 border-blue-500">
+            <div className="space-y-2">
               {otherWork.slice(0, 5).map((workItem) => (
                 <WorkProjectCard
                   key={workItem.id}
@@ -264,7 +242,7 @@ const EmployeeDashboard = () => {
                   onViewDetails={handleViewDetails}
                   isDisabled={isClockingIn || isClockingOut}
                   variant="available"
-                  className="w-full mb-3 border-2 border-green-500"
+                  className="w-full mb-3"
                 />
               ))}
             </div>
@@ -387,12 +365,14 @@ const EmployeeDashboard = () => {
         </Card>
       </div>
 
-      {/* Filter Chips */}
-      <FilterChips 
-        filters={filters} 
-        onFilterChange={updateFilter}
-        workCounts={workCounts}
-      />
+      {/* Filter Dropdown */}
+      <div className="flex justify-end mb-6">
+        <FilterDropdown 
+          filters={filters} 
+          onFilterChange={updateFilter}
+          workCounts={workCounts}
+        />
+      </div>
 
       {/* Work Layout - Two Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

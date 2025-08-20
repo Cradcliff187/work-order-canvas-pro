@@ -17,11 +17,13 @@ export const useTodayHours = () => {
         .from('employee_reports')
         .select('hours_worked')
         .eq('employee_user_id', profile.id)
-        .eq('report_date', today);
+        .eq('report_date', today)
+        .order('created_at', { ascending: false })
+        .limit(1);
       
       if (error) throw error;
       
-      return (data || []).reduce((total, report) => total + report.hours_worked, 0);
+      return data && data.length > 0 ? data[0].hours_worked : 0;
     },
     enabled: !!profile?.id,
     refetchInterval: 30000,
