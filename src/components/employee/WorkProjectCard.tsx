@@ -13,6 +13,7 @@ interface WorkProjectCardProps {
   onViewDetails: (id: string) => void;
   isDisabled?: boolean;
   variant?: 'assigned' | 'available';
+  className?: string;
 }
 
 export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
@@ -20,7 +21,8 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
   onClockIn,
   onViewDetails,
   isDisabled = false,
-  variant = 'available'
+  variant = 'available',
+  className
 }) => {
   const handleClockIn = () => {
     if (workItem.type === 'work_order') {
@@ -49,7 +51,8 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
         "w-full max-w-full overflow-hidden transition-all cursor-pointer",
         isAssigned 
           ? "bg-gradient-to-r from-success/5 to-success/10 border-success/30 hover:shadow-md" 
-          : "opacity-90 hover:opacity-100 border-border/50 hover:border-border hover:shadow-sm"
+          : "opacity-90 hover:opacity-100 border-border/50 hover:border-border hover:shadow-sm",
+        className
       )}
       onClick={handleClockIn}
     >
@@ -69,7 +72,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
             {/* Content */}
             <div className="flex-1 min-w-0">
               {/* Header with badges */}
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <AssignmentBadge 
                   isAssignedToMe={workItem.isAssignedToMe} 
                   assigneeName={workItem.assigneeName}
@@ -108,7 +111,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col gap-2 ml-2">
+          <div className="flex flex-col gap-2 ml-2 shrink-0">
             <Button
               size="sm"
               onClick={(e) => {
@@ -116,7 +119,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
                 handleClockIn();
               }}
               disabled={isDisabled}
-              className="whitespace-nowrap"
+              className="text-xs px-2 py-1"
               variant={isAssigned ? "default" : "outline"}
             >
               <Clock className="h-3 w-3 mr-1" />
@@ -130,7 +133,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
                   e.stopPropagation();
                   onViewDetails(workItem.id);
                 }}
-                className="whitespace-nowrap"
+                className="text-xs px-2 py-1"
               >
                 <Eye className="h-3 w-3 mr-1" />
                 Details

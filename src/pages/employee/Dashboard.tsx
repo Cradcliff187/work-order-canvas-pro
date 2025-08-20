@@ -203,7 +203,7 @@ const EmployeeDashboard = () => {
         />
 
         {/* My Active Assignments */}
-        <div className="space-y-3">
+        <div className="w-full overflow-x-hidden space-y-3">
           <div className="flex items-center gap-2">
             <Flame className="h-5 w-5 text-success" />
             <h2 className="font-semibold text-base">My Active Assignments</h2>
@@ -225,11 +225,12 @@ const EmployeeDashboard = () => {
                   onViewDetails={handleViewDetails}
                   isDisabled={isClockingIn || isClockingOut}
                   variant="assigned"
+                  className="w-full mb-3"
                 />
               ))}
             </div>
           ) : (
-            <Card className="bg-muted/30">
+            <Card className="w-full mb-3 bg-muted/30">
               <CardContent className="p-4 text-center">
                 <Star className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">No assignments yet</p>
@@ -239,7 +240,7 @@ const EmployeeDashboard = () => {
         </div>
 
         {/* Other Available Work */}
-        <div className="space-y-3">
+        <div className="w-full overflow-x-hidden space-y-3">
           <div className="flex items-center gap-2">
             <Eye className="h-5 w-5 text-muted-foreground" />
             <h2 className="font-semibold text-base">Other Available Work</h2>
@@ -261,6 +262,7 @@ const EmployeeDashboard = () => {
                   onViewDetails={handleViewDetails}
                   isDisabled={isClockingIn || isClockingOut}
                   variant="available"
+                  className="w-full mb-3"
                 />
               ))}
             </div>
