@@ -424,20 +424,24 @@ export default function AdminWorkOrders() {
 
       {/* Desktop Layout */}
       <div className="hidden lg:flex gap-4 mb-6">
-        <div className="flex flex-1 gap-2">
-          <SmartSearchInput
-            placeholder="Search WO#, title, or location..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onClear={handleSearchClear}
-            showClearButton={true}
-            className="flex-1"
-          />
-          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-        </div>
+      <div className="flex flex-1 items-center gap-3">
+        <SmartSearchInput
+          placeholder="Search WO#, title, or location..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onClear={handleSearchClear}
+          showClearButton={true}
+          className="flex-1 h-10"
+        />
+        <Button 
+          variant="outline" 
+          onClick={() => setIsDesktopFilterOpen(true)}
+          className="h-10 px-4 whitespace-nowrap"
+        >
+          <Filter className="h-4 w-4 mr-2" />
+          Filters {filterCount > 0 && `(${filterCount})`}
+        </Button>
+      </div>
         <div className="flex gap-2">
           <ViewModeSwitcher
             value={viewMode}
