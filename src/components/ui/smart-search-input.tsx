@@ -279,7 +279,7 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
           e.preventDefault()
         }
       }}>
-        {showAny ? (
+        {showAny && (
           <div className="max-h-[60vh] overflow-auto py-2">
             {categorized.recent.length > 0 && (
               <>
@@ -338,8 +338,6 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
               </>
             )}
           </div>
-        ) : (
-          <div className="py-8 px-4 text-center text-sm text-muted-foreground">No suggestions</div>
         )}
       </PopoverContent>
     </Popover>
