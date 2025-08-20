@@ -8,7 +8,10 @@ import { BasicClockButton } from '@/components/employee/BasicClockButton';
 import { useClockState } from '@/hooks/useClockState';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
+import { SwipeableWorkOrderCard } from '@/components/employee/SwipeableWorkOrderCard';
 import { 
   ClipboardList, 
   Clock, 
@@ -23,10 +26,10 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
   const { profile } = useAuth();
   const {
@@ -44,6 +47,23 @@ const EmployeeDashboard = () => {
   } = useEmployeeDashboard();
 
   const { clockIn, clockOut, isClockingIn, isClockingOut, isClocked, clockInTime, workOrderId, locationAddress } = useClockState();
+
+  const handleClockIntoWorkOrder = (workOrderId: string) => {
+    if (isClocked && workOrderId !== workOrderId) {
+      toast({
+        title: "Already clocked in",
+        description: "Please clock out first before switching work orders",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    clockIn.mutate();
+  };
+
+  const handleViewAssignmentDetails = (assignmentId: string) => {
+    navigate(`/employee/assignments/${assignmentId}`);
+  };
 
   const handleClockAction = () => {
     if (isClocked) {
@@ -185,15 +205,12 @@ const EmployeeDashboard = () => {
           ) : activeAssignments && activeAssignments.length > 0 ? (
             <div className="space-y-2">
               {activeAssignments.slice(0, 3).map((assignment) => (
-                <CompactMobileCard
+                <SwipeableWorkOrderCard
                   key={assignment.id}
-                  title={assignment.work_orders?.title || 'Untitled'}
-                  subtitle={`${assignment.work_orders?.work_order_number} • ${assignment.assignment_type}`}
-                  badge={
-                    <Badge variant="secondary" className="text-xs">
-                      {format(new Date(assignment.assigned_at), 'MMM d')}
-                    </Badge>
-                  }
+                  assignment={assignment}
+                  onClockIn={handleClockIntoWorkOrder}
+                  onViewDetails={handleViewAssignmentDetails}
+                  isDisabled={isClockingIn || isClockingOut}
                   onClick={() => navigate(`/employee/assignments/${assignment.id}`)}
                 />
               ))}

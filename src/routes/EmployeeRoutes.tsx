@@ -10,6 +10,7 @@ import {
 } from '@/pages/LazyPages';
 import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
 import TimeReportSubmission from '@/pages/employee/TimeReportSubmission';
+import AssignmentDetail from '@/pages/employee/AssignmentDetail';
 
 export const EmployeeRoutes = () => (
   <>
@@ -60,6 +61,16 @@ export const EmployeeRoutes = () => (
         <EmployeeLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <TimeReportSubmission />
+          </Suspense>
+        </EmployeeLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/employee/assignments/:id" element={
+      <ProtectedRoute requiredUserType="employee">
+        <EmployeeLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <AssignmentDetail />
           </Suspense>
         </EmployeeLayout>
       </ProtectedRoute>
