@@ -8,6 +8,7 @@ export interface WorkItem {
   title: string;
   assigneeName?: string;
   isAssignedToMe: boolean;
+  isCompleted: boolean;
 }
 
 export function useAllWorkItems() {
@@ -33,6 +34,7 @@ export function useAllWorkItems() {
           id,
           work_order_number,
           title,
+          status,
           work_order_assignments!work_order_id(
             assigned_to,
             profiles!assigned_to(
@@ -72,13 +74,18 @@ export function useAllWorkItems() {
           ? `${assignment.profiles.first_name} ${assignment.profiles.last_name}`
           : undefined;
 
+        // Determine if work order is completed
+        const completedStatuses = ['work_completed', 'completed', 'cancelled', 'closed'];
+        const isCompleted = completedStatuses.includes(wo.status);
+
         workItems.push({
           id: wo.id,
           type: 'work_order',
           number: wo.work_order_number,
           title: wo.title,
           assigneeName: isAssignedToMe ? undefined : assigneeName,
-          isAssignedToMe
+          isAssignedToMe,
+          isCompleted
         });
       });
 
@@ -96,7 +103,8 @@ export function useAllWorkItems() {
           number: project.project_number,
           title: project.name,
           assigneeName: isAssignedToMe ? undefined : assigneeName,
-          isAssignedToMe
+          isAssignedToMe,
+          isCompleted: false // Projects don't have a status field yet
         });
       });
 

@@ -9,6 +9,8 @@ import { useAllWorkItems } from '@/hooks/useAllWorkItems';
 import { useTodayHours } from '@/hooks/useTodayHours';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDashboardFilters } from '@/hooks/useDashboardFilters';
+import { FilterChips } from '@/components/employee/FilterChips';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { ClockStatusCard } from '@/components/employee/ClockStatusCard';
@@ -46,12 +48,43 @@ const EmployeeDashboard = () => {
   const { clockIn, clockOut, isClockingIn, isClockingOut } = useClockState();
   const { data: allWorkItems, isLoading: workItemsLoading } = useAllWorkItems();
   const { data: todayHours, isLoading: todayHoursLoading } = useTodayHours();
+  const { filters, updateFilter } = useDashboardFilters();
 
   const isLoading = dashboardLoading || workItemsLoading || todayHoursLoading;
 
+  // Apply filters to work items
+  const filteredWorkItems = React.useMemo(() => {
+    let items = allWorkItems || [];
+    
+    // Apply completed filter
+    if (filters.hideCompleted) {
+      items = items.filter(item => !item.isCompleted);
+    }
+    
+    // Apply work type filters
+    items = items.filter(item => {
+      if (item.type === 'project') return filters.showProjects;
+      if (item.type === 'work_order') return filters.showWorkOrders;
+      return true;
+    });
+    
+    return items;
+  }, [allWorkItems, filters]);
+
   // Filter work items by assignment status
-  const myAssignments = allWorkItems?.filter(item => item.isAssignedToMe) || [];
-  const otherWork = allWorkItems?.filter(item => !item.isAssignedToMe) || [];
+  const myAssignments = filteredWorkItems.filter(item => item.isAssignedToMe);
+  const otherWork = filters.showMyWorkOnly ? [] : filteredWorkItems.filter(item => !item.isAssignedToMe);
+
+  // Calculate work counts for filter chips
+  const workCounts = React.useMemo(() => {
+    const all = allWorkItems || [];
+    return {
+      myWork: all.filter(item => item.isAssignedToMe).length,
+      totalWork: all.length,
+      projects: all.filter(item => item.type === 'project').length,
+      workOrders: all.filter(item => item.type === 'work_order').length,
+    };
+  }, [allWorkItems]);
 
   const handleClockIn = (workOrderId?: string, projectId?: string) => {
     if (workOrderId) {
@@ -139,6 +172,13 @@ const EmployeeDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Filter Chips */}
+        <FilterChips 
+          filters={filters} 
+          onFilterChange={updateFilter}
+          workCounts={workCounts}
+        />
 
         {/* My Active Assignments */}
         <div className="space-y-3">
@@ -308,6 +348,13 @@ const EmployeeDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Filter Chips */}
+      <FilterChips 
+        filters={filters} 
+        onFilterChange={updateFilter}
+        workCounts={workCounts}
+      />
 
       {/* Work Layout - Two Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
