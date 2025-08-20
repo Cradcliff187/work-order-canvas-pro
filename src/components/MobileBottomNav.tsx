@@ -9,6 +9,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   path: string;
+  action?: () => void;
 }
 
 interface MobileBottomNavProps {
@@ -20,9 +21,13 @@ export function MobileBottomNav({ navItems }: MobileBottomNavProps) {
   const location = useLocation();
   const { triggerHaptic } = useHapticFeedback();
 
-  const handleNavigation = (path: string) => {
+  const handleNavigation = (item: NavItem) => {
     triggerHaptic({ pattern: 'light' });
-    navigate(path);
+    if (item.action) {
+      item.action();
+    } else {
+      navigate(item.path);
+    }
   };
 
   return (
@@ -39,7 +44,7 @@ export function MobileBottomNav({ navItems }: MobileBottomNavProps) {
           return (
             <button
               key={item.id}
-              onClick={() => handleNavigation(item.path)}
+              onClick={() => handleNavigation(item)}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-0 flex-1",
                 isActive 

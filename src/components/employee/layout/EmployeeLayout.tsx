@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
@@ -8,6 +8,7 @@ import { StandardHeader } from '@/components/layout/StandardHeader';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { UserProfileDropdown } from '@/components/admin/layout/UserProfileDropdown';
 import FloatingClockWidget from '@/components/employee/FloatingClockWidget';
+import { QuickActionSheet } from '@/components/employee/QuickActionSheet';
 import {
   Sidebar,
   SidebarContent,
@@ -29,6 +30,7 @@ import {
   Receipt,
   Clock,
   MessageSquare,
+  MoreHorizontal,
 } from 'lucide-react';
 
 const sidebarItems = [
@@ -106,6 +108,7 @@ interface EmployeeLayoutProps {
 
 const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
+  const [isQuickActionSheetOpen, setIsQuickActionSheetOpen] = useState(false);
 
   // Mobile navigation items
   const employeeNavItems = useMemo(() => [
@@ -113,6 +116,13 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({ children }) => {
     { id: 'time-reports', label: 'Reports', icon: FileText, path: '/employee/time-reports' },
     { id: 'receipts', label: 'Receipts', icon: Receipt, path: '/employee/receipts' },
     { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/employee/messages' },
+    { 
+      id: 'more', 
+      label: 'More', 
+      icon: MoreHorizontal, 
+      path: '', 
+      action: () => setIsQuickActionSheetOpen(true) 
+    },
   ], []);
 
   return (
@@ -140,6 +150,11 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({ children }) => {
         )}
         
         <FloatingClockWidget />
+        
+        <QuickActionSheet 
+          isOpen={isQuickActionSheetOpen} 
+          onClose={() => setIsQuickActionSheetOpen(false)} 
+        />
       </div>
     </SidebarProvider>
   );
