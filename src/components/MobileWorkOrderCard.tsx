@@ -13,6 +13,7 @@ import { MobileQuickActions, createMapAction, createMessageAction, createViewDet
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -115,6 +116,7 @@ export function MobileWorkOrderCard({
   contactPhone,
   className
 }: MobileWorkOrderCardProps) {
+  const isMobile = useIsMobile();
   const {
     isSwipeing,
     direction,
@@ -145,8 +147,8 @@ export function MobileWorkOrderCard({
     onReset();
   };
   const handleTap = () => {
-    // Add haptic feedback if available
-    if ('vibrate' in navigator) {
+    // Only add haptic feedback on mobile devices
+    if (isMobile && 'vibrate' in navigator) {
       navigator.vibrate(10);
     }
     onTap(workOrder);
@@ -226,8 +228,9 @@ export function MobileWorkOrderCard({
 
   return (
     <div className={cn("relative mb-4 w-full max-w-full overflow-hidden", className)}>
-      {/* Swipe Action Backgrounds */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
+      {/* Swipe Action Backgrounds - Only show on mobile */}
+      {isMobile && (
+        <div className="absolute inset-0 z-0 overflow-hidden">
         {/* Left (Delete) */}
         <div
           className="absolute inset-y-0 left-0 w-full flex items-center justify-start px-4 bg-destructive text-destructive-foreground overflow-hidden"
@@ -254,20 +257,24 @@ export function MobileWorkOrderCard({
             <span className="font-medium truncate">Complete</span>
           </div>
         </div>
-      </div>
+        </div>
+      )}
       
-      <Card 
-        className="w-full max-w-full overflow-hidden touch-manipulation transition-transform will-change-transform active:scale-95 duration-200 min-h-[48px] card-hover touch-action-pan-y relative z-10"
+      <Card
+        className={cn(
+          "w-full max-w-full overflow-hidden transition-transform duration-200 min-h-[48px] card-hover relative z-10",
+          isMobile ? "touch-manipulation will-change-transform active:scale-95 touch-action-pan-y" : "hover:shadow-md cursor-pointer"
+        )}
         style={{
-          transform: `translateX(${x}px)`,
-          transition: isDragging ? 'none' : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+          transform: isMobile ? `translateX(${x}px)` : undefined,
+          transition: isMobile && isDragging ? 'none' : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
           maxWidth: '100%',
           width: '100%'
         }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onClick={isDragging || x !== 0 ? undefined : handleTap}
+        onTouchStart={isMobile ? onTouchStart : undefined}
+        onTouchMove={isMobile ? onTouchMove : undefined}
+        onTouchEnd={isMobile ? handleTouchEnd : undefined}
+        onClick={isMobile ? (isDragging || x !== 0 ? undefined : handleTap) : handleTap}
       >
       <CardContent className="p-4 w-full max-w-full overflow-hidden">
         <div className="flex items-start justify-between mb-3">

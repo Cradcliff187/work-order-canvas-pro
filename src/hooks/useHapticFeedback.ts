@@ -12,8 +12,8 @@ export const useHapticFeedback = () => {
   const triggerHaptic = useCallback((options: HapticFeedbackOptions = {}) => {
     const { pattern = 'light', fallback = true } = options;
     
-    // Check if device supports haptics
-    if (!navigator.vibrate) {
+    // Only trigger haptics on mobile devices
+    if (!navigator.vibrate || (!isIOS() && !isAndroid())) {
       return;
     }
 
