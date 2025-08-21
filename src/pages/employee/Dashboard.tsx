@@ -65,19 +65,21 @@ const EmployeeDashboard = () => {
   const filteredWorkItems = React.useMemo(() => {
     let items = allWorkItems || [];
     
-    // Never show completed items (replacing hideCompleted filter)
+    // Always filter out completed
     items = items.filter(item => !item.isCompleted);
     
-    // Apply work type filters
-    items = items.filter(item => {
-      if (item.type === 'project') return filters.showProjects;
-      if (item.type === 'work_order') return filters.showWorkOrders;
-      return true;
-    });
-    
-    // Apply assignment filter (replaces tab navigation)
+    // If showing only my work, filter by assignment first
     if (filters.showMyWorkOnly) {
       items = items.filter(item => item.isAssignedToMe);
+    }
+    
+    // Only apply type filters if NOT in "My Work" mode
+    if (!filters.showMyWorkOnly) {
+      items = items.filter(item => {
+        if (!filters.showProjects && item.type === 'project') return false;
+        if (!filters.showWorkOrders && item.type === 'work_order') return false;
+        return true;
+      });
     }
     
     return items;
