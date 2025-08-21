@@ -9,6 +9,7 @@ export interface ClockOption {
   lastWorkedAt?: Date;
   sessionCount?: number;
   isWorkedToday?: boolean;
+  isCurrentlyActive?: boolean;
 }
 
 export interface ClockFABProps {

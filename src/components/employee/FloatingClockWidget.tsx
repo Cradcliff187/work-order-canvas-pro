@@ -35,6 +35,16 @@ export function FloatingClockWidget() {
       todaysWorkMap.set(key, item);
     });
 
+    // Helper function to check if item is currently active
+    const isCurrentlyActive = (itemId: string, itemType: 'project' | 'work_order') => {
+      if (!clockData.isClocked) return false;
+      if (itemType === 'work_order') {
+        return clockData.workOrderId === itemId;
+      } else {
+        return clockData.projectId === itemId;
+      }
+    };
+
     // Today's Work section - items worked today
     todaysWork.forEach(item => {
       const key = `${item.type}_${item.id}`;
@@ -48,7 +58,8 @@ export function FloatingClockWidget() {
         hoursToday: item.hoursToday,
         lastWorkedAt: item.lastWorkedAt,
         sessionCount: item.sessionCount,
-        isWorkedToday: true
+        isWorkedToday: true,
+        isCurrentlyActive: isCurrentlyActive(item.id, item.type)
       });
     });
 
@@ -70,7 +81,8 @@ export function FloatingClockWidget() {
             hoursToday: todaysInfo?.hoursToday,
             lastWorkedAt: todaysInfo?.lastWorkedAt,
             sessionCount: todaysInfo?.sessionCount,
-            isWorkedToday: !!todaysInfo
+            isWorkedToday: !!todaysInfo,
+            isCurrentlyActive: isCurrentlyActive(item.id, item.type)
           });
         }
       });
@@ -91,7 +103,8 @@ export function FloatingClockWidget() {
           hoursToday: todaysInfo?.hoursToday,
           lastWorkedAt: todaysInfo?.lastWorkedAt || new Date(item.lastClocked),
           sessionCount: todaysInfo?.sessionCount,
-          isWorkedToday: !!todaysInfo
+          isWorkedToday: !!todaysInfo,
+          isCurrentlyActive: isCurrentlyActive(item.id, item.type)
         });
       }
     });
@@ -116,12 +129,13 @@ export function FloatingClockWidget() {
           hoursToday: todaysInfo?.hoursToday,
           lastWorkedAt: todaysInfo?.lastWorkedAt,
           sessionCount: todaysInfo?.sessionCount,
-          isWorkedToday: !!todaysInfo
+          isWorkedToday: !!todaysInfo,
+          isCurrentlyActive: isCurrentlyActive(item.id, item.type)
         });
       });
 
     return options;
-  }, [allWorkItems, recentItems, todaysWork]);
+  }, [allWorkItems, recentItems, todaysWork, clockData.isClocked, clockData.workOrderId, clockData.projectId]);
 
   // Filter options based on search query
   const filteredOptions = useMemo(() => {

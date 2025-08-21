@@ -3,6 +3,7 @@ import { MapPin, Briefcase, Star, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AssignmentBadge } from './AssignmentBadge';
+import { StatusDot } from './StatusDot';
 
 interface ClockOption {
   id: string;
@@ -15,6 +16,7 @@ interface ClockOption {
   lastWorkedAt?: Date;
   sessionCount?: number;
   isWorkedToday?: boolean;
+  isCurrentlyActive?: boolean;
 }
 
 interface WorkItemCardProps {
@@ -76,10 +78,17 @@ export function WorkItemCard({
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
           <div className={cn(
-            "h-8 w-8 rounded-full flex items-center justify-center",
+            "h-8 w-8 rounded-full flex items-center justify-center relative",
             iconClassName || "bg-blue-100 text-blue-600"
           )}>
             {getIcon()}
+            {option.isCurrentlyActive && (
+              <StatusDot 
+                status="active" 
+                className="absolute -top-1 -right-1" 
+                size="sm"
+              />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -96,8 +105,13 @@ export function WorkItemCard({
             
             <div className="flex items-center gap-2 flex-wrap">
               {option.hoursToday && option.hoursToday > 0 && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                  {option.hoursToday.toFixed(1)}h today
+                <span className={cn(
+                  "text-xs px-2 py-0.5 rounded-full font-medium",
+                  option.isCurrentlyActive 
+                    ? "bg-green-500 text-white" 
+                    : "bg-green-100 text-green-700"
+                )}>
+                  {option.hoursToday.toFixed(1)} hrs today
                 </span>
               )}
               {option.lastWorkedAt && (

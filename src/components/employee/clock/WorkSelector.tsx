@@ -1,4 +1,4 @@
-import { Users, Clock, Archive } from 'lucide-react';
+import { Users, Clock, Archive, Play } from 'lucide-react';
 import { WorkItemCard } from '../WorkItemCard';
 import { WorkSelectorProps } from './types';
 
@@ -21,6 +21,7 @@ export function WorkSelector({ options, selectedOption, onOptionSelect }: WorkSe
 
   const getSectionIcon = (section: string) => {
     switch (section) {
+      case 'today': return Play;
       case 'assigned': return Users;
       case 'recent': return Clock;
       case 'available': return Archive;
@@ -30,7 +31,7 @@ export function WorkSelector({ options, selectedOption, onOptionSelect }: WorkSe
 
   const getSectionTitle = (section: string) => {
     switch (section) {
-      case 'today': return 'Continue from Today';
+      case 'today': return 'Continue Today\'s Work';
       case 'assigned': return 'Your Assignments';
       case 'recent': return 'Recently Clocked';
       case 'available': return 'Available Work';
@@ -45,10 +46,10 @@ export function WorkSelector({ options, selectedOption, onOptionSelect }: WorkSe
     const title = getSectionTitle(sectionKey);
 
     return (
-      <div key={sectionKey} className="mb-6">
+      <div key={sectionKey} className={`mb-6 ${sectionKey === 'today' ? 'bg-gradient-to-r from-green-50/50 to-blue-50/50 p-4 rounded-lg border border-green-200/50' : ''}`}>
         <div className="flex items-center gap-2 mb-3">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium text-foreground">{title}</span>
+          <Icon className={`h-4 w-4 ${sectionKey === 'today' ? 'text-green-600' : 'text-muted-foreground'}`} />
+          <span className={`text-sm font-medium ${sectionKey === 'today' ? 'text-green-700' : 'text-foreground'}`}>{title}</span>
           <span className="text-xs text-muted-foreground">({sectionOptions.length})</span>
         </div>
         
