@@ -130,55 +130,55 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
   }
 
   return (
-    <Card className="bg-gradient-to-br from-success/20 via-success/15 to-emerald-500/15 border-success/50 shadow-2xl hover:shadow-[0_25px_50px_-12px_hsl(var(--success)/0.25)] transition-all duration-500 ring-2 ring-success/30 animate-fade-in">
-      <CardContent className="p-8 sm:p-12 relative overflow-hidden">
+    <Card className="bg-gradient-to-br from-success/20 via-success/15 to-emerald-500/15 border-success/50 shadow-2xl hover:shadow-[0_25px_50px_-12px_hsl(var(--success)/0.25)] transition-all duration-500 ring-2 ring-success/30 animate-fade-in max-w-full">
+      <CardContent className="p-4 sm:p-6 md:p-8 relative overflow-hidden">
         {/* Animated background effect */}
         <div className="absolute inset-0 bg-gradient-to-br from-success/5 via-transparent to-emerald-500/5 animate-pulse" />
-        <div className="flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-6">
-            <div className="bg-gradient-to-br from-success/40 to-success/20 rounded-full p-5 shadow-lg">
-              <Clock className="h-10 w-10 text-success animate-pulse drop-shadow-sm" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative z-10">
+          <div className="flex items-center gap-4 sm:gap-6 min-w-0 flex-1">
+            <div className="bg-gradient-to-br from-success/40 to-success/20 rounded-full p-3 sm:p-5 shadow-lg flex-shrink-0">
+              <Clock className="h-6 w-6 sm:h-10 sm:w-10 text-success animate-pulse drop-shadow-sm" />
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-2xl font-bold">Currently Clocked In</h3>
-                <Badge variant="outline" className="border-success text-success bg-success/20 px-3 py-1 animate-pulse">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-4">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold truncate">Currently Clocked In</h3>
+                <Badge variant="outline" className="border-success text-success bg-success/20 px-3 py-1 animate-pulse w-fit">
                   Active
                 </Badge>
               </div>
               
               {/* Enhanced Large Timer Display */}
-              <div className="mb-6">
-                <div className="text-6xl md:text-7xl font-mono font-bold text-success mb-3 animate-pulse tabular-nums tracking-tight">
+              <div className="mb-4 sm:mb-6">
+                <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-mono font-bold text-success mb-3 animate-pulse tabular-nums tracking-tight break-all">
                   {formatElapsedTime(elapsedTime)}
                 </div>
                 
                 {/* Enhanced Live Earnings Counter */}
                 {hourlyRate && (
-                  <div className="flex items-center gap-3 text-xl font-bold bg-gradient-to-r from-success/20 to-emerald-500/20 rounded-lg p-3 border border-success/30">
-                    <div className="bg-success/20 rounded-full p-2">
-                      <DollarSign className="h-6 w-6 text-success" />
+                  <div className="flex items-center gap-2 sm:gap-3 text-sm sm:text-xl font-bold bg-gradient-to-r from-success/20 to-emerald-500/20 rounded-lg p-2 sm:p-3 border border-success/30">
+                    <div className="bg-success/20 rounded-full p-1 sm:p-2 flex-shrink-0">
+                      <DollarSign className="h-4 w-4 sm:h-6 sm:w-6 text-success" />
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-2xl font-bold text-success tabular-nums">
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-lg sm:text-xl md:text-2xl font-bold text-success tabular-nums truncate">
                         {calculateEarnings(elapsedTime, hourlyRate)}
                       </span>
-                      <span className="text-sm text-success/70">earned so far</span>
+                      <span className="text-xs sm:text-sm text-success/70">earned so far</span>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Current Task Display */}
-              <p className="text-lg font-semibold text-foreground mb-3">
+              <p className="text-sm sm:text-base md:text-lg font-semibold text-foreground mb-2 sm:mb-3 truncate">
                 {workOrderId ? 
                   `Work Order: ${workOrderId}` :
                   'General Time'
                 }
               </p>
               
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                <span className="truncate">
                   Started: {clockInTime ? 
                     format(new Date(clockInTime), 'h:mm a') : 
                     '--'
@@ -187,9 +187,9 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
               </div>
               
               {locationAddress && (
-                <div className="flex items-center gap-2 mt-3">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground truncate">
+                <div className="flex items-center gap-2 mt-2 sm:mt-3 min-w-0">
+                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-xs sm:text-sm text-muted-foreground truncate">
                     {locationAddress}
                   </span>
                 </div>
@@ -201,7 +201,7 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
             onClick={onClockOut}
             disabled={isClockingOut}
             size="lg"
-            className="h-14 px-8 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+            className="h-12 sm:h-14 px-4 sm:px-8 text-sm sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 w-full sm:w-auto flex-shrink-0"
           >
             {isClockingOut ? 'Clocking Out...' : 'Clock Out'}
           </Button>

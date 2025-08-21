@@ -145,7 +145,7 @@ const EmployeeDashboard = () => {
 
   if (isMobile) {
     return (
-      <div className="space-y-2 max-w-full">
+      <div className="space-y-2 max-w-full overflow-hidden px-0">
         {/* Slim Header */}
         <SlimHeader firstName={profile?.first_name} isMobile={true} />
 

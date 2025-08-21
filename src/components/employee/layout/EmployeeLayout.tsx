@@ -140,7 +140,7 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({ children }) => {
             )}
 
             <main className="flex-1 overflow-y-auto overflow-x-hidden">
-              <div className={`px-4 space-y-4 ${isMobile ? 'pb-24' : 'pb-6'} pt-6 max-w-full`}>
+              <div className={`${isMobile ? 'px-4 pb-24' : 'px-4 pb-6'} space-y-4 pt-6 max-w-full overflow-hidden`}>
                 {children}
               </div>
             </main>
