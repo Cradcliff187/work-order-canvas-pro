@@ -20,6 +20,8 @@ import { WorkProjectCard } from '@/components/employee/WorkProjectCard';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAssignmentCounts } from '@/hooks/useAssignmentCounts';
+import { RetroactiveTimeCard } from '@/components/employee/RetroactiveTimeCard';
+import { RetroactiveTimeModal } from '@/components/employee/retroactive/RetroactiveTimeModal';
 import { 
   ClipboardList, 
   Clock, 
@@ -55,6 +57,7 @@ const EmployeeDashboard = () => {
   const { data: todayHours, isLoading: todayHoursLoading } = useTodayHours();
   const { filters, updateFilter } = useDashboardFilters();
   const { data: assignmentCounts = { workOrders: 0, projects: 0, total: 0 } } = useAssignmentCounts();
+  const [showRetroactiveModal, setShowRetroactiveModal] = React.useState(false);
 
   const isLoading = dashboardLoading || workItemsLoading || todayHoursLoading;
 
@@ -149,6 +152,9 @@ const EmployeeDashboard = () => {
           isClockingOut={isClockingOut}
         />
 
+        {/* Retroactive Time Card */}
+        <RetroactiveTimeCard onOpenModal={() => setShowRetroactiveModal(true)} />
+
         {/* Compact Stats Row */}
         <CompactStatsRow 
           todayHours={todayHours || 0}
@@ -224,11 +230,14 @@ const EmployeeDashboard = () => {
       {/* Slim Header */}
       <SlimHeader firstName={profile?.first_name} isMobile={false} />
 
-      {/* Hero Clock Card */}
-      <ClockStatusCard 
-        onClockOut={handleClockOut}
-        isClockingOut={isClockingOut}
-      />
+        {/* Hero Clock Card */}
+        <ClockStatusCard 
+          onClockOut={handleClockOut}
+          isClockingOut={isClockingOut}
+        />
+
+        {/* Retroactive Time Card */}
+        <RetroactiveTimeCard onOpenModal={() => setShowRetroactiveModal(true)} />
 
       {/* Slim Stats Bar */}
       <SlimStatsBar 
@@ -313,6 +322,12 @@ const EmployeeDashboard = () => {
           Reports
         </Button>
       </div>
+
+      {/* Retroactive Time Modal */}
+      <RetroactiveTimeModal 
+        isOpen={showRetroactiveModal}
+        onClose={() => setShowRetroactiveModal(false)}
+      />
     </div>
   );
 };

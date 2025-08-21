@@ -419,6 +419,7 @@ export type Database = {
           hours_worked: number
           id: string
           is_overtime: boolean | null
+          is_retroactive: boolean
           location_address: string | null
           location_lat: number | null
           location_lng: number | null
@@ -442,6 +443,7 @@ export type Database = {
           hours_worked: number
           id?: string
           is_overtime?: boolean | null
+          is_retroactive?: boolean
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -465,6 +467,7 @@ export type Database = {
           hours_worked?: number
           id?: string
           is_overtime?: boolean | null
+          is_retroactive?: boolean
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
