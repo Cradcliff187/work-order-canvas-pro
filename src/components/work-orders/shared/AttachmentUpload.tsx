@@ -104,29 +104,37 @@ export function AttachmentUpload({
   const handleFilesSelected = useCallback((files: File[]) => {
     setSelectedFiles(files);
     
-    // Haptic feedback for file selection
-    triggerHaptic({ pattern: 'medium' });
+    // Only haptic feedback on mobile devices
+    if (isMobile) {
+      triggerHaptic({ pattern: 'medium' });
+    }
     
     // In immediate mode, trigger upload right away (if not in form context)
     if (mode === 'immediate' && !isFormContext) {
       onUpload(files, isInternal);
     }
-  }, [mode, isFormContext, onUpload, isInternal, triggerHaptic]);
+  }, [mode, isFormContext, onUpload, isInternal, triggerHaptic, isMobile]);
 
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length > 0) {
-      onFormSave(); // Haptic feedback for upload action
+      // Only haptic feedback on mobile devices
+      if (isMobile) {
+        onFormSave();
+      }
       await onUpload(selectedFiles, isInternal);
       setSelectedFiles([]);
       setIsInternal(false);
     }
-  }, [selectedFiles, onUpload, isInternal, onFormSave]);
+  }, [selectedFiles, onUpload, isInternal, onFormSave, isMobile]);
 
   const clearSelection = useCallback(() => {
     setSelectedFiles([]);
     setIsInternal(false);
-    triggerHaptic({ pattern: 'light' }); // Light haptic for clear action
-  }, [triggerHaptic]);
+    // Only haptic feedback on mobile devices
+    if (isMobile) {
+      triggerHaptic({ pattern: 'light' });
+    }
+  }, [triggerHaptic, isMobile]);
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -138,8 +146,7 @@ export function AttachmentUpload({
             type="button"
             variant="outline"
             className={cn(
-              "upload-trigger-enhanced w-full border-dashed border-2",
-              isMobile ? "h-20 mobile-upload-trigger" : "h-20",
+              "upload-trigger-enhanced w-full border-dashed border-2 h-20",
               isUploading && "processing",
               mode === 'immediate' && selectedFiles.length > 0 && !isUploading && "success"
             )}
@@ -229,7 +236,6 @@ export function AttachmentUpload({
                 variant="outline" 
                 size={isMobile ? "default" : "sm"}
                 onClick={clearSelection}
-                className={cn(isMobile ? "mobile-upload-button" : "")}
               >
                 Clear
               </Button>
@@ -240,8 +246,7 @@ export function AttachmentUpload({
                   disabled={isUploading}
                   className={cn(
                     "upload-trigger-enhanced",
-                    isUploading && "processing",
-                    isMobile && "mobile-upload-button"
+                    isUploading && "processing"
                   )}
                 >
                   {isUploading ? (
