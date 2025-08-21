@@ -3,8 +3,12 @@ export interface ClockOption {
   type: 'project' | 'work_order';
   title: string;
   number: string;
-  section: 'assigned' | 'recent' | 'available';
+  section: 'assigned' | 'recent' | 'available' | 'today';
   assigneeName?: string;
+  hoursToday?: number;
+  lastWorkedAt?: Date;
+  sessionCount?: number;
+  isWorkedToday?: boolean;
 }
 
 export interface ClockFABProps {

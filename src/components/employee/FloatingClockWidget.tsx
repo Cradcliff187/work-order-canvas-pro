@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useClockState } from '@/hooks/useClockState';
 import { useAllWorkItems } from '@/hooks/useAllWorkItems';
 import { useRecentlyClocked } from '@/hooks/useRecentlyClocked';
+import { useTodaysWork } from '@/hooks/useTodaysWork';
 import { useToast } from '@/hooks/use-toast';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { ClockFAB } from './clock/ClockFAB';
@@ -19,31 +20,66 @@ export function FloatingClockWidget() {
   const { clockIn, clockOut, isClockingIn, isClockingOut } = clockData;
   const { data: allWorkItems = [] } = useAllWorkItems();
   const { data: recentItems = [] } = useRecentlyClocked();
+  const { data: todaysWork = [] } = useTodaysWork();
 
-  // Organize work items into sections
+  // Organize work items into sections with today's work intelligence
   const clockOptions = useMemo<ClockOption[]>(() => {
     const options: ClockOption[] = [];
     const assignedIds = new Set<string>();
     const recentIds = new Set<string>();
+    const todaysWorkMap = new Map<string, typeof todaysWork[0]>();
 
-    // My Assignments section
+    // Create today's work lookup map
+    todaysWork.forEach(item => {
+      const key = `${item.type}_${item.id}`;
+      todaysWorkMap.set(key, item);
+    });
+
+    // Today's Work section - items worked today
+    todaysWork.forEach(item => {
+      const key = `${item.type}_${item.id}`;
+      assignedIds.add(key); // Mark as processed
+      options.push({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        number: item.number,
+        section: 'today',
+        hoursToday: item.hoursToday,
+        lastWorkedAt: item.lastWorkedAt,
+        sessionCount: item.sessionCount,
+        isWorkedToday: true
+      });
+    });
+
+    // My Assignments section (enhanced with today's work info)
     allWorkItems
       .filter(item => item.isAssignedToMe)
       .forEach(item => {
         const key = `${item.type}_${item.id}`;
-        assignedIds.add(key);
-        options.push({
-          id: item.id,
-          type: item.type,
-          title: item.title,
-          number: item.number,
-          section: 'assigned'
-        });
+        const todaysInfo = todaysWorkMap.get(key);
+        
+        if (!assignedIds.has(key)) {
+          assignedIds.add(key);
+          options.push({
+            id: item.id,
+            type: item.type,
+            title: item.title,
+            number: item.number,
+            section: 'assigned',
+            hoursToday: todaysInfo?.hoursToday,
+            lastWorkedAt: todaysInfo?.lastWorkedAt,
+            sessionCount: todaysInfo?.sessionCount,
+            isWorkedToday: !!todaysInfo
+          });
+        }
       });
 
     // Recently Clocked section (excluding already assigned items)
     recentItems.forEach(item => {
       const key = `${item.type}_${item.id}`;
+      const todaysInfo = todaysWorkMap.get(key);
+      
       if (!assignedIds.has(key)) {
         recentIds.add(key);
         options.push({
@@ -51,7 +87,11 @@ export function FloatingClockWidget() {
           type: item.type,
           title: item.title,
           number: item.number,
-          section: 'recent'
+          section: 'recent',
+          hoursToday: todaysInfo?.hoursToday,
+          lastWorkedAt: todaysInfo?.lastWorkedAt || new Date(item.lastClocked),
+          sessionCount: todaysInfo?.sessionCount,
+          isWorkedToday: !!todaysInfo
         });
       }
     });
@@ -63,18 +103,25 @@ export function FloatingClockWidget() {
         return !assignedIds.has(key) && !recentIds.has(key);
       })
       .forEach(item => {
+        const key = `${item.type}_${item.id}`;
+        const todaysInfo = todaysWorkMap.get(key);
+        
         options.push({
           id: item.id,
           type: item.type,
           title: item.title,
           number: item.number,
           section: 'available',
-          assigneeName: item.assigneeName
+          assigneeName: item.assigneeName,
+          hoursToday: todaysInfo?.hoursToday,
+          lastWorkedAt: todaysInfo?.lastWorkedAt,
+          sessionCount: todaysInfo?.sessionCount,
+          isWorkedToday: !!todaysInfo
         });
       });
 
     return options;
-  }, [allWorkItems, recentItems]);
+  }, [allWorkItems, recentItems, todaysWork]);
 
   // Filter options based on search query
   const filteredOptions = useMemo(() => {

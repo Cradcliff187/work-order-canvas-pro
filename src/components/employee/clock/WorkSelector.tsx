@@ -3,10 +3,21 @@ import { WorkItemCard } from '../WorkItemCard';
 import { WorkSelectorProps } from './types';
 
 export function WorkSelector({ options, selectedOption, onOptionSelect }: WorkSelectorProps) {
-  // Group options by section
-  const assignedOptions = options.filter(opt => opt.section === 'assigned');
-  const recentOptions = options.filter(opt => opt.section === 'recent');
-  const availableOptions = options.filter(opt => opt.section === 'available');
+  // Group options by section with smart sorting
+  const todayOptions = options.filter(opt => opt.section === 'today' || opt.isWorkedToday)
+    .sort((a, b) => (b.lastWorkedAt?.getTime() || 0) - (a.lastWorkedAt?.getTime() || 0));
+  
+  const assignedOptions = options.filter(opt => opt.section === 'assigned' && !opt.isWorkedToday)
+    .sort((a, b) => {
+      // Prioritize items worked today, then by work frequency
+      if (a.isWorkedToday !== b.isWorkedToday) {
+        return (b.isWorkedToday ? 1 : 0) - (a.isWorkedToday ? 1 : 0);
+      }
+      return (b.sessionCount || 0) - (a.sessionCount || 0);
+    });
+  
+  const recentOptions = options.filter(opt => opt.section === 'recent' && !opt.isWorkedToday);
+  const availableOptions = options.filter(opt => opt.section === 'available' && !opt.isWorkedToday);
 
   const getSectionIcon = (section: string) => {
     switch (section) {
@@ -19,6 +30,7 @@ export function WorkSelector({ options, selectedOption, onOptionSelect }: WorkSe
 
   const getSectionTitle = (section: string) => {
     switch (section) {
+      case 'today': return 'Continue from Today';
       case 'assigned': return 'Your Assignments';
       case 'recent': return 'Recently Clocked';
       case 'available': return 'Available Work';
@@ -66,6 +78,7 @@ export function WorkSelector({ options, selectedOption, onOptionSelect }: WorkSe
 
   return (
     <div className="space-y-2">
+      {renderSection(todayOptions, 'today')}
       {renderSection(assignedOptions, 'assigned')}
       {renderSection(recentOptions, 'recent')}
       {renderSection(availableOptions, 'available')}

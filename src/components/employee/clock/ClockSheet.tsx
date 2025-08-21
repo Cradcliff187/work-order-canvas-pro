@@ -96,8 +96,7 @@ export function ClockSheet({
           
           <Button
             onClick={onClockAction}
-            disabled={!isClocked && !selectedOption}
-            loading={isLoading}
+            disabled={(!isClocked && !selectedOption) || isLoading}
             className="flex-1"
           >
             {isClocked ? 'Clock Out' : 'Clock In'}
