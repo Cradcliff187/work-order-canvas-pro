@@ -1,13 +1,15 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Clock } from 'lucide-react';
-import { TIME_PRESETS, TimePreset } from './types';
+import { Clock, Calendar } from 'lucide-react';
+import { getTimePresets, TimePreset } from './types';
 
 interface TimePresetsProps {
   onSelectPreset: (preset: TimePreset) => void;
 }
 
 export const TimePresets: React.FC<TimePresetsProps> = ({ onSelectPreset }) => {
+  const presets = getTimePresets();
+  
   return (
     <div className="space-y-3">
       <h4 className="font-medium flex items-center gap-2">
@@ -15,15 +17,18 @@ export const TimePresets: React.FC<TimePresetsProps> = ({ onSelectPreset }) => {
         Quick Presets
       </h4>
       <div className="grid gap-2">
-        {TIME_PRESETS.map((preset) => (
+        {presets.map((preset, index) => (
           <Button
-            key={preset.label}
+            key={`${preset.label}-${index}`}
             variant="outline"
             onClick={() => onSelectPreset(preset)}
             className="justify-between h-auto p-3 text-left"
           >
             <div>
-              <div className="font-medium">{preset.label}</div>
+              <div className="font-medium flex items-center gap-2">
+                {preset.isDynamic && <Calendar className="h-3 w-3 text-primary" />}
+                {preset.label}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {preset.startTime} - {preset.endTime}
               </div>

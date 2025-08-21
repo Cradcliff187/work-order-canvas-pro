@@ -17,6 +17,7 @@ import { useAllWorkItems } from '@/hooks/useAllWorkItems';
 import { useRetroactiveTimeEntry } from '@/hooks/useRetroactiveTimeEntry';
 import { ClockOption } from '@/components/employee/clock/types';
 import { RetroactiveTimeEntry, TimePreset } from './types';
+import { useTodaysWork } from '@/hooks/useTodaysWork';
 
 interface RetroactiveTimeModalProps {
   isOpen: boolean;
@@ -35,6 +36,25 @@ export const RetroactiveTimeModal: React.FC<RetroactiveTimeModalProps> = ({
 
   const { data: allWorkItems = [], isLoading: workItemsLoading } = useAllWorkItems();
   const { addRetroactiveTime, isLoading: isSubmitting } = useRetroactiveTimeEntry();
+  const { data: todaysWork = [] } = useTodaysWork();
+
+  // Smart defaults: auto-select most recent work item
+  React.useEffect(() => {
+    if (!selectedOption && todaysWork.length > 0 && allWorkItems.length > 0) {
+      const recentWorkItem = todaysWork[0]; // Most recent from today
+      const matchingWorkItem = allWorkItems.find(item => item.id === recentWorkItem.id);
+      
+      if (matchingWorkItem && !matchingWorkItem.isCompleted) {
+        setSelectedOption({
+          id: matchingWorkItem.id,
+          type: matchingWorkItem.type,
+          title: matchingWorkItem.title,
+          number: matchingWorkItem.number,
+          section: matchingWorkItem.isAssignedToMe ? 'assigned' as const : 'available' as const,
+        });
+      }
+    }
+  }, [selectedOption, todaysWork, allWorkItems]);
 
   // Filter work items based on search query
   const filteredOptions = React.useMemo(() => {
@@ -60,6 +80,11 @@ export const RetroactiveTimeModal: React.FC<RetroactiveTimeModalProps> = ({
   const handlePresetSelect = (preset: TimePreset) => {
     setStartTime(preset.startTime);
     setEndTime(preset.endTime);
+    
+    // If preset has a specific date, set it
+    if (preset.date) {
+      setDate(preset.date);
+    }
   };
 
   const handleSubmit = () => {

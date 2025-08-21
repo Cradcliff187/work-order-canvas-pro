@@ -26,13 +26,13 @@ export const RetroactiveTimeCard: React.FC<RetroactiveTimeCardProps> = ({ onOpen
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold">Forgot to clock in?</h3>
+                <h3 className="font-semibold">Forgot to Clock?</h3>
                 <Badge variant="outline" className="border-warning text-warning bg-warning/10">
                   Retroactive Entry
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Add time for earlier today
+                Catch up on time you've already worked
               </p>
             </div>
           </div>
