@@ -47,6 +47,15 @@ export function useAllWorkItems() {
         email: profile.email
       });
 
+      // Critical debug - log raw assignment data
+      console.log('🚨 ASSIGNMENT DEBUG', {
+        authUserId: user.id,
+        profileId: profile.id,
+        profileEmail: profile.email,
+        authUserIdType: typeof user.id,
+        profileIdType: typeof profile.id
+      });
+
       // Get user's organization memberships  
       const { data: orgMemberships, error: orgError } = await supabase
         .from('organization_members')
@@ -138,6 +147,16 @@ export function useAllWorkItems() {
         // Find all assignments for this work order
         const assignments = wo.work_order_assignments || [];
         
+        // Raw assignment debug logging
+        console.log(`🔍 WO ${wo.work_order_number} RAW:`, {
+          assignments: wo.work_order_assignments,
+          profileIdType: typeof profile.id,
+          assignmentIdTypes: wo.work_order_assignments?.map(a => ({
+            assigned_to: a.assigned_to,
+            type: typeof a.assigned_to
+          }))
+        });
+        
         // Enhanced debug logging for assignment matching
         console.log(`🔍 Work Order ${wo.work_order_number} assignments:`, assignments.map(a => ({
           assigned_to: a.assigned_to,
@@ -184,6 +203,16 @@ export function useAllWorkItems() {
 
         // Find all assignments for this project
         const assignments = project.project_assignments || [];
+        
+        // Raw assignment debug logging
+        console.log(`🔍 Project ${project.project_number} RAW:`, {
+          assignments: project.project_assignments,
+          profileIdType: typeof profile.id,
+          assignmentIdTypes: project.project_assignments?.map(a => ({
+            assigned_to: a.assigned_to,
+            type: typeof a.assigned_to
+          }))
+        });
         
         // Enhanced debug logging for assignment matching
         console.log(`🔍 Project ${project.project_number} assignments:`, assignments.map(a => ({
