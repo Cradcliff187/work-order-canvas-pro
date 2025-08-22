@@ -181,6 +181,7 @@ const EmployeeDashboard = () => {
                 key={workItem.id}
                 workItem={workItem}
                 onClockIn={handleClockIn}
+                onClockOut={handleClockOut}
                 onViewDetails={handleViewDetails}
                 isDisabled={isClockingIn || isClockingOut}
                 variant={workItem.isAssignedToMe ? "assigned" : "available"}
@@ -269,6 +270,7 @@ const EmployeeDashboard = () => {
               key={workItem.id}
               workItem={workItem}
               onClockIn={handleClockIn}
+              onClockOut={handleClockOut}
               onViewDetails={handleViewDetails}
               isDisabled={isClockingIn || isClockingOut}
               variant={workItem.isAssignedToMe ? "assigned" : "available"}

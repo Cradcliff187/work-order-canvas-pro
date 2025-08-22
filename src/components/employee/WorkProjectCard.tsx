@@ -1,16 +1,20 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, BarChart, Briefcase, FileText } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, Clock, BarChart, Briefcase, FileText, StopCircle } from 'lucide-react';
 import { WorkItem } from '@/hooks/useAllWorkItems';
 import { AssignmentBadge } from './AssignmentBadge';
 import { StatusDot } from './StatusDot';
 import { useWorkItemMetrics } from '@/hooks/useWorkItemMetrics';
+import { useClockState } from '@/hooks/useClockState';
+import { formatElapsedTime } from '@/lib/utils/time';
 import { cn } from '@/lib/utils';
 
 interface WorkProjectCardProps {
   workItem: WorkItem;
   onClockIn: (workOrderId?: string, projectId?: string) => void;
+  onClockOut?: () => void;
   onViewDetails: (id: string) => void;
   isDisabled?: boolean;
   variant?: 'assigned' | 'available';
@@ -20,18 +24,30 @@ interface WorkProjectCardProps {
 export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
   workItem,
   onClockIn,
+  onClockOut,
   onViewDetails,
   isDisabled = false,
   variant = 'available',
   className
 }) => {
   const { data: metrics } = useWorkItemMetrics(workItem.id, workItem.type);
+  const { workOrderId, projectId, isClocked, elapsedTime } = useClockState();
   
-  const handleClockIn = () => {
-    if (workItem.type === 'work_order') {
-      onClockIn(workItem.id);
-    } else if (workItem.type === 'project') {
-      onClockIn(undefined, workItem.id);
+  // Check if THIS work item is currently active
+  const isThisItemActive = isClocked && (
+    (workItem.type === 'work_order' && workOrderId === workItem.id) ||
+    (workItem.type === 'project' && projectId === workItem.id)
+  );
+  
+  const handleClockAction = () => {
+    if (isThisItemActive && onClockOut) {
+      onClockOut();
+    } else {
+      if (workItem.type === 'work_order') {
+        onClockIn(workItem.id);
+      } else if (workItem.type === 'project') {
+        onClockIn(undefined, workItem.id);
+      }
     }
   };
 
@@ -49,6 +65,7 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
       "relative w-full max-w-full overflow-hidden border transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 min-w-0 group",
       "shadow-sm hover:border-primary/20",
       variant === 'assigned' && "bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 shadow-md",
+      isThisItemActive && "bg-gradient-to-r from-green-50 to-green-100 border-green-300 shadow-lg ring-2 ring-green-200 dark:from-green-950/30 dark:to-green-900/30 dark:border-green-700 dark:ring-green-800",
       className
     )}>
       {/* Status Dot */}
@@ -95,49 +112,73 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
                 <span className="font-medium text-foreground text-sm truncate">
                   {workItem.number}
                 </span>
+                {isThisItemActive && (
+                  <Badge variant="success" className="text-[10px] px-1 py-0 animate-pulse">
+                    ACTIVE
+                  </Badge>
+                )}
               </div>
               <p className="text-xs text-muted-foreground truncate">
                 {workItem.title}
               </p>
               
               {/* Mini metrics - show on larger screens */}
-              {metrics && (
-                <div className="hidden sm:flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                  {metrics.lastWorked && (
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-2.5 w-2.5" />
-                      <span className="truncate max-w-[80px]">{metrics.lastWorked}</span>
-                    </div>
-                  )}
-                  {metrics.location && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-2.5 w-2.5" />
-                      <span className="truncate max-w-[100px]">{metrics.location}</span>
-                    </div>
-                  )}
-                  {metrics.hoursLogged && (
-                    <div className="flex items-center gap-1">
-                      <BarChart className="h-2.5 w-2.5" />
-                      <span>{metrics.hoursLogged}h</span>
-                    </div>
-                  )}
-                </div>
-              )}
+              <div className="hidden sm:flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                {isThisItemActive ? (
+                  <div className="flex items-center gap-1 text-green-600 font-medium">
+                    <Clock className="h-2.5 w-2.5" />
+                    <span>{formatElapsedTime(elapsedTime)}</span>
+                  </div>
+                ) : (
+                  <>
+                    {metrics?.lastWorked && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-2.5 w-2.5" />
+                        <span className="truncate max-w-[80px]">{metrics.lastWorked}</span>
+                      </div>
+                    )}
+                    {metrics?.location && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-2.5 w-2.5" />
+                        <span className="truncate max-w-[100px]">{metrics.location}</span>
+                      </div>
+                    )}
+                    {metrics?.hoursLogged && (
+                      <div className="flex items-center gap-1">
+                        <BarChart className="h-2.5 w-2.5" />
+                        <span>{metrics.hoursLogged}h</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Right side - Actions */}
           <div className="flex items-center gap-1 shrink-0">
-            {/* Clock In button */}
+            {/* Clock Action button */}
             <Button
               size="sm"
-              onClick={handleClockIn}
+              variant={isThisItemActive ? "destructive" : "default"}
+              onClick={handleClockAction}
               disabled={isDisabled}
-              className="h-7 px-2 text-xs shrink-0 hover:scale-105 transition-all duration-200 hover:shadow-md"
+              className={cn(
+                "h-7 px-2 text-xs shrink-0 hover:scale-105 transition-all duration-200 hover:shadow-md",
+                isThisItemActive && "animate-pulse"
+              )}
             >
-              <Clock className="h-3 w-3 mr-1" />
-              <span className="hidden xs:inline">Clock In</span>
-              <span className="xs:hidden">In</span>
+              {isThisItemActive ? (
+                <StopCircle className="h-3 w-3 mr-1" />
+              ) : (
+                <Clock className="h-3 w-3 mr-1" />
+              )}
+              <span className="hidden xs:inline">
+                {isThisItemActive ? "Clock Out" : "Clock In"}
+              </span>
+              <span className="xs:hidden">
+                {isThisItemActive ? "Out" : "In"}
+              </span>
             </Button>
             
             {/* Details button - only show if assigned */}
