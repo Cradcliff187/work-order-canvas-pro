@@ -64,7 +64,11 @@ export function WorkOrderDetailPanel({
       {showActionButtons && (
         <div className="flex gap-2">
           {onViewFull && (
-            <Button variant="outline" size="sm" onClick={onViewFull} className="flex-1">
+            <Button variant="outline" size="sm" onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onViewFull?.();
+            }} className="flex-1">
               <Eye className="h-3 w-3 mr-1" />
               View Full
             </Button>
