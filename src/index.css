@@ -10,7 +10,7 @@ html, body, #root {
 }
 
 /* Mobile-specific container constraints */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   * {
     max-width: 100vw;
   }
@@ -239,7 +239,7 @@ html, body, #root {
   }
 
   /* Desktop hover effects */
-  @media (min-width: 768px) {
+  @media (min-width: 1024px) {
     .card-hover {
       transition: var(--transition-smooth);
     }
@@ -249,14 +249,14 @@ html, body, #root {
   }
 
   /* Mobile static shadows */
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .card-hover {
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
   }
 
   /* Responsive gradient utilities */
-  @media (min-width: 768px) {
+  @media (min-width: 1024px) {
     .gradient-header-responsive { 
       background: var(--gradient-header-desktop); 
     }
@@ -268,7 +268,7 @@ html, body, #root {
     }
   }
   
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .gradient-header-responsive { 
       background: var(--gradient-mobile-header); 
     }
@@ -321,14 +321,14 @@ html, body, #root {
   }
 
   /* Admin table responsive adjustments */
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .admin-table tbody tr:hover {
       @apply bg-slate-50/30;
     }
   }
 
   /* Mobile touch targets - ensure 48px minimum */
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .touch-target {
       min-height: 48px;
       min-width: 48px;
