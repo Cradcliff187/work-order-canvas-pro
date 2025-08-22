@@ -71,16 +71,15 @@ export function MasterDetailLayout({
     setShowDetailPanel(false);
   };
 
-  if (!showDetailPanel) {
-    return (
-      <div className={cn("w-full", className)}>
-        {listContent}
-      </div>
-    );
-  }
-
-  // Mobile: Stack layout
+  // Mobile: Stack layout or no selection
   if (isMobile) {
+    if (!showDetailPanel) {
+      return (
+        <div className={cn("w-full", className)}>
+          {listContent}
+        </div>
+      );
+    }
     return (
       <div className={cn("w-full h-full", className)}>
         <div className="h-full flex flex-col overflow-hidden">
@@ -129,9 +128,14 @@ export function MasterDetailLayout({
           </div>
         </ResizablePanel>
         
-        <ResizableHandle withHandle />
+        <ResizableHandle withHandle className={showDetailPanel ? "" : "hidden"} />
         
-        <ResizablePanel defaultSize={30} minSize={25}>
+        <ResizablePanel 
+          defaultSize={showDetailPanel ? 30 : 0} 
+          minSize={showDetailPanel ? 25 : 0}
+          maxSize={showDetailPanel ? 60 : 0}
+          className={showDetailPanel ? "" : "hidden"}
+        >
           <div className="h-full border-l bg-background relative flex flex-col">
             {showDetailHeader ? (
               <div className="flex items-center justify-between p-4 border-b">
