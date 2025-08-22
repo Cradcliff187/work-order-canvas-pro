@@ -2299,6 +2299,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_employee_dashboard_data: {
+        Args: {
+          p_employee_id: string
+          p_month_end: string
+          p_month_start: string
+          p_week_end: string
+          p_week_start: string
+        }
+        Returns: Json
+      }
       get_geographic_distribution: {
         Args: { end_date?: string; start_date?: string }
         Returns: {

@@ -34,27 +34,35 @@ interface EmployeeReceipt {
   description: string;
 }
 
-// Fetch employee's active assignments
-const fetchActiveAssignments = async (employeeId: string): Promise<EmployeeAssignment[]> => {
-  const { data, error } = await supabase
-    .from('work_order_assignments')
-    .select(`
-      id,
-      assignment_type,
-      assigned_at,
-      work_orders!inner (
-        id,
-        title,
-        work_order_number,
-        status
-      )
-    `)
-    .eq('assigned_to', employeeId)
-    .in('work_orders.status', ['assigned', 'in_progress'])
-    .order('assigned_at', { ascending: false });
+interface DashboardData {
+  activeAssignments: EmployeeAssignment[];
+  hoursThisWeek: EmployeeTimeReport[];
+  hoursThisMonth: EmployeeTimeReport[];
+  recentReceipts: EmployeeReceipt[];
+  monthlyExpenses: number;
+  pendingTimeReports: number;
+  totalHoursThisWeek: number;
+  totalHoursThisMonth: number;
+}
+
+// Call the optimized RPC function
+const fetchEmployeeDashboardData = async (
+  employeeId: string,
+  weekStart: Date,
+  weekEnd: Date,
+  monthStart: Date,
+  monthEnd: Date
+): Promise<DashboardData> => {
+  const { data, error } = await supabase.rpc('get_employee_dashboard_data', {
+    p_employee_id: employeeId,
+    p_week_start: format(weekStart, 'yyyy-MM-dd'),
+    p_week_end: format(weekEnd, 'yyyy-MM-dd'),
+    p_month_start: format(monthStart, 'yyyy-MM-dd'),
+    p_month_end: format(monthEnd, 'yyyy-MM-dd')
+  });
 
   if (error) throw error;
-  return data || [];
+  return data as unknown as DashboardData;
 };
 
 // Fetch employee's time reports for a date range
@@ -152,43 +160,18 @@ export const useEmployeeDashboard = () => {
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
-  // Combined dashboard data query - fetches core data efficiently
+  // Optimized dashboard data query - single RPC call
   const dashboardDataQuery = useQuery({
     queryKey: ['employee-dashboard-data', employeeId, weekStart, weekEnd, monthStart, monthEnd],
     queryFn: async () => {
       if (!employeeId) return null;
       
-      // Fetch all core data in parallel
-      const [
-        activeAssignments,
-        hoursThisWeek,
-        hoursThisMonth,
-        recentReceipts,
-        monthlyExpenses,
-        pendingTimeReports
-      ] = await Promise.all([
-        fetchActiveAssignments(employeeId),
-        fetchTimeReports(employeeId, weekStart, weekEnd),
-        fetchTimeReports(employeeId, monthStart, monthEnd),
-        fetchRecentReceipts(employeeId),
-        fetchMonthlyExpenses(employeeId, monthStart, monthEnd),
-        fetchPendingTimeReports(employeeId)
-      ]);
-
-      return {
-        activeAssignments,
-        hoursThisWeek,
-        hoursThisMonth,
-        recentReceipts,
-        monthlyExpenses,
-        pendingTimeReports,
-        totalHoursThisWeek: getTotalHours(hoursThisWeek),
-        totalHoursThisMonth: getTotalHours(hoursThisMonth)
-      };
+      // Single optimized RPC call instead of 6 parallel queries
+      return await fetchEmployeeDashboardData(employeeId, weekStart, weekEnd, monthStart, monthEnd);
     },
     enabled: !!employeeId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 2 * 60 * 1000, // 2 minutes instead of 30 seconds
+    refetchInterval: 2 * 60 * 1000, // 2 minutes
   });
 
   // Recent time reports (separate query as it's less critical)
