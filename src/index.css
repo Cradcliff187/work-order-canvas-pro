@@ -25,113 +25,58 @@ html, body, #root {
 
 @layer base {
   :root {
-    /* Primary Brand Colors - Enhanced Blue */
-    --primary: 211 96% 45%;              /* #0969DA Professional Blue */
+    /* Essential Brand Colors */
+    --primary: 211 96% 45%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 211 96% 55%;         /* Lighter blue for gradients */
-
-    /* Background & Surface - Cleaner */
-    --background: 0 0% 98%;              /* #FAFAFA Clean white */
-    --foreground: 222 47% 11%;           /* #1A202C Rich dark text */
-
-    --card: 0 0% 100%;                   /* Pure white cards */
-    --card-foreground: 222 47% 11%;      /* Dark card text */
-
-    --popover: 0 0% 100%;                /* White popovers */
-    --popover-foreground: 222 47% 11%;   /* Dark popover text */
-
-    /* Secondary - Sophisticated Grays */
-    --secondary: 215 20% 25%;            /* #334155 Dark gray */
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --secondary: 215 20% 25%;
     --secondary-foreground: 0 0% 100%;
-
-    /* Neutral Palette - Better Depth */
-    --muted: 214 32% 91%;                /* #E2E8F0 Light gray */
-    --muted-foreground: 215 25% 27%;     /* #3A4358 Dark muted */
-
-    --accent: 158 64% 92%;               /* #D1FAE5 Light green tint */
-    --accent-foreground: 158 84% 25%;    /* #0F5132 Dark green */
-
-    /* Interactive Elements - Refined */
-    --border: 214 32% 85%;               /* #D4DBE5 Visible borders */
-    --input: 214 32% 96%;                /* #F1F5F9 Input backgrounds */
-    --ring: 211 96% 45%;                 /* Blue focus rings */
-
-    /* Status Colors - Professional & Clear */
-    --success: 158 64% 42%;              /* #27A971 Efficiency green */
+    --muted: 214 32% 91%;
+    --muted-foreground: 215 25% 27%;
+    --accent: 158 64% 92%;
+    --accent-foreground: 158 84% 25%;
+    --border: 214 32% 85%;
+    --input: 214 32% 96%;
+    --ring: 211 96% 45%;
+    --success: 158 64% 42%;
     --success-foreground: 0 0% 100%;
-    
-    --warning: 45 93% 47%;               /* #F59E0B Attention amber */
+    --warning: 45 93% 47%;
     --warning-foreground: 0 0% 100%;
-    
-    --destructive: 0 72% 51%;            /* #E11D48 Issue red */
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-
-    --project: 271 91% 65%;              /* #A855F7 Project purple */
+    --project: 271 91% 65%;
     --project-foreground: 0 0% 100%;
-
     --radius: 0.5rem;
-
-    /* Essential Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(211 96% 45%), hsl(211 96% 55%));
-
-    /* Essential Shadows */
     --shadow-card: 0 2px 4px -1px hsl(222 47% 11% / 0.06), 0 1px 2px -1px hsl(222 47% 11% / 0.03);
-
-    /* Transitions */
     --transition-smooth: all 0.2s ease;
-
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 211 96% 93%;       /* Light blue tint */
-    --sidebar-accent-foreground: 211 96% 35%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 211 96% 45%;         /* Blue focus */
   }
 
   .dark {
-    /* Background & Surface - Dark Mode */
-    --background: 222 47% 8%;            /* Deep blue-black */
-    --foreground: 210 40% 98%;           /* Off-white */
-
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
     --card: 222 47% 8%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
-
-    /* Primary - Brighter blue for dark mode */
-    --primary: 211 96% 55%;              /* Brighter blue in dark mode */
-    --primary-foreground: 222 47% 11%;   /* Dark text on bright blue */
-
-    /* Secondary - Light gray for dark mode */
-    --secondary: 215 16% 70%;            /* Light gray for dark mode */
+    --primary: 211 96% 55%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 215 16% 70%;
     --secondary-foreground: 222 47% 11%;
-
-    /* Neutral Palette - Dark Mode */
-    --muted: 217 32% 15%;                /* Dark muted backgrounds */
-    --muted-foreground: 215 20% 65%;     /* Lighter muted text */
-
-    --accent: 158 64% 15%;               /* Dark green tint */
-    --accent-foreground: 158 64% 80%;    /* Light green text */
-
+    --muted: 217 32% 15%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 158 64% 15%;
+    --accent-foreground: 158 64% 80%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
-    --border: 217 32% 20%;               /* Subtle borders */
+    --border: 217 32% 20%;
     --input: 217 32% 17.5%;
     --ring: 211 96% 55%;
-
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -186,21 +131,10 @@ html, body, #root {
 }
 
 @layer components {
-  /* Accessibility-first animations with prefers-reduced-motion support */
   .smooth-transition {
     transition: all 200ms ease-in-out;
   }
   
-  .smooth-transition-colors {
-    transition: color 200ms ease-in-out, background-color 200ms ease-in-out, border-color 200ms ease-in-out;
-  }
-  
-  .smooth-transition-transform {
-    transition: transform 200ms ease-in-out;
-    will-change: transform;
-  }
-
-  /* Entrance animations */
   .fade-in-up {
     animation: fadeInUp 0.4s ease-out;
   }
@@ -213,105 +147,15 @@ html, body, #root {
     animation: scaleIn 0.2s ease-out;
   }
 
-  /* Respect user's motion preferences */
   @media (prefers-reduced-motion: reduce) {
     .smooth-transition,
-    .smooth-transition-colors,
-    .smooth-transition-transform,
     .fade-in-up,
     .fade-in,
     .scale-in {
       animation: none !important;
       transition: none !important;
-      will-change: auto;
     }
   }
-
-  /* Desktop hover effects - with proper hover media queries */
-  @media (min-width: 1024px) and (hover: hover) {
-    .card-hover {
-      transition: var(--transition-smooth);
-    }
-    .card-hover:hover {
-      box-shadow: var(--shadow-card);
-    }
-  }
-
-  /* Mobile static shadows */
-  @media (max-width: 1023px) {
-    .card-hover {
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-  }
-
-
-  /* Admin Table Styling - Enterprise Grade */
-  .admin-table {
-    @apply text-sm;
-  }
-
-  .admin-table thead tr {
-    @apply bg-slate-50 border-b-2 border-slate-200;
-  }
-
-  .admin-table thead th {
-    @apply text-slate-600 font-semibold text-xs uppercase tracking-wider py-3;
-  }
-
-  .admin-table tbody tr {
-    @apply border-b border-slate-100 bg-white;
-  }
-
-  @media (hover: hover) {
-    .admin-table tbody tr:hover {
-      @apply bg-slate-50/50 transition-colors duration-150;
-    }
-  }
-
-  .admin-table tbody td {
-    @apply py-4 text-slate-700;
-  }
-
-  /* Zebra striping for better readability */
-  .admin-table tbody tr:nth-child(even) {
-    @apply bg-slate-50;
-  }
-
-  /* Admin table row selection states */
-  .admin-table tbody tr[data-state="selected"] {
-    @apply bg-primary/10 hover:bg-primary/15;
-  }
-  
-  /* Subtle badge animations */
-  .admin-table .badge {
-    @apply transition-all duration-200;
-  }
-
-  /* Admin table responsive adjustments */
-  @media (max-width: 1023px) and (hover: hover) {
-    .admin-table tbody tr:hover {
-      @apply bg-slate-50/30;
-    }
-  }
-
-/* Essential Mobile Touch Targets */
-@media (max-width: 767px) {
-  .touch-target {
-    min-height: 48px;
-    min-width: 48px;
-  }
-
-  .mobile-button {
-    min-height: 48px;
-    padding: 12px 16px;
-    font-size: 16px; /* Prevent iOS zoom */
-  }
-
-  .mobile-input {
-    min-height: 48px;
-    font-size: 16px; /* Prevent iOS zoom */
-  }
-}
 }
 
 @layer utilities {
@@ -319,7 +163,7 @@ html, body, #root {
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
-/* Keyframes for entrance animations */
+/* Essential Keyframes */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -337,7 +181,6 @@ html, body, #root {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -348,36 +191,6 @@ html, body, #root {
   }
   to {
     opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes bounce-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.3) rotate(-10deg);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.1) rotate(5deg);
-  }
-  70% {
-    transform: scale(0.95) rotate(-2deg);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) rotate(0deg);
-  }
-}
-
-@keyframes earnings-tick {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
     transform: scale(1);
   }
 }
@@ -418,17 +231,3 @@ html, body, #root {
   }
 }
 
-/* Print Styles - Hide mobile navigation and optimize for print */
-@media print {
-  .fixed.bottom-0,
-  [role="navigation"][aria-label="Main navigation"],
-  .mobile-nav,
-  .mobile-bottom-nav {
-    display: none !important;
-  }
-  
-  /* Ensure clean print layout */
-  body {
-    padding-bottom: 0 !important;
-  }
-}
