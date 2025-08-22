@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DashboardSkeleton } from '@/components/ui/loading-skeleton';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useEmployeeDashboard } from '@/hooks/useEmployeeDashboard';
@@ -86,21 +87,7 @@ const EmployeeDashboard = () => {
     return items;
   }, [allWorkItems, filters]);
 
-  // Debug assignment counts
-  React.useEffect(() => {
-    if (allWorkItems) {
-      console.log('🔍 Assignment Debug Info:');
-      console.log('Profile ID:', profile?.id);
-      console.log('All work items count:', allWorkItems.length);
-      console.log('Filtered work items count:', filteredWorkItems.length);
-      console.log('Work items breakdown:', {
-        projects: allWorkItems.filter(item => item.type === 'project').length,
-        workOrders: allWorkItems.filter(item => item.type === 'work_order').length,
-        assignedToMe: allWorkItems.filter(item => item.isAssignedToMe).length,
-      });
-      console.log('All work items:', allWorkItems);
-    }
-  }, [allWorkItems, filteredWorkItems.length, profile?.id]);
+  // Removed debug logging for performance
 
   // Calculate work counts for filter chips
   const workCounts = React.useMemo(() => {
@@ -141,6 +128,10 @@ const EmployeeDashboard = () => {
         </div>
       </div>
     );
+  }
+
+  if (isLoading) {
+    return <DashboardSkeleton isMobile={isMobile} />;
   }
 
   if (isMobile) {

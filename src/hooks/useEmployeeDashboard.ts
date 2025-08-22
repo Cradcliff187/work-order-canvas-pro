@@ -152,96 +152,72 @@ export const useEmployeeDashboard = () => {
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
-  // Active assignments
-  const activeAssignmentsQuery = useQuery({
-    queryKey: ['employee-active-assignments', employeeId],
-    queryFn: () => fetchActiveAssignments(employeeId!),
+  // Combined dashboard data query - fetches core data efficiently
+  const dashboardDataQuery = useQuery({
+    queryKey: ['employee-dashboard-data', employeeId, weekStart, weekEnd, monthStart, monthEnd],
+    queryFn: async () => {
+      if (!employeeId) return null;
+      
+      // Fetch all core data in parallel
+      const [
+        activeAssignments,
+        hoursThisWeek,
+        hoursThisMonth,
+        recentReceipts,
+        monthlyExpenses,
+        pendingTimeReports
+      ] = await Promise.all([
+        fetchActiveAssignments(employeeId),
+        fetchTimeReports(employeeId, weekStart, weekEnd),
+        fetchTimeReports(employeeId, monthStart, monthEnd),
+        fetchRecentReceipts(employeeId),
+        fetchMonthlyExpenses(employeeId, monthStart, monthEnd),
+        fetchPendingTimeReports(employeeId)
+      ]);
+
+      return {
+        activeAssignments,
+        hoursThisWeek,
+        hoursThisMonth,
+        recentReceipts,
+        monthlyExpenses,
+        pendingTimeReports,
+        totalHoursThisWeek: getTotalHours(hoursThisWeek),
+        totalHoursThisMonth: getTotalHours(hoursThisMonth)
+      };
+    },
     enabled: !!employeeId,
-    refetchInterval: 30000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 2 * 60 * 1000, // 2 minutes instead of 30 seconds
   });
 
-  // Time reports for this week
-  const hoursThisWeekQuery = useQuery({
-    queryKey: ['employee-hours-this-week', employeeId, weekStart, weekEnd],
-    queryFn: () => fetchTimeReports(employeeId!, weekStart, weekEnd),
-    enabled: !!employeeId,
-    refetchInterval: 30000,
-  });
-
-  // Time reports for this month
-  const hoursThisMonthQuery = useQuery({
-    queryKey: ['employee-hours-this-month', employeeId, monthStart, monthEnd],
-    queryFn: () => fetchTimeReports(employeeId!, monthStart, monthEnd),
-    enabled: !!employeeId,
-    refetchInterval: 30000,
-  });
-
-  // Recent receipts
-  const recentReceiptsQuery = useQuery({
-    queryKey: ['employee-recent-receipts', employeeId],
-    queryFn: () => fetchRecentReceipts(employeeId!),
-    enabled: !!employeeId,
-    refetchInterval: 30000,
-  });
-
-  // Monthly expenses
-  const monthlyExpensesQuery = useQuery({
-    queryKey: ['employee-monthly-expenses', employeeId, monthStart, monthEnd],
-    queryFn: () => fetchMonthlyExpenses(employeeId!, monthStart, monthEnd),
-    enabled: !!employeeId,
-    refetchInterval: 30000,
-  });
-
-  // Pending time reports
-  const pendingTimeReportsQuery = useQuery({
-    queryKey: ['employee-pending-time-reports', employeeId],
-    queryFn: () => fetchPendingTimeReports(employeeId!),
-    enabled: !!employeeId,
-    refetchInterval: 30000,
-  });
-
-  // Recent time reports (last 10)
+  // Recent time reports (separate query as it's less critical)
   const recentTimeReportsQuery = useQuery({
     queryKey: ['employee-recent-time-reports', employeeId],
     queryFn: () => {
+      if (!employeeId) return [];
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return fetchTimeReports(employeeId!, thirtyDaysAgo, now);
+      return fetchTimeReports(employeeId, thirtyDaysAgo, now);
     },
     enabled: !!employeeId,
-    refetchInterval: 30000,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: 5 * 60 * 1000, // 5 minutes
   });
 
-  const hoursThisWeek = hoursThisWeekQuery.data || [];
-  const hoursThisMonth = hoursThisMonthQuery.data || [];
-  const totalHoursThisWeek = getTotalHours(hoursThisWeek);
-  const totalHoursThisMonth = getTotalHours(hoursThisMonth);
+  const dashboardData = dashboardDataQuery.data;
 
   return {
-    activeAssignments: activeAssignmentsQuery.data,
-    hoursThisWeek,
-    hoursThisMonth,
-    recentReceipts: recentReceiptsQuery.data,
-    pendingTimeReports: pendingTimeReportsQuery.data,
-    totalHoursThisWeek,
-    totalHoursThisMonth,
-    monthlyExpenses: monthlyExpensesQuery.data || 0,
+    activeAssignments: dashboardData?.activeAssignments,
+    hoursThisWeek: dashboardData?.hoursThisWeek || [],
+    hoursThisMonth: dashboardData?.hoursThisMonth || [],
+    recentReceipts: dashboardData?.recentReceipts,
+    pendingTimeReports: dashboardData?.pendingTimeReports,
+    totalHoursThisWeek: dashboardData?.totalHoursThisWeek || 0,
+    totalHoursThisMonth: dashboardData?.totalHoursThisMonth || 0,
+    monthlyExpenses: dashboardData?.monthlyExpenses || 0,
     recentTimeReports: recentTimeReportsQuery.data,
-    isLoading: 
-      activeAssignmentsQuery.isLoading ||
-      hoursThisWeekQuery.isLoading ||
-      hoursThisMonthQuery.isLoading ||
-      recentReceiptsQuery.isLoading ||
-      pendingTimeReportsQuery.isLoading ||
-      recentTimeReportsQuery.isLoading ||
-      monthlyExpensesQuery.isLoading,
-    isError: 
-      activeAssignmentsQuery.isError ||
-      hoursThisWeekQuery.isError ||
-      hoursThisMonthQuery.isError ||
-      recentReceiptsQuery.isError ||
-      pendingTimeReportsQuery.isError ||
-      recentTimeReportsQuery.isError ||
-      monthlyExpensesQuery.isError,
+    isLoading: dashboardDataQuery.isLoading || recentTimeReportsQuery.isLoading,
+    isError: dashboardDataQuery.isError || recentTimeReportsQuery.isError,
   };
 };
