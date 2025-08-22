@@ -215,7 +215,7 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
           )}
 
           <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
-            <div className="mx-auto px-4 md:px-6 max-w-full lg:max-w-screen-xl">
+            <div className="mx-auto px-4 md:px-6 max-w-full">
               {children}
             </div>
           </main>

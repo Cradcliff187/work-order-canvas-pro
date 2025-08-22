@@ -66,7 +66,7 @@ export const SubcontractorLayout = React.memo(function SubcontractorLayout({ chi
 
           {/* Main Content */}
           <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
-            <div className="container mx-auto p-4 md:p-6 max-w-screen-xl">
+            <div className="container mx-auto p-4 md:p-6 max-w-full">
               {children}
             </div>
           </main>
