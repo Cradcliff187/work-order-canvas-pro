@@ -162,12 +162,21 @@ export function FloatingClockWidget() {
   }, []);
 
   const handleFabClick = useCallback(() => {
+    console.log('🎯 FAB clicked - opening clock widget');
     onFieldSave();
     setIsOpen(true);
   }, [onFieldSave, setIsOpen]);
 
   const handleClockAction = useCallback(async () => {
+    console.log('🔄 handleClockAction called', { 
+      isClocked: clockData.isClocked, 
+      selectedOption,
+      isClockingIn,
+      isClockingOut
+    });
+
     if (!clockData.isClocked && !selectedOption) {
+      console.log('❌ No selection - showing toast');
       toast({
         title: "Selection Required",
         description: "Please select a work order or project before clocking in.",
@@ -178,10 +187,12 @@ export function FloatingClockWidget() {
 
     try {
       if (clockData.isClocked) {
+        console.log('⏰ Clocking out...');
         await clockOut.mutateAsync(false);
         onSubmitSuccess();
         setIsOpen(false);
       } else if (selectedOption) {
+        console.log('⏰ Clocking in...', selectedOption);
         if (selectedOption.type === 'work_order') {
           await clockIn.mutateAsync({ workOrderId: selectedOption.id });
         } else {
@@ -192,10 +203,10 @@ export function FloatingClockWidget() {
         setIsOpen(false);
       }
     } catch (error) {
+      console.error('❌ Clock action failed:', error);
       onError();
-      console.error('Clock action failed:', error);
     }
-  }, [clockData.isClocked, selectedOption, clockIn, clockOut, toast, onSubmitSuccess, onError]);
+  }, [clockData.isClocked, selectedOption, clockIn, clockOut, toast, onSubmitSuccess, onError, isClockingIn, isClockingOut]);
 
   const handleCancel = () => {
     setIsOpen(false);
