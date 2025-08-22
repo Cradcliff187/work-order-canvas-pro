@@ -38,7 +38,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     ? 'pb-[100px]' // Space for MobileBottomNav and FloatingClockWidget
     : isEmployee && isMobile 
       ? 'pb-[100px]' // Space for FloatingClockWidget only
-      : 'pb-20 md:pb-0'; // Default padding
+      : 'pb-20 lg:pb-0'; // Default padding
   return (
     <SidebarProvider>
       <a
