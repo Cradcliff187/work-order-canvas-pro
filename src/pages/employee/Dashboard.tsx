@@ -115,8 +115,8 @@ const EmployeeDashboard = () => {
   };
 
   const handleViewDetails = (id: string) => {
-    // Navigate to work order or project details
-    navigate(`/employee/work-items/${id}`);
+    // Navigate to assignment details
+    navigate(`/employee/assignments/${id}`);
   };
 
   if (isError) {
