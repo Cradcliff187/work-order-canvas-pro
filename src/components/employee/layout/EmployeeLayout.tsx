@@ -9,6 +9,7 @@ import { MobileHeader } from '@/components/layout/MobileHeader';
 import { UserProfileDropdown } from '@/components/admin/layout/UserProfileDropdown';
 import FloatingClockWidget from '@/components/employee/FloatingClockWidget';
 import { QuickActionSheet } from '@/components/employee/QuickActionSheet';
+import { ClockWidgetProvider } from '@/contexts/ClockWidgetContext';
 import {
   Sidebar,
   SidebarContent,
@@ -126,39 +127,41 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({ children }) => {
   ], []);
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen max-w-screen overflow-x-hidden bg-background">
-        <div className="relative flex h-screen">
-          <EmployeeSidebar />
-          
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {isMobile ? <MobileHeader /> : (
-              <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background flex-shrink-0">
-                <SidebarTrigger />
-                <div className="flex-1" />
-              </header>
-            )}
+    <ClockWidgetProvider>
+      <SidebarProvider>
+        <div className="min-h-screen max-w-screen overflow-x-hidden bg-background">
+          <div className="relative flex h-screen">
+            <EmployeeSidebar />
+            
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {isMobile ? <MobileHeader /> : (
+                <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background flex-shrink-0">
+                  <SidebarTrigger />
+                  <div className="flex-1" />
+                </header>
+              )}
 
-            <main className="flex-1 overflow-y-auto overflow-x-hidden">
-              <div className={`${isMobile ? 'px-4 pb-24' : 'px-4 pb-6'} space-y-4 pt-6 max-w-full overflow-hidden`}>
-                {children}
-              </div>
-            </main>
+              <main className="flex-1 overflow-y-auto overflow-x-hidden">
+                <div className={`${isMobile ? 'px-4 pb-24' : 'px-4 pb-6'} space-y-4 pt-6 max-w-full overflow-hidden`}>
+                  {children}
+                </div>
+              </main>
+            </div>
+            
+            {isMobile && (
+              <MobileBottomNav navItems={employeeNavItems} />
+            )}
+            
+            <FloatingClockWidget />
+            
+            <QuickActionSheet 
+              isOpen={isQuickActionSheetOpen} 
+              onClose={() => setIsQuickActionSheetOpen(false)} 
+            />
           </div>
-          
-          {isMobile && (
-            <MobileBottomNav navItems={employeeNavItems} />
-          )}
-          
-          <FloatingClockWidget />
-          
-          <QuickActionSheet 
-            isOpen={isQuickActionSheetOpen} 
-            onClose={() => setIsQuickActionSheetOpen(false)} 
-          />
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </ClockWidgetProvider>
   );
 };
 

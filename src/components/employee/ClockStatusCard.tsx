@@ -6,7 +6,7 @@ import { Clock, MapPin, Play, DollarSign, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { useClockState } from '@/hooks/useClockState';
 import { useRecentlyClocked } from '@/hooks/useRecentlyClocked';
-import { FloatingClockWidget } from '@/components/employee/FloatingClockWidget';
+import { useClockWidget } from '@/contexts/ClockWidgetContext';
 import { WorkItemClockCard } from '@/components/employee/WorkItemClockCard';
 
 interface ClockStatusCardProps {
@@ -44,7 +44,7 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
 }) => {
   const { isClocked, clockInTime, workOrderId, locationAddress, elapsedTime, hourlyRate, clockIn, isClockingIn } = useClockState();
   const { data: recentItems = [], isLoading: isLoadingRecent } = useRecentlyClocked();
-  const [showClockWidget, setShowClockWidget] = React.useState(false);
+  const { openClockWidget } = useClockWidget();
 
   const handleQuickClockIn = (workOrderId?: string, projectId?: string) => {
     clockIn.mutate({ workOrderId, projectId });
@@ -98,7 +98,7 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
                 </p>
                 <div className="space-y-4">
                   <Button 
-                    onClick={() => setShowClockWidget(true)}
+                    onClick={openClockWidget}
                     size="lg"
                     className="shadow-xl hover:shadow-2xl transition-all duration-300 text-lg px-8 py-4 h-auto hover:scale-105"
                   >
@@ -124,7 +124,6 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
             </Card>
           )}
         </div>
-        {showClockWidget && <FloatingClockWidget />}
       </>
     );
   }

@@ -1,10 +1,11 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useClockState } from '@/hooks/useClockState';
 import { useAllWorkItems } from '@/hooks/useAllWorkItems';
 import { useRecentlyClocked } from '@/hooks/useRecentlyClocked';
 import { useTodaysWork } from '@/hooks/useTodaysWork';
 import { useToast } from '@/hooks/use-toast';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { useClockWidget } from '@/contexts/ClockWidgetContext';
 import { ClockFAB } from './clock/ClockFAB';
 import { ClockSheet } from './clock/ClockSheet';
 import type { ClockOption } from './clock/types';
@@ -12,7 +13,7 @@ import type { ClockOption } from './clock/types';
 export function FloatingClockWidget() {
   const { toast } = useToast();
   const { onFieldSave, onSubmitSuccess, onError } = useHapticFeedback();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const { isOpen, setIsOpen } = useClockWidget();
   const [selectedOption, setSelectedOption] = useState<ClockOption | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -162,8 +163,8 @@ export function FloatingClockWidget() {
 
   const handleFabClick = useCallback(() => {
     onFieldSave();
-    setIsSheetOpen(true);
-  }, [onFieldSave]);
+    setIsOpen(true);
+  }, [onFieldSave, setIsOpen]);
 
   const handleClockAction = useCallback(async () => {
     if (!clockData.isClocked && !selectedOption) {
@@ -179,7 +180,7 @@ export function FloatingClockWidget() {
       if (clockData.isClocked) {
         await clockOut.mutateAsync(false);
         onSubmitSuccess();
-        setIsSheetOpen(false);
+        setIsOpen(false);
       } else if (selectedOption) {
         if (selectedOption.type === 'work_order') {
           await clockIn.mutateAsync({ workOrderId: selectedOption.id });
@@ -188,7 +189,7 @@ export function FloatingClockWidget() {
         }
         onSubmitSuccess();
         setSelectedOption(null);
-        setIsSheetOpen(false);
+        setIsOpen(false);
       }
     } catch (error) {
       onError();
@@ -197,7 +198,7 @@ export function FloatingClockWidget() {
   }, [clockData.isClocked, selectedOption, clockIn, clockOut, toast, onSubmitSuccess, onError]);
 
   const handleCancel = () => {
-    setIsSheetOpen(false);
+    setIsOpen(false);
     setSelectedOption(null);
     setSearchQuery('');
   };
@@ -212,8 +213,8 @@ export function FloatingClockWidget() {
       />
       
       <ClockSheet
-        isOpen={isSheetOpen}
-        onOpenChange={setIsSheetOpen}
+        isOpen={isOpen}
+        onOpenChange={setIsOpen}
         isClocked={clockData.isClocked}
         clockInTime={clockData.clockInTime}
         workOrderId={clockData.workOrderId}
