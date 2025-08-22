@@ -82,6 +82,7 @@ export const Auth = () => {
             src={branding.assets.logos.horizontal} 
             alt={branding.company.name}
             className="mx-auto h-38 w-auto mb-8"
+            fetchPriority="high"
           />
           <div className="flex items-center justify-center gap-2 mb-2">
             <HardHat className="h-6 w-6 text-primary" />
