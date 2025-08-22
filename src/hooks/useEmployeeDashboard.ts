@@ -38,6 +38,7 @@ interface DashboardData {
   activeAssignments: EmployeeAssignment[];
   hoursThisWeek: EmployeeTimeReport[];
   hoursThisMonth: EmployeeTimeReport[];
+  recentTimeReports: EmployeeTimeReport[];
   recentReceipts: EmployeeReceipt[];
   monthlyExpenses: number;
   pendingTimeReports: number;
@@ -65,90 +66,6 @@ const fetchEmployeeDashboardData = async (
   return data as unknown as DashboardData;
 };
 
-// Fetch employee's time reports for a date range
-const fetchTimeReports = async (employeeId: string, startDate: Date, endDate: Date): Promise<EmployeeTimeReport[]> => {
-  const { data, error } = await supabase
-    .from('employee_reports')
-    .select(`
-      id,
-      report_date,
-      hours_worked,
-      hourly_rate_snapshot,
-      work_performed,
-      work_orders!inner (
-        work_order_number
-      )
-    `)
-    .eq('employee_user_id', employeeId)
-    .gte('report_date', format(startDate, 'yyyy-MM-dd'))
-    .lte('report_date', format(endDate, 'yyyy-MM-dd'))
-    .order('report_date', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
-};
-
-// Fetch employee's recent receipts
-const fetchRecentReceipts = async (employeeId: string): Promise<EmployeeReceipt[]> => {
-  const { data, error } = await supabase
-    .from('receipts')
-    .select('id, vendor_name, amount, receipt_date, description')
-    .eq('employee_user_id', employeeId)
-    .order('receipt_date', { ascending: false })
-    .limit(10);
-
-  if (error) throw error;
-  return data || [];
-};
-
-// Fetch employee's monthly expenses total
-const fetchMonthlyExpenses = async (employeeId: string, startDate: Date, endDate: Date): Promise<number> => {
-  const { data, error } = await supabase
-    .from('receipts')
-    .select('amount')
-    .eq('employee_user_id', employeeId)
-    .gte('receipt_date', format(startDate, 'yyyy-MM-dd'))
-    .lte('receipt_date', format(endDate, 'yyyy-MM-dd'));
-
-  if (error) throw error;
-  return (data || []).reduce((total, receipt) => total + receipt.amount, 0);
-};
-
-// Get total hours for a date range
-const getTotalHours = (timeReports: EmployeeTimeReport[]): number => {
-  return timeReports.reduce((total, report) => total + report.hours_worked, 0);
-};
-
-// Count pending time reports (work orders that need time reports)
-const fetchPendingTimeReports = async (employeeId: string): Promise<number> => {
-  // Get active assignments
-  const { data: assignments, error: assignmentsError } = await supabase
-    .from('work_order_assignments')
-    .select('work_order_id')
-    .eq('assigned_to', employeeId);
-
-  if (assignmentsError) throw assignmentsError;
-
-  if (!assignments || assignments.length === 0) return 0;
-
-  const workOrderIds = assignments.map(a => a.work_order_id);
-
-  // Check which work orders don't have recent time reports
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-  const { data: recentReports, error: reportsError } = await supabase
-    .from('employee_reports')
-    .select('work_order_id')
-    .eq('employee_user_id', employeeId)
-    .in('work_order_id', workOrderIds)
-    .gte('report_date', format(oneWeekAgo, 'yyyy-MM-dd'));
-
-  if (reportsError) throw reportsError;
-
-  const reportedWorkOrderIds = new Set((recentReports || []).map(r => r.work_order_id));
-  return workOrderIds.filter(id => !reportedWorkOrderIds.has(id)).length;
-};
 
 export const useEmployeeDashboard = () => {
   const { profile } = useAuth();
@@ -160,32 +77,16 @@ export const useEmployeeDashboard = () => {
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
-  // Optimized dashboard data query - single RPC call
+  // Single optimized RPC call for all dashboard data
   const dashboardDataQuery = useQuery({
     queryKey: ['employee-dashboard-data', employeeId, weekStart, weekEnd, monthStart, monthEnd],
     queryFn: async () => {
       if (!employeeId) return null;
-      
-      // Single optimized RPC call instead of 6 parallel queries
       return await fetchEmployeeDashboardData(employeeId, weekStart, weekEnd, monthStart, monthEnd);
     },
     enabled: !!employeeId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 2 * 60 * 1000, // 2 minutes
-  });
-
-  // Recent time reports (separate query as it's less critical)
-  const recentTimeReportsQuery = useQuery({
-    queryKey: ['employee-recent-time-reports', employeeId],
-    queryFn: () => {
-      if (!employeeId) return [];
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return fetchTimeReports(employeeId, thirtyDaysAgo, now);
-    },
-    enabled: !!employeeId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    refetchInterval: 5 * 60 * 1000, // 5 minutes
   });
 
   const dashboardData = dashboardDataQuery.data;
@@ -194,13 +95,13 @@ export const useEmployeeDashboard = () => {
     activeAssignments: dashboardData?.activeAssignments,
     hoursThisWeek: dashboardData?.hoursThisWeek || [],
     hoursThisMonth: dashboardData?.hoursThisMonth || [],
+    recentTimeReports: dashboardData?.recentTimeReports || [],
     recentReceipts: dashboardData?.recentReceipts,
     pendingTimeReports: dashboardData?.pendingTimeReports,
     totalHoursThisWeek: dashboardData?.totalHoursThisWeek || 0,
     totalHoursThisMonth: dashboardData?.totalHoursThisMonth || 0,
     monthlyExpenses: dashboardData?.monthlyExpenses || 0,
-    recentTimeReports: recentTimeReportsQuery.data,
-    isLoading: dashboardDataQuery.isLoading || recentTimeReportsQuery.isLoading,
-    isError: dashboardDataQuery.isError || recentTimeReportsQuery.isError,
+    isLoading: dashboardDataQuery.isLoading,
+    isError: dashboardDataQuery.isError,
   };
 };
