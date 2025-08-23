@@ -21,6 +21,10 @@ export function useAdminReportSubmission() {
 
   const submitReportForSubcontractor = useMutation({
     mutationFn: async (reportData: AdminReportSubmissionData) => {
+      // Admin report submission follows same rules as regular submission
+      // Database triggers handle all status transitions automatically
+      // Manual status updates would bypass audit and email systems
+      
       if (!user) throw new Error("Not authenticated");
 
       // Get current admin/employee profile
@@ -106,15 +110,6 @@ export function useAdminReportSubmission() {
         await Promise.all(uploadPromises);
       }
 
-      // Update work order status - no longer updating assignments as they should be pre-existing
-      await supabase
-        .from("work_orders")
-        .update({ 
-          status: "completed",
-          subcontractor_report_submitted: true,
-          date_completed: new Date().toISOString()
-        })
-        .eq("id", reportData.workOrderId);
 
       return report;
     },
