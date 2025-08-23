@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSwipeGesture } from "@/hooks/useSwipeGesture";
+
 import { formatFileSize } from "@/utils/fileUtils";
 import { getFieldConfidence } from "@/utils/confidence-display";
 import { FileText, X } from "lucide-react";
@@ -11,7 +11,7 @@ interface FilePreviewProps {
   file: File | null;
   imagePreview: string | null;
   onRemove: () => void;
-  swipeGesture?: ReturnType<typeof useSwipeGesture>;
+  swipeGesture?: any; // Removed useSwipeGesture
   ocrConfidence?: Record<string, number>;
 }
 

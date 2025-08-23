@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { motion, PanInfo } from 'framer-motion';
+import React, { useState, useCallback, useRef } from 'react';
+import { motion, PanInfo, useMotionValue, useTransform } from 'framer-motion';
 import { Trash2 } from 'lucide-react';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SwipeAction {
   icon: React.ComponentType<{ className?: string }>;
@@ -38,9 +40,15 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
   rightAction,
   leftAction
 }) => {
-  const [dragX, setDragX] = useState(0);
+  const isMobile = useIsMobile();
+  const { triggerHaptic } = useHapticFeedback();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hasTriggeredThreshold, setHasTriggeredThreshold] = useState(false);
+  
+  // Motion values for smooth animations
+  const x = useMotionValue(0);
+  const dragConstraintsRef = useRef<HTMLDivElement>(null);
 
   // Default left action to delete if onDelete is provided
   const effectiveLeftAction = leftAction || (onDelete ? {
@@ -50,12 +58,19 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
     confirmMessage: `Delete ${itemType} "${itemName}"?`
   } : undefined);
 
-  const handleDragEnd = (event: any, info: PanInfo) => {
+  // Transform values for dynamic styling
+  const leftOpacity = useTransform(x, [-120, -40, 0], [1, 0.3, 0]);
+  const rightOpacity = useTransform(x, [0, 40, 100], [0, 0.3, 1]);
+  const leftScale = useTransform(x, [-120, -80, -40], [1.1, 1, 0.8]);
+  const rightScale = useTransform(x, [40, 80, 120], [0.8, 1, 1.1]);
+
+  const handleDragEnd = useCallback((event: any, info: PanInfo) => {
     const leftThreshold = -80;
     const rightThreshold = 60;
     
     if (info.offset.x < leftThreshold && (effectiveLeftAction || onSwipeLeft) && !disabled) {
       // Swiped left beyond threshold
+      triggerHaptic({ pattern: 'medium' });
       if (effectiveLeftAction?.confirmMessage || onDelete) {
         setShowDeleteConfirm(true);
       } else if (onSwipeLeft) {
@@ -63,6 +78,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
       }
     } else if (info.offset.x > rightThreshold && (rightAction || onSwipeRight) && !disabled) {
       // Swiped right beyond threshold
+      triggerHaptic({ pattern: 'medium' });
       if (rightAction?.confirmMessage) {
         // Could add right action confirmation here
       } else if (onSwipeRight) {
@@ -70,9 +86,30 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
       }
     }
     
-    // Reset position
-    setDragX(0);
-  };
+    // Reset haptic state
+    setHasTriggeredThreshold(false);
+  }, [effectiveLeftAction, rightAction, onSwipeLeft, onSwipeRight, onDelete, disabled, triggerHaptic]);
+
+  const handleDrag = useCallback((event: any, info: PanInfo) => {
+    const leftThreshold = -80;
+    const rightThreshold = 60;
+    
+    // Trigger haptic feedback when crossing thresholds (only once per drag)
+    if (!hasTriggeredThreshold) {
+      if ((info.offset.x < leftThreshold && (effectiveLeftAction || onSwipeLeft)) || 
+          (info.offset.x > rightThreshold && (rightAction || onSwipeRight))) {
+        triggerHaptic({ pattern: 'light' });
+        setHasTriggeredThreshold(true);
+      }
+    }
+    
+    // Reset threshold state when returning to center
+    if (Math.abs(info.offset.x) < 20) {
+      setHasTriggeredThreshold(false);
+    }
+    
+    x.set(info.offset.x);
+  }, [hasTriggeredThreshold, effectiveLeftAction, rightAction, onSwipeLeft, onSwipeRight, triggerHaptic, x]);
 
   const handleDelete = async () => {
     if (!onDelete && !onSwipeLeft) return;
@@ -92,11 +129,6 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
     }
   };
 
-  // Calculate opacity for background reveals
-  const leftSwipeProgress = Math.max(0, -dragX / 120);
-  const rightSwipeProgress = Math.max(0, dragX / 100);
-  const leftOpacity = Math.min(leftSwipeProgress, 1);
-  const rightOpacity = Math.min(rightSwipeProgress, 1);
 
   // Get background colors based on action type
   const getActionBackground = (action?: SwipeAction) => {
@@ -125,43 +157,55 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
 
   return (
     <>
-      <div className="relative overflow-hidden">
+      <div 
+        ref={dragConstraintsRef}
+        className="relative overflow-hidden will-change-transform"
+      >
         {/* Right action background - appears when swiping right */}
         {(rightAction || onSwipeRight) && !disabled && (
-          <div 
-            className={`absolute inset-0 ${getActionBackground(rightAction)} flex items-center justify-start px-4 transition-opacity duration-200`}
-            style={{ opacity: dragX > 0 ? rightOpacity : 0 }}
+          <motion.div 
+            className={`absolute inset-0 ${getActionBackground(rightAction)} flex items-center justify-start px-4`}
+            style={{ opacity: rightOpacity }}
           >
             {rightAction?.icon && (
-              <rightAction.icon className={`h-5 w-5 ${getActionForeground(rightAction)}`} />
+              <motion.div style={{ scale: rightScale }}>
+                <rightAction.icon className={`h-5 w-5 ${getActionForeground(rightAction)}`} />
+              </motion.div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* Left action background - appears when swiping left */}
         {(effectiveLeftAction || onSwipeLeft) && !disabled && (
-          <div 
-            className={`absolute inset-0 ${getActionBackground(effectiveLeftAction)} flex items-center justify-end px-4 transition-opacity duration-200`}
-            style={{ opacity: dragX < 0 ? leftOpacity : 0 }}
+          <motion.div 
+            className={`absolute inset-0 ${getActionBackground(effectiveLeftAction)} flex items-center justify-end px-4`}
+            style={{ opacity: leftOpacity }}
           >
             {effectiveLeftAction?.icon && (
-              <effectiveLeftAction.icon className={`h-5 w-5 ${getActionForeground(effectiveLeftAction)}`} />
+              <motion.div style={{ scale: leftScale }}>
+                <effectiveLeftAction.icon className={`h-5 w-5 ${getActionForeground(effectiveLeftAction)}`} />
+              </motion.div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* Main content */}
         <motion.div
-          drag={(effectiveLeftAction || onSwipeLeft || rightAction || onSwipeRight) && !disabled ? "x" : false}
+          drag={(effectiveLeftAction || onSwipeLeft || rightAction || onSwipeRight) && !disabled && isMobile ? "x" : false}
           dragConstraints={{ left: -120, right: 100 }}
-          dragElastic={0.2}
-          onDrag={(event, info) => setDragX(info.offset.x)}
+          dragElastic={0.15}
+          onDrag={handleDrag}
           onDragEnd={handleDragEnd}
+          style={{ x }}
           animate={{ x: 0 }}
-          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          whileTap={{ scale: 0.98 }}
+          transition={{ 
+            type: "spring", 
+            stiffness: 400, 
+            damping: 30,
+            mass: 0.8
+          }}
+          whileTap={{ scale: isMobile ? 0.995 : 1 }}
           className={`relative bg-card ${className}`}
-          style={{ x: dragX }}
         >
           {children}
         </motion.div>

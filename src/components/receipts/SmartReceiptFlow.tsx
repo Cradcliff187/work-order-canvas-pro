@@ -34,7 +34,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw, Edit } from "lucide-react";
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
-import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+
 import { useCamera } from '@/hooks/useCamera';
 import { format } from "date-fns";
 import type { LineItem, OCRResult, SmartReceiptFormData } from '@/types/receipt';
@@ -202,29 +202,7 @@ export function SmartReceiptFlow() {
     // Debug data handled by DebugPanel
   }, [onSwipeAction, actions]);
 
-  // Swipe gesture for image removal
-  const swipeGesture = useSwipeGesture({
-    threshold: 75,
-    verticalCancelThreshold: 10
-  });
-
-  // Handle swipe gesture completion (stabilized)
-  useEffect(() => {
-    let mounted = true;
-    
-    if (!swipeGesture.isSwipeing && swipeGesture.distance > 75 && swipeGesture.direction) {
-      const timeoutId = setTimeout(() => {
-        if (mounted) {
-          removeFile();
-        }
-      }, 50); // Small delay to prevent rapid firing
-      
-      return () => {
-        mounted = false;
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [swipeGesture.isSwipeing, swipeGesture.distance, swipeGesture.direction, removeFile]);
+  // Removed swipe gesture functionality - now handled by SwipeableListItem if needed
   
   // Pull to refresh for form reset
   const { containerRef, pullDistance, isPulling, isRefreshable } = usePullToRefresh({
@@ -730,7 +708,7 @@ export function SmartReceiptFlow() {
               file={receiptFile}
               imagePreview={imagePreview}
               onRemove={removeFile}
-              swipeGesture={isMobile ? swipeGesture : undefined}
+              swipeGesture={undefined}
               ocrConfidence={ocrConfidence}
             />
 

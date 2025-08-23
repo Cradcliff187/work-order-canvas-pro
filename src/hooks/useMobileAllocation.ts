@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
-import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+
 import { useDebounce } from '@/hooks/useDebounce';
 
 interface UseMobileAllocationOptions {
@@ -49,12 +49,18 @@ export function useMobileAllocation({
     }
   }), [isMobile, onFieldSave, onSwipeAction, onFormSave, onSubmitSuccess, onError]);
 
-  // Swipe-to-remove gesture for allocations
+  // Swipe-to-remove gesture for allocations - now handled by SwipeableListItem
   const useSwipeToRemove = useCallback((workOrderId: string) => {
-    return useSwipeGesture({
-      threshold: 75, // 75px swipe distance
-      verticalCancelThreshold: 10
-    });
+    // Return a mock object for backward compatibility
+    return {
+      isSwipeing: false,
+      direction: null,
+      distance: 0,
+      onTouchStart: () => {},
+      onTouchMove: () => {},
+      onTouchEnd: () => {},
+      onReset: () => {}
+    };
   }, []);
 
   // Debounced amount change for performance

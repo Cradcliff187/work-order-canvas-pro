@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +9,8 @@ import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { formatLocationDisplay, formatAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 import { MobileQuickActions, createMapAction, createMessageAction, createViewDetailsAction, createSubmitReportAction, createPhoneAction } from '@/components/work-orders/MobileQuickActions';
-import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -117,35 +116,18 @@ export function MobileWorkOrderCard({
   className
 }: MobileWorkOrderCardProps) {
   const isMobile = useIsMobile();
-  const {
-    isSwipeing,
-    direction,
-    distance,
-    onTouchStart,
-    onTouchMove,
-    onReset,
-  } = useSwipeGesture();
-
-  const ACTION_THRESHOLD = 75;
-  const MAX_DRAG = 120;
-  const progress = Math.min(1, distance / ACTION_THRESHOLD);
-  const x = direction ? (direction === 'left' ? -1 : 1) * Math.min(distance, MAX_DRAG) : 0;
-  const isDragging = isSwipeing;
   const [confirmOpen, setConfirmOpen] = React.useState(false);
 
-  const handleTouchEnd = () => {
-    if (distance >= ACTION_THRESHOLD && direction) {
-      if (direction === 'right') {
-        if ('vibrate' in navigator) (navigator as any).vibrate?.(20);
-        onSwipeRight?.(workOrder);
-      } else if (direction === 'left') {
-        if ('vibrate' in navigator) (navigator as any).vibrate?.(20);
-        setConfirmOpen(true);
-      }
-    }
-    
-    onReset();
+  const handleSwipeLeft = () => {
+    if ('vibrate' in navigator) (navigator as any).vibrate?.(20);
+    setConfirmOpen(true);
   };
+
+  const handleSwipeRight = () => {
+    if ('vibrate' in navigator) (navigator as any).vibrate?.(20);
+    onSwipeRight?.(workOrder);
+  };
+
   const handleTap = () => {
     // Only add haptic feedback on mobile devices
     if (isMobile && 'vibrate' in navigator) {
@@ -226,56 +208,11 @@ export function MobileWorkOrderCard({
     return compactLocation !== 'N/A' ? compactLocation : 'No location specified';
   };
 
-  return (
-    <div className={cn("relative mb-4 w-full max-w-full overflow-hidden", className)}>
-      {/* Swipe Action Backgrounds - Only show on mobile */}
-      {isMobile && (
-        <div className="absolute inset-0 z-0 overflow-hidden">
-        {/* Left (Delete) */}
-        <div
-          className="absolute inset-y-0 left-0 w-full flex items-center justify-start px-4 bg-destructive text-destructive-foreground overflow-hidden"
-          style={{ opacity: direction === 'left' ? progress : 0 }}
-        >
-          <div
-            className="flex items-center gap-2 min-w-0"
-            style={{ transform: `scale(${0.9 + 0.1 * progress})` }}
-          >
-            <Trash2 className="h-5 w-5 flex-shrink-0" />
-            <span className="font-medium truncate">Delete</span>
-          </div>
-        </div>
-        {/* Right (Complete) */}
-        <div
-          className="absolute inset-y-0 right-0 w-full flex items-center justify-end px-4 bg-success text-success-foreground overflow-hidden"
-          style={{ opacity: direction === 'right' ? progress : 0 }}
-        >
-          <div
-            className="flex items-center gap-2 min-w-0"
-            style={{ transform: `scale(${0.9 + 0.1 * progress})` }}
-          >
-            <Check className="h-5 w-5 flex-shrink-0" />
-            <span className="font-medium truncate">Complete</span>
-          </div>
-        </div>
-        </div>
-      )}
-      
-      <Card
-        className={cn(
-          "w-full max-w-full overflow-hidden transition-transform duration-200 min-h-[48px] card-hover relative z-10",
-          isMobile ? "touch-manipulation will-change-transform active:scale-95 touch-action-pan-y" : "hover:shadow-md cursor-pointer"
-        )}
-        style={{
-          transform: isMobile ? `translateX(${x}px)` : undefined,
-          transition: isMobile && isDragging ? 'none' : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
-          maxWidth: '100%',
-          width: '100%'
-        }}
-        onTouchStart={isMobile ? onTouchStart : undefined}
-        onTouchMove={isMobile ? onTouchMove : undefined}
-        onTouchEnd={isMobile ? handleTouchEnd : undefined}
-        onClick={isMobile ? (isDragging || x !== 0 ? undefined : handleTap) : handleTap}
-      >
+  const cardContent = (
+    <Card
+      className="w-full max-w-full overflow-hidden min-h-[48px] card-hover"
+      onClick={handleTap}
+    >
       <CardContent className="p-4 w-full max-w-full overflow-hidden">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
@@ -361,10 +298,8 @@ export function MobileWorkOrderCard({
             </div>
           )}
 
-          {/* Enhanced organization context with team member indicator */}
           {shouldShowField('organization') && (
             <>
-              {/* Subcontractor sees submitting org */}
               {viewerRole === 'subcontractor' && workOrder.organizations && (
                 <div className="flex items-center gap-2 text-sm min-w-0">
                   <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -376,7 +311,6 @@ export function MobileWorkOrderCard({
                   />
                 </div>
               )}
-              {/* Partner sees assigned-to org only */}
               {viewerRole === 'partner' && workOrder.assigned_organizations && (
                 <div className="flex items-center gap-2 text-sm min-w-0">
                   <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -388,7 +322,6 @@ export function MobileWorkOrderCard({
                   />
                 </div>
               )}
-              {/* Admin/Employee sees both when available */}
               {viewerRole === 'admin' && (
                 <>
                   {workOrder.organizations && (
@@ -415,7 +348,6 @@ export function MobileWorkOrderCard({
                   )}
                 </>
               )}
-              {/* Show team assignment for organization-wide assignments */}
               {viewerRole === 'subcontractor' && workOrder.work_order_assignments?.some(a => a.assignment_type === 'organization') && (
                 <div className="flex items-center gap-2 text-sm min-w-0">
                   <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -457,46 +389,54 @@ export function MobileWorkOrderCard({
           )}
         </div>
 
-        {/* Static Action Buttons */}
         {showActionsDefault && (
           <div className="flex gap-2 mt-3 pt-3 border-t">
             <Button size="default" variant="outline" className="flex-1 mobile-button touch-target">
               View Details
             </Button>
-            {viewerRole === 'subcontractor' && workOrder.status === 'assigned' && (
-              <Button size="default" className="flex-1 mobile-button touch-target">
-                Start Work
-              </Button>
-            )}
-            {viewerRole === 'subcontractor' && workOrder.status === 'in_progress' && (
-              <Button size="default" className="flex-1 mobile-button touch-target">
-                Submit Report
-              </Button>
-            )}
-            {viewerRole === 'partner' && workOrder.status === 'received' && (
-              <Button size="default" className="flex-1 mobile-button touch-target">
-                Assign
-              </Button>
-            )}
           </div>
         )}
       </CardContent>
-
-      {/* Quick Actions Footer */}
-      <MobileQuickActions actions={quickActions} />
+      {showQuickActions && quickActions.length > 0 && (
+        <MobileQuickActions actions={quickActions} />
+      )}
     </Card>
+  );
 
-    <DeleteConfirmationDialog
-      open={confirmOpen}
-      onOpenChange={setConfirmOpen}
-      onConfirm={async () => {
-        await onSwipeLeft?.(workOrder);
-        setConfirmOpen(false);
-      }}
-      itemType="work order"
-      itemName={workOrder.work_order_number || workOrder.title}
-      isLoading={false}
-    />
+  // If swipe actions are enabled, wrap in SwipeableListItem
+  if (isMobile && (onSwipeLeft || onSwipeRight)) {
+    return (
+      <div className={cn("relative mb-4 w-full max-w-full", className)}>
+        <SwipeableListItem
+          onSwipeLeft={onSwipeLeft ? handleSwipeLeft : undefined}
+          onSwipeRight={onSwipeRight ? handleSwipeRight : undefined}
+          leftAction={onSwipeLeft ? { icon: Trash2, label: 'Delete', color: 'destructive' } : undefined}
+          rightAction={onSwipeRight ? { icon: Check, label: 'Complete', color: 'success' } : undefined}
+          disabled={false}
+          className="mb-0"
+        >
+          {cardContent}
+        </SwipeableListItem>
+        
+        <DeleteConfirmationDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          onConfirm={async () => {
+            await onSwipeLeft?.(workOrder);
+            setConfirmOpen(false);
+          }}
+          itemType="work order"
+          itemName={workOrder.work_order_number || workOrder.title}
+          isLoading={false}
+        />
+      </div>
+    );
+  }
+
+  // Non-swipeable version for desktop or when swipe actions are disabled
+  return (
+    <div className={cn("relative mb-4 w-full max-w-full", className)}>
+      {cardContent}
     </div>
   );
 }
