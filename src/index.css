@@ -55,6 +55,12 @@ html, body, #root {
     --gradient-primary: linear-gradient(135deg, hsl(211 96% 45%), hsl(211 96% 55%));
     --shadow-card: 0 2px 4px -1px hsl(222 47% 11% / 0.06), 0 1px 2px -1px hsl(222 47% 11% / 0.03);
     --transition-smooth: all 0.2s ease;
+    
+    /* Sidebar Colors */
+    --sidebar: 220 14% 95%;
+    --sidebar-foreground: 220 9% 8%;
+    --sidebar-accent: 220 14% 90%;
+    --sidebar-border: 220 13% 91%;
   }
 
   .dark {
@@ -77,6 +83,12 @@ html, body, #root {
     --border: 217 32% 20%;
     --input: 217 32% 17.5%;
     --ring: 211 96% 55%;
+    
+    /* Sidebar Colors - Dark Theme */
+    --sidebar: 220 14% 5%;
+    --sidebar-foreground: 220 9% 98%;
+    --sidebar-accent: 220 14% 10%;
+    --sidebar-border: 220 13% 9%;
   }
 }
 
