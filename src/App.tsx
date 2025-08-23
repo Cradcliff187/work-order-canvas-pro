@@ -8,6 +8,7 @@ import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PWAUpdateNotification } from '@/components/PWAUpdateNotification';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { StorageDebugPanel } from '@/components/StorageDebugPanel';
+import { useStatusUpdateGuard } from '@/hooks/useStatusUpdateGuard';
 
 import { OrganizationAuthProvider } from '@/contexts/OrganizationAuthContext';
 import { AppRouter } from '@/routes/AppRouter';
@@ -36,6 +37,11 @@ const AppWithBrowserTitle: React.FC = () => {
 
 const App: React.FC = () => {
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  
+  // Development-only guard against direct status updates
+  if (process.env.NODE_ENV === 'development') {
+    useStatusUpdateGuard();
+  }
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
