@@ -119,15 +119,12 @@ export function useAdminReportMutations() {
 
     if (error) throw error;
 
-    if (status === 'approved' && data.work_orders) {
-      await supabase
-        .from('work_orders')
-        .update({ 
-          status: 'completed',
-          date_completed: new Date().toISOString()
-        })
-        .eq('id', data.work_orders.id);
-    }
+    // When report status changes to 'approved', the database trigger
+    // auto_update_report_status_enhanced() will:
+    // 1. Check if all required reports are approved
+    // 2. Transition work order to 'completed' if ready
+    // 3. Send completion email notifications
+    // Manual updates would skip these important steps
 
     return data;
   };
@@ -170,16 +167,12 @@ export function useAdminReportMutations() {
 
       if (error) throw error;
 
-      if (status === 'approved' && data) {
-        const workOrderIds = data.map(report => report.work_order_id);
-        await supabase
-          .from('work_orders')
-          .update({ 
-            status: 'completed',
-            date_completed: new Date().toISOString()
-          })
-          .in('id', workOrderIds);
-      }
+      // When report status changes to 'approved', the database trigger
+      // auto_update_report_status_enhanced() will:
+      // 1. Check if all required reports are approved
+      // 2. Transition work order to 'completed' if ready
+      // 3. Send completion email notifications
+      // Manual updates would skip these important steps
 
       return data;
     },
