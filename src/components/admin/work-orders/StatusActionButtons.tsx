@@ -14,7 +14,7 @@ import {
   X,
   PlayCircle
 } from 'lucide-react';
-import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
+import { useWorkOrderStatusManager } from '@/hooks/useWorkOrderStatusManager';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -55,7 +55,9 @@ export function StatusActionButtons({
   hasAssignments,
   onUpdate 
 }: StatusActionButtonsProps) {
-  const { transitionStatus, isTransitioning } = useWorkOrderStatusTransitions();
+  // Using the centralized status manager - this is the ONLY approved way for admin status changes
+  // This ensures all manual admin changes go through proper audit logging, email triggers, and business rules
+  const { changeStatus, isChangingStatus } = useWorkOrderStatusManager();
   const { toast } = useToast();
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -222,15 +224,11 @@ export function StatusActionButtons({
   };
 
   const handleStatusTransition = async (newStatus: WorkOrderStatus) => {
-    try {
-      await transitionStatus.mutateAsync({
-        workOrderId: workOrder.id,
-        newStatus,
-        reason: `Status changed from ${workOrder.status} to ${newStatus} by admin`
-      });
-    } catch (error) {
-      console.error('Failed to transition status:', error);
-    }
+    const reason = `Manual status change by admin from ${workOrder.status} to ${newStatus}`;
+    await changeStatus(workOrder.id, newStatus, reason);
+    
+    // Refresh the work order data
+    onUpdate();
   };
 
   const handleTransitionClick = (transition: StatusTransition) => {
@@ -288,7 +286,7 @@ export function StatusActionButtons({
                   variant={transition.variant}
                   className="w-full h-12 justify-center gap-2"
                   onClick={() => handleTransitionClick(transition)}
-                  disabled={isTransitioning || isDisabled}
+                  disabled={isChangingStatus || isDisabled}
                   title={isDisabled ? 'Assignment required before this action' : undefined}
                 >
                   {transition.icon}
@@ -323,7 +321,7 @@ export function StatusActionButtons({
                         setMobileOpen(false);
                         handleTransitionClick(transition);
                       }}
-                      disabled={isTransitioning || isDisabled}
+                      disabled={isChangingStatus || isDisabled}
                       title={isDisabled ? 'Assignment required before this action' : undefined}
                     >
                       {transition.icon}
@@ -357,7 +355,7 @@ export function StatusActionButtons({
               size="sm"
               variant={transition.variant}
               onClick={() => handleTransitionClick(transition)}
-              disabled={isTransitioning || isDisabled}
+              disabled={isChangingStatus || isDisabled}
               className="flex items-center gap-1 min-h-[44px] h-11 whitespace-nowrap"
               title={isDisabled ? 'Assignment required before this action' : undefined}
             >
@@ -377,12 +375,12 @@ export function StatusActionButtons({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isTransitioning}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isChangingStatus}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmTransition}
-              disabled={isTransitioning}
+              disabled={isChangingStatus}
             >
-              {isTransitioning ? 'Processing...' : 'Confirm'}
+              {isChangingStatus ? 'Processing...' : 'Confirm'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
