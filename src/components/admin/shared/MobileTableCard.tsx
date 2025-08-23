@@ -13,7 +13,7 @@ interface MobileTableCardProps {
   title?: string;
   subtitle?: string;
   status?: ReactNode;
-  onClick?: () => void;
+  onClick?: (e?: any) => void;
   children?: ReactNode;
   data?: Record<string, string>;
   badge?: ReactNode;
@@ -47,7 +47,13 @@ export function MobileTableCard({
       className={`transition-all duration-200 border-border ${
         onClick ? 'cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background' : ''
       } ${className || ''}`}
-      onClick={onClick}
+      onClick={(e) => {
+        // Prevent click if user is dragging/swiping
+        if (e.defaultPrevented || (e.target as Element).closest('[data-dragging="true"]')) {
+          return;
+        }
+        onClick?.(e);
+      }}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : -1}
       onKeyDown={(e) => {

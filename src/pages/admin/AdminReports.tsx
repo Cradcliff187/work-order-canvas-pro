@@ -599,10 +599,10 @@ const table = useReactTable({
                   key={report.id}
                   itemName={workOrder?.work_order_number || 'Report'}
                   itemType="report"
-                  leftAction={report.status === 'submitted' ? { icon: CheckCircle, label: 'Approve', color: 'success' } : { icon: Eye, label: 'View', color: 'default' }}
-                  rightAction={report.status === 'submitted' ? { icon: XCircle, label: 'Reject', color: 'destructive' } : undefined}
-                  onSwipeLeft={report.status === 'submitted' ? () => reviewReport.mutate({ reportId: report.id, status: 'approved' }) : undefined}
-                  onSwipeRight={report.status === 'submitted' ? () => reviewReport.mutate({ reportId: report.id, status: 'rejected' }) : undefined}
+                  leftAction={report.status === 'submitted' ? { icon: XCircle, label: 'Reject', color: 'destructive' } : { icon: Eye, label: 'View', color: 'default' }}
+                  rightAction={report.status === 'submitted' ? { icon: CheckCircle, label: 'Approve', color: 'success' } : undefined}
+                  onSwipeLeft={report.status === 'submitted' ? () => reviewReport.mutate({ reportId: report.id, status: 'rejected' }) : undefined}
+                  onSwipeRight={report.status === 'submitted' ? () => reviewReport.mutate({ reportId: report.id, status: 'approved' }) : undefined}
                 >
                   <MobileTableCard
                     key={report.id}

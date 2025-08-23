@@ -196,6 +196,18 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
           dragElastic={0.15}
           onDrag={handleDrag}
           onDragEnd={handleDragEnd}
+          onDragStart={() => {
+            // Mark as dragging to prevent click events
+            if (dragConstraintsRef.current) {
+              dragConstraintsRef.current.setAttribute('data-dragging', 'true');
+            }
+          }}
+          onAnimationComplete={() => {
+            // Remove dragging state when animation completes
+            if (dragConstraintsRef.current) {
+              dragConstraintsRef.current.removeAttribute('data-dragging');
+            }
+          }}
           style={{ x }}
           animate={{ x: 0 }}
           transition={{ 
