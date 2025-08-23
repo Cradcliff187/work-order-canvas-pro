@@ -72,17 +72,10 @@ export function useWorkOrderReportSubmission() {
         await Promise.all(uploadPromises);
       }
 
-      // Update work order status to completed
-      const { error: statusError } = await supabase
-        .from('work_orders')
-        .update({ 
-          status: 'completed',
-          subcontractor_report_submitted: true,
-          date_completed: new Date().toISOString()
-        })
-        .eq('id', reportData.workOrderId);
-
-      if (statusError) throw statusError;
+      // Status transitions handled automatically by database trigger
+      // When report is submitted: trigger sets status to 'in_progress'
+      // When report is approved: trigger may set status to 'completed'
+      // DO NOT manually update status here - it breaks the automation
 
       return report;
     },
