@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAssignmentCounts } from '@/hooks/useAssignmentCounts';
 import { RetroactiveTimeCard } from '@/components/employee/RetroactiveTimeCard';
 import { RetroactiveTimeModal } from '@/components/employee/retroactive/RetroactiveTimeModal';
-import { ClockReminder } from '@/components/employee/ClockReminder';
+import { ActiveTimerBar } from '@/components/employee/ActiveTimerBar';
 import { 
   ClipboardList, 
   Clock, 
@@ -149,8 +149,8 @@ const EmployeeDashboard = () => {
         {/* Retroactive Time Card */}
         <RetroactiveTimeCard onOpenModal={() => setShowRetroactiveModal(true)} />
 
-        {/* Clock Reminders */}
-        <ClockReminder onOpenClockWidget={() => handleClockIn()} />
+        {/* Active Timer Bar */}
+        <ActiveTimerBar />
 
         {/* Compact Stats Row */}
         <CompactStatsRow 
@@ -236,8 +236,8 @@ const EmployeeDashboard = () => {
         {/* Retroactive Time Card */}
         <RetroactiveTimeCard onOpenModal={() => setShowRetroactiveModal(true)} />
 
-        {/* Clock Reminders */}
-        <ClockReminder onOpenClockWidget={() => handleClockIn()} />
+        {/* Active Timer Bar */}
+        <ActiveTimerBar />
 
       {/* Slim Stats Bar */}
       <SlimStatsBar 
