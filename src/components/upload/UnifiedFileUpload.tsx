@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, Info } from 'lucide-react';
+import { Upload, Info, Loader2, FileText, ImageIcon, AlertCircle, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -464,7 +464,7 @@ export function UnifiedFileUpload({
     <div className={cn("space-y-4", className)} role="region" aria-label="File upload">
       {/* Live region for status announcements */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {getUploadStatusAnnouncement()}
+        {/* Status announcements are now handled by UploadProgressIndicator */}
       </div>
 
       {/* Upload Progress Indicator */}
@@ -483,7 +483,7 @@ export function UnifiedFileUpload({
                   <span>Formats: {getFileRestrictions().types}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <ImageIconSolid className="w-4 h-4" aria-hidden="true" />
+                  <ImageIcon className="w-4 h-4" aria-hidden="true" />
                   <span>Max size: {getFileRestrictions().size} per file</span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -534,7 +534,7 @@ export function UnifiedFileUpload({
             {isUploading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
-                {getUploadStatusAnnouncement() || "Processing files..."}
+                Processing files...
               </>
             ) : (
               "Browse Files"
@@ -588,7 +588,7 @@ export function UnifiedFileUpload({
           
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" role="list" aria-label="File grid">
             {previews.map((preview) => {
-              const progress = getFileProgress(preview.file.name);
+              const progress = uploadProgress[preview.file.name] || { progress: 0, status: 'pending' as const };
               const progressId = `desktop-progress-${preview.id}`;
               return (
                 <Card key={preview.id} role="listitem">
@@ -607,7 +607,7 @@ export function UnifiedFileUpload({
                             className="w-full h-full object-cover"
                           />
                          ) : (
-                           <File className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
+                           <FileText className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
                          )}
                       </div>
 
@@ -699,7 +699,7 @@ export function UnifiedFileUpload({
                 >
                   {isUploading ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Uploading {previews.length} file{previews.length === 1 ? '' : 's'}...
                     </>
                   ) : (
