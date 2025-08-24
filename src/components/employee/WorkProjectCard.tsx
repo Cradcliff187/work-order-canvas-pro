@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 interface WorkProjectCardProps {
   workItem: WorkItem;
   onViewDetails: (id: string) => void;
-  onClockIn: (workOrderId?: string, projectId?: string) => void;
+  onClockIn?: (workOrderId?: string, projectId?: string) => void;
   onClockOut?: () => void;
   variant?: 'assigned' | 'available';
   className?: string;
@@ -66,9 +66,9 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
         onClockOut?.();
       } else {
         if (workItem.type === 'work_order') {
-          onClockIn(workItem.id);
+          onClockIn?.(workItem.id);
         } else {
-          onClockIn(undefined, workItem.id);
+          onClockIn?.(undefined, workItem.id);
         }
       }
       onSubmitSuccess(); // Success haptic

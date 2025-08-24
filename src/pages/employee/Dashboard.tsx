@@ -94,15 +94,6 @@ const EmployeeDashboard = () => {
     };
   }, [allWorkItems]);
 
-  const handleClockIn = (workOrderId?: string, projectId?: string) => {
-    if (workOrderId) {
-      clockIn.mutate({ workOrderId });
-    } else if (projectId) {
-      clockIn.mutate({ projectId });
-    } else {
-      clockIn.mutate({});
-    }
-  };
 
   const handleClockOut = () => {
     clockOut.mutate(false);
@@ -173,9 +164,6 @@ const EmployeeDashboard = () => {
               key={workItem.id}
               workItem={workItem}
               onViewDetails={handleViewDetails}
-              onClockIn={handleClockIn}
-              onClockOut={handleClockOut}
-              variant={workItem.isAssignedToMe ? "assigned" : "available"}
             />
           ))}
         </div>
