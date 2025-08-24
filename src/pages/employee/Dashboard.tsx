@@ -1,10 +1,7 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DashboardSkeleton } from '@/components/ui/loading-skeleton';
-import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/empty-state';
 import { useEmployeeDashboard } from '@/hooks/useEmployeeDashboard';
 import { useClockState } from '@/hooks/useClockState';
 import { useAllWorkItems } from '@/hooks/useAllWorkItems';
@@ -17,39 +14,21 @@ import { ClockStatusCard } from '@/components/employee/ClockStatusCard';
 import { SlimStatsBar } from '@/components/employee/SlimStatsBar';
 import { WorkProjectCard } from '@/components/employee/WorkProjectCard';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
 import { useAssignmentCounts } from '@/hooks/useAssignmentCounts';
 import { ActiveTimerBar } from '@/components/employee/ActiveTimerBar';
-import { 
-  ClipboardList, 
-  Clock, 
-  Calendar,
-  Receipt,
-  FileText,
-  Plus,
-  DollarSign,
-  Star,
-  Eye,
-  User,
-  Flame,
-  ChevronRight,
-  CheckCircle
-} from 'lucide-react';
-import { format } from 'date-fns';
+import { Receipt, Plus, Star } from 'lucide-react';
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { profile } = useAuth();
   const {
     totalHoursThisWeek,
     totalHoursThisMonth,
-    monthlyExpenses,
     isLoading: dashboardLoading,
     isError
   } = useEmployeeDashboard();
 
-  const { clockIn, clockOut, isClockingIn, isClockingOut } = useClockState();
+  const { clockOut, isClockingIn, isClockingOut } = useClockState();
   const { data: allWorkItems, isLoading: workItemsLoading } = useAllWorkItems();
   const { data: todayHours, isLoading: todayHoursLoading } = useTodayHours();
   const { filters, updateFilter } = useDashboardFilters();
