@@ -180,10 +180,7 @@ const EmployeeDashboard = () => {
               <WorkProjectCard
                 key={workItem.id}
                 workItem={workItem}
-                onClockIn={handleClockIn}
-                onClockOut={handleClockOut}
                 onViewDetails={handleViewDetails}
-                isDisabled={isClockingIn || isClockingOut}
                 variant={workItem.isAssignedToMe ? "assigned" : "available"}
                 className="w-full"
               />
@@ -269,10 +266,7 @@ const EmployeeDashboard = () => {
             <WorkProjectCard
               key={workItem.id}
               workItem={workItem}
-              onClockIn={handleClockIn}
-              onClockOut={handleClockOut}
               onViewDetails={handleViewDetails}
-              isDisabled={isClockingIn || isClockingOut}
               variant={workItem.isAssignedToMe ? "assigned" : "available"}
             />
           ))}
