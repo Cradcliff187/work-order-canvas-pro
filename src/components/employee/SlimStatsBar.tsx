@@ -1,11 +1,13 @@
 import React from 'react';
 import { Separator } from '@/components/ui/separator';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SlimStatsBarProps {
   todayHours: number;
   weekHours: number;
   assignedCount: number;
-  availableCount: number;  
+  availableCount: number;
+  activeCount?: number; // For mobile compatibility
   isLoading?: boolean;
 }
 
@@ -14,27 +16,36 @@ export function SlimStatsBar({
   weekHours, 
   assignedCount,
   availableCount,
+  activeCount,
   isLoading = false 
 }: SlimStatsBarProps) {
+  const isMobile = useIsMobile();
+  
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-2 px-4 bg-muted/30 rounded-lg">
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <div className={`flex items-center justify-center bg-muted/30 rounded-lg ${isMobile ? 'p-3' : 'py-2 px-4'}`}>
+        <div className={`flex items-center text-sm text-muted-foreground ${isMobile ? 'gap-2 sm:gap-4' : 'gap-4'}`}>
           <span>Today: --h</span>
           <Separator orientation="vertical" className="h-4" />
           <span>Week: --h</span>
           <Separator orientation="vertical" className="h-4" />
-          <span>Assigned: --</span>
-          <Separator orientation="vertical" className="h-4" />
-          <span>Available: --</span>
+          {isMobile ? (
+            <span>Active: --</span>
+          ) : (
+            <>
+              <span>Assigned: --</span>
+              <Separator orientation="vertical" className="h-4" />
+              <span>Available: --</span>
+            </>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center py-2 px-4 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg">
-      <div className="flex items-center gap-4 text-sm font-medium">
+    <div className={`flex items-center justify-center bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg ${isMobile ? 'p-3' : 'py-2 px-4'}`}>
+      <div className={`flex items-center text-sm font-medium ${isMobile ? 'gap-2 sm:gap-4' : 'gap-4'}`}>
         <span className="text-foreground">
           Today: <span className="font-bold text-primary">{todayHours ? `${todayHours}h` : '0h'}</span>
         </span>
@@ -43,13 +54,21 @@ export function SlimStatsBar({
           Week: <span className="font-bold text-primary">{weekHours ? `${weekHours}h` : '0h'}</span>
         </span>
         <Separator orientation="vertical" className="h-4" />
-        <span className="text-foreground">
-          Assigned: <span className="font-bold text-primary">{assignedCount || 0}</span>
-        </span>
-        <Separator orientation="vertical" className="h-4" />
-        <span className="text-foreground">
-          Available: <span className="font-bold text-primary">{availableCount || 0}</span>
-        </span>
+        {isMobile ? (
+          <span className="text-foreground">
+            Active: <span className="font-bold text-primary">{activeCount || assignedCount || 0}</span>
+          </span>
+        ) : (
+          <>
+            <span className="text-foreground">
+              Assigned: <span className="font-bold text-primary">{assignedCount || 0}</span>
+            </span>
+            <Separator orientation="vertical" className="h-4" />
+            <span className="text-foreground">
+              Available: <span className="font-bold text-primary">{availableCount || 0}</span>
+            </span>
+          </>
+        )}
       </div>
     </div>
   );

@@ -15,7 +15,6 @@ import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 import { SlimHeader } from '@/components/employee/SlimHeader';
 import { SimpleFilterChips } from '@/components/employee/SimpleFilterChips';
 import { ClockStatusCard } from '@/components/employee/ClockStatusCard';
-import { CompactStatsRow } from '@/components/employee/CompactStatsRow';
 import { SlimStatsBar } from '@/components/employee/SlimStatsBar';
 import { WorkProjectCard } from '@/components/employee/WorkProjectCard';
 import { useNavigate } from 'react-router-dom';
@@ -152,10 +151,12 @@ const EmployeeDashboard = () => {
         {/* Active Timer Bar */}
         <ActiveTimerBar />
 
-        {/* Compact Stats Row */}
-        <CompactStatsRow 
+        {/* Unified Stats Bar */}
+        <SlimStatsBar 
           todayHours={todayHours || 0}
           weekHours={totalHoursThisWeek || 0}
+          assignedCount={assignmentCounts.total || 0}
+          availableCount={filteredWorkItems.length || 0}
           activeCount={assignmentCounts.total || 0}
           isLoading={dashboardLoading}
         />
@@ -239,12 +240,13 @@ const EmployeeDashboard = () => {
         {/* Active Timer Bar */}
         <ActiveTimerBar />
 
-      {/* Slim Stats Bar */}
+      {/* Unified Stats Bar */}
       <SlimStatsBar 
         todayHours={todayHours || 0}
         weekHours={totalHoursThisWeek || 0}
         assignedCount={assignmentCounts.total || 0}
         availableCount={filteredWorkItems.length || 0}
+        activeCount={assignmentCounts.total || 0}
         isLoading={dashboardLoading}
       />
 
