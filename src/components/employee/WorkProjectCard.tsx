@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,11 +10,14 @@ import { StatusDot } from './StatusDot';
 import { useWorkItemMetrics } from '@/hooks/useWorkItemMetrics';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { useClockState } from '@/hooks/useClockState';
 import { cn } from '@/lib/utils';
 
 interface WorkProjectCardProps {
   workItem: WorkItem;
   onViewDetails: (id: string) => void;
+  onClockIn: (workOrderId?: string, projectId?: string) => void;
+  onClockOut?: () => void;
   variant?: 'assigned' | 'available';
   className?: string;
 }
@@ -22,17 +25,53 @@ interface WorkProjectCardProps {
 export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
   workItem,
   onViewDetails,
+  onClockIn,
+  onClockOut,
   variant = 'available',
   className
 }) => {
   const { data: metrics } = useWorkItemMetrics(workItem.id, workItem.type);
   const isMobile = useIsMobile();
-  const { onSwipeAction } = useHapticFeedback();
+  const { onSwipeAction, onSubmitSuccess } = useHapticFeedback();
+  const { isClocked, workOrderId, projectId } = useClockState();
   const x = useMotionValue(0);
+
+  // Determine if this item is currently active
+  const isThisItemActive = isClocked && (
+    (workItem.type === 'work_order' && workOrderId === workItem.id) ||
+    (workItem.type === 'project' && projectId === workItem.id)
+  );
 
   // Transform values for action backgrounds
   const rightOpacity = useTransform(x, [0, 40, 80], [0, 0.3, 1]);
   const leftOpacity = useTransform(x, [-80, -40, 0], [1, 0.3, 0]);
+
+  // Handle drag end for swipe actions
+  const handleDragEnd = useCallback((_event: any, info: { offset: { x: number } }) => {
+    const finalX = info.offset.x;
+    
+    if (finalX > 60) {
+      // Right swipe - Clock action
+      onSwipeAction(); // Haptic feedback
+      if (isThisItemActive) {
+        onClockOut?.();
+      } else {
+        if (workItem.type === 'work_order') {
+          onClockIn(workItem.id);
+        } else {
+          onClockIn(undefined, workItem.id);
+        }
+      }
+      onSubmitSuccess(); // Success haptic
+    } else if (finalX < -60) {
+      // Left swipe - View Details
+      onSwipeAction(); // Haptic feedback
+      onViewDetails(workItem.id);
+    }
+    
+    // Reset position
+    x.set(0);
+  }, [isThisItemActive, workItem, onClockIn, onClockOut, onViewDetails, onSwipeAction, onSubmitSuccess, x]);
 
   // Map work item status to status dot status
   const getStatusDotStatus = () => {
@@ -45,13 +84,18 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
 
   return (
     <div className="relative overflow-hidden will-change-transform">
-      {/* Right action background - Quick Clock */}
+      {/* Right action background - Clock action */}
       <motion.div 
-        className="absolute inset-0 bg-green-500 flex items-center justify-start px-4 rounded-xl"
+        className={cn(
+          "absolute inset-0 flex items-center justify-start px-4 rounded-xl",
+          isThisItemActive ? "bg-red-500" : "bg-green-500"
+        )}
         style={{ opacity: rightOpacity }}
       >
         <Clock className="h-5 w-5 text-white" />
-        <span className="text-white font-medium ml-2">Quick Clock</span>
+        <span className="text-white font-medium ml-2">
+          {isThisItemActive ? "Clock Out" : "Clock In"}
+        </span>
       </motion.div>
       
       {/* Left action background - View Details */}
@@ -65,9 +109,11 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
       
       {/* Main card content */}
       <motion.div 
-        drag={isMobile ? "x" : false}
+        drag={isMobile && !isThisItemActive ? "x" : false}
         dragConstraints={{ left: -80, right: 80 }}
         dragElastic={0.2}
+        onDrag={() => onSwipeAction()}
+        onDragEnd={handleDragEnd}
         style={{ x }}
         className={cn(
           "relative w-full max-w-full overflow-hidden border transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 min-w-0 group",
