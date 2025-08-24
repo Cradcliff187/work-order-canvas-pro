@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useClockState } from '@/hooks/useClockState';
 import { useAllWorkItems } from '@/hooks/useAllWorkItems';
 import { useRecentlyClocked } from '@/hooks/useRecentlyClocked';
@@ -11,6 +12,13 @@ import { ClockSheet } from './clock/ClockSheet';
 import type { ClockOption } from './clock/types';
 
 export function FloatingClockWidget() {
+  const location = useLocation();
+  
+  // Hide on dashboard page to avoid redundancy with hero clock
+  if (location.pathname === '/employee/dashboard') {
+    return null;
+  }
+
   const { toast } = useToast();
   const { onFieldSave, onSubmitSuccess, onError } = useHapticFeedback();
   const { isOpen, setIsOpen } = useClockWidget();
