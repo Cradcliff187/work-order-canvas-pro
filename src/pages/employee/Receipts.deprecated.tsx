@@ -1,3 +1,16 @@
+/**
+ * DEPRECATED: This component has been replaced with SmartReceiptFlow
+ * 
+ * This file contains the old basic receipt upload implementation for employees.
+ * It has been replaced with the enhanced SmartReceiptFlow component that provides
+ * OCR functionality, camera capture, work order allocation, and better mobile UX.
+ * 
+ * New route uses: SmartReceiptFlow component at /employee/receipts
+ * 
+ * Last used: Before commit implementing SmartReceiptFlow for employees
+ * Replacement: src/components/receipts/SmartReceiptFlow.tsx
+ */
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

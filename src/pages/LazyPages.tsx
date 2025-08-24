@@ -6,7 +6,7 @@ export const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'))
 // Employee Pages
 export const EmployeeDashboardEmployee = lazy(() => import('@/pages/employee/Dashboard'));
 export const EmployeeTimeReportsPage = lazy(() => import('@/pages/employee/TimeReports'));
-export const EmployeeReceiptsPage = lazy(() => import('@/pages/employee/Receipts'));
+// EmployeeReceiptsPage removed - replaced with SmartReceiptFlow
 export const PipelineDashboard = lazy(() => import('@/pages/admin/PipelineDashboard'));
 export const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 export const AdminOrganizations = lazy(() => import('@/pages/admin/AdminOrganizations'));
