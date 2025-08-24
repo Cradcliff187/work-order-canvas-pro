@@ -1,17 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, Info, Loader2, FileText, ImageIcon, AlertCircle, X } from 'lucide-react';
+import { Upload, X, File, ImageIcon, AlertCircle, Loader2, Info, FileText, Image as ImageIconSolid, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UniversalUploadSheet } from './UniversalUploadSheet';
-import { StagedFilesList } from './StagedFilesList';
-import { UploadProgressIndicator } from './UploadProgressIndicator';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useFileValidation } from '@/hooks/useFileValidation';
 import { cn } from '@/lib/utils';
-import { getSupportedFormatsText } from '@/utils/fileUtils';
+import { isSupportedFileType, getSupportedFormatsText } from '@/utils/fileUtils';
 
 // ============= FILE STATE MANAGEMENT =============
 // Clear state ownership model:
@@ -124,14 +121,6 @@ export function UnifiedFileUpload({
   // Track object URLs for proper cleanup
   const objectURLsRef = useRef<Set<string>>(new Set());
   
-  // Initialize file validation hook
-  const { validateFiles, getFileType } = useFileValidation({
-    maxFiles,
-    maxSizeBytes,
-    acceptedTypes,
-    selectionMode
-  });
-  
   // Legacy backward compatibility - convert stagedFiles to previews
   const previews: FilePreview[] = useMemo(() => {
     return stagedFiles.map(sf => ({
@@ -141,6 +130,101 @@ export function UnifiedFileUpload({
       fileType: sf.fileType
     }));
   }, [stagedFiles]);
+
+  const getFileType = (file: File): 'image' | 'document' => {
+    return file.type.startsWith('image/') ? 'image' : 'document';
+  };
+
+  const isValidFileType = (file: File): boolean => {
+    if (acceptedTypes.length > 0) {
+      return acceptedTypes.includes(file.type);
+    }
+    return isSupportedFileType(file);
+  };
+
+  const validateFiles = useCallback((files: File[], existingFiles: File[] = []): { valid: File[]; errors: ValidationError[] } => {
+    const errors: ValidationError[] = [];
+    const valid: File[] = [];
+    
+    // For validation, consider the total that would exist after this selection
+    const totalAfterSelection = selectionMode === 'accumulate' ? existingFiles.length + files.length : files.length;
+
+    // Check file count against total after selection
+    if (totalAfterSelection > maxFiles) {
+      const remaining = selectionMode === 'accumulate' ? maxFiles - existingFiles.length : maxFiles;
+      if (remaining <= 0) {
+        errors.push({
+          id: `maxFiles_${Date.now()}`,
+          type: 'maxFiles',
+          message: `Maximum ${maxFiles} files reached`,
+          guidance: `Remove some files before adding more.`,
+          isDismissible: true
+        });
+      } else {
+        errors.push({
+          id: `maxFiles_${Date.now()}`,
+          type: 'maxFiles',
+          message: `You can only add ${remaining} more file${remaining === 1 ? '' : 's'}`,
+          guidance: `You currently have ${existingFiles.length} files selected out of ${maxFiles} maximum.`,
+          isDismissible: true
+        });
+      }
+      return { valid: [], errors };
+    }
+
+    files.forEach(file => {
+      // Check file type
+      if (!isValidFileType(file)) {
+        const allowedFormats = acceptedTypes.length > 0 
+          ? acceptedTypes.map(type => type.split('/')[1]?.toUpperCase()).join(', ')
+          : 'JPEG, PNG, PDF, Word documents';
+        errors.push({
+          id: `fileType_${file.name}_${Date.now()}`,
+          type: 'fileType',
+          fileName: file.name,
+          message: `${file.name} isn't supported`,
+          guidance: `Try uploading ${allowedFormats} files instead.`,
+          isDismissible: true
+        });
+        return;
+      }
+
+      // Check file size
+      if (file.size > maxSizeBytes) {
+        const maxMB = Math.round(maxSizeBytes / 1024 / 1024);
+        const fileMB = (file.size / 1024 / 1024).toFixed(1);
+        errors.push({
+          id: `fileSize_${file.name}_${Date.now()}`,
+          type: 'fileSize',
+          fileName: file.name,
+          message: `${file.name} (${fileMB}MB) exceeds the ${maxMB}MB limit`,
+          guidance: 'Please compress the file and try again.',
+          isDismissible: true
+        });
+        return;
+      }
+
+      // Check for duplicates against existing files
+      const isDuplicate = existingFiles.some(existingFile => 
+        existingFile.name === file.name && existingFile.size === file.size
+      );
+      if (isDuplicate) {
+        errors.push({
+          id: `duplicate_${file.name}_${Date.now()}`,
+          type: 'duplicate',
+          fileName: file.name,
+          message: `${file.name} is already selected`,
+          guidance: 'Choose a different file or rename it.',
+          isDismissible: true
+        });
+        return;
+      }
+
+      valid.push(file);
+    });
+
+    return { valid, errors };
+  }, [maxFiles, maxSizeBytes, acceptedTypes, selectionMode]);
 
   // ============= DUAL MODE FILE MANAGEMENT =============
   // Support both immediate and staged modes for backward compatibility
@@ -207,7 +291,7 @@ export function UnifiedFileUpload({
         });
       }
     }
-  }, [mode, selectionMode, validateFiles, stagedFiles, onFilesSelected, onFilesStaged, getFileType]);
+  }, [mode, selectionMode, validateFiles, stagedFiles, onFilesSelected, onFilesStaged]);
 
   const removeFile = useCallback((id: string) => {
     console.log(`[UnifiedFileUpload] Removing staged file with id: ${id}`);
@@ -292,6 +376,9 @@ export function UnifiedFileUpload({
     };
   };
 
+  const getFileProgress = (fileName: string) => {
+    return uploadProgress[fileName] || { progress: 0, status: 'pending' as const };
+  };
 
   // Sync uploadProgress prop with internal file states
   useEffect(() => {
@@ -362,12 +449,32 @@ export function UnifiedFileUpload({
     multiple: maxFiles > 1
   });
 
+  // Calculate upload status for aria announcements
+  const getUploadStatusAnnouncement = () => {
+    const uploadingFiles = previews.filter(p => getFileProgress(p.file.name).status === 'uploading');
+    const completedFiles = previews.filter(p => getFileProgress(p.file.name).status === 'completed');
+    const errorFiles = previews.filter(p => getFileProgress(p.file.name).status === 'error');
+    
+    if (uploadingFiles.length > 0) {
+      return `Uploading ${uploadingFiles.length} of ${previews.length} files`;
+    }
+    if (errorFiles.length > 0) {
+      return `${errorFiles.length} files failed to upload`;
+    }
+    if (completedFiles.length === previews.length && previews.length > 0) {
+      return `All ${completedFiles.length} files uploaded successfully`;
+    }
+    return '';
+  };
+
   // Mobile UI
   if (isMobile) {
     return (
       <div className={cn("space-y-4", className)} role="region" aria-label="File upload">
-        {/* Upload Progress Indicator */}
-        <UploadProgressIndicator files={stagedFiles} uploadProgress={uploadProgress} />
+        {/* Live region for status announcements */}
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {getUploadStatusAnnouncement()}
+        </div>
 
         {/* File restrictions and selection mode */}
         <div className="text-sm text-muted-foreground bg-muted/30 rounded-xl p-4 border">
@@ -377,6 +484,14 @@ export function UnifiedFileUpload({
               <span>Formats: {getFileRestrictions().types}</span>
               <span>Max size: {getFileRestrictions().size} per file</span>
               <span>Max files: {getFileRestrictions().count}</span>
+              {mode === 'staged' && previews.length > 0 && (
+                <span className="text-primary font-medium">
+                  {selectionMode === 'accumulate' 
+                    ? `Adding to ${previews.length} existing files` 
+                    : 'New selection will replace existing files'
+                  }
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -388,12 +503,22 @@ export function UnifiedFileUpload({
               variant="outline"
               className="w-full h-20 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-all duration-200"
               disabled={disabled || isUploading}
+              aria-label={isUploading ? "Processing files, please wait" : `Upload files. Maximum ${maxFiles} files allowed.`}
+              aria-describedby="upload-instructions"
             >
               <div className="text-center space-y-2">
-                <Upload className="mx-auto h-6 w-6 text-muted-foreground" />
+                {isUploading ? (
+                  <Loader2 className="mx-auto h-6 w-6 text-primary animate-spin" aria-hidden="true" />
+                ) : (
+                  <Upload className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
+                )}
                 <div>
-                  <p className="text-sm font-medium">Choose Files</p>
-                  <p className="text-xs text-muted-foreground">Tap to browse</p>
+                  <p className="text-sm font-medium">
+                    {isUploading ? "Processing Files..." : "Choose Files"}
+                  </p>
+                  <p id="upload-instructions" className="text-xs text-muted-foreground">
+                    {isUploading ? "Please wait..." : "Tap to browse"}
+                  </p>
                 </div>
               </div>
             </Button>
@@ -402,33 +527,157 @@ export function UnifiedFileUpload({
           accept={acceptedTypes.length > 0 ? acceptedTypes.join(',') : "*/*"}
           multiple={maxFiles > 1}
           disabled={disabled || isUploading}
+          isProcessing={isUploading}
         />
 
         {/* Validation errors */}
         {validationErrors.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-2" role="region" aria-live="assertive" aria-label="Upload errors">
             {validationErrors.map((error) => (
-              <Alert key={error.id} variant="destructive">
-                <AlertDescription>
+              <Alert key={error.id} variant="destructive" role="alert">
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                <AlertDescription className="flex items-start justify-between space-x-2">
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{error.message}</p>
                     <p className="text-xs opacity-90">{error.guidance}</p>
                   </div>
+                  {error.isDismissible && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => dismissError(error.id)}
+                      className="h-6 w-6 p-0 text-destructive-foreground hover:bg-destructive/20"
+                      aria-label={`Dismiss error for ${error.fileName || 'upload'}`}
+                    >
+                      <X className="h-3 w-3" aria-hidden="true" />
+                    </Button>
+                  )}
                 </AlertDescription>
               </Alert>
             ))}
           </div>
         )}
 
-        {/* Staged Files List */}
-        <StagedFilesList
-          files={stagedFiles}
-          uploadProgress={uploadProgress}
-          onRemoveFile={removeFile}
-          onClearAll={clearAll}
-          disabled={disabled}
-          isMobile={true}
-        />
+        {/* File previews */}
+        {previews.length > 0 && (
+          <div className="space-y-2" role="region" aria-label="Selected files" aria-describedby="file-count">
+            <div className="flex justify-between items-center">
+              <p id="file-count" className="text-sm font-medium">Selected Files ({previews.length})</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearAll}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-10 min-w-[44px]"
+                aria-label={`Clear all ${previews.length} selected files`}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear All
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4" role="list" aria-label="File list">
+              {previews.map((preview) => {
+                const progress = getFileProgress(preview.file.name);
+                const progressId = `progress-${preview.id}`;
+                return (
+                  <Card key={preview.id} role="listitem" className="hover:shadow-sm transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* File preview */}
+                        <div role="img" aria-label={`${preview.fileType} file preview`}>
+                          {preview.fileType === 'image' && preview.previewUrl ? (
+                            <img
+                              src={preview.previewUrl}
+                              alt={`Preview of ${preview.file.name}`}
+                              className="w-full h-48 object-cover rounded-lg border"
+                            />
+                          ) : (
+                            <div className="w-full h-48 bg-muted rounded-lg border flex items-center justify-center">
+                              <FileText className="h-12 w-12 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* File info and actions */}
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate" title={preview.file.name}>
+                                {preview.file.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {(preview.file.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                            {(() => {
+                              const stagedFile = stagedFiles.find(sf => sf.id === preview.id);
+                              const uploadState = stagedFile?.uploadState || 'staged';
+                              const isUploading = uploadState === 'uploading';
+                              
+                              return (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFile(preview.id)}
+                                  disabled={isUploading}
+                                  className={cn(
+                                    "h-11 w-11 p-0 flex-shrink-0",
+                                    isUploading 
+                                      ? "text-muted-foreground cursor-not-allowed" 
+                                      : "text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  )}
+                                  aria-label={isUploading ? `Cannot remove ${preview.file.name} while uploading` : `Remove ${preview.file.name}`}
+                                >
+                                  <X className="h-5 w-5" />
+                                </Button>
+                              );
+                            })()}
+                          </div>
+
+                          {/* Progress and upload state */}
+                          {(() => {
+                            const stagedFile = stagedFiles.find(sf => sf.id === preview.id);
+                            const uploadState = stagedFile?.uploadState || 'staged';
+                            
+                            // Only show progress for files actively being uploaded or completed/error
+                            if (uploadState === 'staged') return null;
+                            
+                            return (
+                              <div className="space-y-2" aria-describedby={progressId}>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className={cn(
+                                    "font-medium",
+                                    uploadState === 'uploading' && "text-primary",
+                                    uploadState === 'completed' && "text-emerald-600",
+                                    uploadState === 'error' && "text-destructive"
+                                  )} id={progressId}>
+                                    {uploadState === 'uploading' && `Uploading...`}
+                                    {uploadState === 'completed' && 'Upload complete'}
+                                    {uploadState === 'error' && 'Upload failed'}
+                                  </span>
+                                  {uploadState === 'uploading' && (
+                                    <span className="font-medium text-primary">{progress.progress}%</span>
+                                  )}
+                                </div>
+                                {uploadState === 'uploading' && (
+                                  <Progress 
+                                    value={progress.progress} 
+                                    className="h-2"
+                                    aria-label={`Upload progress: ${progress.progress}%`}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Upload trigger for staged mode */}
         {mode === 'staged' && previews.length > 0 && (
@@ -464,11 +713,8 @@ export function UnifiedFileUpload({
     <div className={cn("space-y-4", className)} role="region" aria-label="File upload">
       {/* Live region for status announcements */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {/* Status announcements are now handled by UploadProgressIndicator */}
+        {getUploadStatusAnnouncement()}
       </div>
-
-      {/* Upload Progress Indicator */}
-      <UploadProgressIndicator files={stagedFiles} uploadProgress={uploadProgress} />
 
       {/* File restrictions */}
       <Card className="bg-muted/30 border-muted">
@@ -483,7 +729,7 @@ export function UnifiedFileUpload({
                   <span>Formats: {getFileRestrictions().types}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <ImageIcon className="w-4 h-4" aria-hidden="true" />
+                  <ImageIconSolid className="w-4 h-4" aria-hidden="true" />
                   <span>Max size: {getFileRestrictions().size} per file</span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -534,7 +780,7 @@ export function UnifiedFileUpload({
             {isUploading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
-                Processing files...
+                {getUploadStatusAnnouncement() || "Processing files..."}
               </>
             ) : (
               "Browse Files"
@@ -588,7 +834,7 @@ export function UnifiedFileUpload({
           
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" role="list" aria-label="File grid">
             {previews.map((preview) => {
-              const progress = uploadProgress[preview.file.name] || { progress: 0, status: 'pending' as const };
+              const progress = getFileProgress(preview.file.name);
               const progressId = `desktop-progress-${preview.id}`;
               return (
                 <Card key={preview.id} role="listitem">
@@ -607,7 +853,7 @@ export function UnifiedFileUpload({
                             className="w-full h-full object-cover"
                           />
                          ) : (
-                           <FileText className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
+                           <File className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
                          )}
                       </div>
 
@@ -699,7 +945,7 @@ export function UnifiedFileUpload({
                 >
                   {isUploading ? (
                     <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Uploading {previews.length} file{previews.length === 1 ? '' : 's'}...
                     </>
                   ) : (
@@ -711,16 +957,6 @@ export function UnifiedFileUpload({
           )}
         </div>
       )}
-
-      {/* Staged Files List */}
-      <StagedFilesList
-        files={stagedFiles}
-        uploadProgress={uploadProgress}
-        onRemoveFile={removeFile}
-        onClearAll={clearAll}
-        disabled={disabled}
-        isMobile={false}
-      />
     </div>
   );
 }
