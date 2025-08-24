@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,8 @@ import { WorkItem } from '@/hooks/useAllWorkItems';
 import { AssignmentBadge } from './AssignmentBadge';
 import { StatusDot } from './StatusDot';
 import { useWorkItemMetrics } from '@/hooks/useWorkItemMetrics';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { cn } from '@/lib/utils';
 
 interface WorkProjectCardProps {
@@ -23,6 +26,9 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
   className
 }) => {
   const { data: metrics } = useWorkItemMetrics(workItem.id, workItem.type);
+  const isMobile = useIsMobile();
+  const { onSwipeAction } = useHapticFeedback();
+  const x = useMotionValue(0);
 
   // Map work item status to status dot status
   const getStatusDotStatus = () => {
@@ -34,12 +40,18 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
   };
 
   return (
-    <Card className={cn(
-      "relative w-full max-w-full overflow-hidden border transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 min-w-0 group",
-      "shadow-sm hover:border-primary/20",
-      variant === 'assigned' && "bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 shadow-md",
-      className
-    )}>
+    <motion.div 
+      drag={isMobile ? "x" : false}
+      dragConstraints={{ left: -80, right: 80 }}
+      dragElastic={0.2}
+      style={{ x }}
+      className={cn(
+        "relative w-full max-w-full overflow-hidden border transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 min-w-0 group",
+        "rounded-xl bg-card text-card-foreground shadow-sm hover:shadow-md hover:border-primary/20 active:scale-[0.98]",
+        variant === 'assigned' && "bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 shadow-md",
+        className
+      )}
+    >
       {/* Status Dot */}
       <StatusDot 
         status={getStatusDotStatus()}
@@ -130,6 +142,6 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </motion.div>
   );
 };
