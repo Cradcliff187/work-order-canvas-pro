@@ -2,13 +2,14 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, MapPin, Play, DollarSign } from 'lucide-react';
+import { Clock, MapPin, Play, DollarSign, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { useClockState } from '@/hooks/useClockState';
 import { useAllWorkItems } from '@/hooks/useAllWorkItems';
 import { useTodayHours } from '@/hooks/useTodayHours';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useClockWidget } from '@/contexts/ClockWidgetContext';
+import { useRecentlyClockedWorkOrders } from '@/hooks/useRecentlyClockedWorkOrders';
 import { WorkItemClockCard } from '@/components/employee/WorkItemClockCard';
 import { formatElapsedTime as formatTimeUtil } from '@/lib/utils/time';
 
@@ -48,6 +49,7 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
   const { isClocked, clockInTime, workOrderId, locationAddress, elapsedTime, hourlyRate, clockIn, isClockingIn } = useClockState();
   const { data: allWorkItems = [], isLoading: isLoadingWorkItems } = useAllWorkItems();
   const { data: todayHours = 0 } = useTodayHours();
+  const { data: recentlyClockedWorkOrders = [] } = useRecentlyClockedWorkOrders();
   const isMobile = useIsMobile();
   const { openClockWidget } = useClockWidget();
 
@@ -95,6 +97,33 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
               Start Work
             </Button>
           </div>
+
+          {/* Quick Select Chips */}
+          {recentlyClockedWorkOrders.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Quick Start</h4>
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2">
+                {recentlyClockedWorkOrders.map((workOrder) => (
+                  <Badge
+                    key={workOrder.id}
+                    variant="outline"
+                    className="cursor-pointer hover:bg-primary/10 hover:border-primary/40 transition-all duration-200 px-3 py-2 text-sm font-medium whitespace-nowrap flex-shrink-0"
+                    onClick={() => clockIn.mutate({ workOrderId: workOrder.id })}
+                  >
+                    {workOrder.work_order_number}
+                  </Badge>
+                ))}
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer hover:bg-accent/80 transition-all duration-200 px-3 py-2 text-sm font-medium whitespace-nowrap flex-shrink-0"
+                  onClick={openClockWidget}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Browse
+                </Badge>
+              </div>
+            </div>
+          )}
 
           {/* Recent Work Orders Horizontal Scroll */}
           {recentWorkOrders.length > 0 && (
