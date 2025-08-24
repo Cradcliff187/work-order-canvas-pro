@@ -10,7 +10,6 @@ import { useClockState } from '@/hooks/useClockState';
 import { useAllWorkItems } from '@/hooks/useAllWorkItems';
 import { useTodayHours } from '@/hooks/useTodayHours';
 import { useAuth } from '@/contexts/AuthContext';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 import { SlimHeader } from '@/components/employee/SlimHeader';
 import { SimpleFilterChips } from '@/components/employee/SimpleFilterChips';
@@ -20,8 +19,6 @@ import { WorkProjectCard } from '@/components/employee/WorkProjectCard';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAssignmentCounts } from '@/hooks/useAssignmentCounts';
-import { RetroactiveTimeCard } from '@/components/employee/RetroactiveTimeCard';
-import { RetroactiveTimeModal } from '@/components/employee/retroactive/RetroactiveTimeModal';
 import { ActiveTimerBar } from '@/components/employee/ActiveTimerBar';
 import { 
   ClipboardList, 
@@ -43,7 +40,6 @@ import { format } from 'date-fns';
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
   const { profile } = useAuth();
   const {
     totalHoursThisWeek,
@@ -58,7 +54,6 @@ const EmployeeDashboard = () => {
   const { data: todayHours, isLoading: todayHoursLoading } = useTodayHours();
   const { filters, updateFilter } = useDashboardFilters();
   const { data: assignmentCounts = { workOrders: 0, projects: 0, total: 0 } } = useAssignmentCounts();
-  const [showRetroactiveModal, setShowRetroactiveModal] = React.useState(false);
 
   const isLoading = dashboardLoading || workItemsLoading || todayHoursLoading;
 
@@ -130,115 +125,22 @@ const EmployeeDashboard = () => {
   }
 
   if (isLoading) {
-    return <DashboardSkeleton isMobile={isMobile} />;
-  }
-
-  if (isMobile) {
-    return (
-      <div className="space-y-2 max-w-full overflow-hidden px-0">
-        {/* Slim Header */}
-        <SlimHeader firstName={profile?.first_name} isMobile={true} />
-
-        {/* Hero Clock Card */}
-        <ClockStatusCard 
-          onClockOut={handleClockOut}
-          isClockingOut={isClockingOut}
-        />
-
-        {/* Retroactive Time Card */}
-        <RetroactiveTimeCard onOpenModal={() => setShowRetroactiveModal(true)} />
-
-        {/* Active Timer Bar */}
-        <ActiveTimerBar />
-
-        {/* Unified Stats Bar */}
-        <SlimStatsBar 
-          todayHours={todayHours || 0}
-          weekHours={totalHoursThisWeek || 0}
-          assignedCount={assignmentCounts.total || 0}
-          availableCount={filteredWorkItems.length || 0}
-          activeCount={assignmentCounts.total || 0}
-          isLoading={dashboardLoading}
-        />
-
-        {/* Simple Filter Chips */}
-        <SimpleFilterChips 
-          filters={filters}
-          onFilterChange={updateFilter}
-          workCounts={workCounts}
-        />
-
-        {/* Work Items Section */}
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-lg" />
-            ))}
-          </div>
-        ) : filteredWorkItems.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {filteredWorkItems.slice(0, 8).map((workItem) => (
-              <WorkProjectCard
-                key={workItem.id}
-                workItem={workItem}
-                onViewDetails={handleViewDetails}
-                onClockIn={handleClockIn}
-                onClockOut={handleClockOut}
-                variant={workItem.isAssignedToMe ? "assigned" : "available"}
-                className="w-full"
-              />
-            ))}
-          </div>
-        ) : (
-          <Card className="w-full bg-muted/30">
-            <CardContent className="p-4 text-center">
-              <Star className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                {filters.showMyWorkOnly ? "No assignments yet" : "No work available"}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Compact Quick Actions */}
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="h-12 flex-1 flex flex-col gap-1 text-xs"
-            onClick={() => navigate('/employee/time-reports')}
-          >
-            <Plus className="h-3 w-3" />
-            Time Report
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-12 flex-1 flex flex-col gap-1 text-xs"
-            onClick={() => navigate('/employee/receipts')}
-          >
-            <Receipt className="h-3 w-3" />
-            Add Receipt
-          </Button>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
     <div className="space-y-2">
       {/* Slim Header */}
-      <SlimHeader firstName={profile?.first_name} isMobile={false} />
+      <SlimHeader firstName={profile?.first_name} />
 
-        {/* Hero Clock Card */}
-        <ClockStatusCard 
-          onClockOut={handleClockOut}
-          isClockingOut={isClockingOut}
-        />
+      {/* Hero Clock Card */}
+      <ClockStatusCard 
+        onClockOut={handleClockOut}
+        isClockingOut={isClockingOut}
+      />
 
-        {/* Retroactive Time Card */}
-        <RetroactiveTimeCard onOpenModal={() => setShowRetroactiveModal(true)} />
-
-        {/* Active Timer Bar */}
-        <ActiveTimerBar />
+      {/* Active Timer Bar */}
+      <ActiveTimerBar />
 
       {/* Unified Stats Bar */}
       <SlimStatsBar 
@@ -290,10 +192,10 @@ const EmployeeDashboard = () => {
         </div>
       )}
 
-      {/* Compact Quick Actions */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Quick Actions - Only Time Report and Receipt */}
+      <div className="flex gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-2">
         <Button 
-          className="h-12 flex flex-col gap-1 text-sm"
+          className="h-12 flex-1 sm:flex-none flex flex-col gap-1 text-sm"
           onClick={() => navigate('/employee/time-reports')}
         >
           <Plus className="h-4 w-4" />
@@ -301,35 +203,13 @@ const EmployeeDashboard = () => {
         </Button>
         <Button 
           variant="outline" 
-          className="h-12 flex flex-col gap-1 text-sm"
+          className="h-12 flex-1 sm:flex-none flex flex-col gap-1 text-sm"
           onClick={() => navigate('/employee/receipts')}
         >
           <Receipt className="h-4 w-4" />
           Add Receipt
         </Button>
-        <Button 
-          variant="outline" 
-          className="h-12 flex flex-col gap-1 text-sm"
-          onClick={() => navigate('/employee/assignments')}
-        >
-          <ClipboardList className="h-4 w-4" />
-          All Work
-        </Button>
-        <Button 
-          variant="outline" 
-          className="h-12 flex flex-col gap-1 text-sm"
-          onClick={() => navigate('/employee/time-reports')}
-        >
-          <FileText className="h-4 w-4" />
-          Reports
-        </Button>
       </div>
-
-      {/* Retroactive Time Modal */}
-      <RetroactiveTimeModal 
-        isOpen={showRetroactiveModal}
-        onClose={() => setShowRetroactiveModal(false)}
-      />
     </div>
   );
 };
