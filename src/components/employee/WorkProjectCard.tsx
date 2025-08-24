@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, BarChart, Briefcase, FileText, Eye } from 'lucide-react';
+import { MapPin, Clock, BarChart, Briefcase, FileText, Eye, Loader2 } from 'lucide-react';
 import { WorkItem } from '@/hooks/useAllWorkItems';
 import { AssignmentBadge } from './AssignmentBadge';
 import { StatusDot } from './StatusDot';
@@ -33,8 +33,15 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
   const { data: metrics } = useWorkItemMetrics(workItem.id, workItem.type);
   const isMobile = useIsMobile();
   const { onSwipeAction, onSubmitSuccess } = useHapticFeedback();
-  const { isClocked, workOrderId, projectId } = useClockState();
+  const { isClocked, workOrderId, projectId, isClockingIn, isClockingOut } = useClockState();
   const x = useMotionValue(0);
+
+  // Loading and drag states
+  const isLoading = isClockingIn || isClockingOut;
+  const isDragging = useTransform(x, (value) => Math.abs(value) > 5);
+
+  // Spring configuration for smooth animations
+  const springConfig = { type: "spring" as const, stiffness: 300, damping: 30 };
 
   // Determine if this item is currently active
   const isThisItemActive = isClocked && (
@@ -48,6 +55,8 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
 
   // Handle drag end for swipe actions
   const handleDragEnd = useCallback((_event: any, info: { offset: { x: number } }) => {
+    if (isLoading) return; // Prevent actions during loading
+    
     const finalX = info.offset.x;
     
     if (finalX > 60) {
@@ -69,9 +78,9 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
       onViewDetails(workItem.id);
     }
     
-    // Reset position
+    // Spring-based snap back to center
     x.set(0);
-  }, [isThisItemActive, workItem, onClockIn, onClockOut, onViewDetails, onSwipeAction, onSubmitSuccess, x]);
+  }, [isLoading, isThisItemActive, workItem, onClockIn, onClockOut, onViewDetails, onSwipeAction, onSubmitSuccess, x, springConfig]);
 
   // Map work item status to status dot status
   const getStatusDotStatus = () => {
@@ -92,9 +101,13 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
         )}
         style={{ opacity: rightOpacity }}
       >
-        <Clock className="h-5 w-5 text-white" />
+        {isLoading ? (
+          <Loader2 className="h-5 w-5 text-white animate-spin" />
+        ) : (
+          <Clock className="h-5 w-5 text-white" />
+        )}
         <span className="text-white font-medium ml-2">
-          {isThisItemActive ? "Clock Out" : "Clock In"}
+          {isLoading ? "Loading..." : (isThisItemActive ? "Clock Out" : "Clock In")}
         </span>
       </motion.div>
       
@@ -109,15 +122,18 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
       
       {/* Main card content */}
       <motion.div 
-        drag={isMobile && !isThisItemActive ? "x" : false}
+        drag={isMobile && !isThisItemActive && !isLoading ? "x" : false}
         dragConstraints={{ left: -80, right: 80 }}
         dragElastic={0.2}
+        transition={springConfig}
         onDrag={() => onSwipeAction()}
-        onDragEnd={handleDragEnd}
+        onDragEnd={isLoading ? undefined : handleDragEnd}
         style={{ x }}
         className={cn(
           "relative w-full max-w-full overflow-hidden border transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 min-w-0 group",
           "rounded-xl bg-card text-card-foreground shadow-sm hover:shadow-md hover:border-primary/20 active:scale-[0.98]",
+          "transform-gpu backface-hidden will-change-transform",
+          isLoading && "opacity-75 cursor-not-allowed",
           variant === 'assigned' && "bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 shadow-md",
           className
         )}
@@ -196,7 +212,10 @@ export const WorkProjectCard: React.FC<WorkProjectCardProps> = ({
             </div>
 
             {/* Right side - Actions */}
-            <div className="flex items-center gap-1 shrink-0">
+            <div className={cn(
+              "flex items-center gap-1 shrink-0",
+              isDragging && "pointer-events-none"
+            )}>
               {/* Details button - only show if assigned */}
               {workItem.isAssignedToMe && (
                 <Button
