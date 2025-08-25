@@ -355,7 +355,7 @@ export function BillingDashboard() {
 
       // Completed by filter (maps to assigned organization)
       if (filters.completed_by && filters.completed_by.length > 0) {
-        const itemCompletedBy = item.assigned_organization_id === 'internal' ? 'internal' : item.assigned_organization_id;
+        const itemCompletedBy = item.assigned_organization_type === 'internal' ? 'internal' : item.assigned_organization_id;
         if (!itemCompletedBy || !filters.completed_by.includes(itemCompletedBy)) return false;
       }
 

@@ -22,6 +22,7 @@ export interface WorkOrderPipelineItem {
   partner_organization_name: string | null;
   assigned_organization_name: string | null;
   assigned_organization_id: string | null;
+  assigned_organization_type: string | null;
   
   // Financial tracking
   estimated_hours: number | null;
@@ -120,7 +121,8 @@ export function useWorkOrderLifecycle() {
             name
           ),
           assigned_organizations:organizations!work_orders_assigned_organization_id_fkey(
-            name
+            name,
+            organization_type
           ),
           latest_report:work_order_reports!left(
             status,
@@ -298,6 +300,7 @@ export function useWorkOrderLifecycle() {
           partner_organization_name: workOrder.partner_organization?.name || null,
           assigned_organization_name: workOrder.assigned_organizations?.name || null,
           assigned_organization_id: workOrder.assigned_organization_id,
+          assigned_organization_type: workOrder.assigned_organizations?.organization_type || null,
           
           // Financial tracking
           estimated_hours: workOrder.estimated_hours,
