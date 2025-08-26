@@ -18,7 +18,8 @@ import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
-import { Plus, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
+import { Plus, ClipboardList } from 'lucide-react';
+import { TablePagination } from '@/components/admin/shared/TablePagination';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
@@ -490,41 +491,11 @@ export function WorkOrderTable({
             )}
 
             {/* Pagination */}
-            <div className="flex items-center justify-between space-x-2 py-4" role="navigation" aria-label="Table pagination">
-              <div className="flex-1 text-sm text-muted-foreground" aria-live="polite">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                {table.getFilteredRowModel().rows.length} row(s) selected.
-                {totalCount && ` (${totalCount} total)`}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  aria-label={`Go to previous page (currently on page ${pagination.pageIndex + 1})`}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-medium">
-                    Page {table.getState().pagination.pageIndex + 1} of{" "}
-                    {table.getPageCount()}
-                  </span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                  aria-label={`Go to next page (currently on page ${pagination.pageIndex + 1})`}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <TablePagination
+              table={table}
+              totalCount={totalCount}
+              itemName="work orders"
+            />
           </>
         )}
       </CardContent>
