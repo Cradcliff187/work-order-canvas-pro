@@ -210,10 +210,9 @@ export function useWorkOrderLifecycle() {
         const invoiceWorkOrders = workOrder.invoice_work_orders || [];
 
         // The invoice is nested inside each invoice_work_order
-        const subcontractorInvoice = invoiceWorkOrders
-          .filter((iwo: any) => iwo.invoices) // Only get entries with invoices
-          .map((iwo: any) => iwo.invoices) // Extract the nested invoice object
-          .find((inv: any) => inv); // Get the first valid invoice
+        const subcontractorInvoice = invoiceWorkOrders && invoiceWorkOrders.length > 0 && invoiceWorkOrders[0].invoices
+          ? invoiceWorkOrders[0].invoices
+          : null;
 
         // Calculate the amount
         const totalInvoiceAmount = subcontractorInvoice?.total_amount 
