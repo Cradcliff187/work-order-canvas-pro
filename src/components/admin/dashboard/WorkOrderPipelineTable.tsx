@@ -212,6 +212,27 @@ export function WorkOrderPipelineTable({
       },
     },
     {
+      id: 'completed_by',
+      header: 'Completed By',
+      cell: ({ row }) => {
+        const { assigned_organization_type, assigned_organization_name } = row.original;
+        
+        if (assigned_organization_type === 'internal') {
+          return <span className="text-sm font-medium">Internal</span>;
+        }
+        
+        if (assigned_organization_type === 'subcontractor' && assigned_organization_name) {
+          return (
+            <div className="max-w-[120px] truncate text-sm" title={assigned_organization_name}>
+              {assigned_organization_name}
+            </div>
+          );
+        }
+        
+        return <span className="text-muted-foreground text-sm">Unassigned</span>;
+      },
+    },
+    {
       id: 'operational_status',
       header: 'Work Status',
       cell: ({ row }) => <WorkOrderStatusBadge status={row.original.status} size="sm" showIcon />,
