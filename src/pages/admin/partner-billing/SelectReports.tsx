@@ -430,7 +430,7 @@ export default function SelectReports() {
                 <Button 
                   variant="default"
                   disabled={selectedReportIds.size === 0}
-                  onClick={handleGenerateInvoice}
+                  onClick={() => setShowConfirmDialog(true)}
                   className="gap-2"
                 >
                   <Receipt className="h-4 w-4" />
@@ -471,7 +471,7 @@ export default function SelectReports() {
                 <Button 
                   variant="default"
                   disabled={selectedReportIds.size === 0}
-                  onClick={handleGenerateInvoice}
+                  onClick={() => setShowConfirmDialog(true)}
                   className="flex-1 gap-2"
                 >
                   <Receipt className="h-4 w-4" />
