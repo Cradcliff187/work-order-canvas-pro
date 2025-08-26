@@ -67,33 +67,7 @@ export function useWorkOrderLifecycle() {
         throw new Error('User not authenticated');
       }
 
-      // DEBUG: Testing invoice access
-      console.log('🔍 Testing invoice access...');
-      
-      // Test 1: Can we access invoice_work_orders?
-      const { data: testAccess, error: testError } = await supabase
-        .from('invoice_work_orders')
-        .select('*')
-        .limit(1);
-      console.log('Can access invoice_work_orders?', { testAccess, testError });
-
-      // Test 2: Get BB-525-001 with nested query
-      const { data: testNested, error: testNestedError } = await supabase
-        .from('work_orders')
-        .select(`
-          work_order_number,
-          invoice_work_orders(
-            invoice_id,
-            amount,
-            invoices(
-              status,
-              total_amount
-            )
-          )
-        `)
-        .eq('work_order_number', 'BB-525-001')
-        .single();
-      console.log('BB-525-001 nested test:', { testNested, testNestedError });
+      // Clean query without debug logging
 
       let query = supabase
         .from('work_orders')
@@ -183,10 +157,7 @@ export function useWorkOrderLifecycle() {
         throw error;
       }
       
-      // DEBUG: Main query result for BB-525-001
-      const bb525 = data?.find((wo: any) => wo.work_order_number === 'BB-525-001');
-      console.log('🔍 Main query result for BB-525-001:', bb525);
-      console.log('🔍 Main query BB-525-001 invoice_work_orders:', bb525?.invoice_work_orders);
+      // Process work order data
 
 
       // Helper functions for calculations
@@ -230,11 +201,7 @@ export function useWorkOrderLifecycle() {
 
       // Transform the data to match our pipeline structure
       return (data || []).map((workOrder: any): WorkOrderPipelineItem => {
-        // DEBUG: Log BB-525-001 raw data
-        if (workOrder.work_order_number === 'BB-525-001') {
-          console.log('🎯 BB-525-001 RAW:', workOrder);
-          console.log('🎯 BB-525-001 invoice_work_orders:', workOrder.invoice_work_orders);
-        }
+        // Process individual work order
 
         // Get the latest report (assuming they're ordered by submitted_at)
         const latestReport = workOrder.latest_report?.[0];
@@ -253,15 +220,7 @@ export function useWorkOrderLifecycle() {
           ? parseFloat(subcontractorInvoice.total_amount.toString()) 
           : 0;
 
-        // Debug logging for BB-525-001
-        if (workOrder.work_order_number === 'BB-525-001') {
-          console.log('🔍 BB-525-001 Invoice Debug:', {
-            invoiceWorkOrders: invoiceWorkOrders,
-            extractedInvoice: subcontractorInvoice,
-            status: subcontractorInvoice?.status,
-            amount: totalInvoiceAmount
-          });
-        }
+        // Calculate financial amounts
         
         // Get partner billing info from the latest report - use most recent invoice
         const partnerInvoices = latestReport?.partner_invoices || [];
