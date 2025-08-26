@@ -193,7 +193,7 @@ export function WorkOrderFiltersV2({
 
   // Essential filters (always visible in sections)
   const essentialFilters = (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <>
       {/* Status Filter */}
       <div className="space-y-2">
         <label className="text-sm font-medium">Status</label>
@@ -202,6 +202,7 @@ export function WorkOrderFiltersV2({
           selectedValues={filters.status || []}
           onSelectionChange={(value) => handleFilterChange('status', value)}
           placeholder="Filter by status..."
+          className="h-10"
         />
       </div>
 
@@ -213,6 +214,7 @@ export function WorkOrderFiltersV2({
           selectedValues={filters.organizations || []}
           onSelectionChange={(value) => handleFilterChange('organizations', value)}
           placeholder="Filter by organization..."
+          className="h-10"
         />
       </div>
 
@@ -236,6 +238,7 @@ export function WorkOrderFiltersV2({
                 selected={filters.date_from || filters.date_range?.from ? new Date(filters.date_from || filters.date_range?.from) : undefined}
                 onSelect={handleDateFromChange}
                 initialFocus
+                className="p-3 pointer-events-auto"
               />
             </PopoverContent>
           </Popover>
@@ -256,6 +259,7 @@ export function WorkOrderFiltersV2({
                 selected={filters.date_to || filters.date_range?.to ? new Date(filters.date_to || filters.date_range?.to) : undefined}
                 onSelect={handleDateToChange}
                 initialFocus
+                className="p-3 pointer-events-auto"
               />
             </PopoverContent>
           </Popover>
@@ -285,12 +289,11 @@ export function WorkOrderFiltersV2({
           </Button>
         )}
       </div>
-    </div>
+    </>
   );
-
   // Advanced filters (collapsible)
   const advancedFilters = (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <>
       {/* Trades Filter */}
       <div className="space-y-2">
         <label className="text-sm font-medium">Trades</label>
@@ -299,6 +302,7 @@ export function WorkOrderFiltersV2({
           selectedValues={filters.trades || []}
           onSelectionChange={(value) => handleFilterChange('trades', value)}
           placeholder="Filter by trades..."
+          className="h-10"
         />
       </div>
 
@@ -311,6 +315,7 @@ export function WorkOrderFiltersV2({
             selectedValues={filters.location_filter || filters.location || []}
             onSelectionChange={(value) => handleFilterChange(filters.location_filter !== undefined ? 'location_filter' : 'location', value)}
             placeholder="Select locations..."
+            className="h-10"
           />
           <div className="flex gap-2">
             <Input
@@ -323,7 +328,7 @@ export function WorkOrderFiltersV2({
                   handleLocationTextSubmit();
                 }
               }}
-              className="h-10"
+              className="h-10 flex-1"
             />
             <Button
               type="button"
@@ -331,6 +336,7 @@ export function WorkOrderFiltersV2({
               size="sm"
               onClick={handleLocationTextSubmit}
               disabled={!locationTextInput.trim()}
+              className="h-10"
             >
               Add
             </Button>
@@ -347,6 +353,7 @@ export function WorkOrderFiltersV2({
             selectedValues={filters.priority || []}
             onSelectionChange={(value) => handleFilterChange('priority', value)}
             placeholder="Filter by priority..."
+            className="h-10"
           />
         </div>
       )}
@@ -360,10 +367,11 @@ export function WorkOrderFiltersV2({
             selectedValues={filters.completed_by || []}
             onSelectionChange={(value) => handleFilterChange('completed_by', value)}
             placeholder="Filter by completion..."
+            className="h-10"
           />
         </div>
       )}
-    </div>
+    </>
   );
 
   return (
