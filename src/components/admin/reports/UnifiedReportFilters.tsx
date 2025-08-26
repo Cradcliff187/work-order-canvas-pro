@@ -102,17 +102,6 @@ export function UnifiedReportFilters({
     });
   };
 
-  // Search slot
-  const searchSlot = (
-    <SmartSearchInput
-      value={filters.search || ''}
-      onChange={handleSearchChange}
-      placeholder="Search reports..."
-      storageKey="admin-reports-search"
-      className="flex-1"
-    />
-  );
-
   // Essential filters
   const essentialFilters = (
     <div className="flex flex-col gap-4">
@@ -219,7 +208,6 @@ export function UnifiedReportFilters({
       title="Report Filters"
       filterCount={filterCount}
       onClear={onClear}
-      searchSlot={searchSlot}
       sections={{
         essential: essentialFilters,
         advanced: advancedFilters

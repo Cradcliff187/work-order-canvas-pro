@@ -42,22 +42,9 @@ export function PartnerLocationFilters({
 
   // Calculate filter count
   const filterCount = [
-    searchTerm,
     selectedOrganization !== 'all' ? selectedOrganization : null,
     statusFilter !== 'all' ? statusFilter : null
   ].filter(Boolean).length;
-
-  const searchSlot = (
-    <SmartSearchInput
-      placeholder="Search locations, organizations, or cities..."
-      value={searchTerm}
-      onChange={(e) => onSearchChange(e.target.value)}
-      onSearchSubmit={onSearchChange}
-      storageKey="admin-partner-locations-search"
-      aria-label="Search partner locations"
-      className="w-full"
-    />
-  );
 
   return (
     <AdminFilterBar
@@ -65,7 +52,6 @@ export function PartnerLocationFilters({
       filterCount={filterCount}
       onClear={onClearFilters}
       className={className}
-      searchSlot={searchSlot}
       sheetSide="bottom"
     >
       <div className="space-y-3">

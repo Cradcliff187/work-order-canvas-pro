@@ -39,22 +39,9 @@ export function OrganizationFilters({
 
   // Calculate filter count
   const filterCount = [
-    searchTerm,
     organizationTypeFilter !== 'all' ? organizationTypeFilter : null,
     statusFilter !== 'all' ? statusFilter : null
   ].filter(Boolean).length;
-
-  const searchSlot = (
-    <SmartSearchInput
-      placeholder="Search organizations by name, email, or contact..."
-      value={searchTerm}
-      onChange={(e) => onSearchChange(e.target.value)}
-      onSearchSubmit={onSearchChange}
-      storageKey="admin-organizations-search"
-      aria-label="Search organizations"
-      className="w-full"
-    />
-  );
 
   return (
     <AdminFilterBar
@@ -62,7 +49,6 @@ export function OrganizationFilters({
       filterCount={filterCount}
       onClear={onClearFilters}
       className={className}
-      searchSlot={searchSlot}
       sheetSide="bottom"
     >
       <div className="space-y-3">

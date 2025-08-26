@@ -71,8 +71,8 @@ interface WorkOrderTableProps {
   
   // View Configuration
   viewMode: 'table' | 'card' | 'list';
-  allowedModes: string[];
-  setViewMode: (mode: string) => void;
+  allowedModes: ('table' | 'card' | 'list')[];
+  setViewMode: (mode: 'table' | 'card' | 'list') => void;
   bulkMode: boolean;
   useCompactCards: boolean;
   
@@ -310,9 +310,9 @@ export function WorkOrderTable({
             
             {/* View mode switcher */}
             <ViewModeSwitcher
-              value={viewMode as any}
+              value={viewMode}
               onValueChange={setViewMode}
-              allowedModes={allowedModes as any}
+              allowedModes={allowedModes}
               className="shrink-0"
             />
           </div>
