@@ -112,7 +112,7 @@ export function useWorkOrderLifecycle() {
           invoice_work_orders!left(
             invoice_id,
             amount,
-            invoices!left(
+            invoices(
               id,
               status,
               total_amount,
