@@ -12,13 +12,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
-import { useAdminFilters } from '@/hooks/useAdminFilters';
-import { useDebounce } from '@/hooks/useDebounce';
+// Removed complex filter hooks - simplified to search only
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { useTrades } from '@/hooks/useWorkOrders';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
@@ -29,13 +27,12 @@ import {
   Clock,
   ReceiptText,
   Building2,
-  Filter,
   Download
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { KPICard } from '@/components/analytics/KPICard';
 import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
-import { SimplePipelineFilters } from '@/components/admin/billing/SimplePipelineFilters';
+// Removed SimplePipelineFilters import - simplified billing dashboard
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { Invoice } from '@/hooks/useInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
@@ -173,27 +170,15 @@ function useBillingMetrics() {
   });
 }
 
-// Filter interface for Pipeline tab - adapted to WorkOrderFilters format
+// Simplified interface for just search functionality
 interface PipelineFiltersValue {
-  status?: string[];
-  trade_id?: string[];
-  partner_organization_ids?: string[];
-  completed_by?: string[];
   search?: string;
-  date_from?: string;
-  date_to?: string;
-  location_filter?: string[];
-  showOverdueOnly?: boolean;
-  financial_status?: string[];
-  partner_billing_status?: string[];
-  priority?: string[];
-  report_status?: string[];
 }
 
 export function BillingDashboard() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  // Removed filter modal state - simplified UI
   const [activeTab, setActiveTab] = useState('overview');
   const isMobile = useIsMobile();
 
@@ -244,38 +229,13 @@ export function BillingDashboard() {
   const { data: subcontractors } = useSubcontractorOrganizations();
   const organizations = organizationsData?.filter(org => org.organization_type === 'partner');
   
-  // Default filters - show all work orders
-  const initialFilters: PipelineFiltersValue = {
-    status: [],
-    trade_id: [],
-    partner_organization_ids: [],
-    completed_by: [],
-    search: '',
-    date_from: undefined,
-    date_to: undefined,
-    location_filter: []
-  };
-
-  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters(
-    'billing-pipeline-filters-v3',
-    initialFilters,
-    { excludeKeys: [] }
-  );
-
-  const handleClearFilters = () => {
-    clearFilters();
-  };
+  // Simplified search-only state
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Export functionality
   const handleExport = (format: 'csv' | 'excel') => {
     exportWorkOrders(filteredPipelineData, format, `billing-pipeline-${new Date().toISOString().split('T')[0]}`);
   };
-
-  // Debounce search input
-  const debouncedSearch = useDebounce(filters.search || '', 300);
-  
-  // Track search separately for WorkOrderFilters
-  const [searchTerm, setSearchTerm] = useState(filters.search || '');
 
   // Helper function to get financial status based on invoicing
   const getFinancialStatus = (item: WorkOrderPipelineItem): string => {
@@ -325,15 +285,14 @@ export function BillingDashboard() {
     return locations.sort();
   }, [pipelineData]);
 
-  // Apply client-side filtering with improved logic
+  // Apply search-only filtering
   const filteredPipelineData = useMemo(() => {
     if (!pipelineData) return [];
 
     return pipelineData.filter((item) => {
       // Enhanced search filter (work order number, title, partner, location, assigned org)
-      const searchValue = filters.search || searchTerm;
-      if (searchValue && searchValue.trim()) {
-        const searchLower = searchValue.toLowerCase().trim();
+      if (searchTerm && searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase().trim();
         const matchesSearch = 
           item.work_order_number?.toLowerCase().includes(searchLower) ||
           item.title?.toLowerCase().includes(searchLower) ||
@@ -343,66 +302,9 @@ export function BillingDashboard() {
         if (!matchesSearch) return false;
       }
 
-      // Status filter (maps to operational status)
-      if (filters.status && filters.status.length > 0) {
-        if (!filters.status.includes(item.status)) return false;
-      }
-
-      // Partner organization filter
-      if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
-        if (!item.organization_id || !filters.partner_organization_ids.includes(item.organization_id)) return false;
-      }
-
-      // Completed by filter (maps to assigned organization)
-      if (filters.completed_by && filters.completed_by.length > 0) {
-        const itemCompletedBy = item.assigned_organization_type === 'internal' ? 'internal' : item.assigned_organization_id;
-        if (!itemCompletedBy || !filters.completed_by.includes(itemCompletedBy)) return false;
-      }
-
-      // Date range filter
-      if (filters.date_from || filters.date_to) {
-        const itemDate = new Date(item.created_at);
-        if (filters.date_from && itemDate < new Date(filters.date_from)) return false;
-        if (filters.date_to && itemDate > new Date(filters.date_to)) return false;
-      }
-
-      // Location filter
-      if (filters.location_filter && filters.location_filter.length > 0) {
-        const itemLocation = item.store_location || 'No location';
-        if (!filters.location_filter.includes(itemLocation)) return false;
-      }
-
-      // Financial status filter
-      if (filters.financial_status && filters.financial_status.length > 0) {
-        const itemFinancialStatus = getFinancialStatus(item);
-        if (!filters.financial_status.includes(itemFinancialStatus)) return false;
-      }
-
-      // Partner billing status filter
-      if (filters.partner_billing_status && filters.partner_billing_status.length > 0) {
-        const itemBillingStatus = getPartnerBillingStatus(item);
-        if (!filters.partner_billing_status.includes(itemBillingStatus)) return false;
-      }
-
-      // Priority filter
-      if (filters.priority && filters.priority.length > 0) {
-        if (!item.priority || !filters.priority.includes(item.priority)) return false;
-      }
-
-      // Report status filter
-      if (filters.report_status && filters.report_status.length > 0) {
-        if (!item.report_status || !filters.report_status.includes(item.report_status)) return false;
-      }
-
-      // Show overdue only filter
-      if (filters.showOverdueOnly) {
-        // Add overdue logic here if needed
-        // This would require overdue date calculation based on business rules
-      }
-
       return true;
     });
-  }, [pipelineData, searchTerm, filters]);
+  }, [pipelineData, searchTerm]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -881,34 +783,10 @@ export function BillingDashboard() {
               <div className="flex flex-1 gap-2">
                 <SmartSearchInput
                   placeholder="Search pipeline..."
-                  value={filters.search || ''}
-                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="flex-1"
                 />
-                <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline">
-                      <Filter className="h-4 w-4 mr-2" />
-                      Filters {filterCount > 0 && `(${filterCount})`}
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="flex flex-col">
-                    <SheetHeader>
-                      <SheetTitle>Filter Pipeline</SheetTitle>
-                    </SheetHeader>
-                    <div className="flex-1 overflow-y-auto">
-                      <SimplePipelineFilters
-                        filters={filters}
-                        onFiltersChange={setFilters}
-                        onClear={handleClearFilters}
-                        organizations={organizations}
-                        subcontractors={subcontractors}
-                        locations={locationOptions}
-                        trades={trades}
-                      />
-                    </div>
-                  </SheetContent>
-                </Sheet>
               </div>
               
               {/* Action Buttons Group - Hidden on mobile since mobile always uses cards */}
