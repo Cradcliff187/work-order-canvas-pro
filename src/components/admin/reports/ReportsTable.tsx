@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Table,
@@ -15,6 +16,7 @@ import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { flexRender, ColumnDef, Table as ReactTable, RowSelectionState } from '@tanstack/react-table';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { format } from 'date-fns';
@@ -48,6 +50,8 @@ export interface ReportsTableProps<TData = any> {
   onClearSelection?: () => void;
   // Mobile props
   isMobile?: boolean;
+  // Data props for pagination display
+  totalCount?: number;
 }
 
 export function ReportsTable<TData = any>({
@@ -68,6 +72,7 @@ export function ReportsTable<TData = any>({
   rowSelection,
   onClearSelection,
   isMobile = false,
+  totalCount,
 }: ReportsTableProps<TData>) {
   const rows = table.getRowModel().rows;
   const hasRows = rows?.length > 0;
@@ -212,37 +217,54 @@ export function ReportsTable<TData = any>({
           </div>
         )}
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between space-x-2 py-4 mt-4">
-          <div className="flex-1 text-sm text-muted-foreground">
-            {table.getFilteredSelectedRowModel().rows.length > 0 && (
-              <span>
-                {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
-              </span>
+        {/* Enhanced Pagination */}
+        <div className={`flex items-center py-4 mt-4 ${isMobile ? 'flex-col space-y-4' : 'justify-between space-x-2'}`}>
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {table.getRowModel().rows.length} of {totalCount || table.getFilteredRowModel().rows.length} {isMobile ? 'items' : 'reports'}
+            </div>
+            {!isMobile && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                <Select
+                  value={table.getState().pagination.pageSize.toString()}
+                  onValueChange={(value) => table.setPageSize(Number(value))}
+                >
+                  <SelectTrigger className="w-16 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <button
-              type="button"
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-3 py-1 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
               Previous
-            </button>
+            </Button>
             <div className="flex items-center gap-1">
               <span className="text-sm text-muted-foreground">
                 Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
               </span>
             </div>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-3 py-1 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       </CardContent>
