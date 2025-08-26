@@ -382,6 +382,18 @@ export function BillingDashboard() {
                   onValueChange={setViewMode} 
                   allowedModes={['table', 'card']} 
                 />
+                <ExportDropdown 
+                  onExport={handleExport} 
+                  variant="outline" 
+                  size="default"
+                  disabled={pipelineLoading || filteredPipelineData.length === 0} 
+                />
+                <ColumnVisibilityDropdown
+                  columns={getAllColumns()}
+                  onToggleColumn={toggleColumn}
+                  onResetToDefaults={resetToDefaults}
+                  variant="outline"
+                />
               </div>
             )}
           </div>
