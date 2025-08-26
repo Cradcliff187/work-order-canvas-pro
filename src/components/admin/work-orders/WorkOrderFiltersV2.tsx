@@ -14,24 +14,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAllAssignees } from '@/hooks/useEmployeesForAssignment';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 
+interface FilterConfig {
+  statusOptions?: { value: string; label: string }[];
+  showPriority?: boolean;
+  showCompleted?: boolean;
+  showSubmittedBy?: boolean;
+  showWorkOrder?: boolean;
+  searchPlaceholder?: string;
+  searchStorageKey?: string;
+  completedByLabel?: string;
+}
+
 interface WorkOrderFiltersV2Props {
-  filters: {
-    status?: string[];
-    trade_id?: string[];
-    partner_organization_ids?: string[];
-    completed_by?: string[];
-    search?: string;
-    date_from?: string;
-    date_to?: string;
-    location_filter?: string[];
-  };
+  filters: any;
   searchTerm: string;
   onFiltersChange: (filters: any) => void;
   onSearchChange: (value: string) => void;
   onClearFilters: () => void;
+  config?: FilterConfig;
 }
 
-const statusOptions = [
+const defaultWorkOrderStatusOptions = [
   { value: 'received', label: 'Received' },
   { value: 'assigned', label: 'Assigned' },
   { value: 'in_progress', label: 'In Progress' },
@@ -41,13 +44,38 @@ const statusOptions = [
   { value: 'estimate_approved', label: 'Estimate Approved' },
 ];
 
+export const defaultReportStatusOptions = [
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'in_review', label: 'In Review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+];
+
+const priorityOptions = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' },
+];
+
 export function WorkOrderFiltersV2({ 
   filters, 
   searchTerm, 
   onFiltersChange, 
   onSearchChange, 
-  onClearFilters 
+  onClearFilters,
+  config = {}
 }: WorkOrderFiltersV2Props) {
+  const {
+    statusOptions = defaultWorkOrderStatusOptions,
+    showPriority = false,
+    showCompleted = true,
+    showSubmittedBy = false,
+    showWorkOrder = false,
+    searchPlaceholder = "Search work orders, locations, or descriptions...",
+    searchStorageKey = "admin-work-orders-search",
+    completedByLabel = "Completed By"
+  } = config;
   const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
   const { data: subcontractors } = useQuery({
@@ -113,27 +141,60 @@ export function WorkOrderFiltersV2({
     });
   };
 
-  const handleDateFromChange = (date: Date | undefined) => {
+  const handleStringFilterChange = (key: string, value: string) => {
     onFiltersChange({
       ...filters,
-      date_from: date ? format(date, 'yyyy-MM-dd') : undefined
+      [key]: value || undefined
     });
+  };
+
+  const handleDateFromChange = (date: Date | undefined) => {
+    if (filters.date_range !== undefined) {
+      // Handle reports date_range format
+      onFiltersChange({
+        ...filters,
+        date_range: {
+          ...filters.date_range,
+          from: date ? format(date, 'yyyy-MM-dd') : undefined
+        }
+      });
+    } else {
+      // Handle work orders date_from format
+      onFiltersChange({
+        ...filters,
+        date_from: date ? format(date, 'yyyy-MM-dd') : undefined
+      });
+    }
     setDateFromOpen(false);
   };
 
   const handleDateToChange = (date: Date | undefined) => {
-    onFiltersChange({
-      ...filters,
-      date_to: date ? format(date, 'yyyy-MM-dd') : undefined
-    });
+    if (filters.date_range !== undefined) {
+      // Handle reports date_range format
+      onFiltersChange({
+        ...filters,
+        date_range: {
+          ...filters.date_range,
+          to: date ? format(date, 'yyyy-MM-dd') : undefined
+        }
+      });
+    } else {
+      // Handle work orders date_to format
+      onFiltersChange({
+        ...filters,
+        date_to: date ? format(date, 'yyyy-MM-dd') : undefined
+      });
+    }
     setDateToOpen(false);
   };
 
   const handleLocationTextSubmit = () => {
     if (locationTextInput.trim()) {
-      const current = filters.location_filter || [];
-      if (!current.includes(locationTextInput.trim())) {
-        handleFilterChange('location_filter', [...current, locationTextInput.trim()]);
+      const locationKey = filters.location_filter !== undefined ? 'location_filter' : 'location';
+      const current = filters[locationKey] || [];
+      const currentArray = Array.isArray(current) ? current : [current].filter(Boolean);
+      if (!currentArray.includes(locationTextInput.trim())) {
+        handleFilterChange(locationKey, [...currentArray, locationTextInput.trim()]);
       }
       setLocationTextInput('');
     }
@@ -142,12 +203,12 @@ export function WorkOrderFiltersV2({
   // Search slot component
   const searchSlot = (
     <SmartSearchInput
-      placeholder="Search work orders, locations, or descriptions..."
+      placeholder={searchPlaceholder}
       value={searchTerm}
       onChange={(e) => onSearchChange(e.target.value)}
       onSearchSubmit={onSearchChange}
-      storageKey="admin-work-orders-search"
-      aria-label="Search work orders"
+      storageKey={searchStorageKey}
+      aria-label="Search"
       className="w-full"
     />
   );
@@ -175,15 +236,29 @@ export function WorkOrderFiltersV2({
         />
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Completed By</label>
-        <MultiSelectFilter
-          placeholder="Select assignee type"
-          options={completedByOptions}
-          selectedValues={filters.completed_by || []}
-          onSelectionChange={(values) => handleFilterChange('completed_by', values)}
-        />
-      </div>
+      {showPriority && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Priority</label>
+          <MultiSelectFilter
+            placeholder="Select priority"
+            options={priorityOptions}
+            selectedValues={filters.priority || []}
+            onSelectionChange={(values) => handleFilterChange('priority', values)}
+          />
+        </div>
+      )}
+
+      {showCompleted && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">{completedByLabel}</label>
+          <MultiSelectFilter
+            placeholder="Select assignee type"
+            options={completedByOptions}
+            selectedValues={filters.completed_by || filters.subcontractor_organization_ids || []}
+            onSelectionChange={(values) => handleFilterChange(filters.completed_by !== undefined ? 'completed_by' : 'subcontractor_organization_ids', values)}
+          />
+        </div>
+      )}
     </>
   );
 
@@ -195,8 +270,8 @@ export function WorkOrderFiltersV2({
         <MultiSelectFilter
           placeholder="Select trade"
           options={tradeOptions}
-          selectedValues={filters.trade_id || []}
-          onSelectionChange={(values) => handleFilterChange('trade_id', values)}
+          selectedValues={filters.trade_id || filters.trade_ids || []}
+          onSelectionChange={(values) => handleFilterChange(filters.trade_id !== undefined ? 'trade_id' : 'trade_ids', values)}
         />
       </div>
 
@@ -205,8 +280,8 @@ export function WorkOrderFiltersV2({
         <MultiSelectFilter
           placeholder="Select location"
           options={locationOptions}
-          selectedValues={filters.location_filter || []}
-          onSelectionChange={(values) => handleFilterChange('location_filter', values)}
+          selectedValues={filters.location_filter || (filters.location ? [filters.location] : []) || []}
+          onSelectionChange={(values) => handleFilterChange(filters.location_filter !== undefined ? 'location_filter' : 'location', values)}
         />
         <div className="flex gap-2">
           <Input
@@ -230,6 +305,28 @@ export function WorkOrderFiltersV2({
             Add
           </Button>
         </div>
+
+      {showSubmittedBy && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Submitted By</label>
+          <Input
+            placeholder="Name or email..."
+            value={filters.submitted_by || ''}
+            onChange={(e) => handleStringFilterChange('submitted_by', e.target.value)}
+          />
+        </div>
+      )}
+
+      {showWorkOrder && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Work Order</label>
+          <Input
+            placeholder="Work order number or details..."
+            value={filters.work_order || ''}
+            onChange={(e) => handleStringFilterChange('work_order', e.target.value)}
+          />
+        </div>
+      )}
       </div>
 
       <div className="space-y-2">
@@ -239,13 +336,15 @@ export function WorkOrderFiltersV2({
             <PopoverTrigger asChild>
               <Button variant="outline" className="justify-start text-left font-normal flex-1">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {filters.date_from ? format(new Date(filters.date_from), 'PPP') : 'From date'}
+                {(filters.date_from || filters.date_range?.from) ? 
+                  format(new Date(filters.date_from || filters.date_range?.from), 'PPP') : 'From date'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={filters.date_from ? new Date(filters.date_from) : undefined}
+                selected={(filters.date_from || filters.date_range?.from) ? 
+                  new Date(filters.date_from || filters.date_range?.from) : undefined}
                 onSelect={handleDateFromChange}
                 disabled={(date) =>
                   date > new Date() || date < new Date('1900-01-01')
@@ -259,13 +358,15 @@ export function WorkOrderFiltersV2({
             <PopoverTrigger asChild>
               <Button variant="outline" className="justify-start text-left font-normal flex-1">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {filters.date_to ? format(new Date(filters.date_to), 'PPP') : 'To date'}
+                {(filters.date_to || filters.date_range?.to) ? 
+                  format(new Date(filters.date_to || filters.date_range?.to), 'PPP') : 'To date'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={filters.date_to ? new Date(filters.date_to) : undefined}
+                selected={(filters.date_to || filters.date_range?.to) ? 
+                  new Date(filters.date_to || filters.date_range?.to) : undefined}
                 onSelect={handleDateToChange}
                 disabled={(date) =>
                   date > new Date() || date < new Date('1900-01-01')
@@ -275,15 +376,24 @@ export function WorkOrderFiltersV2({
             </PopoverContent>
           </Popover>
         </div>
-        {(filters.date_from || filters.date_to) && (
+        {(filters.date_from || filters.date_to || filters.date_range?.from || filters.date_range?.to) && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onFiltersChange({
-              ...filters,
-              date_from: undefined,
-              date_to: undefined
-            })}
+            onClick={() => {
+              if (filters.date_range !== undefined) {
+                onFiltersChange({
+                  ...filters,
+                  date_range: undefined
+                });
+              } else {
+                onFiltersChange({
+                  ...filters,
+                  date_from: undefined,
+                  date_to: undefined
+                });
+              }
+            }}
             className="w-full"
           >
             <X className="h-4 w-4 mr-2" />

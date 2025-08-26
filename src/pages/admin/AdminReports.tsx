@@ -66,7 +66,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
-import { SimpleReportFilters } from '@/components/admin/reports/SimpleReportFilters';
+import { WorkOrderFiltersV2, defaultReportStatusOptions } from '@/components/admin/work-orders/WorkOrderFiltersV2';
 import { ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersContent';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { cn } from '@/lib/utils';
@@ -501,33 +501,22 @@ const table = useReactTable({
         </div>
       </div>
 
-        {/* Desktop Filter Sheet */}
-        <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-          <SheetContent side="right" className="w-80 overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>Filter Reports</SheetTitle>
-            </SheetHeader>
-            <SimpleReportFilters
-              filters={filters}
-              onFiltersChange={handleFiltersChange}
-              onClear={handleClearFilters}
-            />
-          </SheetContent>
-        </Sheet>
-
-        {/* Mobile Filter Sheet */}
-        <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-          <SheetContent side="bottom" className="h-[80vh]">
-            <SheetHeader>
-              <SheetTitle>Filter Reports</SheetTitle>
-            </SheetHeader>
-            <SimpleReportFilters
-              filters={filters}
-              onFiltersChange={handleFiltersChange}
-              onClear={handleClearFilters}
-            />
-          </SheetContent>
-        </Sheet>
+      <WorkOrderFiltersV2
+        filters={filters}
+        searchTerm={searchTerm}
+        onFiltersChange={handleFiltersChange}
+        onSearchChange={setSearchTerm}
+        onClearFilters={handleClearFilters}
+        config={{
+          statusOptions: defaultReportStatusOptions,
+          showCompleted: true,
+          showSubmittedBy: true,
+          showWorkOrder: true,
+          searchPlaceholder: "Search reports, subcontractors, or work orders...",
+          searchStorageKey: "admin-reports-search",
+          completedByLabel: "Subcontractor"
+        }}
+      />
 
       {/* Bulk Actions */}
       {selectedRows.length > 0 && (

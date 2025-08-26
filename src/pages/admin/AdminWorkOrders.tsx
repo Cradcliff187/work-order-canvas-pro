@@ -11,7 +11,21 @@ import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { createWorkOrderColumns, WORK_ORDER_COLUMN_METADATA } from '@/components/admin/work-orders/WorkOrderColumns';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
-import { UnifiedWorkOrderFilters, type WorkOrderFiltersValue } from '@/components/admin/work-orders/UnifiedWorkOrderFilters';
+interface WorkOrderFiltersValue {
+  status?: string[];
+  priority?: string[];
+  partner_organization_ids?: string[];
+  completed_by?: string[];
+  trade_id?: string[];
+  location_filter?: string[];
+  date_range?: {
+    from?: string;
+    to?: string;
+  };
+  search?: string;
+}
+
+import { WorkOrderFiltersV2 } from '@/components/admin/work-orders/WorkOrderFiltersV2';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { BulkEditModal } from '@/components/admin/work-orders/BulkEditModal';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
@@ -423,130 +437,18 @@ export default function AdminWorkOrders() {
       </header>
 
       {/* Desktop Layout */}
-      <div className="hidden lg:flex gap-4 mb-6">
-      <div className="flex flex-1 items-center gap-3">
-        <SmartSearchInput
-          placeholder="Search WO#, title, or location..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onClear={handleSearchClear}
-          showClearButton={true}
-          className="flex-1 h-10"
-        />
-        <Button 
-          variant="outline" 
-          onClick={() => setIsDesktopFilterOpen(true)}
-          className="h-10 px-4 whitespace-nowrap"
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          Filters {filterCount > 0 && `(${filterCount})`}
-        </Button>
-      </div>
-        <div className="flex gap-2">
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
-            className="h-9"
-          />
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setBulkMode(!bulkMode)}
-            className={cn("h-9", bulkMode ? "border-primary text-primary" : "")}
-            aria-label={bulkMode ? 'Exit bulk selection mode' : 'Enter bulk selection mode'}
-            aria-pressed={bulkMode}
-          >
-            <CheckSquare className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Bulk Actions</span>
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowCreateModal(true)} 
-            className="h-9"
-            aria-label="Create new work order"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Work Order
-          </Button>
-        </div>
-      </div>
-
-      {/* Mobile Layout */}
-      <div className="lg:hidden space-y-3 mb-6">
-        <SmartSearchInput
-          placeholder="Search WO#, title, or location..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onClear={handleSearchClear}
-          showClearButton={true}
-          className="w-full"
-        />
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
-            className="h-9"
-          />
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setBulkMode(!bulkMode)}
-            className={cn("h-9", bulkMode ? "border-primary text-primary" : "")}
-            aria-label={bulkMode ? 'Exit bulk selection mode' : 'Enter bulk selection mode'}
-            aria-pressed={bulkMode}
-          >
-            <CheckSquare className="w-4 h-4" />
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowCreateModal(true)} 
-            className="h-9"
-            aria-label="Create new work order"
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Desktop Filter Sheet */}
-      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-80">
-          <SheetHeader>
-            <SheetTitle>Filter Work Orders</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
-            <UnifiedWorkOrderFilters
-              filters={cleanFilters}
-              onFiltersChange={setFilters}
-              onClear={handleClearFilters}
-              filterCount={filterCount}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Mobile Filter Sheet */}
-      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[80vh]">
-          <SheetHeader>
-            <SheetTitle>Filter Work Orders</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
-            <UnifiedWorkOrderFilters
-              filters={cleanFilters}
-              onFiltersChange={setFilters}
-              onClear={handleClearFilters}
-              filterCount={filterCount}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <WorkOrderFiltersV2
+        filters={cleanFilters}
+        searchTerm={searchTerm}
+        onFiltersChange={setFilters}
+        onSearchChange={setSearchTerm}
+        onClearFilters={handleClearFilters}
+        config={{
+          showPriority: true,
+          searchPlaceholder: "Search WO#, title, or location...",
+          searchStorageKey: "admin-work-orders-search",
+        }}
+      />
 
       {/* Work Order Table */}
       <WorkOrderTable
