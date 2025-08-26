@@ -217,127 +217,36 @@ export function WorkOrderFiltersV2({
   const essentialFilters = (
     <>
       <div className="space-y-2">
-        <label className="text-sm font-medium">Status</label>
+        <label className="text-sm font-medium text-muted-foreground">Status</label>
         <MultiSelectFilter
           placeholder="Select status"
           options={statusOptions}
           selectedValues={filters.status || []}
           onSelectionChange={(values) => handleFilterChange('status', values)}
+          className="h-10"
         />
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Organization</label>
+        <label className="text-sm font-medium text-muted-foreground">Organization</label>
         <MultiSelectFilter
           placeholder="Select organization"
           options={organizationOptions}
           selectedValues={filters.partner_organization_ids || []}
           onSelectionChange={(values) => handleFilterChange('partner_organization_ids', values)}
-        />
-      </div>
-
-      {showPriority && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Priority</label>
-          <MultiSelectFilter
-            placeholder="Select priority"
-            options={priorityOptions}
-            selectedValues={filters.priority || []}
-            onSelectionChange={(values) => handleFilterChange('priority', values)}
-          />
-        </div>
-      )}
-
-      {showCompleted && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">{completedByLabel}</label>
-          <MultiSelectFilter
-            placeholder="Select assignee type"
-            options={completedByOptions}
-            selectedValues={filters.completed_by || filters.subcontractor_organization_ids || []}
-            onSelectionChange={(values) => handleFilterChange(filters.completed_by !== undefined ? 'completed_by' : 'subcontractor_organization_ids', values)}
-          />
-        </div>
-      )}
-    </>
-  );
-
-  // Advanced filters (collapsible in sections)
-  const advancedFilters = (
-    <>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Trade</label>
-        <MultiSelectFilter
-          placeholder="Select trade"
-          options={tradeOptions}
-          selectedValues={filters.trade_id || filters.trade_ids || []}
-          onSelectionChange={(values) => handleFilterChange(filters.trade_id !== undefined ? 'trade_id' : 'trade_ids', values)}
+          className="h-10"
         />
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Location</label>
-        <MultiSelectFilter
-          placeholder="Select location"
-          options={locationOptions}
-          selectedValues={filters.location_filter || (filters.location ? [filters.location] : []) || []}
-          onSelectionChange={(values) => handleFilterChange(filters.location_filter !== undefined ? 'location_filter' : 'location', values)}
-        />
-        <div className="flex gap-2">
-          <Input
-            placeholder="Add custom location"
-            value={locationTextInput}
-            onChange={(e) => setLocationTextInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleLocationTextSubmit();
-              }
-            }}
-            className="flex-1"
-          />
-          <Button 
-            onClick={handleLocationTextSubmit}
-            size="sm" 
-            variant="outline"
-            disabled={!locationTextInput.trim()}
-          >
-            Add
-          </Button>
-        </div>
-
-      {showSubmittedBy && (
+        <label className="text-sm font-medium text-muted-foreground">Date Range</label>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Submitted By</label>
-          <Input
-            placeholder="Name or email..."
-            value={filters.submitted_by || ''}
-            onChange={(e) => handleStringFilterChange('submitted_by', e.target.value)}
-          />
-        </div>
-      )}
-
-      {showWorkOrder && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Work Order</label>
-          <Input
-            placeholder="Work order number or details..."
-            value={filters.work_order || ''}
-            onChange={(e) => handleStringFilterChange('work_order', e.target.value)}
-          />
-        </div>
-      )}
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Date Range</label>
-        <div className="flex gap-2">
           <Popover open={dateFromOpen} onOpenChange={setDateFromOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-start text-left font-normal flex-1">
+              <Button variant="outline" className="justify-start text-left font-normal w-full h-10">
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {(filters.date_from || filters.date_range?.from) ? 
-                  format(new Date(filters.date_from || filters.date_range?.from), 'PPP') : 'From date'}
+                  format(new Date(filters.date_from || filters.date_range?.from), 'MMM dd, yyyy') : 'From date'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -350,16 +259,17 @@ export function WorkOrderFiltersV2({
                   date > new Date() || date < new Date('1900-01-01')
                 }
                 initialFocus
+                className="pointer-events-auto"
               />
             </PopoverContent>
           </Popover>
-
+          
           <Popover open={dateToOpen} onOpenChange={setDateToOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-start text-left font-normal flex-1">
+              <Button variant="outline" className="justify-start text-left font-normal w-full h-10">
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {(filters.date_to || filters.date_range?.to) ? 
-                  format(new Date(filters.date_to || filters.date_range?.to), 'PPP') : 'To date'}
+                  format(new Date(filters.date_to || filters.date_range?.to), 'MMM dd, yyyy') : 'To date'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -372,35 +282,139 @@ export function WorkOrderFiltersV2({
                   date > new Date() || date < new Date('1900-01-01')
                 }
                 initialFocus
+                className="pointer-events-auto"
               />
             </PopoverContent>
           </Popover>
+          
+          {(filters.date_from || filters.date_to || filters.date_range?.from || filters.date_range?.to) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (filters.date_range !== undefined) {
+                  onFiltersChange({
+                    ...filters,
+                    date_range: undefined
+                  });
+                } else {
+                  onFiltersChange({
+                    ...filters,
+                    date_from: undefined,
+                    date_to: undefined
+                  });
+                }
+              }}
+              className="w-full h-8 text-xs"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Clear Date Range
+            </Button>
+          )}
         </div>
-        {(filters.date_from || filters.date_to || filters.date_range?.from || filters.date_range?.to) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (filters.date_range !== undefined) {
-                onFiltersChange({
-                  ...filters,
-                  date_range: undefined
-                });
-              } else {
-                onFiltersChange({
-                  ...filters,
-                  date_from: undefined,
-                  date_to: undefined
-                });
-              }
-            }}
-            className="w-full"
-          >
-            <X className="h-4 w-4 mr-2" />
-            Clear Date Range
-          </Button>
-        )}
       </div>
+    </>
+  );
+
+  // Advanced filters (collapsible in sections)
+  const advancedFilters = (
+    <>
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-muted-foreground">Trade</label>
+        <MultiSelectFilter
+          placeholder="Select trade"
+          options={tradeOptions}
+          selectedValues={filters.trade_id || filters.trade_ids || []}
+          onSelectionChange={(values) => handleFilterChange(filters.trade_id !== undefined ? 'trade_id' : 'trade_ids', values)}
+          className="h-10"
+        />
+      </div>
+
+      {showPriority && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Priority</label>
+          <MultiSelectFilter
+            placeholder="Select priority"
+            options={priorityOptions}
+            selectedValues={filters.priority || []}
+            onSelectionChange={(values) => handleFilterChange('priority', values)}
+            className="h-10"
+          />
+        </div>
+      )}
+
+      {showCompleted && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">{completedByLabel}</label>
+          <MultiSelectFilter
+            placeholder="Select assignee type"
+            options={completedByOptions}
+            selectedValues={filters.completed_by || filters.subcontractor_organization_ids || []}
+            onSelectionChange={(values) => handleFilterChange(filters.completed_by !== undefined ? 'completed_by' : 'subcontractor_organization_ids', values)}
+            className="h-10"
+          />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-muted-foreground">Location</label>
+        <div className="space-y-2">
+          <MultiSelectFilter
+            placeholder="Select location"
+            options={locationOptions}
+            selectedValues={filters.location_filter || (filters.location ? [filters.location] : []) || []}
+            onSelectionChange={(values) => handleFilterChange(filters.location_filter !== undefined ? 'location_filter' : 'location', values)}
+            className="h-10"
+          />
+          <div className="flex gap-2">
+            <Input
+              placeholder="Add custom location"
+              value={locationTextInput}
+              onChange={(e) => setLocationTextInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleLocationTextSubmit();
+                }
+              }}
+              className="flex-1 h-10"
+            />
+            <Button 
+              onClick={handleLocationTextSubmit}
+              size="sm" 
+              variant="outline"
+              disabled={!locationTextInput.trim()}
+              className="h-10 px-3"
+            >
+              Add
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {showSubmittedBy && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Submitted By</label>
+          <Input
+            placeholder="Name or email..."
+            value={filters.submitted_by || ''}
+            onChange={(e) => handleStringFilterChange('submitted_by', e.target.value)}
+            className="h-10"
+          />
+        </div>
+      )}
+
+      {showWorkOrder && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Work Order</label>
+          <Input
+            placeholder="Work order number or details..."
+            value={filters.work_order || ''}
+            onChange={(e) => handleStringFilterChange('work_order', e.target.value)}
+            className="h-10"
+          />
+        </div>
+      )}
     </>
   );
 

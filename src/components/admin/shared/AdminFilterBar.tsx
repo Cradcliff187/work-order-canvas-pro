@@ -136,26 +136,26 @@ export function AdminFilterBar({
               </div>
               <CollapsibleContent>
                 {sections ? (
-                  <div className="space-y-6">
+                  <div className="space-y-8">
                     {sections.essential && (
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium text-muted-foreground">Essential</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Essential Filters</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
                           {sections.essential}
                         </div>
                       </div>
                     )}
                     {sections.advanced && (
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium text-muted-foreground">Advanced</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Advanced Filters</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
                           {sections.advanced}
                         </div>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
                     {children}
                   </div>
                 )}
@@ -171,26 +171,26 @@ export function AdminFilterBar({
               )}
             </div>
             {sections ? (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {sections.essential && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground">Essential</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Essential Filters</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
                       {sections.essential}
                     </div>
                   </div>
                 )}
                 {sections.advanced && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground">Advanced</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Advanced Filters</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
                       {sections.advanced}
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
                 {children}
               </div>
             )}
