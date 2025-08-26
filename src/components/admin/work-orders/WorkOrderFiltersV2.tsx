@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
@@ -20,16 +19,12 @@ interface FilterConfig {
   showCompleted?: boolean;
   showSubmittedBy?: boolean;
   showWorkOrder?: boolean;
-  searchPlaceholder?: string;
-  searchStorageKey?: string;
   completedByLabel?: string;
 }
 
 interface WorkOrderFiltersV2Props {
   filters: any;
-  searchTerm: string;
   onFiltersChange: (filters: any) => void;
-  onSearchChange: (value: string) => void;
   onClearFilters: () => void;
   config?: FilterConfig;
 }
@@ -60,9 +55,7 @@ const priorityOptions = [
 
 export function WorkOrderFiltersV2({ 
   filters, 
-  searchTerm, 
   onFiltersChange, 
-  onSearchChange, 
   onClearFilters,
   config = {}
 }: WorkOrderFiltersV2Props) {
@@ -72,8 +65,6 @@ export function WorkOrderFiltersV2({
     showCompleted = true,
     showSubmittedBy = false,
     showWorkOrder = false,
-    searchPlaceholder = "Search work orders, locations, or descriptions...",
-    searchStorageKey = "admin-work-orders-search",
     completedByLabel = "Completed By"
   } = config;
   const { data: organizations } = useOrganizationsForWorkOrders();
@@ -104,9 +95,9 @@ export function WorkOrderFiltersV2({
   const activeFilterCount = useMemo(() => {
     const baseCount = Object.values(filters).filter(value => 
       Array.isArray(value) ? value.length > 0 : Boolean(value)
-    ).length + (searchTerm ? 1 : 0);
+    ).length;
     return baseCount;
-  }, [filters, searchTerm]);
+  }, [filters]);
 
   // Prepare option arrays
   const organizationOptions = organizations?.map(org => ({
@@ -200,175 +191,130 @@ export function WorkOrderFiltersV2({
     }
   };
 
-  // Search slot component
-  const searchSlot = (
-    <SmartSearchInput
-      placeholder={searchPlaceholder}
-      value={searchTerm}
-      onChange={(e) => onSearchChange(e.target.value)}
-      onSearchSubmit={onSearchChange}
-      storageKey={searchStorageKey}
-      aria-label="Search"
-      className="w-full"
-    />
-  );
-
   // Essential filters (always visible in sections)
   const essentialFilters = (
-    <>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Status Filter */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Status</label>
+        <label className="text-sm font-medium">Status</label>
         <MultiSelectFilter
-          placeholder="Select status"
           options={statusOptions}
           selectedValues={filters.status || []}
-          onSelectionChange={(values) => handleFilterChange('status', values)}
-          className="h-10"
+          onSelectionChange={(value) => handleFilterChange('status', value)}
+          placeholder="Filter by status..."
         />
       </div>
 
+      {/* Organization Filter */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Organization</label>
+        <label className="text-sm font-medium">Organization</label>
         <MultiSelectFilter
-          placeholder="Select organization"
           options={organizationOptions}
-          selectedValues={filters.partner_organization_ids || []}
-          onSelectionChange={(values) => handleFilterChange('partner_organization_ids', values)}
-          className="h-10"
+          selectedValues={filters.organizations || []}
+          onSelectionChange={(value) => handleFilterChange('organizations', value)}
+          placeholder="Filter by organization..."
         />
       </div>
 
+      {/* Date Range */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Date Range</label>
-        <div className="space-y-2">
+        <label className="text-sm font-medium">Date Range</label>
+        <div className="flex gap-2">
           <Popover open={dateFromOpen} onOpenChange={setDateFromOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-start text-left font-normal w-full h-10">
+              <Button
+                variant="outline"
+                className="flex-1 justify-start text-left font-normal h-10"
+              >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {(filters.date_from || filters.date_range?.from) ? 
-                  format(new Date(filters.date_from || filters.date_range?.from), 'MMM dd, yyyy') : 'From date'}
+                {filters.date_from || filters.date_range?.from ? format(new Date(filters.date_from || filters.date_range?.from), 'MMM dd, yyyy') : 'From'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={(filters.date_from || filters.date_range?.from) ? 
-                  new Date(filters.date_from || filters.date_range?.from) : undefined}
+                selected={filters.date_from || filters.date_range?.from ? new Date(filters.date_from || filters.date_range?.from) : undefined}
                 onSelect={handleDateFromChange}
-                disabled={(date) =>
-                  date > new Date() || date < new Date('1900-01-01')
-                }
                 initialFocus
-                className="pointer-events-auto"
               />
             </PopoverContent>
           </Popover>
-          
+
           <Popover open={dateToOpen} onOpenChange={setDateToOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-start text-left font-normal w-full h-10">
+              <Button
+                variant="outline"
+                className="flex-1 justify-start text-left font-normal h-10"
+              >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {(filters.date_to || filters.date_range?.to) ? 
-                  format(new Date(filters.date_to || filters.date_range?.to), 'MMM dd, yyyy') : 'To date'}
+                {filters.date_to || filters.date_range?.to ? format(new Date(filters.date_to || filters.date_range?.to), 'MMM dd, yyyy') : 'To'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={(filters.date_to || filters.date_range?.to) ? 
-                  new Date(filters.date_to || filters.date_range?.to) : undefined}
+                selected={filters.date_to || filters.date_range?.to ? new Date(filters.date_to || filters.date_range?.to) : undefined}
                 onSelect={handleDateToChange}
-                disabled={(date) =>
-                  date > new Date() || date < new Date('1900-01-01')
-                }
                 initialFocus
-                className="pointer-events-auto"
               />
             </PopoverContent>
           </Popover>
-          
-          {(filters.date_from || filters.date_to || filters.date_range?.from || filters.date_range?.to) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (filters.date_range !== undefined) {
-                  onFiltersChange({
-                    ...filters,
-                    date_range: undefined
-                  });
-                } else {
-                  onFiltersChange({
-                    ...filters,
-                    date_from: undefined,
-                    date_to: undefined
-                  });
-                }
-              }}
-              className="w-full h-8 text-xs"
-            >
-              <X className="h-3 w-3 mr-1" />
-              Clear Date Range
-            </Button>
-          )}
         </div>
+        {(filters.date_from || filters.date_to || filters.date_range?.from || filters.date_range?.to) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (filters.date_range !== undefined) {
+                onFiltersChange({
+                  ...filters,
+                  date_range: { from: undefined, to: undefined }
+                });
+              } else {
+                onFiltersChange({
+                  ...filters,
+                  date_from: undefined,
+                  date_to: undefined
+                });
+              }
+            }}
+            className="h-8 px-2 lg:px-3"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Clear dates
+          </Button>
+        )}
       </div>
-    </>
+    </div>
   );
 
-  // Advanced filters (collapsible in sections)
+  // Advanced filters (collapsible)
   const advancedFilters = (
-    <>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Trades Filter */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Trade</label>
+        <label className="text-sm font-medium">Trades</label>
         <MultiSelectFilter
-          placeholder="Select trade"
           options={tradeOptions}
-          selectedValues={filters.trade_id || filters.trade_ids || []}
-          onSelectionChange={(values) => handleFilterChange(filters.trade_id !== undefined ? 'trade_id' : 'trade_ids', values)}
-          className="h-10"
+          selectedValues={filters.trades || []}
+          onSelectionChange={(value) => handleFilterChange('trades', value)}
+          placeholder="Filter by trades..."
         />
       </div>
 
-      {showPriority && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Priority</label>
-          <MultiSelectFilter
-            placeholder="Select priority"
-            options={priorityOptions}
-            selectedValues={filters.priority || []}
-            onSelectionChange={(values) => handleFilterChange('priority', values)}
-            className="h-10"
-          />
-        </div>
-      )}
-
-      {showCompleted && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">{completedByLabel}</label>
-          <MultiSelectFilter
-            placeholder="Select assignee type"
-            options={completedByOptions}
-            selectedValues={filters.completed_by || filters.subcontractor_organization_ids || []}
-            onSelectionChange={(values) => handleFilterChange(filters.completed_by !== undefined ? 'completed_by' : 'subcontractor_organization_ids', values)}
-            className="h-10"
-          />
-        </div>
-      )}
-
+      {/* Location Filter */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Location</label>
+        <label className="text-sm font-medium">Locations</label>
         <div className="space-y-2">
           <MultiSelectFilter
-            placeholder="Select location"
             options={locationOptions}
-            selectedValues={filters.location_filter || (filters.location ? [filters.location] : []) || []}
-            onSelectionChange={(values) => handleFilterChange(filters.location_filter !== undefined ? 'location_filter' : 'location', values)}
-            className="h-10"
+            selectedValues={filters.location_filter || filters.location || []}
+            onSelectionChange={(value) => handleFilterChange(filters.location_filter !== undefined ? 'location_filter' : 'location', value)}
+            placeholder="Select locations..."
           />
           <div className="flex gap-2">
             <Input
-              placeholder="Add custom location"
+              placeholder="Add custom location..."
               value={locationTextInput}
               onChange={(e) => setLocationTextInput(e.target.value)}
               onKeyDown={(e) => {
@@ -377,14 +323,14 @@ export function WorkOrderFiltersV2({
                   handleLocationTextSubmit();
                 }
               }}
-              className="flex-1 h-10"
+              className="h-10"
             />
-            <Button 
-              onClick={handleLocationTextSubmit}
-              size="sm" 
+            <Button
+              type="button"
               variant="outline"
+              size="sm"
+              onClick={handleLocationTextSubmit}
               disabled={!locationTextInput.trim()}
-              className="h-10 px-3"
             >
               Add
             </Button>
@@ -392,30 +338,32 @@ export function WorkOrderFiltersV2({
         </div>
       </div>
 
-      {showSubmittedBy && (
+      {/* Priority Filter */}
+      {showPriority && (
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Submitted By</label>
-          <Input
-            placeholder="Name or email..."
-            value={filters.submitted_by || ''}
-            onChange={(e) => handleStringFilterChange('submitted_by', e.target.value)}
-            className="h-10"
+          <label className="text-sm font-medium">Priority</label>
+          <MultiSelectFilter
+            options={priorityOptions}
+            selectedValues={filters.priority || []}
+            onSelectionChange={(value) => handleFilterChange('priority', value)}
+            placeholder="Filter by priority..."
           />
         </div>
       )}
 
-      {showWorkOrder && (
+      {/* Completed By Filter */}
+      {showCompleted && (
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Work Order</label>
-          <Input
-            placeholder="Work order number or details..."
-            value={filters.work_order || ''}
-            onChange={(e) => handleStringFilterChange('work_order', e.target.value)}
-            className="h-10"
+          <label className="text-sm font-medium">{completedByLabel}</label>
+          <MultiSelectFilter
+            options={completedByOptions}
+            selectedValues={filters.completed_by || []}
+            onSelectionChange={(value) => handleFilterChange('completed_by', value)}
+            placeholder="Filter by completion..."
           />
         </div>
       )}
-    </>
+    </div>
   );
 
   return (
@@ -423,7 +371,6 @@ export function WorkOrderFiltersV2({
       title="Filters"
       filterCount={activeFilterCount}
       onClear={onClearFilters}
-      searchSlot={searchSlot}
       sheetSide="bottom"
       collapsible={true}
       sections={{

@@ -503,17 +503,13 @@ const table = useReactTable({
 
       <WorkOrderFiltersV2
         filters={filters}
-        searchTerm={searchTerm}
         onFiltersChange={handleFiltersChange}
-        onSearchChange={setSearchTerm}
         onClearFilters={handleClearFilters}
         config={{
           statusOptions: defaultReportStatusOptions,
           showCompleted: true,
           showSubmittedBy: true,
           showWorkOrder: true,
-          searchPlaceholder: "Search reports, subcontractors, or work orders...",
-          searchStorageKey: "admin-reports-search",
           completedByLabel: "Subcontractor"
         }}
       />

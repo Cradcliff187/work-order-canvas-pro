@@ -436,17 +436,13 @@ export default function AdminWorkOrders() {
         </div>
       </header>
 
-      {/* Desktop Layout */}
+      {/* Filters */}
       <WorkOrderFiltersV2
         filters={cleanFilters}
-        searchTerm={searchTerm}
         onFiltersChange={setFilters}
-        onSearchChange={setSearchTerm}
         onClearFilters={handleClearFilters}
         config={{
           showPriority: true,
-          searchPlaceholder: "Search WO#, title, or location...",
-          searchStorageKey: "admin-work-orders-search",
         }}
       />
 
@@ -456,6 +452,9 @@ export default function AdminWorkOrders() {
         totalCount={workOrdersData?.totalCount}
         pageCount={workOrdersData?.pageCount || 0}
         isLoading={isLoading}
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search WO#, title, or location..."
         columns={columns}
         pagination={pagination}
         setPagination={setPagination}
