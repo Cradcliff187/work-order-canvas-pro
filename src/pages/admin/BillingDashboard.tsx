@@ -311,15 +311,23 @@ export function BillingDashboard() {
     canonical.setAttribute('href', window.location.href);
   }, []);
 
+  // Error boundary with better error handling
   if (pipelineError) {
+    console.error('Billing dashboard pipeline error:', pipelineError);
     return (
-      <EmptyState
-        icon={FileText}
-        title="We couldn't load pipeline data"
-        description="Please check your connection and try again."
-        action={{ label: 'Retry', onClick: () => refetch() }}
-        variant="full"
-      />
+      <div className="space-y-6 p-6">
+        <header>
+          <h1 className="text-3xl font-bold mb-2">Billing Pipeline</h1>
+          <p className="text-muted-foreground">Track work orders through the complete billing workflow</p>
+        </header>
+        <EmptyState
+          icon={FileText}
+          title="We couldn't load pipeline data"
+          description="An error occurred while loading the billing pipeline data. Please check your connection and try again."
+          action={{ label: 'Retry', onClick: () => refetch() }}
+          variant="full"
+        />
+      </div>
     );
   }
 

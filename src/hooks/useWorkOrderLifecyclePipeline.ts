@@ -56,6 +56,45 @@ export interface WorkOrderPipelineItem {
   financial_status: 'not_billed' | 'invoice_received' | 'paid' | 'fully_billed';
 }
 
+// Helper functions for calculations
+const calculateAgeDays = (createdAt: string): number => {
+  const created = new Date(createdAt);
+  const now = new Date();
+  const diffTime = now.getTime() - created.getTime();
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+};
+
+const isOverdue = (dueDate: string | null): boolean => {
+  if (!dueDate) return false;
+  return new Date(dueDate) < new Date();
+};
+
+const calculateOperationalStatus = (
+  status: string,
+  reportStatus: string | null,
+  dueDate: string | null,
+  ageDays: number
+): 'on_track' | 'at_risk' | 'overdue' | 'blocked' | 'completed' => {
+  if (status === 'completed') return 'completed';
+  if (dueDate && isOverdue(dueDate)) return 'overdue';
+  if (status === 'received' && ageDays > 3) return 'at_risk';
+  if (status === 'assigned' && ageDays > 7) return 'at_risk';
+  if (status === 'in_progress' && reportStatus === 'rejected') return 'blocked';
+  return 'on_track';
+};
+
+const calculateFinancialStatus = (
+  invoiceStatus: string | null,
+  partnerBillStatus: string | null
+): 'not_billed' | 'invoice_received' | 'paid' | 'fully_billed' => {
+  // Check invoice status specifically - align with computedFinancialStatus config
+  if (invoiceStatus === 'paid' || partnerBillStatus === 'paid') return 'paid';
+  if (invoiceStatus === 'approved') return 'fully_billed';
+  if (invoiceStatus === 'submitted') return 'invoice_received';
+  if (partnerBillStatus) return 'invoice_received';
+  return 'not_billed';
+};
+
 export function useWorkOrderLifecycle() {
   const { user } = useAuth();
   const { profile, primaryRole, partnerMemberships, subcontractorMemberships } = useUserProfile();
@@ -63,241 +102,216 @@ export function useWorkOrderLifecycle() {
   return useQuery({
     queryKey: ['work-order-lifecycle'],
     queryFn: async (): Promise<WorkOrderPipelineItem[]> => {
-      if (!user || !profile) {
-        throw new Error('User not authenticated');
+      // Add proper authentication guards
+      if (!user) {
+        console.warn('No authenticated user');
+        return [];
       }
-
-      // Clean query without debug logging
-
-      let query = supabase
-        .from('work_orders')
-        .select(`
-          id,
-          work_order_number,
-          title,
-          description,
-          status,
-          store_location,
-          organization_id,
-          date_submitted,
-          created_at,
-          due_date,
-          priority,
-        estimated_hours,
-        actual_hours,
-        materials_cost,
-        labor_cost,
-        date_assigned,
-        date_completed,
-        assigned_organization_id,
-        internal_markup_percentage,
-          partner_organization:organizations!work_orders_organization_id_fkey(
-            name
-          ),
-          assigned_organizations:organizations!work_orders_assigned_organization_id_fkey(
-            name,
-            organization_type
-          ),
-          latest_report:work_order_reports!left(
-            status,
-            submitted_at,
-            partner_billed_amount,
-            partner_billed_at,
-            approved_subcontractor_invoice_amount,
-            partner_invoices(
-              status,
-              created_at
-            )
-          ),
-          invoice_work_orders!left(
-            invoice_id,
-            amount,
-            invoices(
-              id,
-              status,
-              total_amount,
-              submitted_at,
-              approved_at
-            )
-          )
-        `)
-        .neq('status', 'cancelled')
-        .order('date_submitted', { ascending: false });
-
-      // Apply role-based filtering
-      if (primaryRole === 'admin' || primaryRole === 'employee') {
-        // Admin and employees can see all work orders
-      } else if (primaryRole === 'partner') {
-        // Partners can only see their organization's work orders
-        const userOrgIds = partnerMemberships?.map(org => org.organization_id) || [];
-        if (userOrgIds.length > 0) {
-          query = query.in('organization_id', userOrgIds);
-        } else {
-          // If no organizations, return empty result
-          return [];
-        }
-      } else if (primaryRole === 'subcontractor') {
-        // Subcontractors can only see work orders assigned to their organizations
-        const userOrgIds = subcontractorMemberships?.map(org => org.organization_id) || [];
-        if (userOrgIds.length > 0) {
-          query = query.in('assigned_organization_id', userOrgIds);
-        } else {
-          // If no organizations, return empty result
-          return [];
-        }
-      } else {
-        // Unknown role, return empty result
+      
+      if (!profile) {
+        console.warn('No user profile found');
         return [];
       }
 
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching work order pipeline:', error);
-        throw error;
+      try {
+        // Simplified, bulletproof query structure
+        let query = supabase
+          .from('work_orders')
+          .select(`
+            id,
+            work_order_number,
+            title,
+            description,
+            status,
+            store_location,
+            organization_id,
+            date_submitted,
+            created_at,
+            due_date,
+            priority,
+            estimated_hours,
+            actual_hours,
+            materials_cost,
+            labor_cost,
+            date_assigned,
+            date_completed,
+            assigned_organization_id,
+            internal_markup_percentage,
+            organizations!work_orders_organization_id_fkey(
+              name
+            ),
+            assigned_organizations:organizations!work_orders_assigned_organization_id_fkey(
+              name,
+              organization_type
+            )
+          `)
+          .neq('status', 'cancelled')
+          .order('date_submitted', { ascending: false });
+
+        // Apply role-based filtering with safe defaults
+        if (primaryRole === 'admin' || primaryRole === 'employee') {
+          // Admin and employees can see all work orders
+        } else if (primaryRole === 'partner') {
+          // Partners can only see their organization's work orders
+          const userOrgIds = partnerMemberships?.map(org => org.organization_id) || [];
+          if (userOrgIds.length > 0) {
+            query = query.in('organization_id', userOrgIds);
+          } else {
+            // If no organizations, return empty result safely
+            return [];
+          }
+        } else if (primaryRole === 'subcontractor') {
+          // Subcontractors can only see work orders assigned to their organizations
+          const userOrgIds = subcontractorMemberships?.map(org => org.organization_id) || [];
+          if (userOrgIds.length > 0) {
+            query = query.in('assigned_organization_id', userOrgIds);
+          } else {
+            // If no organizations, return empty result safely
+            return [];
+          }
+        } else {
+          // Unknown role, return empty result safely
+          return [];
+        }
+
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error('Error fetching work order pipeline:', error);
+          throw new Error(`Database query failed: ${error.message}`);
+        }
+
+        if (!data) {
+          console.warn('No data returned from work orders query');
+          return [];
+        }
+
+        // Transform the data to match our pipeline structure with comprehensive null safety
+        const transformedData = await Promise.all(
+          (data || []).map(async (workOrder: any): Promise<WorkOrderPipelineItem> => {
+            // Fetch additional data with separate queries for complex relationships
+            const [reportsResult, invoicesResult] = await Promise.all([
+              // Get latest report for this work order
+              supabase
+                .from('work_order_reports')
+                .select('status, submitted_at, partner_billed_amount, partner_billed_at, approved_subcontractor_invoice_amount')
+                .eq('work_order_id', workOrder.id)
+                .order('submitted_at', { ascending: false })
+                .limit(1)
+                .maybeSingle(),
+              
+              // Get subcontractor invoices for this work order
+              supabase
+                .from('invoice_work_orders')
+                .select(`
+                  amount,
+                  invoices!inner(
+                    id,
+                    status,
+                    total_amount,
+                    submitted_at,
+                    approved_at
+                  )
+                `)
+                .eq('work_order_id', workOrder.id)
+                .limit(1)
+                .maybeSingle()
+            ]);
+
+            // Safe data extraction with fallbacks
+            const latestReport = reportsResult.data;
+            const subcontractorInvoiceData = invoicesResult.data;
+            const subcontractorInvoice = subcontractorInvoiceData?.invoices;
+
+            // Safe amount calculation
+            const totalInvoiceAmount = subcontractorInvoice?.total_amount 
+              ? parseFloat(String(subcontractorInvoice.total_amount)) 
+              : null;
+
+            // Calculate derived fields with safe data
+            const ageDays = calculateAgeDays(workOrder.created_at || new Date().toISOString());
+            const overdueStatus = isOverdue(workOrder.due_date);
+            const operationalStatus = calculateOperationalStatus(
+              workOrder.status || 'received',
+              latestReport?.status || null,
+              workOrder.due_date,
+              ageDays
+            );
+            const financialStatus = calculateFinancialStatus(
+              subcontractorInvoice?.status || null,
+              latestReport?.partner_billed_at ? 'billed' : null
+            );
+
+            return {
+              // Core work order info with safe fallbacks
+              id: workOrder.id || '',
+              work_order_number: workOrder.work_order_number || null,
+              title: workOrder.title || 'Untitled Work Order',
+              description: workOrder.description || null,
+              status: workOrder.status || 'received',
+              store_location: workOrder.store_location || null,
+              organization_id: workOrder.organization_id || null,
+              date_submitted: workOrder.date_submitted || workOrder.created_at,
+              created_at: workOrder.created_at || new Date().toISOString(),
+              due_date: workOrder.due_date || null,
+              priority: workOrder.priority || null,
+              
+              // Organization info with safe extraction
+              partner_organization_name: workOrder.organizations?.name || null,
+              assigned_organization_name: workOrder.assigned_organizations?.name || null,
+              assigned_organization_id: workOrder.assigned_organization_id || null,
+              assigned_organization_type: workOrder.assigned_organizations?.organization_type || null,
+              
+              // Financial tracking with safe number parsing
+              estimated_hours: workOrder.estimated_hours || null,
+              actual_hours: workOrder.actual_hours || null,
+              materials_cost: workOrder.materials_cost || null,
+              labor_cost: workOrder.labor_cost || null,
+              subcontractor_invoice_amount: totalInvoiceAmount,
+              
+              // Timeline tracking
+              date_assigned: workOrder.date_assigned || null,
+              date_completed: workOrder.date_completed || null,
+              
+              // Latest report status with safe fallbacks
+              report_status: latestReport?.status || null,
+              report_submitted_at: latestReport?.submitted_at || null,
+              
+              // Invoice status (subcontractor billing)
+              invoice_status: subcontractorInvoice?.status || null,
+              invoice_submitted_at: subcontractorInvoice?.submitted_at || null,
+              
+              // Partner billing status with safe defaults
+              internal_markup_percentage: workOrder.internal_markup_percentage || 30,
+              partner_billed_amount: latestReport?.partner_billed_amount || null,
+              partner_bill_status: latestReport?.partner_billed_at ? 'billed' : null,
+              partner_billed_at: latestReport?.partner_billed_at || null,
+              
+              // Calculated fields
+              age_days: ageDays,
+              is_overdue: overdueStatus,
+              operational_status: operationalStatus,
+              financial_status: financialStatus,
+            };
+          })
+        );
+
+        return transformedData;
+
+      } catch (error: any) {
+        console.error('Critical error in useWorkOrderLifecycle:', error);
+        throw new Error(`Pipeline data fetch failed: ${error.message || 'Unknown error'}`);
       }
-      
-      // Process work order data
-
-
-      // Helper functions for calculations
-      const calculateAgeDays = (createdAt: string): number => {
-        const created = new Date(createdAt);
-        const now = new Date();
-        const diffTime = now.getTime() - created.getTime();
-        return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      };
-
-      const isOverdue = (dueDate: string | null): boolean => {
-        if (!dueDate) return false;
-        return new Date(dueDate) < new Date();
-      };
-
-      const calculateOperationalStatus = (
-        status: string,
-        reportStatus: string | null,
-        dueDate: string | null,
-        ageDays: number
-      ): 'on_track' | 'at_risk' | 'overdue' | 'blocked' | 'completed' => {
-        if (status === 'completed') return 'completed';
-        if (dueDate && isOverdue(dueDate)) return 'overdue';
-        if (status === 'received' && ageDays > 3) return 'at_risk';
-        if (status === 'assigned' && ageDays > 7) return 'at_risk';
-        if (status === 'in_progress' && reportStatus === 'rejected') return 'blocked';
-        return 'on_track';
-      };
-
-      const calculateFinancialStatus = (
-        invoiceStatus: string | null,
-        partnerBillStatus: string | null
-      ): 'not_billed' | 'invoice_received' | 'paid' | 'fully_billed' => {
-        // Check invoice status specifically - align with computedFinancialStatus config
-        if (invoiceStatus === 'paid' || partnerBillStatus === 'paid') return 'paid';
-        if (invoiceStatus === 'approved') return 'fully_billed'; // Changed from 'invoice_approved'
-        if (invoiceStatus === 'submitted') return 'invoice_received';
-        if (partnerBillStatus) return 'invoice_received';
-        return 'not_billed';
-      };
-
-      // Transform the data to match our pipeline structure
-      return (data || []).map((workOrder: any): WorkOrderPipelineItem => {
-        // Process individual work order
-
-        // Get the latest report (assuming they're ordered by submitted_at)
-        const latestReport = workOrder.latest_report?.[0];
-        
-        // Get invoice data from the junction table
-        const invoiceWorkOrders = workOrder.invoice_work_orders || [];
-
-        // The invoice is nested inside each invoice_work_order
-        const subcontractorInvoice = invoiceWorkOrders && 
-          invoiceWorkOrders.length > 0 && 
-          invoiceWorkOrders[0] && 
-          invoiceWorkOrders[0].invoices
-          ? invoiceWorkOrders[0].invoices
-          : null;
-
-        // Calculate the amount
-        const totalInvoiceAmount = subcontractorInvoice?.total_amount 
-          ? parseFloat(subcontractorInvoice.total_amount.toString()) 
-          : 0;
-
-        // Calculate financial amounts
-        
-        // Get partner billing info from the latest report - use most recent invoice
-        const partnerInvoices = latestReport?.partner_invoices || [];
-        const partnerInvoice = partnerInvoices.sort((a: any, b: any) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )[0];
-
-        // Calculate derived fields
-        const ageDays = calculateAgeDays(workOrder.created_at);
-        const overdueStatus = isOverdue(workOrder.due_date);
-        const operationalStatus = calculateOperationalStatus(
-          workOrder.status,
-          latestReport?.status,
-          workOrder.due_date,
-          ageDays
-        );
-        const financialStatus = calculateFinancialStatus(
-          subcontractorInvoice?.status || null,
-          partnerInvoice?.status
-        );
-
-        return {
-          id: workOrder.id,
-          work_order_number: workOrder.work_order_number,
-          title: workOrder.title,
-          description: workOrder.description,
-          status: workOrder.status,
-          store_location: workOrder.store_location,
-          organization_id: workOrder.organization_id,
-          date_submitted: workOrder.date_submitted,
-          created_at: workOrder.created_at,
-          due_date: workOrder.due_date,
-          priority: workOrder.priority,
-          
-          // Organization info
-          partner_organization_name: workOrder.partner_organization?.name || null,
-          assigned_organization_name: workOrder.assigned_organizations?.name || null,
-          assigned_organization_id: workOrder.assigned_organization_id,
-          assigned_organization_type: workOrder.assigned_organizations?.organization_type || null,
-          
-          // Financial tracking
-          estimated_hours: workOrder.estimated_hours,
-          actual_hours: workOrder.actual_hours,
-          materials_cost: workOrder.materials_cost,
-          labor_cost: workOrder.labor_cost,
-          subcontractor_invoice_amount: totalInvoiceAmount > 0 ? totalInvoiceAmount : null,
-          
-          // Timeline tracking
-          date_assigned: workOrder.date_assigned,
-          date_completed: workOrder.date_completed,
-          
-          // Latest report status
-          report_status: latestReport?.status || null,
-          report_submitted_at: latestReport?.submitted_at || null,
-          
-          // Invoice status (subcontractor billing) - Fixed extraction
-          invoice_status: subcontractorInvoice?.status || null,
-          invoice_submitted_at: subcontractorInvoice?.submitted_at || null,
-          
-          // Partner billing status  
-          internal_markup_percentage: workOrder.internal_markup_percentage || 30,
-          partner_billed_amount: latestReport?.partner_billed_amount || null,
-          partner_bill_status: latestReport?.partner_billed_at ? 'billed' : null,
-          partner_billed_at: latestReport?.partner_billed_at || null,
-          
-          // Calculated fields
-          age_days: ageDays,
-          is_overdue: overdueStatus,
-          operational_status: operationalStatus,
-          financial_status: financialStatus,
-        };
-      });
     },
-    enabled: !!user && !!profile,
+    enabled: !!user && !!profile && !!primaryRole,
     staleTime: 30 * 1000, // 30 seconds
     refetchOnWindowFocus: false,
+    retry: (failureCount, error: any) => {
+      // Only retry on network errors, not authentication errors
+      if (error?.message?.includes('User not authenticated')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 }
