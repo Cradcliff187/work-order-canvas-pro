@@ -226,11 +226,6 @@ export function WorkOrderPipelineTable({
       },
     },
     {
-      id: 'partner_billing',
-      header: 'Partner Billing Status',
-      cell: ({ row }) => <StatusBadge type="partnerBilling" status={getPartnerBillingStatus(row.original)} size="sm" showIcon />,
-    },
-    {
       id: 'subcontractor_invoice',
       header: 'Subcontractor Invoice',
       cell: ({ row }) => {
@@ -259,6 +254,11 @@ export function WorkOrderPipelineTable({
         
         return <FinancialStatusBadge status={statusValue} size="sm" showIcon />;
       },
+    },
+    {
+      id: 'partner_billing',
+      header: 'Partner Billing Status',
+      cell: ({ row }) => <StatusBadge type="partnerBilling" status={getPartnerBillingStatus(row.original)} size="sm" showIcon />,
     },
     {
       id: 'amount',
