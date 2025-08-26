@@ -111,8 +111,8 @@ export function AdminFilterBar({
         </SheetContent>
       </Sheet>
 
-      {/* Desktop: Inline card with header and actions */}
-      <div className="hidden sm:block mt-3 space-y-4">
+      {/* Desktop: Modern filter interface with improved spacing and hierarchy */}
+      <div className="hidden sm:block space-y-6">
         {searchSlot && (
           <div className="w-full">
             {searchSlot}
@@ -120,80 +120,102 @@ export function AdminFilterBar({
         )}
         {collapsible ? (
           <Collapsible open={!collapsed} onOpenChange={(open) => setCollapsed(!open)}>
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-medium text-sm text-muted-foreground">{title}</div>
+            <Card className="border-border/50 shadow-sm">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
+                <div className="flex items-center gap-3">
+                  <h3 className="font-semibold text-base text-foreground">{title}</h3>
+                  {hasActive && (
+                    <div className="inline-flex items-center px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      {filterCount} active
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   {hasActive && (
-                    <Button variant="ghost" size="sm" onClick={onClear}>Clear All</Button>
+                    <Button variant="ghost" size="sm" onClick={onClear} className="text-muted-foreground hover:text-foreground">
+                      Clear All
+                    </Button>
                   )}
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="p-1 h-6 w-6">
-                      <ChevronDown className={clsx("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+                    <Button variant="ghost" size="sm" className="p-2 h-8 w-8">
+                      <ChevronDown className={clsx("h-4 w-4 transition-transform duration-200", collapsed && "rotate-180")} />
                     </Button>
                   </CollapsibleTrigger>
                 </div>
               </div>
-              <CollapsibleContent>
-                {sections ? (
-                  <div className="space-y-8">
-                    {sections.essential && (
-                      <div className="space-y-4">
-                        <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Essential Filters</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
-                          {sections.essential}
+              <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-top-1 data-[state=open]:slide-in-from-top-1">
+                <div className="p-6">
+                  {sections ? (
+                    <div className="space-y-8">
+                      {sections.essential && (
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Essential Filters</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
+                            {sections.essential}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {sections.advanced && (
-                      <div className="space-y-4">
-                        <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Advanced Filters</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
-                          {sections.advanced}
+                      )}
+                      {sections.advanced && (
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Advanced Filters</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
+                            {sections.advanced}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
-                    {children}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
+                      {children}
+                    </div>
+                  )}
+                </div>
               </CollapsibleContent>
             </Card>
           </Collapsible>
         ) : (
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-medium text-sm text-muted-foreground">{title}</div>
+          <Card className="border-border/50 shadow-sm">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
+              <div className="flex items-center gap-3">
+                <h3 className="font-semibold text-base text-foreground">{title}</h3>
+                {hasActive && (
+                  <div className="inline-flex items-center px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                    {filterCount} active
+                  </div>
+                )}
+              </div>
               {hasActive && (
-                <Button variant="ghost" size="sm" onClick={onClear}>Clear All</Button>
+                <Button variant="ghost" size="sm" onClick={onClear} className="text-muted-foreground hover:text-foreground">
+                  Clear All
+                </Button>
               )}
             </div>
-            {sections ? (
-              <div className="space-y-8">
-                {sections.essential && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Essential Filters</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
-                      {sections.essential}
+            <div className="p-6">
+              {sections ? (
+                <div className="space-y-8">
+                  {sections.essential && (
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Essential Filters</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
+                        {sections.essential}
+                      </div>
                     </div>
-                  </div>
-                )}
-                {sections.advanced && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Advanced Filters</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
-                      {sections.advanced}
+                  )}
+                  {sections.advanced && (
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Advanced Filters</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
+                        {sections.advanced}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
-                {children}
-              </div>
-            )}
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4">
+                  {children}
+                </div>
+              )}
+            </div>
           </Card>
         )}
       </div>
