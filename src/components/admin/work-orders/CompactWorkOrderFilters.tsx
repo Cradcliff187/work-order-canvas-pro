@@ -21,33 +21,40 @@ export interface WorkOrderFiltersValue {
   assigned_to?: string[];
   date_submitted_from?: string;
   date_submitted_to?: string;
+  date_from?: string;
+  date_to?: string;
+  date_range?: {
+    from?: string;
+    to?: string;
+  };
   location?: string[];
   location_filter?: string[];
 }
 
 export interface FilterConfig {
+  statusOptions?: { value: string; label: string }[];
   showPriority?: boolean;
   showCompleted?: boolean;
   showSubmittedBy?: boolean;
-  submitLabel?: string;
-  customLabels?: {
-    [key: string]: string;
-  };
+  showWorkOrder?: boolean;
+  assignedToLabel?: string;
 }
 
 export interface CompactWorkOrderFiltersProps {
   value: WorkOrderFiltersValue;
   onChange: (value: WorkOrderFiltersValue) => void;
   onClear?: () => void;
-  filterCount: number;
   config?: FilterConfig;
 }
 
-const workOrderStatusOptions = [
-  { value: 'open', label: 'Open' },
+const defaultWorkOrderStatusOptions = [
+  { value: 'received', label: 'Received' },
+  { value: 'assigned', label: 'Assigned' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
+  { value: 'estimate_needed', label: 'Estimate Needed' },
+  { value: 'estimate_approved', label: 'Estimate Approved' },
 ];
 
 const priorityOptions = [
@@ -61,9 +68,17 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
   value,
   onChange,
   onClear,
-  filterCount,
   config = {}
 }) => {
+  const {
+    statusOptions = defaultWorkOrderStatusOptions,
+    showPriority = false,
+    showCompleted = true,
+    showSubmittedBy = false,
+    showWorkOrder = false,
+    assignedToLabel = "Assigned To"
+  } = config;
+  
   const [isOpen, setIsOpen] = useState(false);
   const [showDateFrom, setShowDateFrom] = useState(false);
   const [showDateTo, setShowDateTo] = useState(false);
@@ -85,6 +100,20 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
   });
   const { employees: assignees } = useAllAssignees();
   const { data: locations } = usePartnerLocations();
+
+  // Calculate active filter count
+  const activeCount = useMemo(() => {
+    return [
+      value.status?.length,
+      value.organizations?.length, 
+      value.assigned_to?.length,
+      value.date_submitted_from || value.date_from,
+      value.date_submitted_to || value.date_to,
+      value.location_filter?.length || value.location?.length,
+      value.priority?.length,
+      value.trades?.length
+    ].filter(Boolean).length;
+  }, [value]);
 
   // Prepare option arrays
   const organizationOptions = organizations?.map(org => ({
@@ -111,12 +140,61 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
     return uniqueLocations.map(loc => ({ value: loc, label: loc }));
   }, [locations]);
 
-  const handleFilterChange = (field: keyof WorkOrderFiltersValue, filterValue: string[] | string) => {
-    const newValue = {
+  // Handle filter changes
+  const handleFilterChange = (key: string, filterValue: string[]) => {
+    onChange({
       ...value,
-      [field]: filterValue,
-    };
-    onChange(newValue);
+      [key]: filterValue
+    });
+  };
+
+  const handleStringFilterChange = (key: string, filterValue: string) => {
+    onChange({
+      ...value,
+      [key]: filterValue || undefined
+    });
+  };
+
+  const handleDateFromChange = (date: Date | undefined) => {
+    if (value.date_range !== undefined) {
+      // Handle reports date_range format
+      onChange({
+        ...value,
+        date_range: {
+          ...value.date_range,
+          from: date ? format(date, 'yyyy-MM-dd') : undefined
+        }
+      });
+    } else {
+      // Handle work orders date_from format (and legacy date_submitted_from)
+      onChange({
+        ...value,
+        date_from: date ? format(date, 'yyyy-MM-dd') : undefined,
+        date_submitted_from: date ? format(date, 'yyyy-MM-dd') : undefined
+      });
+    }
+    setShowDateFrom(false);
+  };
+
+  const handleDateToChange = (date: Date | undefined) => {
+    if (value.date_range !== undefined) {
+      // Handle reports date_range format
+      onChange({
+        ...value,
+        date_range: {
+          ...value.date_range,
+          to: date ? format(date, 'yyyy-MM-dd') : undefined
+        }
+      });
+    } else {
+      // Handle work orders date_to format (and legacy date_submitted_to)
+      onChange({
+        ...value,
+        date_to: date ? format(date, 'yyyy-MM-dd') : undefined,
+        date_submitted_to: date ? format(date, 'yyyy-MM-dd') : undefined
+      });
+    }
+    setShowDateTo(false);
   };
 
   const handleApplyFilters = () => {
@@ -135,7 +213,7 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
       <PopoverTrigger asChild>
         <Button variant="outline">
           <Filter className="h-4 w-4 mr-2" />
-          Filters {filterCount > 0 && `(${filterCount})`}
+          Filters {activeCount > 0 && `(${activeCount})`}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-4">
@@ -144,7 +222,7 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
           <div>
             <label className="text-sm font-medium mb-2 block">Status</label>
             <MultiSelectFilter
-              options={workOrderStatusOptions}
+              options={statusOptions}
               selectedValues={value.status || []}
               onSelectionChange={(filterValue) => handleFilterChange('status', filterValue)}
               placeholder="Filter by status..."
@@ -165,16 +243,18 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
           </div>
 
           {/* Assigned To Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Assigned To</label>
-            <MultiSelectFilter
-              options={assignedToOptions}
-              selectedValues={value.assigned_to || []}
-              onSelectionChange={(filterValue) => handleFilterChange('assigned_to', filterValue)}
-              placeholder="Filter by assignment..."
-              className="w-full h-10"
-            />
-          </div>
+          {showCompleted && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">{assignedToLabel}</label>
+              <MultiSelectFilter
+                options={assignedToOptions}
+                selectedValues={value.assigned_to || []}
+                onSelectionChange={(filterValue) => handleFilterChange('assigned_to', filterValue)}
+                placeholder="Filter by assignment..."
+                className="w-full h-10"
+              />
+            </div>
+          )}
 
           {/* Date Submitted Range */}
           <div>
@@ -197,10 +277,7 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
                   <Calendar
                     mode="single"
                     selected={value.date_submitted_from ? new Date(value.date_submitted_from) : undefined}
-                    onSelect={(date) => {
-                      handleFilterChange('date_submitted_from', date ? date.toISOString().split('T')[0] : '');
-                      setShowDateFrom(false);
-                    }}
+                    onSelect={handleDateFromChange}
                     initialFocus
                     className="p-3 pointer-events-auto"
                   />
@@ -224,10 +301,7 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
                   <Calendar
                     mode="single"
                     selected={value.date_submitted_to ? new Date(value.date_submitted_to) : undefined}
-                    onSelect={(date) => {
-                      handleFilterChange('date_submitted_to', date ? date.toISOString().split('T')[0] : '');
-                      setShowDateTo(false);
-                    }}
+                    onSelect={handleDateToChange}
                     initialFocus
                     className="p-3 pointer-events-auto"
                   />
@@ -249,7 +323,7 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
           </div>
 
           {/* Priority Filter */}
-          {config.showPriority && (
+          {showPriority && (
             <div>
               <label className="text-sm font-medium mb-2 block">Priority</label>
               <MultiSelectFilter
