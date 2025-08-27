@@ -66,8 +66,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
-import { WorkOrderFiltersV2, defaultReportStatusOptions } from '@/components/admin/work-orders/WorkOrderFiltersV2';
-import { ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersContent';
+import { ReportsFiltersV2, ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersV2';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { cn } from '@/lib/utils';
 
@@ -501,17 +500,12 @@ const table = useReactTable({
         </div>
       </div>
 
-      <WorkOrderFiltersV2
-        filters={filters}
-        onFiltersChange={handleFiltersChange}
-        onClearFilters={handleClearFilters}
-        config={{
-          statusOptions: defaultReportStatusOptions,
-          showCompleted: true,
-          showSubmittedBy: true,
-          showWorkOrder: true,
-          completedByLabel: "Subcontractor"
-        }}
+      <ReportsFiltersV2
+        value={filters}
+        onChange={handleFiltersChange}
+        searchTerm={searchTerm}
+        onSearchChange={handleSearchChange}
+        onClear={handleClearFilters}
       />
 
       {/* Bulk Actions */}

@@ -11,21 +11,7 @@ import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { createWorkOrderColumns, WORK_ORDER_COLUMN_METADATA } from '@/components/admin/work-orders/WorkOrderColumns';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
-interface WorkOrderFiltersValue {
-  status?: string[];
-  priority?: string[];
-  partner_organization_ids?: string[];
-  completed_by?: string[];
-  trade_id?: string[];
-  location_filter?: string[];
-  date_range?: {
-    from?: string;
-    to?: string;
-  };
-  search?: string;
-}
-
-import { WorkOrderFiltersV2 } from '@/components/admin/work-orders/WorkOrderFiltersV2';
+import { WorkOrderFiltersV2, WorkOrderFiltersValue } from '@/components/admin/work-orders/WorkOrderFiltersV2';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { BulkEditModal } from '@/components/admin/work-orders/BulkEditModal';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
@@ -99,9 +85,9 @@ export default function AdminWorkOrders() {
   const initialFilters: WorkOrderFiltersValue = {
     status: [],
     priority: [],
-    partner_organization_ids: [],
+    organizations: [],
     completed_by: [],
-    trade_id: [],
+    trades: [],
     location_filter: [],
     date_range: undefined
   };
@@ -214,12 +200,17 @@ export default function AdminWorkOrders() {
 
   // Transform for API compatibility
   const apiFilters = useMemo(() => ({
-    ...filters,
-    date_from: filters.date_range?.from,
-    date_to: filters.date_range?.to,
+    ...cleanFilters,
+    // Map field names for API compatibility
+    partner_organization_ids: cleanFilters.organizations || [],
+    trade_id: cleanFilters.trades || [],
+    organizations: undefined, // remove this field for API
+    trades: undefined, // remove this field for API
+    date_from: cleanFilters.date_range?.from,
+    date_to: cleanFilters.date_range?.to,
     date_range: undefined, // remove this field for API
     search: debouncedSearchTerm || undefined
-  }), [filters, debouncedSearchTerm]);
+  }), [cleanFilters, debouncedSearchTerm]);
 
   // Update filters when debounced search term changes
   useEffect(() => {
@@ -438,9 +429,12 @@ export default function AdminWorkOrders() {
 
       {/* Filters */}
       <WorkOrderFiltersV2
-        filters={cleanFilters}
-        onFiltersChange={setFilters}
-        onClearFilters={handleClearFilters}
+        value={cleanFilters}
+        onChange={setFilters}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onClear={handleClearFilters}
+        filterCount={filterCount}
         config={{
           showPriority: true,
         }}

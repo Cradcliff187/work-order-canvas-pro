@@ -7,11 +7,29 @@ import { format } from 'date-fns';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { Input } from '@/components/ui/input';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAllAssignees } from '@/hooks/useEmployeesForAssignment';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
+
+export interface WorkOrderFiltersValue {
+  search?: string;
+  status?: string[];
+  priority?: string[];
+  organizations?: string[];
+  trades?: string[];
+  location_filter?: string[];
+  location?: string[];
+  completed_by?: string[];
+  date_from?: string;
+  date_to?: string;
+  date_range?: {
+    from?: string;
+    to?: string;
+  };
+}
 
 interface FilterConfig {
   statusOptions?: { value: string; label: string }[];
@@ -23,9 +41,12 @@ interface FilterConfig {
 }
 
 interface WorkOrderFiltersV2Props {
-  filters: any;
-  onFiltersChange: (filters: any) => void;
-  onClearFilters: () => void;
+  value: WorkOrderFiltersValue;
+  onChange: (filters: WorkOrderFiltersValue) => void;
+  searchTerm?: string;
+  onSearchChange?: (search: string) => void;
+  onClear?: () => void;
+  filterCount: number;
   config?: FilterConfig;
 }
 
@@ -54,9 +75,12 @@ const priorityOptions = [
 ];
 
 export function WorkOrderFiltersV2({ 
-  filters, 
-  onFiltersChange, 
-  onClearFilters,
+  value,
+  onChange,
+  searchTerm = '',
+  onSearchChange,
+  onClear,
+  filterCount,
   config = {}
 }: WorkOrderFiltersV2Props) {
   const {
@@ -91,13 +115,7 @@ export function WorkOrderFiltersV2({
   const [dateFromOpen, setDateFromOpen] = useState(false);
   const [dateToOpen, setDateToOpen] = useState(false);
 
-  // Calculate active filter count
-  const activeFilterCount = useMemo(() => {
-    const baseCount = Object.values(filters).filter(value => 
-      Array.isArray(value) ? value.length > 0 : Boolean(value)
-    ).length;
-    return baseCount;
-  }, [filters]);
+  // Use passed filterCount instead of calculating internally
 
   // Prepare option arrays
   const organizationOptions = organizations?.map(org => ({
@@ -125,34 +143,34 @@ export function WorkOrderFiltersV2({
   }, [locations]);
 
   // Handle filter changes
-  const handleFilterChange = (key: string, value: string[]) => {
-    onFiltersChange({
-      ...filters,
-      [key]: value
+  const handleFilterChange = (key: string, filterValue: string[]) => {
+    onChange({
+      ...value,
+      [key]: filterValue
     });
   };
 
-  const handleStringFilterChange = (key: string, value: string) => {
-    onFiltersChange({
-      ...filters,
-      [key]: value || undefined
+  const handleStringFilterChange = (key: string, filterValue: string) => {
+    onChange({
+      ...value,
+      [key]: filterValue || undefined
     });
   };
 
   const handleDateFromChange = (date: Date | undefined) => {
-    if (filters.date_range !== undefined) {
+    if (value.date_range !== undefined) {
       // Handle reports date_range format
-      onFiltersChange({
-        ...filters,
+      onChange({
+        ...value,
         date_range: {
-          ...filters.date_range,
+          ...value.date_range,
           from: date ? format(date, 'yyyy-MM-dd') : undefined
         }
       });
     } else {
       // Handle work orders date_from format
-      onFiltersChange({
-        ...filters,
+      onChange({
+        ...value,
         date_from: date ? format(date, 'yyyy-MM-dd') : undefined
       });
     }
@@ -160,19 +178,19 @@ export function WorkOrderFiltersV2({
   };
 
   const handleDateToChange = (date: Date | undefined) => {
-    if (filters.date_range !== undefined) {
+    if (value.date_range !== undefined) {
       // Handle reports date_range format
-      onFiltersChange({
-        ...filters,
+      onChange({
+        ...value,
         date_range: {
-          ...filters.date_range,
+          ...value.date_range,
           to: date ? format(date, 'yyyy-MM-dd') : undefined
         }
       });
     } else {
       // Handle work orders date_to format
-      onFiltersChange({
-        ...filters,
+      onChange({
+        ...value,
         date_to: date ? format(date, 'yyyy-MM-dd') : undefined
       });
     }
@@ -181,8 +199,8 @@ export function WorkOrderFiltersV2({
 
   const handleLocationTextSubmit = () => {
     if (locationTextInput.trim()) {
-      const locationKey = filters.location_filter !== undefined ? 'location_filter' : 'location';
-      const current = filters[locationKey] || [];
+      const locationKey = value.location_filter !== undefined ? 'location_filter' : 'location';
+      const current = value[locationKey] || [];
       const currentArray = Array.isArray(current) ? current : [current].filter(Boolean);
       if (!currentArray.includes(locationTextInput.trim())) {
         handleFilterChange(locationKey, [...currentArray, locationTextInput.trim()]);
@@ -190,6 +208,18 @@ export function WorkOrderFiltersV2({
       setLocationTextInput('');
     }
   };
+
+  // Create search slot for AdminFilterBar
+  const searchSlot = onSearchChange ? (
+    <SmartSearchInput
+      placeholder="Search WO#, title, or location..."
+      value={searchTerm}
+      onChange={(e) => onSearchChange(e.target.value)}
+      onClear={() => onSearchChange('')}
+      storageKey="admin-work-orders-search"
+      className="w-full"
+    />
+  ) : null;
 
   // Essential filters (always visible in sections)
   const essentialFilters = (
@@ -199,8 +229,8 @@ export function WorkOrderFiltersV2({
         <label className="text-sm font-medium">Status</label>
         <MultiSelectFilter
           options={statusOptions}
-          selectedValues={filters.status || []}
-          onSelectionChange={(value) => handleFilterChange('status', value)}
+          selectedValues={value.status || []}
+          onSelectionChange={(filterValue) => handleFilterChange('status', filterValue)}
           placeholder="Filter by status..."
           className="h-10"
         />
@@ -211,8 +241,8 @@ export function WorkOrderFiltersV2({
         <label className="text-sm font-medium">Organization</label>
         <MultiSelectFilter
           options={organizationOptions}
-          selectedValues={filters.organizations || []}
-          onSelectionChange={(value) => handleFilterChange('organizations', value)}
+          selectedValues={value.organizations || []}
+          onSelectionChange={(filterValue) => handleFilterChange('organizations', filterValue)}
           placeholder="Filter by organization..."
           className="h-10"
         />
@@ -229,13 +259,13 @@ export function WorkOrderFiltersV2({
                 className="flex-1 justify-start text-left font-normal h-10"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {filters.date_from || filters.date_range?.from ? format(new Date(filters.date_from || filters.date_range?.from), 'MMM dd, yyyy') : 'From'}
+                {value.date_from || value.date_range?.from ? format(new Date(value.date_from || value.date_range?.from), 'MMM dd, yyyy') : 'From'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={filters.date_from || filters.date_range?.from ? new Date(filters.date_from || filters.date_range?.from) : undefined}
+                selected={value.date_from || value.date_range?.from ? new Date(value.date_from || value.date_range?.from) : undefined}
                 onSelect={handleDateFromChange}
                 initialFocus
                 className="p-3 pointer-events-auto"
@@ -250,13 +280,13 @@ export function WorkOrderFiltersV2({
                 className="flex-1 justify-start text-left font-normal h-10"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {filters.date_to || filters.date_range?.to ? format(new Date(filters.date_to || filters.date_range?.to), 'MMM dd, yyyy') : 'To'}
+                {value.date_to || value.date_range?.to ? format(new Date(value.date_to || value.date_range?.to), 'MMM dd, yyyy') : 'To'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={filters.date_to || filters.date_range?.to ? new Date(filters.date_to || filters.date_range?.to) : undefined}
+                selected={value.date_to || value.date_range?.to ? new Date(value.date_to || value.date_range?.to) : undefined}
                 onSelect={handleDateToChange}
                 initialFocus
                 className="p-3 pointer-events-auto"
@@ -264,19 +294,19 @@ export function WorkOrderFiltersV2({
             </PopoverContent>
           </Popover>
         </div>
-        {(filters.date_from || filters.date_to || filters.date_range?.from || filters.date_range?.to) && (
+        {(value.date_from || value.date_to || value.date_range?.from || value.date_range?.to) && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (filters.date_range !== undefined) {
-                onFiltersChange({
-                  ...filters,
+              if (value.date_range !== undefined) {
+                onChange({
+                  ...value,
                   date_range: { from: undefined, to: undefined }
                 });
               } else {
-                onFiltersChange({
-                  ...filters,
+                onChange({
+                  ...value,
                   date_from: undefined,
                   date_to: undefined
                 });
@@ -299,8 +329,8 @@ export function WorkOrderFiltersV2({
         <label className="text-sm font-medium">Trades</label>
         <MultiSelectFilter
           options={tradeOptions}
-          selectedValues={filters.trades || []}
-          onSelectionChange={(value) => handleFilterChange('trades', value)}
+          selectedValues={value.trades || []}
+          onSelectionChange={(filterValue) => handleFilterChange('trades', filterValue)}
           placeholder="Filter by trades..."
           className="h-10"
         />
@@ -312,8 +342,8 @@ export function WorkOrderFiltersV2({
         <div className="space-y-2">
           <MultiSelectFilter
             options={locationOptions}
-            selectedValues={filters.location_filter || filters.location || []}
-            onSelectionChange={(value) => handleFilterChange(filters.location_filter !== undefined ? 'location_filter' : 'location', value)}
+            selectedValues={value.location_filter || value.location || []}
+            onSelectionChange={(filterValue) => handleFilterChange(value.location_filter !== undefined ? 'location_filter' : 'location', filterValue)}
             placeholder="Select locations..."
             className="h-10"
           />
@@ -350,8 +380,8 @@ export function WorkOrderFiltersV2({
           <label className="text-sm font-medium">Priority</label>
           <MultiSelectFilter
             options={priorityOptions}
-            selectedValues={filters.priority || []}
-            onSelectionChange={(value) => handleFilterChange('priority', value)}
+            selectedValues={value.priority || []}
+            onSelectionChange={(filterValue) => handleFilterChange('priority', filterValue)}
             placeholder="Filter by priority..."
             className="h-10"
           />
@@ -364,8 +394,8 @@ export function WorkOrderFiltersV2({
           <label className="text-sm font-medium">{completedByLabel}</label>
           <MultiSelectFilter
             options={completedByOptions}
-            selectedValues={filters.completed_by || []}
-            onSelectionChange={(value) => handleFilterChange('completed_by', value)}
+            selectedValues={value.completed_by || []}
+            onSelectionChange={(filterValue) => handleFilterChange('completed_by', filterValue)}
             placeholder="Filter by completion..."
             className="h-10"
           />
@@ -377,10 +407,11 @@ export function WorkOrderFiltersV2({
   return (
     <AdminFilterBar
       title="Filters"
-      filterCount={activeFilterCount}
-      onClear={onClearFilters}
+      filterCount={filterCount}
+      onClear={onClear}
       sheetSide="bottom"
       collapsible={true}
+      searchSlot={searchSlot}
       sections={{
         essential: essentialFilters,
         advanced: advancedFilters
