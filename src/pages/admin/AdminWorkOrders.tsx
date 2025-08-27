@@ -11,7 +11,8 @@ import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { createWorkOrderColumns, WORK_ORDER_COLUMN_METADATA } from '@/components/admin/work-orders/WorkOrderColumns';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
-import { WorkOrderFiltersV2, WorkOrderFiltersValue } from '@/components/admin/work-orders/WorkOrderFiltersV2';
+import { CompactWorkOrderFilters } from '@/components/admin/work-orders/CompactWorkOrderFilters';
+import { WorkOrderFiltersValue } from '@/components/admin/work-orders/WorkOrderFiltersV2';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { BulkEditModal } from '@/components/admin/work-orders/BulkEditModal';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
@@ -428,16 +429,6 @@ export default function AdminWorkOrders() {
         </div>
       </header>
 
-      {/* Filters */}
-      <WorkOrderFiltersV2
-        value={cleanFilters}
-        onChange={setFilters}
-        onClear={handleClearFilters}
-        filterCount={filterCount}
-        config={{
-          showPriority: true,
-        }}
-      />
 
       {/* Work Order Table */}
       <WorkOrderTable
@@ -445,6 +436,16 @@ export default function AdminWorkOrders() {
         totalCount={workOrdersData?.totalCount}
         pageCount={workOrdersData?.pageCount || 0}
         isLoading={isLoading}
+        filterComponent={
+          <CompactWorkOrderFilters
+            value={cleanFilters}
+            onChange={setFilters}
+            onClear={handleClearFilters}
+            config={{
+              showPriority: true,
+            }}
+          />
+        }
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Search WO#, title, or location..."
