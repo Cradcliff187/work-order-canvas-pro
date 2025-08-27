@@ -44,6 +44,9 @@ interface WorkOrderTableProps {
   pageCount: number;
   isLoading: boolean;
   
+  // Filter Component
+  filterComponent?: React.ReactNode;
+  
   // Search
   searchValue: string;
   onSearchChange: (value: string) => void;
@@ -106,6 +109,7 @@ export function WorkOrderTable({
   totalCount,
   pageCount,
   isLoading,
+  filterComponent,
   searchValue,
   onSearchChange,
   searchPlaceholder = "Search WO#, title, or location...",
@@ -331,25 +335,28 @@ export function WorkOrderTable({
               </Button>
             )}
 
-            {/* Search */}
-            <div className="relative flex-1 sm:flex-initial sm:w-80">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={searchPlaceholder}
-                value={searchValue}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10 pr-10 h-10"
-              />
-              {searchValue && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onSearchChange('')}
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+            {/* Filters and Search */}
+            <div className="flex items-center gap-2">
+              {filterComponent}
+              <div className="relative flex-1 sm:flex-initial sm:w-80">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={searchPlaceholder}
+                  value={searchValue}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className="pl-10 pr-10 h-10"
+                />
+                {searchValue && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onSearchChange('')}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Column visibility */}
