@@ -6,7 +6,6 @@ import { Calendar as CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
-import { Input } from '@/components/ui/input';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
 import { useQuery } from '@tanstack/react-query';
@@ -105,8 +104,6 @@ export function WorkOrderFiltersV2({
   const { employees: assignees } = useAllAssignees();
   const { data: locations } = usePartnerLocations();
 
-  const [locationTextInput, setLocationTextInput] = useState('');
-
   // Date picker states
   const [dateFromOpen, setDateFromOpen] = useState(false);
   const [dateToOpen, setDateToOpen] = useState(false);
@@ -193,17 +190,6 @@ export function WorkOrderFiltersV2({
     setDateToOpen(false);
   };
 
-  const handleLocationTextSubmit = () => {
-    if (locationTextInput.trim()) {
-      const locationKey = value.location_filter !== undefined ? 'location_filter' : 'location';
-      const current = value[locationKey] || [];
-      const currentArray = Array.isArray(current) ? current : [current].filter(Boolean);
-      if (!currentArray.includes(locationTextInput.trim())) {
-        handleFilterChange(locationKey, [...currentArray, locationTextInput.trim()]);
-      }
-      setLocationTextInput('');
-    }
-  };
 
   // No search slot - search moved to table controls
 
@@ -326,39 +312,13 @@ export function WorkOrderFiltersV2({
       {/* Location Filter */}
       <div className="space-y-2">
         <label className="text-sm font-medium">Locations</label>
-        <div className="space-y-2">
-          <MultiSelectFilter
-            options={locationOptions}
-            selectedValues={value.location_filter || value.location || []}
-            onSelectionChange={(filterValue) => handleFilterChange(value.location_filter !== undefined ? 'location_filter' : 'location', filterValue)}
-            placeholder="Select locations..."
-            className="h-10"
-          />
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add custom location..."
-              value={locationTextInput}
-              onChange={(e) => setLocationTextInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleLocationTextSubmit();
-                }
-              }}
-              className="h-10 flex-1"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleLocationTextSubmit}
-              disabled={!locationTextInput.trim()}
-              className="h-10"
-            >
-              Add
-            </Button>
-          </div>
-        </div>
+        <MultiSelectFilter
+          options={locationOptions}
+          selectedValues={value.location_filter || value.location || []}
+          onSelectionChange={(filterValue) => handleFilterChange(value.location_filter !== undefined ? 'location_filter' : 'location', filterValue)}
+          placeholder="Select locations..."
+          className="h-10"
+        />
       </div>
 
       {/* Priority Filter */}
