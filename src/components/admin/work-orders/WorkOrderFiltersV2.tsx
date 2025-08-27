@@ -201,153 +201,161 @@ export function WorkOrderFiltersV2({
       sheetSide="bottom"
       collapsible={true}
     >
-      {/* Status Filter */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Status</label>
-        <MultiSelectFilter
-          options={statusOptions}
-          selectedValues={value.status || []}
-          onSelectionChange={(filterValue) => handleFilterChange('status', filterValue)}
-          placeholder="Filter by status..."
-          className="h-10"
-        />
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left Column */}
+        <div className="space-y-4">
+          {/* Status Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Status</label>
+            <MultiSelectFilter
+              options={statusOptions}
+              selectedValues={value.status || []}
+              onSelectionChange={(filterValue) => handleFilterChange('status', filterValue)}
+              placeholder="Filter by status..."
+              className="h-10"
+            />
+          </div>
 
-      {/* Partner Filter */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Partner</label>
-        <MultiSelectFilter
-          options={organizationOptions}
-          selectedValues={value.organizations || []}
-          onSelectionChange={(filterValue) => handleFilterChange('organizations', filterValue)}
-          placeholder="Filter by partner..."
-          className="h-10"
-        />
-      </div>
+          {/* Partner Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Partner</label>
+            <MultiSelectFilter
+              options={organizationOptions}
+              selectedValues={value.organizations || []}
+              onSelectionChange={(filterValue) => handleFilterChange('organizations', filterValue)}
+              placeholder="Filter by partner..."
+              className="h-10"
+            />
+          </div>
 
-      {/* Date Range */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Date Range</label>
-        <div className="flex gap-2">
-          <Popover open={dateFromOpen} onOpenChange={setDateFromOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="flex-1 justify-start text-left font-normal h-10"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value.date_from || value.date_range?.from ? format(new Date(value.date_from || value.date_range?.from), 'MMM dd, yyyy') : 'From'}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={value.date_from || value.date_range?.from ? new Date(value.date_from || value.date_range?.from) : undefined}
-                onSelect={handleDateFromChange}
-                initialFocus
-                className="p-3 pointer-events-auto"
+          {/* Assigned To Filter */}
+          {showCompleted && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{assignedToLabel}</label>
+              <MultiSelectFilter
+                options={assignedToOptions}
+                selectedValues={value.assigned_to || []}
+                onSelectionChange={(filterValue) => handleFilterChange('assigned_to', filterValue)}
+                placeholder="Filter by assignment..."
+                className="h-10"
               />
-            </PopoverContent>
-          </Popover>
+            </div>
+          )}
+        </div>
 
-          <Popover open={dateToOpen} onOpenChange={setDateToOpen}>
-            <PopoverTrigger asChild>
+        {/* Right Column */}
+        <div className="space-y-4">
+          {/* Date Range */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Date Range</label>
+            <div className="flex gap-2">
+              <Popover open={dateFromOpen} onOpenChange={setDateFromOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex-1 justify-start text-left font-normal h-10"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {value.date_from || value.date_range?.from ? format(new Date(value.date_from || value.date_range?.from), 'MMM dd, yyyy') : 'From'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={value.date_from || value.date_range?.from ? new Date(value.date_from || value.date_range?.from) : undefined}
+                    onSelect={handleDateFromChange}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover open={dateToOpen} onOpenChange={setDateToOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex-1 justify-start text-left font-normal h-10"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {value.date_to || value.date_range?.to ? format(new Date(value.date_to || value.date_range?.to), 'MMM dd, yyyy') : 'To'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={value.date_to || value.date_range?.to ? new Date(value.date_to || value.date_range?.to) : undefined}
+                    onSelect={handleDateToChange}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            {(value.date_from || value.date_to || value.date_range?.from || value.date_range?.to) && (
               <Button
-                variant="outline"
-                className="flex-1 justify-start text-left font-normal h-10"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (value.date_range !== undefined) {
+                    onChange({
+                      ...value,
+                      date_range: { from: undefined, to: undefined }
+                    });
+                  } else {
+                    onChange({
+                      ...value,
+                      date_from: undefined,
+                      date_to: undefined
+                    });
+                  }
+                }}
+                className="h-8 px-2 lg:px-3"
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value.date_to || value.date_range?.to ? format(new Date(value.date_to || value.date_range?.to), 'MMM dd, yyyy') : 'To'}
+                <X className="h-4 w-4 mr-1" />
+                Clear dates
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={value.date_to || value.date_range?.to ? new Date(value.date_to || value.date_range?.to) : undefined}
-                onSelect={handleDateToChange}
-                initialFocus
-                className="p-3 pointer-events-auto"
+            )}
+          </div>
+
+          {/* Location Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Locations</label>
+            <MultiSelectFilter
+              options={locationOptions}
+              selectedValues={value.location_filter || value.location || []}
+              onSelectionChange={(filterValue) => handleFilterChange(value.location_filter !== undefined ? 'location_filter' : 'location', filterValue)}
+              placeholder="Select locations..."
+              className="h-10"
+            />
+          </div>
+
+          {/* Priority Filter */}
+          {showPriority && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Priority</label>
+              <MultiSelectFilter
+                options={priorityOptions}
+                selectedValues={value.priority || []}
+                onSelectionChange={(filterValue) => handleFilterChange('priority', filterValue)}
+                placeholder="Filter by priority..."
+                className="h-10"
               />
-            </PopoverContent>
-          </Popover>
+            </div>
+          )}
+
+          {/* Trades Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Trades</label>
+            <MultiSelectFilter
+              options={tradeOptions}
+              selectedValues={value.trades || []}
+              onSelectionChange={(filterValue) => handleFilterChange('trades', filterValue)}
+              placeholder="Filter by trades..."
+              className="h-10"
+            />
+          </div>
         </div>
-        {(value.date_from || value.date_to || value.date_range?.from || value.date_range?.to) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (value.date_range !== undefined) {
-                onChange({
-                  ...value,
-                  date_range: { from: undefined, to: undefined }
-                });
-              } else {
-                onChange({
-                  ...value,
-                  date_from: undefined,
-                  date_to: undefined
-                });
-              }
-            }}
-            className="h-8 px-2 lg:px-3"
-          >
-            <X className="h-4 w-4 mr-1" />
-            Clear dates
-          </Button>
-        )}
       </div>
-
-      {/* Trades Filter */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Trades</label>
-        <MultiSelectFilter
-          options={tradeOptions}
-          selectedValues={value.trades || []}
-          onSelectionChange={(filterValue) => handleFilterChange('trades', filterValue)}
-          placeholder="Filter by trades..."
-          className="h-10"
-        />
-      </div>
-
-      {/* Location Filter */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Locations</label>
-        <MultiSelectFilter
-          options={locationOptions}
-          selectedValues={value.location_filter || value.location || []}
-          onSelectionChange={(filterValue) => handleFilterChange(value.location_filter !== undefined ? 'location_filter' : 'location', filterValue)}
-          placeholder="Select locations..."
-          className="h-10"
-        />
-      </div>
-
-      {/* Priority Filter */}
-      {showPriority && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Priority</label>
-          <MultiSelectFilter
-            options={priorityOptions}
-            selectedValues={value.priority || []}
-            onSelectionChange={(filterValue) => handleFilterChange('priority', filterValue)}
-            placeholder="Filter by priority..."
-            className="h-10"
-          />
-        </div>
-      )}
-
-      {/* Assigned To Filter */}
-      {showCompleted && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">{assignedToLabel}</label>
-          <MultiSelectFilter
-            options={assignedToOptions}
-            selectedValues={value.assigned_to || []}
-            onSelectionChange={(filterValue) => handleFilterChange('assigned_to', filterValue)}
-            placeholder="Filter by assignment..."
-            className="h-10"
-          />
-        </div>
-      )}
     </AdminFilterBar>
   );
 }
