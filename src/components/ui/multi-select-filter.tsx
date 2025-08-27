@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { ChevronDown, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Option {
   value: string;
@@ -34,6 +35,7 @@ export function MultiSelectFilter({
 }: MultiSelectFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const isMobile = useIsMobile();
 
   const filteredOptions = options.filter(option =>
     option.label.toLowerCase().includes(searchQuery.toLowerCase())
@@ -85,6 +87,7 @@ export function MultiSelectFilter({
         className="w-[300px] p-0 z-[9999] bg-background border shadow-lg" 
         align="start"
         sideOffset={5}
+        disablePortal={isMobile}
       >
           <div className="p-3 space-y-3">
             {/* Search input */}
