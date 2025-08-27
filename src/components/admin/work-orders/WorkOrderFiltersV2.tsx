@@ -43,8 +43,6 @@ interface FilterConfig {
 interface WorkOrderFiltersV2Props {
   value: WorkOrderFiltersValue;
   onChange: (filters: WorkOrderFiltersValue) => void;
-  searchTerm?: string;
-  onSearchChange?: (search: string) => void;
   onClear?: () => void;
   filterCount: number;
   config?: FilterConfig;
@@ -77,8 +75,6 @@ const priorityOptions = [
 export function WorkOrderFiltersV2({ 
   value,
   onChange,
-  searchTerm = '',
-  onSearchChange,
   onClear,
   filterCount,
   config = {}
@@ -209,17 +205,7 @@ export function WorkOrderFiltersV2({
     }
   };
 
-  // Create search slot for AdminFilterBar
-  const searchSlot = onSearchChange ? (
-    <SmartSearchInput
-      placeholder="Search WO#, title, or location..."
-      value={searchTerm}
-      onChange={(e) => onSearchChange(e.target.value)}
-      onClear={() => onSearchChange('')}
-      storageKey="admin-work-orders-search"
-      className="w-full"
-    />
-  ) : null;
+  // No search slot - search moved to table controls
 
   // Essential filters (always visible in sections)
   const essentialFilters = (
@@ -411,7 +397,6 @@ export function WorkOrderFiltersV2({
       onClear={onClear}
       sheetSide="bottom"
       collapsible={true}
-      searchSlot={searchSlot}
       sections={{
         essential: essentialFilters,
         advanced: advancedFilters
