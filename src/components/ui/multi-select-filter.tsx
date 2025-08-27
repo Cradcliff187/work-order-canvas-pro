@@ -74,7 +74,7 @@ export function MultiSelectFilter({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "justify-between text-left font-normal min-w-[200px]",
+            "justify-between text-left font-normal w-full",
             selectedValues.length === 0 && "text-muted-foreground",
             className
           )}

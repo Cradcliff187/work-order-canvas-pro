@@ -212,7 +212,7 @@ export function WorkOrderFiltersV2({
               selectedValues={value.status || []}
               onSelectionChange={(filterValue) => handleFilterChange('status', filterValue)}
               placeholder="Filter by status..."
-              className="h-10"
+              className="w-full h-10"
             />
           </div>
 
@@ -224,7 +224,7 @@ export function WorkOrderFiltersV2({
               selectedValues={value.organizations || []}
               onSelectionChange={(filterValue) => handleFilterChange('organizations', filterValue)}
               placeholder="Filter by partner..."
-              className="h-10"
+              className="w-full h-10"
             />
           </div>
 
@@ -237,7 +237,7 @@ export function WorkOrderFiltersV2({
                 selectedValues={value.assigned_to || []}
                 onSelectionChange={(filterValue) => handleFilterChange('assigned_to', filterValue)}
                 placeholder="Filter by assignment..."
-                className="h-10"
+                className="w-full h-10"
               />
             </div>
           )}
@@ -325,7 +325,7 @@ export function WorkOrderFiltersV2({
               selectedValues={value.location_filter || value.location || []}
               onSelectionChange={(filterValue) => handleFilterChange(value.location_filter !== undefined ? 'location_filter' : 'location', filterValue)}
               placeholder="Select locations..."
-              className="h-10"
+              className="w-full h-10"
             />
           </div>
 
@@ -338,7 +338,7 @@ export function WorkOrderFiltersV2({
                 selectedValues={value.priority || []}
                 onSelectionChange={(filterValue) => handleFilterChange('priority', filterValue)}
                 placeholder="Filter by priority..."
-                className="h-10"
+                className="w-full h-10"
               />
             </div>
           )}
@@ -351,7 +351,7 @@ export function WorkOrderFiltersV2({
               selectedValues={value.trades || []}
               onSelectionChange={(filterValue) => handleFilterChange('trades', filterValue)}
               placeholder="Filter by trades..."
-              className="h-10"
+              className="w-full h-10"
             />
           </div>
         </div>
