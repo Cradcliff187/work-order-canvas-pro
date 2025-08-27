@@ -140,11 +140,11 @@ export const MobileOrganizationSelector: React.FC<MobileOrganizationSelectorProp
               <div
                 key={org.id}
                 className={cn(
-                  "flex items-center gap-3 p-4 rounded-lg border transition-all duration-200",
+                  "flex items-center gap-3 p-4 rounded-lg border transition-colors duration-200",
                   isSelected 
                     ? "bg-primary/10 border-primary/30" 
                     : "bg-background border-border hover:bg-muted/50",
-                  hasMultipleOrganizations && "cursor-pointer active:scale-[0.98]"
+                  hasMultipleOrganizations && "cursor-pointer"
                 )}
                 onClick={() => hasMultipleOrganizations && handleOrganizationSelect(org)}
               >

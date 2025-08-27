@@ -54,7 +54,7 @@ export const QuickActionsBar: React.FC = () => {
               size="sm"
               className={`
                 min-h-[48px] min-w-0 h-full flex flex-col items-center justify-center gap-1
-                transition-all duration-200 active:scale-95
+                transition-colors duration-200
                 ${active 
                   ? 'text-primary font-medium bg-primary/12' 
                   : 'text-muted-foreground hover:text-foreground'

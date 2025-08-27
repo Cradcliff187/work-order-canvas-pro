@@ -80,7 +80,7 @@ const PartnerDashboard = () => {
           <div className="fixed bottom-20 right-4 z-50">
             <Button 
               onClick={() => navigate('/partner/work-orders/new')}
-              className="h-14 w-14 rounded-full shadow-lg border border-primary/20 active:scale-95 active:bg-primary/80 transition-all duration-200"
+              className="h-14 w-14 rounded-full shadow-lg border border-primary/20 active:bg-primary/80 transition-colors duration-200"
               size="icon"
             >
               <Plus className="h-6 w-6" />
@@ -89,7 +89,7 @@ const PartnerDashboard = () => {
         ) : (
           <Button 
             onClick={() => navigate('/partner/work-orders/new')}
-            className="shadow-sm border border-primary/20 px-6 py-3 active:bg-primary/80 transition-all duration-200"
+            className="shadow-sm border border-primary/20 px-6 py-3 active:bg-primary/80 transition-colors duration-200"
           >
             <Plus className="h-4 w-4 mr-2" />
             New Work Order

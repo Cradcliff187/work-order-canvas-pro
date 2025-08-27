@@ -55,9 +55,9 @@ export function BasicClockButton({ onClick, loading = false, className }: BasicC
         disabled={loading}
         variant={isClocked ? "success" : "secondary"}
         className={cn(
-          "w-full h-15 text-lg font-semibold shadow-lg transition-all duration-200",
+          "w-full h-15 text-lg font-semibold shadow-lg transition-colors duration-200",
           "hover:shadow-xl hover:-translate-y-0.5",
-          "active:scale-[0.98] disabled:opacity-50",
+          "disabled:opacity-50",
           isClocked && "bg-success hover:bg-success/90",
           !isClocked && "bg-secondary hover:bg-secondary/80"
         )}

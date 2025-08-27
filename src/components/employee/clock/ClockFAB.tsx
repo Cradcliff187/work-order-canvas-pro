@@ -7,8 +7,8 @@ export function ClockFAB({ isClocked, elapsedTime, onFabClick, formatElapsedTime
       <button
         onClick={onFabClick}
         className={`
-          relative overflow-hidden rounded-full p-4 shadow-lg transition-all duration-300 
-          transform hover:scale-105 active:scale-95 min-w-[64px] min-h-[64px]
+          relative overflow-hidden rounded-full p-4 shadow-lg transition-colors duration-300 
+          transform hover:scale-105 min-w-[64px] min-h-[64px]
           ${isClocked 
             ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-green-500/25' 
             : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-blue-500/25'

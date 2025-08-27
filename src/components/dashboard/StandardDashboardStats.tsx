@@ -105,9 +105,9 @@ export function StandardDashboardStats({
         className={cn(
           getVariantStyles(stat.variant),
           stat.href && isMobile 
-            ? "active:scale-98 active:border-primary/20 transition-transform cursor-pointer" 
+            ? "active:border-primary/20 transition-colors cursor-pointer" 
             : "hover:bg-muted/50 transition-colors cursor-pointer",
-          !stat.href && isMobile && "active:scale-98 transition-transform"
+          !stat.href && isMobile && "transition-colors"
         )}
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

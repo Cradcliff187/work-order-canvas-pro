@@ -26,7 +26,7 @@ export function MobileReportCard({
 
   return (
     <Card 
-      className="transition-all duration-200 border-border cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98]"
+      className="transition-shadow duration-200 border-border cursor-pointer hover:shadow-md hover:border-primary/20"
       onClick={onTap}
     >
       <CardContent className="p-4">

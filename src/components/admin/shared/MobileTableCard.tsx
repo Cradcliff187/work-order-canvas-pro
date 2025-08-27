@@ -44,8 +44,8 @@ export function MobileTableCard({
 
   return (
     <Card 
-      className={`transition-all duration-200 border-border ${
-        onClick ? 'cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background' : ''
+      className={`transition-shadow duration-200 border-border ${
+        onClick ? 'cursor-pointer hover:shadow-md hover:border-primary/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background' : ''
       } ${className || ''}`}
       onClick={(e) => {
         // Prevent click if user is dragging/swiping
