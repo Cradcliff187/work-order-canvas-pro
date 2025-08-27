@@ -446,9 +446,6 @@ export default function AdminWorkOrders() {
         totalCount={workOrdersData?.totalCount}
         pageCount={workOrdersData?.pageCount || 0}
         isLoading={isLoading}
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Search WO#, title, or location..."
         columns={columns}
         pagination={pagination}
         setPagination={setPagination}
