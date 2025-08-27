@@ -402,7 +402,14 @@ export function WorkOrderTable({
                           {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                               {headerGroup.headers.map((header) => (
-                                <TableHead key={header.id} className="h-12" scope="col">
+                                <TableHead 
+                                  key={header.id} 
+                                  className={cn(
+                                    "h-12",
+                                    (header.column.columnDef.meta as any)?.className
+                                  )} 
+                                  scope="col"
+                                >
                                   {header.isPlaceholder
                                     ? null
                                     : flexRender(
@@ -428,7 +435,13 @@ export function WorkOrderTable({
                                 onClick={() => handleWorkOrderRowClick(row.original)}
                               >
                                 {row.getVisibleCells().map((cell) => (
-                                  <TableCell key={cell.id} className="py-3">
+                                  <TableCell 
+                                    key={cell.id} 
+                                    className={cn(
+                                      "py-3",
+                                      (cell.column.columnDef.meta as any)?.className
+                                    )}
+                                  >
                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                   </TableCell>
                                 ))}

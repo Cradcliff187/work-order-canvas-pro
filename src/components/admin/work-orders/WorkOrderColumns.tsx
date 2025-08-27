@@ -73,26 +73,25 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
   {
     id: 'select',
     header: ({ table }) => (
-      <div className="flex items-center h-full">
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      </div>
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
     ),
     cell: ({ row }) => (
-      <div className="flex items-center h-full">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Select row"
-        />
-      </div>
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        onClick={(e) => e.stopPropagation()}
+        aria-label="Select row"
+      />
     ),
     enableSorting: false,
     enableHiding: false,
+    meta: {
+      className: "align-middle"
+    },
   },
   {
     accessorKey: 'work_order_number',
