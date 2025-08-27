@@ -125,7 +125,6 @@ export function BillingDashboard() {
   // Debounce search input
   const debouncedSearch = useDebounce(filters.search || '', 300);
   
-  // Track search separately for WorkOrderFilters
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
 
   // Helper function to get financial status based on invoicing
