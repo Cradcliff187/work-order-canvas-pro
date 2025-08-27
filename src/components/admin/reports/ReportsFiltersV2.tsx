@@ -1,22 +1,17 @@
-import React, { useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { useOrganizationsForWorkOrders } from '@/hooks/useWorkOrders';
 import { useTrades } from '@/hooks/useWorkOrders';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { CalendarIcon, Filter, X } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -55,9 +50,6 @@ export function ReportsFiltersV2({
   onSearchChange,
   onClear
 }: ReportsFiltersV2Props) {
-  const isMobile = useIsMobile();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isDesktopSheetOpen, setIsDesktopSheetOpen] = useState(false);
 
   // Data fetching
   const { data: organizations = [] } = useOrganizationsForWorkOrders();
@@ -135,17 +127,18 @@ export function ReportsFiltersV2({
     label: location
   }));
 
-  // Render functions for reusable filters
-  const renderSearchFilter = () => (
-    <div className="space-y-2">
-      <Label htmlFor="search">Search Reports</Label>
-      <Input
-        value={searchTerm}
-        onChange={(e) => onSearchChange?.(e.target.value)}
-        placeholder="Search by work order, location, materials..."
-      />
-    </div>
-  );
+  // Search slot for AdminFilterBar
+  const searchSlot = onSearchChange ? (
+    <SmartSearchInput
+      value={searchTerm}
+      onChange={(e) => onSearchChange(e.target.value)}
+      onSearchSubmit={onSearchChange}
+      placeholder="Search by work order, location, materials..."
+      storageKey="admin-reports-search"
+      aria-label="Search reports"
+      className="w-full"
+    />
+  ) : null;
 
   const renderStatusFilter = () => (
     <div className="space-y-2">
@@ -289,14 +282,15 @@ export function ReportsFiltersV2({
     </div>
   );
 
+  // Essential filters (core filtering functionality)
   const essentialFilters = (
     <div className="space-y-4">
-      {isMobile ? null : renderSearchFilter()}
       {renderStatusFilter()}
       {renderDateRangeFilter()}
     </div>
   );
 
+  // Advanced filters (detailed filtering options)
   const advancedFilters = (
     <div className="space-y-4">
       {renderPartnerOrganizationFilter()}
@@ -308,123 +302,17 @@ export function ReportsFiltersV2({
     </div>
   );
 
-  const sheetFooter = (
-    <SheetFooter className="flex flex-row gap-2">
-      {activeFilterCount > 0 && onClear && (
-        <Button
-          variant="outline"
-          onClick={() => {
-            onClear();
-            setIsSheetOpen(false);
-            setIsDesktopSheetOpen(false);
-          }}
-          className="flex-1"
-        >
-          Clear All
-        </Button>
-      )}
-      <Button
-        onClick={() => {
-          setIsSheetOpen(false);
-          setIsDesktopSheetOpen(false);
-        }}
-        className="flex-1"
-      >
-        Apply Filters
-      </Button>
-    </SheetFooter>
-  );
-
-  if (isMobile) {
-    return (
-      <div className="space-y-4">
-        {/* Always visible search on mobile */}
-        <Card className="p-4">
-          {renderSearchFilter()}
-        </Card>
-
-        {/* Mobile bottom sheet */}
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" className="w-full">
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[85vh] flex flex-col">
-            <SheetHeader>
-              <SheetTitle>Filter Reports</SheetTitle>
-            </SheetHeader>
-            
-            <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-6 py-4 pb-20">
-              <div>
-                <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
-                {essentialFilters}
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h3 className="text-sm font-medium mb-3">Advanced Filters</h3>
-                {advancedFilters}
-              </div>
-            </div>
-
-            {sheetFooter}
-          </SheetContent>
-        </Sheet>
-      </div>
-    );
-  }
-
-  // Desktop layout
   return (
-    <div className="space-y-4">
-      {/* Always visible search on desktop */}
-      <Card className="p-4">
-        {renderSearchFilter()}
-      </Card>
-
-      {/* Desktop right sidebar */}
-      <Sheet open={isDesktopSheetOpen} onOpenChange={setIsDesktopSheetOpen}>
-        <SheetTrigger asChild>
-          <Button variant="outline">
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-            {activeFilterCount > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {activeFilterCount}
-              </Badge>
-            )}
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="right" className="w-[480px] flex flex-col">
-          <SheetHeader>
-            <SheetTitle>Filter Reports</SheetTitle>
-          </SheetHeader>
-          
-          <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-6 py-4">
-            <div>
-              <h3 className="text-sm font-medium mb-3">Essential Filters</h3>
-              {essentialFilters}
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <h3 className="text-sm font-medium mb-3">Advanced Filters</h3>
-              {advancedFilters}
-            </div>
-          </div>
-
-          {sheetFooter}
-        </SheetContent>
-      </Sheet>
-    </div>
+    <AdminFilterBar
+      title="Filters"
+      filterCount={activeFilterCount}
+      onClear={onClear}
+      searchSlot={searchSlot}
+      sheetSide="bottom"
+      sections={{
+        essential: essentialFilters,
+        advanced: advancedFilters
+      }}
+    />
   );
 }

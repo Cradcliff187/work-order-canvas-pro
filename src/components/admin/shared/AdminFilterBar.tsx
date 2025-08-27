@@ -13,6 +13,7 @@ export interface AdminFilterBarProps {
   className?: string;
   children?: React.ReactNode;
   collapsible?: boolean;
+  searchSlot?: React.ReactNode;
   
   sheetSide?: 'left' | 'right' | 'bottom';
   sections?: {
@@ -31,6 +32,7 @@ export function AdminFilterBar({
   className, 
   children, 
   collapsible = false,
+  searchSlot,
   
   sheetSide = 'right',
   sections
@@ -41,8 +43,15 @@ export function AdminFilterBar({
 
   return (
     <div className={clsx('w-full', className)}>
-      {/* Mobile: sheet trigger */}
+      {/* Mobile: persistent search + sheet trigger */}
       <div className="space-y-3 sm:hidden">
+        {/* Always visible search on mobile */}
+        {searchSlot && (
+          <div className="bg-card rounded-lg p-4 border shadow-sm">
+            {searchSlot}
+          </div>
+        )}
+        
         <div className="flex items-center justify-between">
           <Button variant="outline" size="sm" onClick={() => setOpen(true)} aria-label="Open filters">
             {title}
@@ -106,8 +115,15 @@ export function AdminFilterBar({
         </SheetContent>
       </Sheet>
 
-      {/* Desktop: Modern filter interface with improved spacing and hierarchy */}
+      {/* Desktop: Modern filter interface with search integration */}
       <div className="hidden sm:block space-y-6">
+        {/* Always visible search on desktop */}
+        {searchSlot && (
+          <div className="bg-card rounded-lg p-4 border shadow-sm">
+            {searchSlot}
+          </div>
+        )}
+        
         {collapsible ? (
           <Collapsible open={!collapsed} onOpenChange={(open) => setCollapsed(!open)}>
             <Card className="border-border/50 shadow-sm">

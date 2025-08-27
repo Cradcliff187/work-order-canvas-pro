@@ -1,13 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { AlertTriangle, Filter, ChevronDown, X } from 'lucide-react';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
+import { AlertTriangle } from 'lucide-react';
 
 // Filter interface aligned with work order pipeline workflow
 export interface InvoiceFiltersValue {
@@ -63,10 +61,6 @@ const partnerBillingStatusOptions = [
 ];
 
 export function InvoiceFilters({ value, onChange, onClear, filterCount }: InvoiceFiltersProps) {
-  const isMobile = useIsMobile();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isDesktopSheetOpen, setIsDesktopSheetOpen] = useState(false);
-
   // Get partner locations for the selected partner organization
   const { data: partnerLocations } = usePartnerLocations(value.partner_organization_id);
 
@@ -99,13 +93,14 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
     onChange({ ...value, [key]: newValue });
   };
 
-  // Filter render functions
-  const renderSearchFilter = () => (
+  // Search slot for AdminFilterBar
+  const searchSlot = (
     <SmartSearchInput
       value={value.search || ''}
       onChange={(e) => set('search', e.target.value)}
       placeholder="Search invoices..."
       storageKey="admin-invoices-search"
+      className="w-full"
     />
   );
 
@@ -220,177 +215,37 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
     </div>
   );
 
-  // Mobile implementation
-  if (isMobile) {
-    return (
-      <div className="block lg:hidden">
-        <div className="space-y-4">
-          {/* Always visible search */}
-          <div className="bg-card rounded-lg p-4 border shadow-sm">
-            {renderSearchFilter()}
-          </div>
-
-          {/* Filter trigger */}
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  <span>Filters</span>
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                </div>
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </SheetTrigger>
-            
-            <SheetContent side="bottom" className="h-[85vh] flex flex-col">
-              <SheetHeader>
-                <div className="flex items-center justify-between">
-                  <SheetTitle>Filter Invoices</SheetTitle>
-                  {activeFilterCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        onClear();
-                        setIsSheetOpen(false);
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <X className="w-4 h-4" />
-                      Clear All
-                    </Button>
-                  )}
-                </div>
-              </SheetHeader>
-
-              <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-6 py-4 pb-20">
-                {/* Essential Filters Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-foreground border-b pb-2">Essential Filters</h3>
-                  {renderOverdueFilter()}
-                  {renderInvoiceStatusFilter()}
-                </div>
-
-                {/* Advanced Filters Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-foreground border-b pb-2">Advanced Filters</h3>
-                  {renderPartnerOrganizationFilter()}
-                  {value.partner_organization_id && renderLocationFilter()}
-                  {renderSubcontractorFilter()}
-                  {renderOperationalStatusFilter()}
-                  {renderReportStatusFilter()}
-                  {renderPartnerBillingStatusFilter()}
-                </div>
-              </div>
-
-              <SheetFooter className="border-t pt-4">
-                <Button 
-                  onClick={() => setIsSheetOpen(false)}
-                  className="w-full"
-                >
-                  Apply Filters
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </div>
-    );
-  }
-
-  // Desktop implementation
-  return (
-    <div className="hidden lg:block">
-      <div className="space-y-4">
-        {/* Always visible search */}
-        <div className="bg-card rounded-lg p-4 border shadow-sm">
-          {renderSearchFilter()}
-        </div>
-
-        {/* Filter trigger */}
-        <Sheet open={isDesktopSheetOpen} onOpenChange={setIsDesktopSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4" />
-                <span>Filters</span>
-                {activeFilterCount > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </div>
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-          </SheetTrigger>
-          
-          <SheetContent side="right" className="w-[480px] flex flex-col">
-            <SheetHeader>
-              <div className="flex items-center justify-between">
-                <SheetTitle>Filter Invoices</SheetTitle>
-                {activeFilterCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      onClear();
-                      setIsDesktopSheetOpen(false);
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <X className="w-4 h-4" />
-                    Clear All
-                  </Button>
-                )}
-              </div>
-            </SheetHeader>
-
-            <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-6 py-4">
-              {/* Essential Filters Section */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b pb-2">Essential Filters</h3>
-                {renderOverdueFilter()}
-                {renderInvoiceStatusFilter()}
-              </div>
-
-              {/* Advanced Filters Section */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b pb-2">Advanced Filters</h3>
-                {renderPartnerOrganizationFilter()}
-                {value.partner_organization_id && renderLocationFilter()}
-                {renderSubcontractorFilter()}
-                {renderOperationalStatusFilter()}
-                {renderReportStatusFilter()}
-                {renderPartnerBillingStatusFilter()}
-              </div>
-            </div>
-
-            <SheetFooter className="border-t pt-4">
-              <Button 
-                onClick={() => setIsDesktopSheetOpen(false)}
-                className="w-full"
-              >
-                Apply Filters
-                {activeFilterCount > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-      </div>
+  // Essential filters (always visible)
+  const essentialFilters = (
+    <div className="space-y-4">
+      {renderOverdueFilter()}
+      {renderInvoiceStatusFilter()}
     </div>
+  );
+
+  // Advanced filters (grouped)
+  const advancedFilters = (
+    <div className="space-y-4">
+      {renderPartnerOrganizationFilter()}
+      {value.partner_organization_id && renderLocationFilter()}
+      {renderSubcontractorFilter()}
+      {renderOperationalStatusFilter()}
+      {renderReportStatusFilter()}
+      {renderPartnerBillingStatusFilter()}
+    </div>
+  );
+
+  return (
+    <AdminFilterBar
+      title="Filters"
+      filterCount={activeFilterCount}
+      onClear={onClear}
+      searchSlot={searchSlot}
+      sheetSide="bottom"
+      sections={{
+        essential: essentialFilters,
+        advanced: advancedFilters
+      }}
+    />
   );
 }
