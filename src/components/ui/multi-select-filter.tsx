@@ -4,7 +4,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { ChevronDown, Search, X } from 'lucide-react';
-import { Portal } from '@radix-ui/react-portal';
 import { cn } from '@/lib/utils';
 
 interface Option {
@@ -82,12 +81,11 @@ export function MultiSelectFilter({
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <Portal>
-        <PopoverContent 
-          className="w-[300px] p-0 z-[9999] bg-background border shadow-lg" 
-          align="start"
-          sideOffset={5}
-        >
+      <PopoverContent 
+        className="w-[300px] p-0 z-[9999] bg-background border shadow-lg" 
+        align="start"
+        sideOffset={5}
+      >
           <div className="p-3 space-y-3">
             {/* Search input */}
             <div className="relative">
@@ -131,7 +129,6 @@ export function MultiSelectFilter({
             </div>
           </div>
         </PopoverContent>
-      </Portal>
     </Popover>
   );
 }
