@@ -247,7 +247,7 @@ export function WorkOrderFiltersV2({
         <div className="space-y-4">
           {/* Date Range */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Date Range</label>
+            <label className="text-sm font-medium">Date Submitted</label>
             <div className="flex gap-2">
               <Popover open={dateFromOpen} onOpenChange={setDateFromOpen}>
                 <PopoverTrigger asChild>
