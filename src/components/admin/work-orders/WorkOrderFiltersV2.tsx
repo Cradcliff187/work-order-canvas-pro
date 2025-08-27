@@ -22,7 +22,7 @@ export interface WorkOrderFiltersValue {
   trades?: string[];
   location_filter?: string[];
   location?: string[];
-  completed_by?: string[];
+  assigned_to?: string[];
   date_from?: string;
   date_to?: string;
   date_range?: {
@@ -37,7 +37,7 @@ interface FilterConfig {
   showCompleted?: boolean;
   showSubmittedBy?: boolean;
   showWorkOrder?: boolean;
-  completedByLabel?: string;
+  assignedToLabel?: string;
 }
 
 interface WorkOrderFiltersV2Props {
@@ -85,7 +85,7 @@ export function WorkOrderFiltersV2({
     showCompleted = true,
     showSubmittedBy = false,
     showWorkOrder = false,
-    completedByLabel = "Completed By"
+    assignedToLabel = "Assigned To"
   } = config;
   const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
@@ -124,7 +124,7 @@ export function WorkOrderFiltersV2({
     label: trade.name
   })) || [];
 
-  const completedByOptions = [
+  const assignedToOptions = [
     { value: 'internal', label: 'Internal' },
     ...(subcontractors?.map(sub => ({
       value: sub.id,
@@ -375,15 +375,15 @@ export function WorkOrderFiltersV2({
         </div>
       )}
 
-      {/* Completed By Filter */}
+      {/* Assigned To Filter */}
       {showCompleted && (
         <div className="space-y-2">
-          <label className="text-sm font-medium">{completedByLabel}</label>
+          <label className="text-sm font-medium">{assignedToLabel}</label>
           <MultiSelectFilter
-            options={completedByOptions}
-            selectedValues={value.completed_by || []}
-            onSelectionChange={(filterValue) => handleFilterChange('completed_by', filterValue)}
-            placeholder="Filter by completion..."
+            options={assignedToOptions}
+            selectedValues={value.assigned_to || []}
+            onSelectionChange={(filterValue) => handleFilterChange('assigned_to', filterValue)}
+            placeholder="Filter by assignment..."
             className="h-10"
           />
         </div>

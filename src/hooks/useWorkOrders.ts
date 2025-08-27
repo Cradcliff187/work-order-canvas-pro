@@ -127,7 +127,7 @@ export interface WorkOrderFilters {
   status?: string[];
   trade_id?: string[];
   partner_organization_ids?: string[]; // Partner orgs multi-select
-  completed_by?: string[]; // 'internal' and/or subcontractor org UUIDs
+  assigned_to?: string[]; // 'internal' and/or subcontractor org UUIDs
   search?: string;
   date_from?: string;
   date_to?: string;
@@ -250,9 +250,9 @@ export function useWorkOrders(
         if (filters.date_to) {
           query = query.lte('created_at', filters.date_to);
         }
-        // Filter by who completed/assigned the work (Internal team and/or specific subcontractors)
-        if (filters.completed_by && filters.completed_by.length > 0) {
-          const selections = filters.completed_by;
+        // Filter by who is assigned to the work (Internal team and/or specific subcontractors)
+        if (filters.assigned_to && filters.assigned_to.length > 0) {
+          const selections = filters.assigned_to;
           const includesInternal = selections.includes('internal');
           const subOrgIds = selections.filter((id) => id !== 'internal');
 

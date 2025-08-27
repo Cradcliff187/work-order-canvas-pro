@@ -86,7 +86,7 @@ export default function AdminWorkOrders() {
     status: [],
     priority: [],
     organizations: [],
-    completed_by: [],
+    assigned_to: [],
     trades: [],
     location_filter: [],
     date_range: undefined
@@ -204,6 +204,7 @@ export default function AdminWorkOrders() {
     // Map field names for API compatibility
     partner_organization_ids: cleanFilters.organizations || [],
     trade_id: cleanFilters.trades || [],
+    assigned_to: cleanFilters.assigned_to || [],
     organizations: undefined, // remove this field for API
     trades: undefined, // remove this field for API
     date_from: cleanFilters.date_range?.from,
