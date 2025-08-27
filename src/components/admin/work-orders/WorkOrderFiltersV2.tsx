@@ -207,9 +207,14 @@ export function WorkOrderFiltersV2({
 
   // No search slot - search moved to table controls
 
-  // Essential filters (always visible in sections)
-  const essentialFilters = (
-    <>
+  return (
+    <AdminFilterBar
+      title="Filters"
+      filterCount={filterCount}
+      onClear={onClear}
+      sheetSide="bottom"
+      collapsible={true}
+    >
       {/* Status Filter */}
       <div className="space-y-2">
         <label className="text-sm font-medium">Status</label>
@@ -222,14 +227,14 @@ export function WorkOrderFiltersV2({
         />
       </div>
 
-      {/* Organization Filter */}
+      {/* Partner Filter */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">Organization</label>
+        <label className="text-sm font-medium">Partner</label>
         <MultiSelectFilter
           options={organizationOptions}
           selectedValues={value.organizations || []}
           onSelectionChange={(filterValue) => handleFilterChange('organizations', filterValue)}
-          placeholder="Filter by organization..."
+          placeholder="Filter by partner..."
           className="h-10"
         />
       </div>
@@ -305,11 +310,7 @@ export function WorkOrderFiltersV2({
           </Button>
         )}
       </div>
-    </>
-  );
-  // Advanced filters (collapsible)
-  const advancedFilters = (
-    <>
+
       {/* Trades Filter */}
       <div className="space-y-2">
         <label className="text-sm font-medium">Trades</label>
@@ -387,21 +388,7 @@ export function WorkOrderFiltersV2({
           />
         </div>
       )}
-    </>
-  );
-
-  return (
-    <AdminFilterBar
-      title="Filters"
-      filterCount={filterCount}
-      onClear={onClear}
-      sheetSide="bottom"
-      collapsible={true}
-      sections={{
-        essential: essentialFilters,
-        advanced: advancedFilters
-      }}
-    />
+    </AdminFilterBar>
   );
 }
 
