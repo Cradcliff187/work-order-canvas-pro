@@ -334,11 +334,6 @@ export function WorkOrderTable({
               <h2 className="text-lg font-semibold leading-none tracking-tight">
                 Work Orders
               </h2>
-              {totalCount !== undefined && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {totalCount} total work orders
-                </p>
-              )}
             </div>
             
             {/* View mode switcher */}
