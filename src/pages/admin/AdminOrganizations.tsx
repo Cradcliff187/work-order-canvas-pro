@@ -19,9 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Label } from '@/components/ui/label';
-import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown, Filter, CheckSquare } from 'lucide-react';
+import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
@@ -39,6 +37,8 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
+import { CompactOrganizationFilters } from '@/components/admin/organizations/CompactOrganizationFilters';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface OrganizationFilters {
   search?: string;
@@ -64,11 +64,10 @@ export default function AdminOrganizations() {
   const [search, setSearch] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(search, 500);
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [bulkMode, setBulkMode] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const isMobile = useIsMobile();
 
   const { data: organizations, isLoading, error, refetch } = useOrganizations();
 
@@ -279,177 +278,99 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         </div>
       </header>
 
-      {/* Desktop Control Bar */}
-        <div className="hidden lg:flex gap-4 mb-6">
-          <div className="flex flex-1 gap-2">
+      <Card className="overflow-hidden">
+        {/* Desktop toolbar */}
+        <div className="border-b">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg font-semibold">Organizations</h2>
+              <ViewModeSwitcher
+                value={viewMode}
+                onValueChange={setViewMode}
+                allowedModes={allowedModes}
+              />
+            </div>
+            
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <SmartSearchInput
+                placeholder="Search name, email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                storageKey="admin-organizations-search"
+                className="max-w-xs"
+              />
+              
+              <CompactOrganizationFilters
+                value={{
+                  organizationType: typeFilter,
+                  status: statusFilter
+                }}
+                onChange={(filters) => {
+                  setTypeFilter(filters.organizationType || 'all');
+                  setStatusFilter(filters.status || 'all');
+                }}
+                onClear={() => {
+                  setTypeFilter('all');
+                  setStatusFilter('all');
+                }}
+              />
+              
+              {!isMobile && (
+                <>
+                  <ColumnVisibilityDropdown
+                    columns={columnOptions}
+                    onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
+                    onResetToDefaults={resetToDefaults}
+                    visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+                    totalCount={columnOptions.filter(c => c.canHide).length}
+                  />
+                  <ExportDropdown 
+                    onExport={handleExport} 
+                    disabled={isLoading || filteredOrganizations.length === 0} 
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile toolbar */}
+        {isMobile && (
+          <div className="bg-muted/30 border rounded-lg p-3 space-y-3 m-4">
             <SmartSearchInput
-              placeholder="Search organizations..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onSearchSubmit={(q) => handleSearchChange(q)}
-              onSelectSuggestion={(item) => handleSearchChange(item.label)}
-              workOrders={[]}
-              assignees={[]}
-              locations={[]}
-              storageKey="admin-organizations-search"
-              className="flex-1"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full"
             />
-            <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
-              <Filter className="h-4 w-4 mr-2" />
-              Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
-            </Button>
+            <div className="flex items-center gap-2">
+              <CompactOrganizationFilters
+                value={{
+                  organizationType: typeFilter,
+                  status: statusFilter
+                }}
+                onChange={(filters) => {
+                  setTypeFilter(filters.organizationType || 'all');
+                  setStatusFilter(filters.status || 'all');
+                }}
+                onClear={() => {
+                  setTypeFilter('all');
+                  setStatusFilter('all');
+                }}
+              />
+              {bulkMode && Object.keys(rowSelection).length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRowSelection({})}
+                  className="shrink-0"
+                >
+                  Clear ({Object.keys(rowSelection).length})
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
-            <ViewModeSwitcher
-              value={viewMode}
-              onValueChange={setViewMode}
-              allowedModes={allowedModes}
-              className="h-9"
-            />
-            <ColumnVisibilityDropdown
-              columns={columnOptions}
-              onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
-              onResetToDefaults={resetToDefaults}
-              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-              totalCount={columnOptions.filter(c => c.canHide).length}
-            />
-            <ExportDropdown 
-              onExport={handleExport} 
-              disabled={isLoading || filteredOrganizations.length === 0} 
-            />
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Organization
-            </Button>
-            </div>
-        </div>
-
-        {/* Mobile Control Bar */}
-        <div className="lg:hidden space-y-3">
-          <SmartSearchInput
-            placeholder="Search organizations..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onSearchSubmit={(q) => handleSearchChange(q)}
-            onSelectSuggestion={(item) => handleSearchChange(item.label)}
-            workOrders={[]}
-            assignees={[]}
-            locations={[]}
-            storageKey="admin-organizations-search"
-            className="w-full"
-          />
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
-              <Filter className="h-4 w-4 mr-2" />
-              Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
-            </Button>
-            <ViewModeSwitcher
-              value={viewMode}
-              onValueChange={setViewMode}
-              allowedModes={allowedModes}
-              className="h-9"
-            />
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Organization
-            </Button>
-          </div>
-        </div>
-
-      {/* Mobile Bottom Sheet */}
-      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[85vh]">
-          <SheetHeader>
-            <SheetTitle>Advanced Filters</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 space-y-4 overflow-y-auto">
-            <div className="space-y-2">
-              <Label htmlFor="mobile-type">Organization Type</Label>
-              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
-                <SelectTrigger id="mobile-type" className="w-full">
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="internal">Internal</SelectItem>
-                  <SelectItem value="partner">Partner</SelectItem>
-                  <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mobile-status">Status</Label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger id="mobile-status" className="w-full">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {activeFilterCount > 0 && (
-              <Button onClick={handleClearFilters} variant="outline" className="w-full">
-                Clear All Filters
-              </Button>
-            )}
-            <Button onClick={() => setIsMobileFilterOpen(false)} className="w-full">
-              Apply Filters
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Desktop Sidebar */}
-      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-[420px]">
-          <SheetHeader>
-            <SheetTitle>Advanced Filters</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="desktop-type">Organization Type</Label>
-              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
-                <SelectTrigger id="desktop-type" className="w-full">
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="internal">Internal</SelectItem>
-                  <SelectItem value="partner">Partner</SelectItem>
-                  <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="desktop-status">Status</Label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger id="desktop-status" className="w-full">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {activeFilterCount > 0 && (
-              <Button onClick={handleClearFilters} variant="outline" className="w-full">
-                Clear All Filters
-              </Button>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Data Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Organizations</CardTitle>
-        </CardHeader>
+        )}
         <CardContent>
           {isLoading ? (
             <EnhancedTableSkeleton rows={5} columns={5} />
