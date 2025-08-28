@@ -192,20 +192,49 @@ export function WorkOrderTable({
     return (
       <MobilePullToRefresh onRefresh={onRefresh} threshold={refreshThreshold}>
         <div className="space-y-4">
-          {bulkMode && (
-            <div className="flex items-center justify-end">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClearSelection}
-                disabled={selectedIds.length === 0}
-                aria-label={`Clear selection (${selectedIds.length} selected)`}
-              >
-                <span className="hidden sm:inline">Clear Selection</span>
-                <span className="sm:hidden">Clear</span>
-              </Button>
+          {/* Mobile Toolbar */}
+          <div className="bg-background border rounded-lg p-4 space-y-3">
+            {/* Search bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={searchValue}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {searchValue && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSearchChange('')}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-          )}
+
+            {/* Filter and bulk actions row */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Filters */}
+              <div className="flex items-center gap-2">
+                {filterComponent}
+              </div>
+
+              {/* Bulk mode actions */}
+              {bulkMode && selectedIds.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onClearSelection}
+                  className="shrink-0"
+                >
+                  Clear ({selectedIds.length})
+                </Button>
+              )}
+            </div>
+          </div>
 
           {!data?.length ? (
             <EmptyState
