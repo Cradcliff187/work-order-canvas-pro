@@ -37,7 +37,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { ChevronLeft, ChevronRight, FileText, DollarSign, Plus, RotateCcw, CheckCircle, XCircle, Filter, CheckSquare } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, DollarSign, Plus, RotateCcw, CheckCircle, XCircle, Filter, CheckSquare, Search, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
@@ -48,7 +48,7 @@ import { Badge } from '@/components/ui/badge';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
-
+import { useViewMode } from '@/hooks/useViewMode';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
@@ -56,7 +56,10 @@ import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import type { VisibilityState } from '@tanstack/react-table';
+import { CompactInvoiceFilters } from '@/components/admin/invoices/CompactInvoiceFilters';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
+import { cn } from '@/lib/utils';
+import { InvoiceFiltersValue } from '@/components/admin/invoices/CompactInvoiceFilters';
 
 export default function AdminInvoices() {
   const isMobile = useIsMobile();
@@ -126,9 +129,42 @@ export default function AdminInvoices() {
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   
+  // Wrapper function to handle compact filter changes
+  const handleCompactFiltersChange = (compactFilters: InvoiceFiltersValue) => {
+    // Convert CompactFilters format to Admin format
+    const adminFilters = {
+      ...filters, // Keep existing admin-specific fields
+      search: compactFilters.search,
+      overdue: compactFilters.overdue,
+      invoice_status: compactFilters.invoice_status,
+      partner_organization_id: compactFilters.partner_organization_id,
+      location_filter: compactFilters.location_filter,
+      ...(compactFilters.amount_range && { amount_range: compactFilters.amount_range })
+    } as any;
+    
+    setFilters(adminFilters);
+  };
+
+  // Convert admin filters to compact format for CompactInvoiceFilters
+  const compactFilters: InvoiceFiltersValue = {
+    search: filters.search,
+    overdue: filters.overdue,
+    invoice_status: filters.invoice_status,
+    partner_organization_id: filters.partner_organization_id,
+    location_filter: filters.location_filter,
+    amount_range: (filters as any).amount_range // Safe access with type assertion
+  };
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'admin-invoices',
+    config: {
+      mobile: ['card', 'list'],
+      desktop: ['table', 'card']
+    },
+    defaultMode: 'table'
+  });
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
@@ -532,31 +568,167 @@ const table = useReactTable({
       </Sheet>
 
       {/* Results */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>
-              {data?.totalCount || 0} Invoice{(data?.totalCount || 0) !== 1 ? 's' : ''}
-            </CardTitle>
-            <ColumnVisibilityDropdown
-              columns={columnOptions}
-              onToggleColumn={toggleColumn}
-              onResetToDefaults={resetToDefaults}
-              variant="outline"
-              size="sm"
-              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
-              totalCount={columnOptions.filter(c => c.canHide).length}
-            />
+      <Card className="overflow-hidden">
+        {/* Desktop toolbar */}
+        <div className="border-b">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
+            {/* Left side - Title and view mode */}
+            <div className="flex items-center gap-4">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold leading-none tracking-tight">
+                  Invoices
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {data?.totalCount || 0} total invoice{(data?.totalCount || 0) !== 1 ? 's' : ''}
+                </p>
+              </div>
+              
+              {/* View mode switcher - Desktop only */}
+              {!isMobile && (
+                <ViewModeSwitcher
+                  value={viewMode}
+                  onValueChange={setViewMode}
+                  allowedModes={allowedModes}
+                  className="shrink-0"
+                />
+              )}
+            </div>
+
+            {/* Right side - Search and Actions */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {/* Selection clear */}
+              {bulkMode && selectedCount > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setRowSelection({})}
+                  className="shrink-0"
+                >
+                  Clear ({selectedCount})
+                </Button>
+              )}
+
+              {/* Search */}
+              <div className="relative flex-1 sm:flex-initial sm:w-80">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <SmartSearchInput
+                  placeholder="Search invoice #, vendor, amount..."
+                  value={filters.search || ''}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  storageKey="admin-invoices-search"
+                  className="pl-10 pr-10 h-10"
+                />
+                {filters.search && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFilters({ ...filters, search: '' })}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Compact filters */}
+              <CompactInvoiceFilters
+                value={compactFilters}
+                onChange={handleCompactFiltersChange}
+                onClear={clearFilters}
+              />
+
+              {/* Desktop only controls */}
+              {!isMobile && (
+                <>
+                  <ColumnVisibilityDropdown
+                    columns={columnOptions}
+                    onToggleColumn={toggleColumn}
+                    onResetToDefaults={resetToDefaults}
+                    variant="outline"
+                    size="sm"
+                  />
+                  <ExportDropdown 
+                    onExport={handleExport} 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={isLoading || (data?.data?.length ?? 0) === 0} 
+                  />
+                </>
+              )}
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+
+        {/* Mobile toolbar */}
+        {isMobile && (
+          <div className="bg-muted/30 border-b p-3 space-y-3">
+            {/* Mobile search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <SmartSearchInput
+                placeholder="Search invoices..."
+                value={filters.search || ''}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                storageKey="admin-invoices-search"
+                className="pl-10 pr-10 h-9 w-full"
+              />
+              {filters.search && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFilters({ ...filters, search: '' })}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+            
+            {/* Mobile filters and actions */}
+            <div className="flex items-center gap-2">
+              <CompactInvoiceFilters
+                value={compactFilters}
+                onChange={handleCompactFiltersChange}
+                onClear={clearFilters}
+              />
+              
+              <ViewModeSwitcher
+                value={viewMode}
+                onValueChange={setViewMode}
+                allowedModes={allowedModes}
+                className="shrink-0"
+              />
+              
+              {bulkMode && selectedCount > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setRowSelection({})}
+                  className="shrink-0 h-9 px-3 text-xs"
+                >
+                  Clear ({selectedCount})
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <CardContent className="p-0 overflow-hidden">
           {isLoading ? (
             <EnhancedTableSkeleton rows={5} columns={8} />
+          ) : data?.data?.length === 0 ? (
+            <EmptyTableState
+              icon={FileText}
+              title="No subcontractor invoices found"
+              description={filters.invoice_status?.length > 0 || filters.search ? "Try adjusting your filters or search criteria" : "Subcontractor invoices will appear here when submitted"}
+              colSpan={columns.length}
+            />
           ) : (
             <>
-              {/* Desktop Table */}
-              <div className="hidden lg:block">
-                <ResponsiveTableWrapper stickyFirstColumn={true}>
+              {/* Desktop Table View */}
+              {viewMode === 'table' && (
+                <div className="hidden lg:block">
+                  <ResponsiveTableWrapper stickyFirstColumn={true}>
                   <Table className="admin-table">
                     <TableHeader>
                       {table.getHeaderGroups().map((headerGroup) => (
@@ -617,18 +789,63 @@ const table = useReactTable({
                             ))}
                           </TableRow>
                         ))
-                      ) : (
-                        <EmptyTableState
-                          icon={FileText}
-                          title="No subcontractor invoices found"
-                          description={filters.invoice_status?.length > 0 || filters.search ? "Try adjusting your filters or search criteria" : "Subcontractor invoices will appear here when submitted"}
-                          colSpan={columns.length}
-                        />
-                      )}
+                      ) : null}
                     </TableBody>
                   </Table>
                 </ResponsiveTableWrapper>
-              </div>
+                </div>
+              )}
+
+              {/* Card and List Views - Desktop */}
+              {(viewMode === 'card' || viewMode === 'list') && (
+                <div className="hidden lg:block p-6">
+                  <div className={cn(
+                    viewMode === 'card' ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"
+                  )}>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => {
+                        const invoice = row.original;
+                        return (
+                          <div key={row.id} className="relative">
+                            <MobileTableCard
+                              title={`Invoice #${invoice.internal_invoice_number || 'N/A'}`}
+                              subtitle={`${invoice.subcontractor_organization?.name || 'Unknown Organization'} • ${formatCurrency(Number(invoice.total_amount), true)}`}
+                              status={
+                                <div className="flex flex-col items-end gap-1">
+                                  <StatusBadge type="financialStatus" status={invoice.status} size="sm" />
+                                  {invoice.paid_at && (
+                                    <StatusBadge type="financialStatus" status="paid" size="sm" />
+                                  )}
+                                </div>
+                              }
+                              onClick={() => handleViewInvoice(invoice)}
+                            >
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>{invoice.invoice_work_orders?.[0]?.work_order?.work_order_number || 'No WO'}</span>
+                                {invoice.submitted_at && (
+                                  <span>{format(new Date(invoice.submitted_at), 'MMM d, yyyy')}</span>
+                                )}
+                              </div>
+                            </MobileTableCard>
+                            {bulkMode && (
+                              <div className="absolute top-2 right-2">
+                                <input
+                                  type="checkbox"
+                                  checked={row.getIsSelected()}
+                                  onChange={row.getToggleSelectedHandler()}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="rounded border-gray-300 scale-125"
+                                  aria-label={`Select invoice ${invoice.internal_invoice_number}`}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : null}
+                  </div>
+                </div>
+              )}
 
               {/* Mobile Cards */}
               <div className="block lg:hidden space-y-3">
