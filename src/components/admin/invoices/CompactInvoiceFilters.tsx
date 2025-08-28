@@ -321,38 +321,48 @@ export function CompactInvoiceFilters({
     );
   };
 
-  // Desktop: Popover
-  if (!isMobile) {
-    return (
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-            {activeCount > 0 && ` (${activeCount})`}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80">
-          <FilterContent />
-        </PopoverContent>
-      </Popover>
-    );
-  }
-
-  // Mobile: Full-screen overlay
   return (
     <>
-      <Button 
-        variant="outline" 
-        size="sm" 
-        className="flex-1"
-        onClick={() => setIsOpen(true)}
-      >
-        <Filter className="h-4 w-4 mr-2" />
-        Filters
-        {activeCount > 0 && ` (${activeCount})`}
-      </Button>
-      <MobileFilterOverlay />
+      {isMobile ? (
+        <>
+          {/* Mobile trigger button */}
+          <Button
+            variant="outline"
+            onClick={() => setIsOpen(!isOpen)}
+            className="relative flex-1"
+          >
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+            {activeCount > 0 && (
+              <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
+                {activeCount}
+              </span>
+            )}
+          </Button>
+          <MobileFilterOverlay />
+        </>
+      ) : (
+        /* Desktop popover */
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="relative"
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+              {activeCount > 0 && (
+                <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
+                  {activeCount}
+                </span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-4" align="end">
+            <FilterContent />
+          </PopoverContent>
+        </Popover>
+      )}
     </>
   );
 }
