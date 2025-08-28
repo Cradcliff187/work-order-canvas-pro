@@ -106,8 +106,6 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
         <ArrowUpDown className="ml-2 h-4 w-4" aria-hidden="true" />
       </Button>
     ),
-    size: 140,
-    minSize: 120,
     maxSize: 160,
     enableResizing: false,
     cell: ({ row }) => {
@@ -180,7 +178,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    size: 180,
+    maxSize: 180,
     cell: ({ row }) => row.original.organizations?.name || 'N/A',
   },
   {
@@ -195,7 +193,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    size: 150,
+    maxSize: 150,
     cell: ({ row }) => {
       const workOrder = row.original;
       const locationDisplay = formatLocationDisplay(workOrder);
@@ -247,7 +245,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    size: 120,
+    maxSize: 120,
     cell: ({ row }) => row.original.trades?.name || 'N/A',
   },
   {
@@ -262,7 +260,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    size: 90,
+    maxSize: 90,
     cell: ({ row }) => {
       const priority = row.getValue('priority') as string;
       
@@ -294,7 +292,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    size: 100,
+    maxSize: 100,
     cell: ({ row }) => {
       const status = row.getValue('status') as WorkOrder['status'];
       const isUpdating = updatingRowIds?.has(row.original.id);
@@ -333,7 +331,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    size: 120,
+    maxSize: 120,
     cell: ({ row }) => {
       const assignments = row.original.work_order_assignments || [];
       
@@ -440,7 +438,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    size: 100,
+    maxSize: 100,
     cell: ({ row }) => {
       const date = new Date(row.getValue('date_submitted'));
       return date.toLocaleDateString();
@@ -449,7 +447,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
   {
     id: 'actions',
     header: 'Actions',
-    size: 80,
+    maxSize: 80,
     cell: ({ row }) => {
       const workOrder = row.original;
       const workOrderName = `${workOrder.work_order_number || 'Work Order'} - ${workOrder.title}`;

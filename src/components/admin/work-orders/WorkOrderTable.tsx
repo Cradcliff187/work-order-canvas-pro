@@ -324,7 +324,7 @@ export function WorkOrderTable({
 
   // Render desktop view
   return (
-    <Card>
+    <Card className="overflow-hidden">
       {/* Table toolbar with search and actions */}
       <div className="border-b">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
@@ -405,7 +405,7 @@ export function WorkOrderTable({
           </div>
         </div>
       </div>
-      <CardContent>
+      <CardContent className="p-0 overflow-hidden">
         {isLoading ? (
           <EnhancedTableSkeleton rows={5} columns={9} />
         ) : data?.length === 0 ? (
@@ -424,11 +424,12 @@ export function WorkOrderTable({
           <>
             {/* Table View (Desktop Master-Detail) */}
             {viewMode === 'table' && (
-              <div className="hidden lg:block">
+              <div className="hidden lg:block w-full max-w-full">
                 <MasterDetailLayout
                   listContent={
-                    <ResponsiveTableWrapper stickyFirstColumn={true} minWidth="0">
-                      <Table className="admin-table" aria-label="Work orders data table">
+                    <div className="w-full overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <Table className="admin-table min-w-full" aria-label="Work orders data table">
                         <TableHeader>
                           {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
@@ -490,8 +491,9 @@ export function WorkOrderTable({
                             </TableRow>
                           )}
                         </TableBody>
-                      </Table>
-                    </ResponsiveTableWrapper>
+                        </Table>
+                      </div>
+                    </div>
                   }
                   selectedId={selectedWorkOrderId}
                   onSelectionChange={setSelectedWorkOrderId}
