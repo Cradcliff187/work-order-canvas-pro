@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Building2 } from 'lucide-react';
+import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Building2, CheckCircle, XCircle } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
@@ -42,6 +42,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { LoadingCard } from '@/components/ui/loading-states';
 import { EmptyState } from '@/components/ui/empty-state';
+import { BulkActionsBar } from '@/components/admin/organizations/BulkActionsBar';
+import { format as formatDate } from 'date-fns';
 
 interface OrganizationFilters {
   search?: string;
@@ -146,15 +148,51 @@ export default function AdminOrganizations() {
     }));
   };
 
+  const handleBulkStatusChange = async (status: 'active' | 'inactive') => {
+    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    const selectedOrgs = filteredOrganizations.filter(org => selectedIds.includes(org.id as string));
+    
+    for (const org of selectedOrgs) {
+      updateOrg({ 
+        id: org.id as string, 
+        is_active: status === 'active' 
+      });
+    }
+    
+    setRowSelection({});
+    
+    toast({
+      title: "Bulk Update Complete",
+      description: `Updated ${selectedIds.length} organizations to ${status}`
+    });
+  };
+
   const handleRefresh = async () => {
     await refetch();
   };
 
+  const ORGANIZATION_COLUMN_METADATA = {
+    columns: [
+      { id: 'name', label: 'Name', defaultVisible: true },
+      { id: 'initials', label: 'Initials', defaultVisible: true },
+      { id: 'organization_type', label: 'Type', defaultVisible: true },
+      { id: 'contact_email', label: 'Email', defaultVisible: true },
+      { id: 'contact_phone', label: 'Phone', defaultVisible: false },
+      { id: 'address', label: 'Address', defaultVisible: false },
+      { id: 'is_active', label: 'Status', defaultVisible: true },
+      { id: 'created_at', label: 'Created', defaultVisible: false },
+    ]
+  };
+
   const columnMetadata = {
-    initials: { label: 'Initials', defaultVisible: true },
     name: { label: 'Name', defaultVisible: true },
-    contact_email: { label: 'Contact Email', defaultVisible: true },
+    initials: { label: 'Initials', defaultVisible: true },
     organization_type: { label: 'Type', defaultVisible: true },
+    contact_email: { label: 'Email', defaultVisible: true },
+    contact_phone: { label: 'Phone', defaultVisible: false },
+    address: { label: 'Address', defaultVisible: false },
+    is_active: { label: 'Status', defaultVisible: true },
+    created_at: { label: 'Created', defaultVisible: false },
     actions: { label: 'Actions', defaultVisible: true },
   } as const;
 
@@ -197,27 +235,40 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
     return sorted;
   }, [organizations, filters.search, typeFilter, statusFilter, sort]);
 
-  const exportColumns: ExportColumn[] = [
-    { key: 'name', label: 'Organization Name', type: 'string' },
-    { key: 'initials', label: 'Initials', type: 'string' },
-    { key: 'organization_type', label: 'Type', type: 'string' },
-    { key: 'contact_email', label: 'Contact Email', type: 'string' },
-  ];
-
-  const handleExport = (format: 'csv' | 'excel') => {
-    try {
-      if (format === 'excel') {
-        exportToExcel(filteredOrganizations, exportColumns, generateFilename('organizations', 'xlsx'));
-      } else {
-        exportToCSV(filteredOrganizations, exportColumns, generateFilename('organizations'));
-      }
-    } catch (e: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Export failed',
-        description: e?.message ?? 'Unable to export organizations',
-      });
+  const handleExport = (formatType: 'csv' | 'excel') => {
+    const exportData = filteredOrganizations.map(org => ({
+      'Name': org.name,
+      'Initials': org.initials || '',
+      'Type': org.organization_type,
+      'Email': org.contact_email || '',
+      'Phone': org.contact_phone || '',
+      'Address': org.address || '',
+      'Status': org.is_active ? 'Active' : 'Inactive',
+      'Created': formatDate(new Date(org.created_at), 'yyyy-MM-dd')
+    }));
+    
+    const exportColumns: ExportColumn[] = [
+      { key: 'Name', label: 'Name', type: 'string' },
+      { key: 'Initials', label: 'Initials', type: 'string' },
+      { key: 'Type', label: 'Type', type: 'string' },
+      { key: 'Email', label: 'Email', type: 'string' },
+      { key: 'Phone', label: 'Phone', type: 'string' },
+      { key: 'Address', label: 'Address', type: 'string' },
+      { key: 'Status', label: 'Status', type: 'string' },
+      { key: 'Created', label: 'Created', type: 'string' },
+    ];
+    
+    const filename = `organizations-${Date.now()}`;
+    if (formatType === 'csv') {
+      exportToCSV(exportData, exportColumns, filename);
+    } else {
+      exportToExcel(exportData, exportColumns, filename);
     }
+    
+    toast({
+      title: "Export Complete",
+      description: `Exported ${exportData.length} organizations`
+    });
   };
 
   const handleClearFilters = () => {
@@ -360,7 +411,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
 
         <CardContent className="p-0">
           {isLoading ? (
-            <EnhancedTableSkeleton rows={5} columns={5} />
+            <EnhancedTableSkeleton rows={10} columns={8} showHeader={true} />
           ) : filteredOrganizations.length === 0 ? (
             <div className="rounded-md border">
               <Table className="admin-table">
@@ -633,6 +684,55 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk Actions Bar */}
+      {Object.keys(rowSelection).length > 0 && (
+        <BulkActionsBar
+          selectedCount={Object.keys(rowSelection).length}
+          selectedIds={Object.keys(rowSelection).filter(id => rowSelection[id])}
+          selectedOrganizations={filteredOrganizations.filter(org => rowSelection[org.id as string])}
+          onClearSelection={() => setRowSelection({})}
+          onExport={(ids) => {
+            const selectedData = filteredOrganizations.filter(org => ids.includes(org.id as string));
+            const exportData = selectedData.map(org => ({
+              'Name': org.name,
+              'Initials': org.initials || '',
+              'Type': org.organization_type,
+              'Email': org.contact_email || '',
+              'Phone': org.contact_phone || '',
+              'Address': org.address || '',
+              'Status': org.is_active ? 'Active' : 'Inactive',
+              'Created': formatDate(new Date(org.created_at), 'yyyy-MM-dd')
+            }));
+            
+            const exportColumns: ExportColumn[] = [
+              { key: 'Name', label: 'Name', type: 'string' },
+              { key: 'Initials', label: 'Initials', type: 'string' },
+              { key: 'Type', label: 'Type', type: 'string' },
+              { key: 'Email', label: 'Email', type: 'string' },
+              { key: 'Phone', label: 'Phone', type: 'string' },
+              { key: 'Address', label: 'Address', type: 'string' },
+              { key: 'Status', label: 'Status', type: 'string' },
+              { key: 'Created', label: 'Created', type: 'string' },
+            ];
+            
+            const filename = `organizations-selected-${Date.now()}`;
+            exportToCSV(exportData, exportColumns, filename);
+            
+            toast({
+              title: "Export Complete",
+              description: `Exported ${exportData.length} selected organizations`
+            });
+          }}
+          onBulkDeactivate={(orgs) => handleBulkStatusChange('inactive')}
+          onBulkDelete={(orgs) => {
+            toast({
+              title: "Feature Coming Soon",
+              description: "Bulk delete will be available in a future update"
+            });
+          }}
+        />
+      )}
 
       {/* Create Modal */}
       <CreateOrganizationModal
