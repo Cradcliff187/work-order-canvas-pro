@@ -1,6 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { CompactUserFilters } from '@/components/admin/users/CompactUserFilters';
 import { type UserFiltersValue } from '@/components/admin/users/UnifiedUserFilters';
+import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { LoadingCard } from '@/components/ui/loading-states';
+import { format } from 'date-fns';
 
 import {
   useReactTable,
@@ -93,6 +97,16 @@ export default function AdminUsers() {
   // Fetch data
   const { data: users, isLoading, error, refetch } = useUsers();
   const { deleteUser, updateUser } = useUserMutations();
+
+  // Pull to refresh hook for mobile
+  usePullToRefresh({
+    queryKey: ['users'],
+    onRefresh: async () => {
+      await refetch();
+    },
+    successMessage: 'Users refreshed successfully',
+    errorMessage: 'Failed to refresh users'
+  });
 
   // Column visibility metadata and state
   const columnMetadata = {
@@ -204,6 +218,29 @@ export default function AdminUsers() {
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedIds = selectedRows.map(row => row.original.id);
+
+  // Helper functions for user actions
+  const handleViewUser = (user: User) => {
+    setSelectedUser(user);
+    setViewUserModalOpen(true);
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setEditUserModalOpen(true);
+  };
+
+  const handleResetPassword = (user: User) => {
+    setSelectedUser(user);
+    setResetPasswordModalOpen(true);
+  };
+
+  const toggleRowSelection = (userId: string) => {
+    setRowSelection(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
+  };
 
   const handleClearFilters = () => {
     clearFilters();
@@ -488,76 +525,151 @@ export default function AdminUsers() {
 
               {/* Card View */}
               {viewMode === 'card' && (
-                <div className="space-y-3">
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => {
-                    const user = row.original;
-                    const getPrimaryRole = () => {
-                      if (user.organization_members && user.organization_members.length > 0) {
-                        const primaryMembership = user.organization_members[0];
-                        return `${primaryMembership.role} - ${primaryMembership.organization?.organization_type || 'Unknown'}`;
-                      }
-                      return 'No Organization';
-                    };
-                    
-                    const getRoleVariant = () => {
-                      if (user.organization_members && user.organization_members.length > 0) {
-                        const primaryMembership = user.organization_members[0];
-                        const orgType = primaryMembership.organization?.organization_type;
-                        switch (orgType) {
-                          case 'internal': return primaryMembership.role === 'admin' ? 'destructive' : 'outline';
-                          case 'partner': return 'default';
-                          case 'subcontractor': return 'secondary';
-                          default: return 'secondary';
-                        }
-                      }
-                      return 'secondary';
-                    };
-                    
-                    return (
-                      <SwipeableListItem
-                        onSwipeRight={() => {
-                          setSelectedUser(user);
-                          setEditUserModalOpen(true);
-                        }}
-                        onSwipeLeft={() => {
-                          updateUser.mutate({ id: user.id, is_active: !(user as any).is_active });
-                        }}
-                        rightAction={{ icon: Edit, label: 'Edit', color: 'default' }}
-                        leftAction={{ icon: Power, label: (user as any).is_active ? 'Deactivate' : 'Activate', color: (user as any).is_active ? 'destructive' : 'success' }}
-                      >
-                        <MobileTableCard
-                          key={row.id}
-                          title={`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
-                          subtitle={user.email || 'No email'}
-                          status={
-                            <Badge variant={getRoleVariant()} className="h-5 text-[10px] px-1.5">
-                              {getPrimaryRole().toUpperCase()}
-                            </Badge>
-                          }
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setViewUserModalOpen(true);
-                          }}
-                        >
-                          {user.organization_members && user.organization_members.length > 0 && (
-                            <div className="text-xs text-muted-foreground">
-                              {user.organization_members.map((membership) => membership.organization?.name).filter(Boolean).join(', ')}
-                            </div>
-                          )}
-                        </MobileTableCard>
-                      </SwipeableListItem>
-                    );
-                  })
-                ) : (
-                  <EmptyTableState
-                    icon={Users}
-                    title="No users found"
-                    description="Try adjusting your filters or search criteria"
-                    colSpan={1}
-                  />
-                )}
-                </div>
+                <>
+                  {isMobile ? (
+                    <MobilePullToRefresh onRefresh={async () => { await refetch(); }}>
+                      {/* User cards */}
+                      <div className="space-y-4 p-4">
+                        {isLoading ? (
+                          <LoadingCard count={5} />
+                        ) : filteredUsers.length === 0 ? (
+                          <EmptyState
+                            icon={Users}
+                            title="No users found"
+                            description={filterCount > 0 
+                              ? "No users match your filters. Try adjusting your search."
+                              : "No users have been created yet."
+                            }
+                            action={filterCount === 0 ? {
+                              label: "Create User",
+                              onClick: () => setCreateUserModalOpen(true),
+                              icon: Plus
+                            } : undefined}
+                          />
+                        ) : (
+                          filteredUsers.map(user => {
+                            const memberships = (user as any).organization_members || [];
+                            const primaryMembership = memberships[0];
+                            
+                            return (
+                              <MobileTableCard
+                                key={user.id}
+                                title={`${user.first_name} ${user.last_name}`}
+                                subtitle={user.email}
+                                badge={
+                                  <Badge variant={(user as any).is_active ? 'default' : 'secondary'}>
+                                    {(user as any).is_active ? 'Active' : 'Inactive'}
+                                  </Badge>
+                                }
+                                metadata={[
+                                  { 
+                                    label: 'Role', 
+                                    value: primaryMembership?.role || 'No role'
+                                  },
+                                  { 
+                                    label: 'Organization', 
+                                    value: primaryMembership?.organization?.name || 'No organization'
+                                  },
+                                  { 
+                                    label: 'Last Login', 
+                                    value: (user as any).last_login 
+                                      ? format(new Date((user as any).last_login), 'MMM d, yyyy')
+                                      : 'Never'
+                                  }
+                                ]}
+                                actions={[
+                                  { label: 'View', icon: Users, onClick: () => handleViewUser(user) },
+                                  { label: 'Edit', icon: Edit, onClick: () => handleEditUser(user) },
+                                  { 
+                                    label: 'Reset Password', 
+                                    icon: RotateCcw,
+                                    onClick: () => handleResetPassword(user),
+                                    variant: 'default'
+                                  }
+                                ]}
+                                selected={bulkMode && rowSelection[user.id]}
+                                onSelect={bulkMode ? () => toggleRowSelection(user.id) : undefined}
+                                onClick={() => !bulkMode && handleViewUser(user)}
+                              />
+                            );
+                          })
+                        )}
+                      </div>
+                    </MobilePullToRefresh>
+                  ) : (
+                    /* Desktop card view */
+                    <div className="space-y-3">
+                      {table.getRowModel().rows?.length ? (
+                        table.getRowModel().rows.map((row) => {
+                          const user = row.original;
+                          const getPrimaryRole = () => {
+                            if (user.organization_members && user.organization_members.length > 0) {
+                              const primaryMembership = user.organization_members[0];
+                              return `${primaryMembership.role} - ${primaryMembership.organization?.organization_type || 'Unknown'}`;
+                            }
+                            return 'No Organization';
+                          };
+                          
+                          const getRoleVariant = () => {
+                            if (user.organization_members && user.organization_members.length > 0) {
+                              const primaryMembership = user.organization_members[0];
+                              const orgType = primaryMembership.organization?.organization_type;
+                              switch (orgType) {
+                                case 'internal': return primaryMembership.role === 'admin' ? 'destructive' : 'outline';
+                                case 'partner': return 'default';
+                                case 'subcontractor': return 'secondary';
+                                default: return 'secondary';
+                              }
+                            }
+                            return 'secondary';
+                          };
+                          
+                          return (
+                            <SwipeableListItem
+                              key={row.id}
+                              onSwipeRight={() => {
+                                setSelectedUser(user);
+                                setEditUserModalOpen(true);
+                              }}
+                              onSwipeLeft={() => {
+                                updateUser.mutate({ id: user.id, is_active: !(user as any).is_active });
+                              }}
+                              rightAction={{ icon: Edit, label: 'Edit', color: 'default' }}
+                              leftAction={{ icon: Power, label: (user as any).is_active ? 'Deactivate' : 'Activate', color: (user as any).is_active ? 'destructive' : 'success' }}
+                            >
+                              <MobileTableCard
+                                title={`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
+                                subtitle={user.email || 'No email'}
+                                status={
+                                  <Badge variant={getRoleVariant()} className="h-5 text-[10px] px-1.5">
+                                    {getPrimaryRole().toUpperCase()}
+                                  </Badge>
+                                }
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setViewUserModalOpen(true);
+                                }}
+                              >
+                                {user.organization_members && user.organization_members.length > 0 && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {user.organization_members.map((membership) => membership.organization?.name).filter(Boolean).join(', ')}
+                                  </div>
+                                )}
+                              </MobileTableCard>
+                            </SwipeableListItem>
+                          );
+                        })
+                      ) : (
+                        <EmptyTableState
+                          icon={Users}
+                          title="No users found"
+                          description="Try adjusting your filters or search criteria"
+                          colSpan={1}
+                        />
+                      )}
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Pagination */}
