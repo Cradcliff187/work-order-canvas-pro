@@ -427,6 +427,22 @@ export default function AdminWorkOrders() {
             </p>
           )}
         </div>
+        
+        <div className="flex items-center gap-3">
+          <Button
+            variant={bulkMode ? "default" : "outline"}
+            onClick={() => setBulkMode(!bulkMode)}
+            className="h-9"
+          >
+            <CheckSquare className="h-4 w-4 mr-2" />
+            {bulkMode ? "Exit Bulk Mode" : "Select Multiple"}
+          </Button>
+          
+          <Button onClick={() => setShowCreateModal(true)} className="h-9">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Work Order
+          </Button>
+        </div>
       </header>
 
 
