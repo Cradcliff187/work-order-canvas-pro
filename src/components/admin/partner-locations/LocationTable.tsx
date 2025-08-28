@@ -7,12 +7,14 @@ import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-drop
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { CompactLocationFilters } from './CompactLocationFilters';
+import { ResponsiveTableContainer } from '@/components/ui/responsive-table-container';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Building2, Phone, Mail, Edit, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 import { type ViewMode } from '@/hooks/useViewMode';
 import { type RowSelectionState } from '@tanstack/react-table';
 
@@ -83,6 +85,41 @@ export function LocationTable({
   onExport
 }: LocationTableProps) {
   
+  // Helper functions
+  const formatAddress = (location: PartnerLocation): string => {
+    return [location.street_address, location.city, location.state, location.zip_code]
+      .filter(Boolean)
+      .join(', ') || 'No address';
+  };
+
+  const handleLocationClick = (location: PartnerLocation) => {
+    // Future: Navigate to location detail page
+    console.log('Location clicked:', location);
+  };
+
+  const toggleRowSelection = (locationId: string) => {
+    if (!setRowSelection) return;
+    setRowSelection(prev => ({
+      ...prev,
+      [locationId]: !prev[locationId]
+    }));
+  };
+
+  const allSelected = data.length > 0 && data.every(item => rowSelection[item.id]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (!setRowSelection) return;
+    if (checked) {
+      const newSelection: RowSelectionState = {};
+      data.forEach(item => {
+        newSelection[item.id] = true;
+      });
+      setRowSelection(newSelection);
+    } else {
+      setRowSelection({});
+    }
+  };
+  
   // Generate location options for filters
   const locationOptions = useMemo(() => {
     const options = [{ value: 'all', label: 'All Locations' }];
@@ -122,127 +159,106 @@ export function LocationTable({
       );
     }
 
-    if (viewMode === 'card') {
+    if (viewMode === 'card' || isMobile) {
       return (
-        <div className="grid gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className={cn(
+          "grid gap-4 p-4",
+          !isMobile && "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
+        )}>
           {data.map((location) => {
             const org = organizationMap[location.organization_id];
-            const address = [location.street_address, location.city, location.state, location.zip_code]
-              .filter(Boolean)
-              .join(', ') || 'No address';
             
             return (
-              <div key={location.id} className="relative">
-                {bulkMode && (
-                  <div className="absolute top-2 left-2 z-10">
-                    <Checkbox
-                      checked={!!rowSelection[location.id]}
-                      onCheckedChange={(checked) => {
-                        if (!setRowSelection) return;
-                        setRowSelection(prev => ({
-                          ...prev,
-                          [location.id]: !!checked
-                        }));
-                      }}
-                    />
-                  </div>
-                )}
-                <MobileTableCard
-                  title={location.location_name}
-                  subtitle={`#${location.location_number} • ${org?.name || 'Unknown Org'}`}
-                  badge={
-                    <Badge variant={location.is_active ? 'success' : 'secondary'}>
-                      {location.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
+              <MobileTableCard
+                key={location.id}
+                title={location.location_name}
+                subtitle={`#${location.location_number} - ${org?.name || 'Unknown Org'}`}
+                badge={
+                  <Badge variant={location.is_active ? 'default' : 'secondary'}>
+                    {location.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                }
+                metadata={[
+                  { 
+                    label: 'Address', 
+                    value: formatAddress(location)
+                  },
+                  { 
+                    label: 'Contact', 
+                    value: location.contact_name || 'No contact' 
                   }
-                  actions={[
-                    {
-                      label: 'Edit',
-                      icon: Edit,
-                      onClick: () => onEdit(location)
-                    },
-                    {
-                      label: 'Delete',
-                      icon: Trash2,
-                      onClick: () => onDelete(location)
-                    }
-                  ]}
-                >
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <span className="text-muted-foreground">{address}</span>
-                    </div>
-                    {location.contact_name && (
-                      <div className="flex items-start gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium">{location.contact_name}</div>
-                          {location.contact_email && (
-                            <div className="text-xs text-muted-foreground">{location.contact_email}</div>
-                          )}
-                          {location.contact_phone && (
-                            <div className="text-xs text-muted-foreground">{location.contact_phone}</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </MobileTableCard>
-              </div>
+                ]}
+                actions={[
+                  { 
+                    label: 'Edit', 
+                    icon: Edit,
+                    onClick: () => onEdit(location) 
+                  },
+                  { 
+                    label: 'Delete', 
+                    icon: Trash2,
+                    onClick: () => onDelete(location), 
+                    variant: 'destructive' 
+                  }
+                ]}
+                selected={bulkMode && !!rowSelection[location.id]}
+                onSelect={bulkMode ? () => toggleRowSelection(location.id) : undefined}
+                onClick={() => !bulkMode && handleLocationClick(location)}
+              />
             );
           })}
         </div>
       );
     }
 
-    // Table view
+    // Table view for desktop
     return (
-      <div className="overflow-x-auto">
-        <Table>
+      <ResponsiveTableContainer>
+        <Table className="admin-table">
           <TableHeader>
             <TableRow>
               {bulkMode && (
-                <TableHead className="w-12">
+                <TableHead className="w-[40px]">
                   <Checkbox
-                    checked={data.length > 0 && data.every(item => rowSelection[item.id])}
-                    onCheckedChange={(checked) => {
-                      if (!setRowSelection) return;
-                      if (checked) {
-                        const newSelection: RowSelectionState = {};
-                        data.forEach(item => {
-                          newSelection[item.id] = true;
-                        });
-                        setRowSelection(newSelection);
-                      } else {
-                        setRowSelection({});
-                      }
-                    }}
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all locations"
                   />
                 </TableHead>
               )}
-              {columnOptions.filter(col => col.visible).map(col => (
-                <TableHead key={col.id}>{col.label}</TableHead>
-              ))}
+              {columnOptions.find(col => col.id === 'organization')?.visible && <TableHead>Organization</TableHead>}
+              {columnOptions.find(col => col.id === 'location_number')?.visible && <TableHead>Location #</TableHead>}
+              {columnOptions.find(col => col.id === 'location_name')?.visible && <TableHead>Location Name</TableHead>}
+              {columnOptions.find(col => col.id === 'address')?.visible && <TableHead>Address</TableHead>}
+              {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
+              {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((location) => {
               const org = organizationMap[location.organization_id];
               return (
-                <TableRow key={location.id}>
+                <TableRow
+                  key={location.id}
+                  className={cn(
+                    "cursor-pointer hover:bg-muted/50",
+                    rowSelection[location.id] && "bg-muted"
+                  )}
+                  onClick={() => !bulkMode && handleLocationClick(location)}
+                >
                   {bulkMode && (
                     <TableCell>
                       <Checkbox
                         checked={!!rowSelection[location.id]}
-                        onCheckedChange={(checked) => {
-                          if (!setRowSelection) return;
-                          setRowSelection(prev => ({
-                            ...prev,
-                            [location.id]: !!checked
-                          }));
-                        }}
+                        onCheckedChange={() => toggleRowSelection(location.id)}
+                        onClick={(e) => e.stopPropagation()}
                       />
+                    </TableCell>
+                  )}
+                  {columnOptions.find(col => col.id === 'organization')?.visible && (
+                    <TableCell>
+                      {org?.name || 'Unknown'}
                     </TableCell>
                   )}
                   {columnOptions.find(col => col.id === 'location_number')?.visible && (
@@ -255,67 +271,58 @@ export function LocationTable({
                       {location.location_name}
                     </TableCell>
                   )}
-                  {columnOptions.find(col => col.id === 'organization')?.visible && (
-                    <TableCell>
-                      {org?.name || 'Unknown'}
-                    </TableCell>
-                  )}
                   {columnOptions.find(col => col.id === 'address')?.visible && (
                     <TableCell>
-                      {[location.street_address, location.city, location.state, location.zip_code]
-                        .filter(Boolean)
-                        .join(', ') || 'No address'}
-                    </TableCell>
-                  )}
-                  {columnOptions.find(col => col.id === 'contact')?.visible && (
-                    <TableCell>
-                      {location.contact_name && (
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium">{location.contact_name}</div>
-                          {location.contact_email && (
-                            <div className="text-xs text-muted-foreground">{location.contact_email}</div>
-                          )}
-                          {location.contact_phone && (
-                            <div className="text-xs text-muted-foreground">{location.contact_phone}</div>
-                          )}
-                        </div>
-                      )}
+                      {formatAddress(location)}
                     </TableCell>
                   )}
                   {columnOptions.find(col => col.id === 'status')?.visible && (
                     <TableCell>
-                      <Badge variant={location.is_active ? 'success' : 'secondary'}>
+                      <Badge variant={location.is_active ? 'default' : 'secondary'}>
                         {location.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
                   )}
-                  {columnOptions.find(col => col.id === 'actions')?.visible && (
+                  {columnOptions.find(col => col.id === 'created_at')?.visible && (
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            ⋮
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEdit(location)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onDelete(location)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {new Date(location.created_at).toLocaleDateString()}
                     </TableCell>
                   )}
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          ⋮
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(location);
+                        }}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(location);
+                          }}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTableContainer>
     );
   };
 

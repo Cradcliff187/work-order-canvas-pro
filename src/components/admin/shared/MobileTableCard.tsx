@@ -1,7 +1,9 @@
 import { ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { MoreHorizontal } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +24,12 @@ interface MobileTableCardProps {
     icon: any;
     onClick: () => void;
     show?: boolean;
+    variant?: 'default' | 'destructive';
   }>;
   className?: string;
+  metadata?: Array<{ label: string; value: string }>;
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
 export function MobileTableCard({ 
@@ -35,7 +41,10 @@ export function MobileTableCard({
   data,
   badge,
   actions,
-  className
+  className,
+  metadata,
+  selected,
+  onSelect
 }: MobileTableCardProps) {
   // If data is provided, use the first two entries as title and subtitle
   const displayTitle = title || (data ? Object.values(data)[0] : '');
@@ -44,9 +53,12 @@ export function MobileTableCard({
 
   return (
     <Card 
-      className={`transition-shadow duration-200 border-border ${
-        onClick ? 'cursor-pointer hover:shadow-md hover:border-primary/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background' : ''
-      } ${className || ''}`}
+      className={cn(
+        "transition-shadow duration-200 border-border",
+        selected && "bg-muted ring-2 ring-primary",
+        onClick && "cursor-pointer hover:shadow-md hover:border-primary/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background",
+        className
+      )}
       onClick={(e) => {
         // Prevent click if user is dragging/swiping
         if (e.defaultPrevented || (e.target as Element).closest('[data-dragging="true"]')) {
@@ -67,6 +79,15 @@ export function MobileTableCard({
       <CardContent className="p-4">
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-3">
+            {onSelect && (
+              <div className="flex-shrink-0 pt-1">
+                <Checkbox
+                  checked={selected}
+                  onCheckedChange={onSelect}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-sm truncate">{displayTitle}</h3>
               <p className="text-sm text-muted-foreground truncate">{displaySubtitle}</p>
@@ -94,6 +115,7 @@ export function MobileTableCard({
                             e.stopPropagation();
                             action.onClick();
                           }}
+                          className={action.variant === 'destructive' ? 'text-destructive' : ''}
                         >
                           <Icon className="h-4 w-4 mr-2" />
                           {action.label}
@@ -106,7 +128,19 @@ export function MobileTableCard({
             </div>
           </div>
           
-          {/* Display additional data if provided */}
+          {/* Display metadata if provided */}
+          {metadata && metadata.length > 0 && (
+            <div className="grid grid-cols-1 gap-1 text-xs text-muted-foreground">
+              {metadata.map((item, index) => (
+                <div key={index} className="flex justify-between">
+                  <span>{item.label}:</span>
+                  <span className="font-medium">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Display additional data if provided (legacy support) */}
           {data && Object.keys(data).length > 2 && (
             <div className="grid grid-cols-1 gap-1 text-xs text-muted-foreground">
               {Object.entries(data).slice(2).map(([key, value]) => (
