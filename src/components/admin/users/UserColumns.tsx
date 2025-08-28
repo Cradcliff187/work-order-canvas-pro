@@ -102,15 +102,15 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
         if (!orgs || orgs.length === 0) {
           return <span className="text-muted-foreground">No organization</span>;
         }
-        return (
-          <div className="flex flex-col gap-1">
-            {orgs.map((org) => (
-              <Badge key={org.id} variant="outline" className="h-5 text-[10px] px-1.5">
-                {org.organization?.name}
-              </Badge>
-            ))}
-          </div>
-        );
+        
+        if (orgs.length === 1) {
+          return orgs[0].organization?.name || 'Unknown';
+        }
+        
+        // For multiple organizations, show primary + count
+        const primary = orgs[0];
+        const remaining = orgs.length - 1;
+        return `${primary.organization?.name || 'Unknown'}${remaining > 0 ? ` +${remaining} more` : ''}`;
       },
     },
     {
