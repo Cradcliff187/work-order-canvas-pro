@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare } from 'lucide-react';
+import { Plus, MapPin, Building2, CheckSquare, RotateCcw } from 'lucide-react';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -7,14 +7,8 @@ import { useViewMode } from '@/hooks/useViewMode';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { RowSelectionState } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Label } from '@/components/ui/label';
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import { AddLocationModal } from '@/components/admin/partner-locations/AddLocationModal';
 import { EditLocationModal } from '@/components/admin/partner-locations/EditLocationModal';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
@@ -29,8 +23,6 @@ export default function AdminPartnerLocations() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [deletingLocation, setDeletingLocation] = useState<any>(null);
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // New state for bulk operations and view mode
   const isMobile = useIsMobile();
@@ -117,14 +109,6 @@ export default function AdminPartnerLocations() {
     return options;
   }, [allLocations, organizationMap]);
 
-  // Calculate active filter count
-  const filterCount = useMemo(() => [
-    searchTerm,
-    selectedOrganization !== 'all' ? selectedOrganization : null,
-    statusFilter !== 'all' ? statusFilter : null,
-    selectedLocations.length > 0 ? selectedLocations : null
-  ].filter(Boolean).length, [searchTerm, selectedOrganization, statusFilter, selectedLocations]);
-
   // Filter locations based on search term, organization, status, and selected locations
   const filteredLocations = allLocations.filter(location => {
     const org = organizationMap[location.organization_id];
@@ -148,55 +132,6 @@ export default function AdminPartnerLocations() {
     return matchesSearch && matchesOrganization && matchesStatus && matchesSelectedLocations;
   });
 
-  // Sorting state and helpers
-  type SortKey = 'organization' | 'location_name' | 'location_number' | 'address' | 'status';
-  const [sortKey, setSortKey] = useState<SortKey>('organization');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-  };
-  const sortedLocations = useMemo(() => {
-    const rows = [...filteredLocations];
-    rows.sort((a, b) => {
-      let av: any = '';
-      let bv: any = '';
-      switch (sortKey) {
-        case 'organization':
-          av = organizationMap[a.organization_id]?.name || '';
-          bv = organizationMap[b.organization_id]?.name || '';
-          break;
-        case 'location_name':
-          av = a.location_name || '';
-          bv = b.location_name || '';
-          break;
-        case 'location_number':
-          av = a.location_number || '';
-          bv = b.location_number || '';
-          break;
-        case 'address':
-          av = [a.city, a.state, a.zip_code].filter(Boolean).join(', ');
-          bv = [b.city, b.state, b.zip_code].filter(Boolean).join(', ');
-          break;
-        case 'status':
-          av = a.is_active ? 1 : 0;
-          bv = b.is_active ? 1 : 0;
-          break;
-      }
-      if (typeof av === 'string' && typeof bv === 'string') {
-        av = av.toLowerCase();
-        bv = bv.toLowerCase();
-      }
-      if (av < bv) return sortDir === 'asc' ? -1 : 1;
-      if (av > bv) return sortDir === 'asc' ? 1 : -1;
-      return 0;
-    });
-    return rows;
-  }, [filteredLocations, sortKey, sortDir, organizationMap]);
-
   // Get statistics
   const stats = {
     total: allLocations.length,
@@ -208,12 +143,9 @@ export default function AdminPartnerLocations() {
     })).filter(item => item.count > 0)
   };
 
-  // Convert filters to LocationTable format
-  const locationFilters = {
-    search: searchTerm,
-    organization_id: selectedOrganization,
-    status: statusFilter as 'all' | 'active' | 'inactive',
-    location_ids: selectedLocations,
+  const handleRefresh = async () => {
+    await refetchLocations();
+    await refetchOrgs();
   };
 
   const handleFiltersChange = (newFilters: any) => {
@@ -234,10 +166,13 @@ export default function AdminPartnerLocations() {
     }
   };
 
-  const handleRefresh = async () => {
-    await refetchLocations();
-    await refetchOrgs();
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedOrganization('all');
+    setStatusFilter('all');
+    setSelectedLocations([]);
   };
+
   if (loadError) {
     return (
       <div className="p-6">
@@ -256,20 +191,23 @@ export default function AdminPartnerLocations() {
     );
   }
 
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-  };
-
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setSelectedOrganization('all');
-    setStatusFilter('all');
-    setSelectedLocations([]);
-  };
-
   return (
     <div className="space-y-6">
-      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      {/* Breadcrumb */}
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Partner Locations</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {/* Page Header */}
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">
             Partner Locations
@@ -280,7 +218,6 @@ export default function AdminPartnerLocations() {
         </div>
         
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Bulk select button */}
           <Button
             variant={bulkMode ? "default" : "outline"}
             onClick={() => setBulkMode(!bulkMode)}
@@ -291,7 +228,6 @@ export default function AdminPartnerLocations() {
             <span className="sm:hidden">Select</span>
           </Button>
           
-          {/* Add location button */}
           <Button 
             onClick={() => setIsAddModalOpen(true)} 
             className="flex-1 sm:flex-initial"
@@ -346,12 +282,22 @@ export default function AdminPartnerLocations() {
         </Card>
       </div>
 
-      {/* Location Table */}
+      {/* Main Content */}
       <LocationTable
-        data={sortedLocations}
+        data={filteredLocations}
         isLoading={isLoading}
-        filters={locationFilters}
-        onFiltersChange={handleFiltersChange}
+        filters={{
+          search: searchTerm,
+          organization_id: selectedOrganization,
+          status: statusFilter as 'all' | 'active' | 'inactive',
+          location_ids: selectedLocations
+        }}
+        onFiltersChange={(newFilters) => {
+          setSearchTerm(newFilters.search || '');
+          setSelectedOrganization(newFilters.organization_id || 'all');
+          setStatusFilter(newFilters.status || 'all');
+          setSelectedLocations(newFilters.location_ids || []);
+        }}
         onClearFilters={handleClearFilters}
         locationOptions={locationOptions}
         organizationMap={organizationMap}
@@ -366,6 +312,7 @@ export default function AdminPartnerLocations() {
         onRefresh={handleRefresh}
         onAddLocation={() => setIsAddModalOpen(true)}
       />
+      
       {/* Modals */}
       <AddLocationModal
         open={isAddModalOpen}
