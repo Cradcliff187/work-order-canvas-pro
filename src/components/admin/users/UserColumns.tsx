@@ -133,12 +133,12 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       },
     },
     {
-      accessorKey: "last_login",
+      accessorKey: "last_sign_in_at",
       header: ({ column }) => <SortableHeader column={column} label="Last Login" />,
       cell: ({ row }) => {
-        const value = row.getValue("last_login") as string | null;
+        const value = row.getValue("last_sign_in_at") as string | null;
         return value ? new Date(value).toLocaleString() : (
-          <span className="text-muted-foreground">—</span>
+          <span className="text-muted-foreground">Never</span>
         );
       },
     },
