@@ -37,7 +37,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { ChevronLeft, ChevronRight, FileText, DollarSign, Plus, RotateCcw, CheckCircle, XCircle, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, DollarSign, Plus, RotateCcw, CheckCircle, XCircle, Filter, CheckSquare } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
@@ -128,6 +128,7 @@ export default function AdminInvoices() {
   
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
@@ -389,16 +390,42 @@ const table = useReactTable({
       </Breadcrumb>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">Subcontractor Invoices</h1>
-          </div>
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Subcontractor Invoices
+          </h1>
           <p className="text-muted-foreground">
-            Manage and review subcontractor invoices
+            {data?.totalCount || 0} total invoices
           </p>
+          {bulkMode && (
+            <p className="text-sm text-primary mt-1">
+              {selectedCount} invoice{selectedCount === 1 ? '' : 's'} selected
+            </p>
+          )}
         </div>
-      </div>
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant={bulkMode ? "default" : "outline"}
+            onClick={() => setBulkMode(!bulkMode)}
+            className="flex-1 sm:flex-initial"
+          >
+            <CheckSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{bulkMode ? "Exit Bulk Mode" : "Select Multiple"}</span>
+            <span className="sm:hidden">{bulkMode ? "Exit" : "Select"}</span>
+          </Button>
+          
+          <Button 
+            onClick={() => navigate('/admin/submit-invoice')} 
+            className="flex-1 sm:flex-initial"
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Create Invoice</span>
+            <span className="sm:hidden">New</span>
+          </Button>
+        </div>
+      </header>
 
       {/* Top Control Bar */}
       <div className="space-y-4">
@@ -432,13 +459,11 @@ const table = useReactTable({
           {/* Action Buttons Group */}
           <div className="flex gap-2 flex-wrap lg:flex-nowrap">
             <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || (data?.data?.length ?? 0) === 0} />
-            <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0} aria-label="Open bulk actions">
-              Bulk Actions{selectedCount > 0 ? ` (${selectedCount})` : ''}
-            </Button>
-            <Button onClick={() => navigate('/admin/submit-invoice')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Invoice
-            </Button>
+            {bulkMode && (
+              <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0} aria-label="Open bulk actions">
+                Bulk Actions{selectedCount > 0 ? ` (${selectedCount})` : ''}
+              </Button>
+            )}
           </div>
         </div>
       </div>
