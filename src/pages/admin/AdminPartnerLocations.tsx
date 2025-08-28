@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare } from 'lucide-react';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useViewMode } from '@/hooks/useViewMode';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { RowSelectionState } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
@@ -35,6 +39,29 @@ export default function AdminPartnerLocations() {
   const [deletingLocation, setDeletingLocation] = useState<any>(null);
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  // New state for bulk operations and view mode
+  const isMobile = useIsMobile();
+  const [bulkMode, setBulkMode] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'admin-partner-locations',
+    config: {
+      mobile: ['card'],
+      desktop: ['table', 'card']
+    },
+    defaultMode: 'table'
+  });
+
+  // Pull-to-refresh hook
+  usePullToRefresh({
+    queryKey: 'partner-locations',
+    onRefresh: async () => {
+      await refetchLocations();
+      await refetchOrgs();
+    }
+  });
 
   // Persist filters
   useEffect(() => {
@@ -290,15 +317,39 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-2">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="min-w-0">
-          <h1 className="text-3xl font-bold tracking-tight">Partner Locations</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Partner Locations
+          </h1>
           <p className="text-muted-foreground">
-            Manage all partner locations across organizations
+            {filteredLocations.length} of {allLocations.length} locations
           </p>
         </div>
-      </div>
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Bulk select button */}
+          <Button
+            variant={bulkMode ? "default" : "outline"}
+            onClick={() => setBulkMode(!bulkMode)}
+            className="flex-1 sm:flex-initial"
+          >
+            <CheckSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Select Multiple</span>
+            <span className="sm:hidden">Select</span>
+          </Button>
+          
+          {/* Add location button */}
+          <Button 
+            onClick={() => setIsAddModalOpen(true)} 
+            className="flex-1 sm:flex-initial"
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Add Location</span>
+            <span className="sm:hidden">Add</span>
+          </Button>
+        </div>
+      </header>
 
       {/* Top Control Bar */}
       {/* Desktop Layout */}
@@ -325,10 +376,6 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             visibleCount={getVisibleColumnCount()}
           />
           <ExportDropdown onExport={handleExport} />
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Location
-          </Button>
         </div>
       </div>
 
@@ -346,10 +393,6 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
           <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
             <Filter className="h-4 w-4 mr-2" />
             Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Location
           </Button>
         </div>
       </div>
