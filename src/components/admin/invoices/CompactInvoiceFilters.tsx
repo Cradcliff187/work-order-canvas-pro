@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
@@ -27,45 +27,41 @@ export function CompactInvoiceFilters({
 }) {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
-  const [localValue, setLocalValue] = useState(value);
   
-  // Sync local value with external value
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-  
-  
-  // Calculate active filter count
+  // Calculate active filter count - match WorkOrders pattern exactly
   const activeCount = useMemo(() => {
-    let count = 0;
-    if (localValue.overdue) count++;
-    if (localValue.partner_organization_id) count++;
-    if (localValue.location_filter?.length) count += localValue.location_filter.length;
-    if (localValue.subcontractor_organization_id) count++;
-    if (localValue.invoice_status?.length) count += localValue.invoice_status.length;
-    if (localValue.partner_billing_status?.length) count += localValue.partner_billing_status.length;
-    return count;
-  }, [localValue]);
+    return [
+      value.overdue,
+      value.partner_organization_id,
+      value.location_filter?.length,
+      value.subcontractor_organization_id,
+      value.invoice_status?.length,
+      value.partner_billing_status?.length
+    ].filter(Boolean).length;
+  }, [value]);
 
-  // Handle filter changes
+  // Handle filter changes - immediate updates like WorkOrders
   const handleFilterChange = (key: keyof InvoiceFiltersValue, filterValue: any) => {
-    setLocalValue(prev => ({ ...prev, [key]: filterValue }));
+    onChange({
+      ...value,
+      [key]: filterValue
+    });
   };
 
   const handleApplyFilters = () => {
-    onChange(localValue);
     setIsOpen(false);
   };
 
   const handleClearFilters = () => {
-    onClear();
-    setLocalValue({});
+    if (onClear) {
+      onClear();
+    }
     setIsOpen(false);
   };
 
   // Filter content component
   const FilterContent = () => {
-    const { data: partnerLocations } = usePartnerLocations(localValue.partner_organization_id);
+    const { data: partnerLocations } = usePartnerLocations(value.partner_organization_id);
     
     const locationOptions = useMemo(() => {
       if (!partnerLocations) return [];
@@ -77,14 +73,14 @@ export function CompactInvoiceFilters({
 
     return (
       <>
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[500px] overflow-y-auto">
           {/* Overdue Quick Filter */}
           <div>
             <label className="text-sm font-medium mb-2 block">Quick Filters</label>
             <Button
-              variant={localValue.overdue ? "default" : "outline"}
+              variant={value.overdue ? "default" : "outline"}
               size="sm"
-              onClick={() => handleFilterChange('overdue', !localValue.overdue)}
+              onClick={() => handleFilterChange('overdue', !value.overdue)}
               className="w-full h-10 justify-start"
             >
               <AlertTriangle className="mr-2 h-4 w-4" />
@@ -102,7 +98,7 @@ export function CompactInvoiceFilters({
                 { value: 'approved', label: 'Approved' },
                 { value: 'rejected', label: 'Rejected' }
               ]}
-              selectedValues={localValue.invoice_status || []}
+              selectedValues={value.invoice_status || []}
               onSelectionChange={(filterValue) => handleFilterChange('invoice_status', filterValue)}
               placeholder="Filter by status..."
               className="w-full h-10"
@@ -114,7 +110,7 @@ export function CompactInvoiceFilters({
             <label className="text-sm font-medium mb-2 block">Payment Status</label>
             <MultiSelectFilter
               options={paymentStatusOptions}
-              selectedValues={localValue.partner_billing_status || []}
+              selectedValues={value.partner_billing_status || []}
               onSelectionChange={(filterValue) => handleFilterChange('partner_billing_status', filterValue)}
               placeholder="Filter by payment..."
               className="w-full h-10"
@@ -125,7 +121,7 @@ export function CompactInvoiceFilters({
           <div>
             <label className="text-sm font-medium mb-2 block">Subcontractor</label>
             <OrganizationSelector
-              value={localValue.subcontractor_organization_id}
+              value={value.subcontractor_organization_id}
               onChange={(orgId) => handleFilterChange('subcontractor_organization_id', orgId)}
               organizationType="subcontractor"
               placeholder="Select subcontractor..."
@@ -137,11 +133,11 @@ export function CompactInvoiceFilters({
           <div>
             <label className="text-sm font-medium mb-2 block">Partner Organization</label>
             <OrganizationSelector
-              value={localValue.partner_organization_id}
+              value={value.partner_organization_id}
               onChange={(orgId) => {
                 handleFilterChange('partner_organization_id', orgId);
                 // Clear locations when partner changes
-                if (orgId !== localValue.partner_organization_id) {
+                if (orgId !== value.partner_organization_id) {
                   handleFilterChange('location_filter', []);
                 }
               }}
@@ -152,12 +148,12 @@ export function CompactInvoiceFilters({
           </div>
 
           {/* Locations (only if partner selected) */}
-          {localValue.partner_organization_id && (
+          {value.partner_organization_id && (
             <div>
               <label className="text-sm font-medium mb-2 block">Locations</label>
               <MultiSelectFilter
                 options={locationOptions}
-                selectedValues={localValue.location_filter || []}
+                selectedValues={value.location_filter || []}
                 onSelectionChange={(filterValue) => handleFilterChange('location_filter', filterValue)}
                 placeholder="Select locations..."
                 className="w-full h-10"
@@ -181,7 +177,7 @@ export function CompactInvoiceFilters({
 
   // Mobile full-screen overlay component
   const MobileFilterOverlay = () => {
-    const { data: partnerLocations } = usePartnerLocations(localValue.partner_organization_id);
+    const { data: partnerLocations } = usePartnerLocations(value.partner_organization_id);
     
     const locationOptions = useMemo(() => {
       if (!partnerLocations) return [];
@@ -207,112 +203,103 @@ export function CompactInvoiceFilters({
           </Button>
         </div>
         
-        {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto" style={{ height: 'calc(100vh - 136px)' }}>
-          <div className="p-4 space-y-4">
-            {/* Overdue Quick Filter */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Quick Filters</label>
-              <Button
-                variant={localValue.overdue ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleFilterChange('overdue', !localValue.overdue)}
-                className="w-full h-10 justify-start"
-              >
-                <AlertTriangle className="mr-2 h-4 w-4" />
-                Overdue Only
-              </Button>
-            </div>
-
-            {/* Invoice Status */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Invoice Status</label>
-              <MultiSelectFilter
-                options={[
-                  { value: 'submitted', label: 'Submitted' },
-                  { value: 'reviewed', label: 'Under Review' },
-                  { value: 'approved', label: 'Approved' },
-                  { value: 'rejected', label: 'Rejected' }
-                ]}
-                selectedValues={localValue.invoice_status || []}
-                onSelectionChange={(filterValue) => handleFilterChange('invoice_status', filterValue)}
-                placeholder="Filter by status..."
-                className="w-full h-10"
-              />
-            </div>
-
-            {/* Payment Status */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Payment Status</label>
-              <MultiSelectFilter
-                options={paymentStatusOptions}
-                selectedValues={localValue.partner_billing_status || []}
-                onSelectionChange={(filterValue) => handleFilterChange('partner_billing_status', filterValue)}
-                placeholder="Filter by payment..."
-                className="w-full h-10"
-              />
-            </div>
-
-            {/* Subcontractor Organization */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Subcontractor</label>
-              <OrganizationSelector
-                value={localValue.subcontractor_organization_id}
-                onChange={(orgId) => handleFilterChange('subcontractor_organization_id', orgId)}
-                organizationType="subcontractor"
-                placeholder="Select subcontractor..."
-                className="h-10"
-              />
-            </div>
-
-            {/* Partner Organization */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Partner Organization</label>
-              <OrganizationSelector
-                value={localValue.partner_organization_id}
-                onChange={(orgId) => {
-                  handleFilterChange('partner_organization_id', orgId);
-                  // Clear locations when partner changes
-                  if (orgId !== localValue.partner_organization_id) {
-                    handleFilterChange('location_filter', []);
-                  }
-                }}
-                organizationType="partner"
-                placeholder="Select partner..."
-                className="h-10"
-              />
-            </div>
-
-            {/* Locations (only if partner selected) */}
-            {localValue.partner_organization_id && (
-              <div>
-                <label className="text-sm font-medium mb-2 block">Locations</label>
-                <MultiSelectFilter
-                  options={locationOptions}
-                  selectedValues={localValue.location_filter || []}
-                  onSelectionChange={(filterValue) => handleFilterChange('location_filter', filterValue)}
-                  placeholder="Select locations..."
-                  className="w-full h-10"
-                />
-              </div>
-            )}
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Overdue Quick Filter */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Quick Filters</label>
+            <Button
+              variant={value.overdue ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleFilterChange('overdue', !value.overdue)}
+              className="w-full h-10 justify-start"
+            >
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              Overdue Only
+            </Button>
           </div>
+
+          {/* Invoice Status */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Invoice Status</label>
+            <MultiSelectFilter
+              options={[
+                { value: 'submitted', label: 'Submitted' },
+                { value: 'reviewed', label: 'Under Review' },
+                { value: 'approved', label: 'Approved' },
+                { value: 'rejected', label: 'Rejected' }
+              ]}
+              selectedValues={value.invoice_status || []}
+              onSelectionChange={(filterValue) => handleFilterChange('invoice_status', filterValue)}
+              placeholder="Filter by status..."
+              className="w-full h-10"
+            />
+          </div>
+
+          {/* Payment Status */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Payment Status</label>
+            <MultiSelectFilter
+              options={paymentStatusOptions}
+              selectedValues={value.partner_billing_status || []}
+              onSelectionChange={(filterValue) => handleFilterChange('partner_billing_status', filterValue)}
+              placeholder="Filter by payment..."
+              className="w-full h-10"
+            />
+          </div>
+
+          {/* Subcontractor Organization */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Subcontractor</label>
+            <OrganizationSelector
+              value={value.subcontractor_organization_id}
+              onChange={(orgId) => handleFilterChange('subcontractor_organization_id', orgId)}
+              organizationType="subcontractor"
+              placeholder="Select subcontractor..."
+              className="h-10"
+            />
+          </div>
+
+          {/* Partner Organization */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Partner Organization</label>
+            <OrganizationSelector
+              value={value.partner_organization_id}
+              onChange={(orgId) => {
+                handleFilterChange('partner_organization_id', orgId);
+                // Clear locations when partner changes
+                if (orgId !== value.partner_organization_id) {
+                  handleFilterChange('location_filter', []);
+                }
+              }}
+              organizationType="partner"
+              placeholder="Select partner..."
+              className="h-10"
+            />
+          </div>
+
+          {/* Locations (only if partner selected) */}
+          {value.partner_organization_id && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">Locations</label>
+              <MultiSelectFilter
+                options={locationOptions}
+                selectedValues={value.location_filter || []}
+                onSelectionChange={(filterValue) => handleFilterChange('location_filter', filterValue)}
+                placeholder="Select locations..."
+                className="w-full h-10"
+              />
+            </div>
+          )}
         </div>
         
-        {/* Sticky action buttons for mobile */}
+        {/* Bottom action buttons */}
         <div className="p-4 border-t bg-background">
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={handleClearFilters}
-              className="flex-1"
-            >
+            <Button variant="outline" onClick={handleClearFilters} className="flex-1">
               Clear
             </Button>
-            <Button 
-              onClick={handleApplyFilters}
-              className="flex-1"
-            >
+            <Button onClick={handleApplyFilters} className="flex-1">
               Apply
             </Button>
           </div>
@@ -325,11 +312,10 @@ export function CompactInvoiceFilters({
     <>
       {isMobile ? (
         <>
-          {/* Mobile trigger button */}
           <Button
             variant="outline"
             onClick={() => setIsOpen(!isOpen)}
-            className="relative flex-1"
+            className="relative"
           >
             <Filter className="mr-2 h-4 w-4" />
             Filters
