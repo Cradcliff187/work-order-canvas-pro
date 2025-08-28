@@ -166,7 +166,7 @@ export function CompactInvoiceFilters({
           )}
         </div>
         
-        {/* Action buttons - exactly like Work Orders */}
+        {/* Action buttons - desktop only */}
         <div className="flex justify-between pt-4 border-t">
           <Button variant="outline" onClick={handleClearFilters}>
             Clear
@@ -181,6 +181,16 @@ export function CompactInvoiceFilters({
 
   // Mobile full-screen overlay component
   const MobileFilterOverlay = () => {
+    const { data: partnerLocations } = usePartnerLocations(localValue.partner_organization_id);
+    
+    const locationOptions = useMemo(() => {
+      if (!partnerLocations) return [];
+      return partnerLocations.map(location => ({
+        value: location.location_name,
+        label: `${location.location_name} (${location.location_number})`
+      }));
+    }, [partnerLocations]);
+
     if (!isOpen) return null;
 
     return (
@@ -197,19 +207,115 @@ export function CompactInvoiceFilters({
           </Button>
         </div>
         
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <FilterContent />
+        {/* Scrollable content area */}
+        <div className="flex-1 overflow-y-auto" style={{ height: 'calc(100vh - 136px)' }}>
+          <div className="p-4 space-y-4">
+            {/* Overdue Quick Filter */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Quick Filters</label>
+              <Button
+                variant={localValue.overdue ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleFilterChange('overdue', !localValue.overdue)}
+                className="w-full h-10 justify-start"
+              >
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Overdue Only
+              </Button>
+            </div>
+
+            {/* Invoice Status */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Invoice Status</label>
+              <MultiSelectFilter
+                options={[
+                  { value: 'submitted', label: 'Submitted' },
+                  { value: 'reviewed', label: 'Under Review' },
+                  { value: 'approved', label: 'Approved' },
+                  { value: 'rejected', label: 'Rejected' }
+                ]}
+                selectedValues={localValue.invoice_status || []}
+                onSelectionChange={(filterValue) => handleFilterChange('invoice_status', filterValue)}
+                placeholder="Filter by status..."
+                className="w-full h-10"
+              />
+            </div>
+
+            {/* Payment Status */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Payment Status</label>
+              <MultiSelectFilter
+                options={paymentStatusOptions}
+                selectedValues={localValue.partner_billing_status || []}
+                onSelectionChange={(filterValue) => handleFilterChange('partner_billing_status', filterValue)}
+                placeholder="Filter by payment..."
+                className="w-full h-10"
+              />
+            </div>
+
+            {/* Subcontractor Organization */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Subcontractor</label>
+              <OrganizationSelector
+                value={localValue.subcontractor_organization_id}
+                onChange={(orgId) => handleFilterChange('subcontractor_organization_id', orgId)}
+                organizationType="subcontractor"
+                placeholder="Select subcontractor..."
+                className="h-10"
+              />
+            </div>
+
+            {/* Partner Organization */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Partner Organization</label>
+              <OrganizationSelector
+                value={localValue.partner_organization_id}
+                onChange={(orgId) => {
+                  handleFilterChange('partner_organization_id', orgId);
+                  // Clear locations when partner changes
+                  if (orgId !== localValue.partner_organization_id) {
+                    handleFilterChange('location_filter', []);
+                  }
+                }}
+                organizationType="partner"
+                placeholder="Select partner..."
+                className="h-10"
+              />
+            </div>
+
+            {/* Locations (only if partner selected) */}
+            {localValue.partner_organization_id && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">Locations</label>
+                <MultiSelectFilter
+                  options={locationOptions}
+                  selectedValues={localValue.location_filter || []}
+                  onSelectionChange={(filterValue) => handleFilterChange('location_filter', filterValue)}
+                  placeholder="Select locations..."
+                  className="w-full h-10"
+                />
+              </div>
+            )}
+          </div>
         </div>
         
-        {/* Fixed bottom action buttons */}
-        <div className="flex justify-between p-4 border-t bg-background">
-          <Button variant="outline" onClick={handleClearFilters}>
-            Clear
-          </Button>
-          <Button onClick={handleApplyFilters}>
-            Apply
-          </Button>
+        {/* Sticky action buttons for mobile */}
+        <div className="p-4 border-t bg-background">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleClearFilters}
+              className="flex-1"
+            >
+              Clear
+            </Button>
+            <Button 
+              onClick={handleApplyFilters}
+              className="flex-1"
+            >
+              Apply
+            </Button>
+          </div>
         </div>
       </div>
     );
