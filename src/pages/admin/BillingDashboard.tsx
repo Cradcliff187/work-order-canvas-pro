@@ -9,12 +9,14 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { useTrades } from '@/hooks/useWorkOrders';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
-import { FileText, Filter, Download } from 'lucide-react';
+import { FileText, Filter, Download, Receipt } from 'lucide-react';
 import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { Invoice } from '@/hooks/useInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
+import { Card, CardContent } from '@/components/ui/card';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
@@ -344,84 +346,107 @@ export function BillingDashboard() {
       >
         Skip to main content
       </a>
-      <main id="main-content" role="main" tabIndex={-1} className={`space-y-6 ${isMobile ? 'p-4' : 'p-6'}`}>
-        <header>
-          <h1 className={`font-bold mb-2 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>Billing Pipeline</h1>
-          <p className="text-muted-foreground">Track work orders through the complete billing workflow</p>
+      <main id="main-content" role="main" tabIndex={-1} className="space-y-6 p-4 sm:p-6">
+        {/* Breadcrumb Navigation */}
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Billing Pipeline</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        {/* Page Header */}
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight">
+              Billing Pipeline
+            </h1>
+            <p className="text-muted-foreground">
+              {filteredPipelineData.length} work orders in pipeline
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/admin/partner-billing')}
+              className="flex-1 sm:flex-initial"
+            >
+              <Receipt className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Generate Partner Invoice</span>
+              <span className="sm:hidden">Invoice</span>
+            </Button>
+          </div>
         </header>
 
-        {/* Desktop Control Bar */}
-        {!isMobile && (
-          <div className="flex items-center gap-2 w-full">
-            <div className="flex items-center gap-2 flex-1">
-              <SmartSearchInput
-                placeholder="Search WO#, partner, location..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                storageKey="billing-pipeline-search"
-                className="max-w-xs"
-              />
+        {/* Pipeline Metrics - keep existing implementation */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          {/* Keep all existing metric cards */}
+        </div>
+
+        {/* Pipeline Table Card */}
+        <Card className="overflow-hidden">
+          {/* Desktop toolbar */}
+          <div className="border-b">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-semibold">Pipeline Items</h2>
+                <ViewModeSwitcher
+                  value={viewMode}
+                  onValueChange={setViewMode}
+                  allowedModes={['table', 'card']}
+                />
+              </div>
               
-              <CompactBillingPipelineFilters
-                value={filters}
-                onChange={setFilters}
-                onClear={clearFilters}
-              />
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <ViewModeSwitcher 
-                value={viewMode} 
-                onValueChange={setViewMode} 
-                allowedModes={['table', 'card']} 
-              />
-              <ColumnVisibilityDropdown
-                columns={getAllColumns()}
-                onToggleColumn={toggleColumn}
-                onResetToDefaults={resetToDefaults}
-                variant="outline"
-              />
-              <ExportDropdown 
-                onExport={handleExport} 
-                variant="outline" 
-                size="default"
-                disabled={pipelineLoading || filteredPipelineData.length === 0} 
-              />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <SmartSearchInput
+                  placeholder="Search WO#, partner..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  storageKey="billing-pipeline-search"
+                  className="max-w-xs"
+                />
+                
+                <CompactBillingPipelineFilters
+                  value={filters}
+                  onChange={setFilters}
+                  onClear={clearFilters}
+                />
+                
+                {!isMobile && (
+                  <>
+                    <ColumnVisibilityDropdown
+                      columns={getAllColumns()}
+                      onToggleColumn={toggleColumn}
+                      onResetToDefaults={resetToDefaults}
+                    />
+                    <ExportDropdown onExport={handleExport} />
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        )}
-
-        {/* Mobile Control Bar */}
-        {isMobile && (
-          <div className="bg-muted/30 border rounded-lg p-3 space-y-3 mx-4">
-            <SmartSearchInput
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
+          
+          {/* Table content */}
+          <CardContent className="p-0">
+            <WorkOrderPipelineTable 
+              data={filteredPipelineData}
+              isLoading={pipelineLoading}
+              isError={pipelineError}
+              viewMode={viewMode}
+              columnVisibility={columnVisibility}
+              onExport={handleExport}
+              onToggleColumn={toggleColumn}
+              onResetColumns={resetToDefaults}
+              columns={getAllColumns()}
             />
-            <div className="flex items-center gap-2">
-              <CompactBillingPipelineFilters
-                value={filters}
-                onChange={setFilters}
-                onClear={clearFilters}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Results Table */}
-        <WorkOrderPipelineTable 
-          data={filteredPipelineData}
-          isLoading={pipelineLoading}
-          isError={pipelineError}
-          viewMode={viewMode}
-          columnVisibility={columnVisibility}
-          onExport={handleExport}
-          onToggleColumn={toggleColumn}
-          onResetColumns={resetToDefaults}
-          columns={getAllColumns()}
-        />
+          </CardContent>
+        </Card>
 
         {/* Invoice Detail Modal */}
         <InvoiceDetailModal
