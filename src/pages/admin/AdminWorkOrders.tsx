@@ -416,11 +416,13 @@ export default function AdminWorkOrders() {
       <WorkOrderBreadcrumb />
       
       {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-3 mb-6" role="banner" aria-label="Work orders management header">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6" role="banner" aria-label="Work orders management header">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold">Work Orders Management</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Work Orders Management
+          </h1>
           <p className="text-muted-foreground">
-            {workOrdersData?.totalCount ? `${workOrdersData.totalCount} total work orders` : 'Manage all work orders across organizations'}
+            {workOrdersData?.totalCount || 0} total work orders
           </p>
           {bulkMode && (
             <p className="text-sm text-primary mt-1">
@@ -429,19 +431,24 @@ export default function AdminWorkOrders() {
           )}
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button
             variant={bulkMode ? "default" : "outline"}
             onClick={() => setBulkMode(!bulkMode)}
-            className="h-9"
+            className="flex-1 sm:flex-initial h-9"
           >
-            <CheckSquare className="h-4 w-4 mr-2" />
-            {bulkMode ? "Exit Bulk Mode" : "Select Multiple"}
+            <CheckSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{bulkMode ? "Exit Bulk Mode" : "Select Multiple"}</span>
+            <span className="sm:hidden">{bulkMode ? "Exit Bulk" : "Select"}</span>
           </Button>
           
-          <Button onClick={() => setShowCreateModal(true)} className="h-9">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Work Order
+          <Button 
+            onClick={() => setShowCreateModal(true)} 
+            className="flex-1 sm:flex-initial h-9"
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Create Work Order</span>
+            <span className="sm:hidden">Create</span>
           </Button>
         </div>
       </header>
