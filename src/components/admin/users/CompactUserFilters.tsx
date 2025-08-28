@@ -120,7 +120,6 @@ export function CompactUserFilters({
             onChange={(orgId) => handleFilterChange('organizationId', orgId)}
             placeholder="All organizations..."
             className="h-10"
-            allowAll={true}
           />
         </div>
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { UnifiedUserFilters, type UserFiltersValue } from '@/components/admin/users/UnifiedUserFilters';
 
 import {
@@ -17,12 +17,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
-import { Plus, RotateCcw, Users, Power, Edit, Filter } from 'lucide-react';
+import { Plus, RotateCcw, Users, Power, Edit, Filter, CheckSquare } from 'lucide-react';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useUsers, useUserMutations, User } from '@/hooks/useUsers';
 import { createUserColumns } from '@/components/admin/users/UserColumns';
-import { UserBreadcrumb } from '@/components/admin/users/UserBreadcrumb';
 import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
 import { EditUserModal } from '@/components/admin/users/EditUserModal';
 import { ViewUserModal } from '@/components/admin/users/ViewUserModal';
@@ -56,6 +56,7 @@ export default function AdminUsers() {
   
   // Search state for the top control bar
   const [searchTerm, setSearchTerm] = useState('');
+  const [bulkMode, setBulkMode] = useState(false);
   
   // View mode configuration
   const { viewMode, setViewMode, allowedModes } = useViewMode({
@@ -78,6 +79,13 @@ export default function AdminUsers() {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  // Reset row selection when bulk mode toggles
+  useEffect(() => {
+    if (!bulkMode) {
+      setRowSelection({});
+    }
+  }, [bulkMode]);
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<UserFiltersValue>(
     'admin-users-filters-v2',
     { search: '', roleFilter: [], organizationId: '', status: [], organizationType: [] }
@@ -266,21 +274,60 @@ export default function AdminUsers() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <UserBreadcrumb />
-      
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Users</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold">User Management</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Users
+          </h1>
           <p className="text-muted-foreground">
-            {users?.length
-              ? (isFiltered
-                  ? `${filteredUsers.length} matching of ${users.length}`
-                  : `${users.length} total users`)
-              : 'Manage system users and their access'}
+            {isFiltered 
+              ? `${filteredUsers.length} matching of ${users?.length || 0} users`
+              : `${users?.length || 0} total users`
+            }
           </p>
+          {bulkMode && (
+            <p className="text-sm text-primary mt-1">
+              Select users using checkboxes, then use the action bar below
+            </p>
+          )}
         </div>
-      </div>
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Bulk select button */}
+          <Button
+            variant={bulkMode ? "default" : "outline"}
+            onClick={() => setBulkMode(!bulkMode)}
+            className="flex-1 sm:flex-initial"
+          >
+            <CheckSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{bulkMode ? "Exit Bulk Mode" : "Select Multiple"}</span>
+            <span className="sm:hidden">{bulkMode ? "Exit Bulk" : "Select"}</span>
+          </Button>
+          
+          {/* Add user button */}
+          <Button 
+            onClick={() => setCreateUserModalOpen(true)} 
+            className="flex-1 sm:flex-initial"
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Create User</span>
+            <span className="sm:hidden">New</span>
+          </Button>
+        </div>
+      </header>
 
       {/* Desktop Layout */}
       <div className="hidden lg:flex gap-4 mb-6">
