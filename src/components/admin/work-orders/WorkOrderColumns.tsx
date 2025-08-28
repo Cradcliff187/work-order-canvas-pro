@@ -1,4 +1,6 @@
 import { ColumnDef } from '@tanstack/react-table';
+import { ResponsiveTableContainer } from '@/components/ui/responsive-table-container';
+import { responsiveColumns, createResponsiveColumn } from '@/components/ui/responsive-table-utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

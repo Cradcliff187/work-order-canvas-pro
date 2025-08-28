@@ -23,7 +23,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TableActionsDropdown, type TableAction } from '@/components/ui/table-actions-dropdown';
+import { ResponsiveTableContainer } from '@/components/ui/responsive-table-container';
+import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 
 import { getFileIcon, getFileExtension, formatFileSize } from '@/utils/fileUtils';
 import { format } from 'date-fns';
@@ -159,143 +160,73 @@ export function AttachmentTable({
         </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-md border overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table className="min-w-[600px]">
-            <TableHeader>
-              <TableRow>
-                {showBulkActions && (
-                <TableHead className="w-12 min-w-[48px]">
-                  <Checkbox
-                    checked={isAllSelected}
-                    onCheckedChange={handleSelectAll}
-                    aria-label="Select all attachments"
-                    className={cn(isIndeterminate && "data-[state=checked]:bg-primary/50")}
-                  />
-                </TableHead>
-                )}
-                <TableHead className="min-w-[200px]">Name</TableHead>
-                <TableHead className="hidden md:table-cell min-w-[120px]">Type</TableHead>
-                <TableHead className="hidden lg:table-cell min-w-[80px]">Size</TableHead>
-                <TableHead className="hidden lg:table-cell min-w-[120px]">Uploaded By</TableHead>
-                <TableHead className="hidden md:table-cell min-w-[100px]">Date</TableHead>
-                <TableHead className="w-12 min-w-[48px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+      <ResponsiveTableContainer className="mt-4">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={selectedItems.length === attachments.length && attachments.length > 0}
+                  onCheckedChange={handleSelectAll}
+                  aria-label="Select all attachments"
+                />
+              </TableHead>
+              <TableHead>File Name</TableHead>
+              <TableHead className="w-20">Type</TableHead>
+              <TableHead className="w-24">Size</TableHead>
+              <TableHead className="w-32 hidden sm:table-cell">Uploader</TableHead>
+              <TableHead className="w-32 hidden md:table-cell">Date</TableHead>
+              <TableHead className="w-20">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
             {attachments.map((attachment) => {
-              const IconComponent = getFileTypeIcon(attachment.file_name, attachment.file_type);
               const isSelected = selectedItems.includes(attachment.id);
-
-              const actions: TableAction[] = [
-                {
-                  label: 'View',
-                  icon: Eye,
-                  onClick: () => onView?.(attachment),
-                  show: true
-                },
-                {
-                  label: 'Download',
-                  icon: Download,
-                  onClick: () => onDownload?.(attachment),
-                  show: true
-                },
-                {
-                  label: 'Delete',
-                  icon: Trash2,
-                  onClick: () => onDelete?.(attachment),
-                  variant: 'destructive',
-                  show: !!onDelete
-                }
-              ];
-
+              const FileIcon = getFileTypeIcon(attachment.file_name, attachment.file_type);
+              
               return (
                 <TableRow 
                   key={attachment.id}
                   className={cn(
                     "cursor-pointer hover:bg-muted/50",
-                    isSelected && "bg-muted/30"
+                    isSelected && "bg-muted"
                   )}
                   onClick={() => onView?.(attachment)}
                 >
-                  {showBulkActions && (
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked) => 
-                          handleSelectItem(attachment.id, checked as boolean)
-                        }
-                        aria-label={`Select ${attachment.file_name}`}
-                      />
-                    </TableCell>
-                  )}
-                  
-                  <TableCell className="max-w-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <IconComponent className="w-5 h-5 text-muted-foreground shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate" title={attachment.file_name}>
-                          {attachment.file_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground md:hidden">
-                          {formatFileSize(attachment.file_size)} • {getFileExtension(attachment.file_name).toUpperCase()}
-                        </p>
-                      </div>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(checked) => handleSelectItem(attachment.id, checked as boolean)}
+                      aria-label={`Select ${attachment.file_name}`}
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="truncate">{attachment.file_name}</span>
                     </div>
                   </TableCell>
-                  
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex flex-wrap gap-1 max-w-[120px]">
-                      <Badge variant={attachment.file_type === 'photo' ? 'default' : 'secondary'} className="text-xs">
-                        {attachment.file_type === 'photo' ? 'Image' : 'Document'}
-                      </Badge>
-                      {attachment.is_internal && (
-                        <Badge variant="outline" className="text-xs">
-                          Internal
-                        </Badge>
-                      )}
-                       {attachment.uploader_organization_type && (
-                        <Badge 
-                          variant={
-                            attachment.uploader_organization_type === 'partner' ? 'default' :
-                            attachment.uploader_organization_type === 'subcontractor' ? 'secondary' :
-                            'outline'
-                          }
-                          className="text-xs"
-                        >
-                          {attachment.uploader_organization_type === 'partner' ? 'Partner' :
-                           attachment.uploader_organization_type === 'subcontractor' ? 'Subcontractor' :
-                           'AKC Staff'}
-                        </Badge>
-                      )}
-                    </div>
+                  <TableCell>
+                    <Badge variant="secondary" className="text-xs">
+                      {attachment.file_type.toUpperCase()}
+                    </Badge>
                   </TableCell>
-                  
-                  <TableCell className="hidden lg:table-cell">
+                  <TableCell className="text-muted-foreground">
                     {formatFileSize(attachment.file_size)}
                   </TableCell>
-                  
-                  <TableCell className="hidden lg:table-cell max-w-[120px]">
-                    <span className="truncate block" title={attachment.uploader_name}>
-                      {attachment.uploader_name || 'Unknown'}
-                    </span>
+                  <TableCell className="text-muted-foreground hidden sm:table-cell">
+                    {attachment.uploader_name || 'Unknown'}
                   </TableCell>
-                  
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex flex-col">
-                      <span className="text-sm">
-                        {format(new Date(attachment.uploaded_at), 'MMM d, yyyy')}
-                      </span>
-                      <span className="text-xs text-muted-foreground lg:hidden">
-                        {attachment.uploader_name || 'Unknown'}
-                      </span>
-                    </div>
+                  <TableCell className="text-muted-foreground hidden md:table-cell">
+                    {attachment.uploaded_at ? format(new Date(attachment.uploaded_at), 'MMM d, yyyy') : '-'}
                   </TableCell>
-                  
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <TableActionsDropdown 
-                      actions={actions}
+                    <TableActionsDropdown
+                      actions={[
+                        { label: 'View', icon: Eye, onClick: () => onView?.(attachment) },
+                        { label: 'Download', icon: Download, onClick: () => onDownload?.(attachment) },
+                        { label: 'Delete', icon: Trash2, onClick: () => onDelete?.(attachment), variant: 'destructive' }
+                      ]}
                       itemName={attachment.file_name}
                       align="end"
                     />
@@ -304,9 +235,8 @@ export function AttachmentTable({
               );
             })}
           </TableBody>
-          </Table>
-        </div>
-      </div>
+        </Table>
+      </ResponsiveTableContainer>
     </div>
   );
 }

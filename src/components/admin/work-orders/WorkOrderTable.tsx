@@ -14,7 +14,7 @@ import {
   VisibilityState,
 } from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
+import { ResponsiveTableContainer } from '@/components/ui/responsive-table-container';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
@@ -425,76 +425,75 @@ export function WorkOrderTable({
             {/* Table View (Desktop Master-Detail) */}
             {viewMode === 'table' && (
               <div className="hidden lg:block w-full max-w-full">
-                  <MasterDetailLayout
-                    listContent={
-                      <div className="w-full min-w-0 overflow-hidden">
-                        <div className="overflow-x-auto min-w-0">
-                          <Table className="admin-table w-full" aria-label="Work orders data table">
-                        <TableHeader>
-                          {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                              {headerGroup.headers.map((header) => (
-                                <TableHead 
-                                  key={header.id} 
-                                  className={cn(
-                                    "h-12",
-                                    (header.column.columnDef.meta as any)?.className
-                                  )} 
-                                  scope="col"
-                                >
-                                  {header.isPlaceholder
-                                    ? null
-                                    : flexRender(
-                                        header.column.columnDef.header,
-                                        header.getContext()
-                                      )}
-                                </TableHead>
+                    <MasterDetailLayout
+                      listContent={
+                        <ResponsiveTableContainer>
+                          <Table>
+                            <TableHeader>
+                              {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id}>
+                                  {headerGroup.headers.map((header) => (
+                                    <TableHead key={header.id}>
+                                      {header.isPlaceholder
+                                        ? null
+                                        : flexRender(
+                                            header.column.columnDef.header,
+                                            header.getContext()
+                                          )}
+                                    </TableHead>
+                                  ))}
+                                </TableRow>
                               ))}
-                            </TableRow>
-                          ))}
-                        </TableHeader>
-                        <TableBody>
-                          {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                              <TableRow
-                                key={row.id}
-                                data-state={row.getIsSelected() && "selected"}
-                                className={cn(
-                                  "cursor-pointer hover:bg-muted/50",
-                                  selectedWorkOrderId === row.original.id && "bg-muted",
-                                  updatingRowIds?.has(row.original.id) && "opacity-50 pointer-events-none"
-                                )}
-                                onClick={() => handleWorkOrderRowClick(row.original)}
-                              >
-                                {row.getVisibleCells().map((cell) => (
-                                  <TableCell 
-                                    key={cell.id} 
-                                    className={cn(
-                                      "py-3",
-                                      (cell.column.columnDef.meta as any)?.className
-                                    )}
+                            </TableHeader>
+                            <TableBody>
+                              {isLoading ? (
+                                // Loading skeleton rows
+                                Array.from({ length: 5 }).map((_, index) => (
+                                  <TableRow key={`skeleton-${index}`}>
+                                    {table.getAllColumns().map((column) => (
+                                      <TableCell key={column.id} className="py-4">
+                                        <div className="h-4 bg-muted rounded animate-pulse" />
+                                      </TableCell>
+                                    ))}
+                                  </TableRow>
+                                ))
+                              ) : table.getRowModel().rows?.length ? (
+                                table.getRowModel().rows.map((row) => {
+                                  const isSelected = selectedWorkOrderId === row.original.id;
+                                  const isUpdating = updatingRowIds?.has(row.original.id);
+                                  return (
+                                    <TableRow
+                                      key={row.id}
+                                      data-state={isSelected ? "selected" : undefined}
+                                      className={cn(
+                                        "cursor-pointer transition-colors",
+                                        isSelected && "bg-muted/50",
+                                        isUpdating && "opacity-50 pointer-events-none"
+                                      )}
+                                      onClick={() => handleWorkOrderRowClick(row.original)}
+                                    >
+                                      {row.getVisibleCells().map((cell) => (
+                                        <TableCell key={cell.id}>
+                                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </TableCell>
+                                      ))}
+                                    </TableRow>
+                                  );
+                                })
+                              ) : (
+                                <TableRow>
+                                  <TableCell
+                                    colSpan={table.getAllColumns().length}
+                                    className="h-24 text-center"
                                   >
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                    No work orders found.
                                   </TableCell>
-                                ))}
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={columns.length} className="h-24 text-center">
-                            <EmptyTableState 
-                              title="No work orders found"
-                              description="Try adjusting your filters or search criteria"
-                              colSpan={columns.length}
-                            />
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  }
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </ResponsiveTableContainer>
+                      }
                   selectedId={selectedWorkOrderId}
                   onSelectionChange={setSelectedWorkOrderId}
                   detailContent={
