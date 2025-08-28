@@ -427,7 +427,7 @@ export function WorkOrderTable({
               <div className="hidden lg:block">
                 <MasterDetailLayout
                   listContent={
-                    <ResponsiveTableWrapper stickyFirstColumn={true}>
+                    <ResponsiveTableWrapper stickyFirstColumn={true} minWidth="0">
                       <Table className="admin-table" aria-label="Work orders data table">
                         <TableHeader>
                           {table.getHeaderGroups().map((headerGroup) => (

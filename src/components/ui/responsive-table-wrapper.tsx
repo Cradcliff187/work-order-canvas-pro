@@ -61,7 +61,7 @@ export function ResponsiveTableWrapper({
   }
 
   return (
-    <div className={cn("relative overflow-hidden rounded-lg border", className)}>
+    <div className={cn("relative overflow-hidden rounded-lg border min-w-0", className)}>
       {/* Left shadow */}
       <div
         className={cn(
@@ -81,8 +81,8 @@ export function ResponsiveTableWrapper({
       {/* Scrollable content */}
       <div
         ref={scrollRef}
-        className="overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border"
-        style={{ minWidth }}
+        className="overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border min-w-0"
+        style={minWidth && minWidth !== "0" ? { minWidth } : undefined}
       >
         <div 
           className={cn(
