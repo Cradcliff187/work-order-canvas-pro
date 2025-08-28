@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ReportsBreadcrumb } from '@/components/admin/reports/ReportsBreadcrumb';
 import { 
   Eye, 
   Edit,
@@ -415,33 +416,29 @@ const table = useReactTable({
       </Card>
     </div>
   ) : (
-    <div className={cn("p-6 space-y-6", bulkMode && selectedRows.length > 0 && "pb-24")}>
+    <div className={cn("min-h-screen bg-background w-full max-w-full p-4 md:p-6 space-y-6", bulkMode && selectedRows.length > 0 && "pb-24 sm:pb-28")}>
+      {/* Breadcrumb */}
+      <ReportsBreadcrumb />
+      
       {/* Header */}
-      <header className="flex justify-between items-center mb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">Reports Management</h1>
-            {submittedCounts && submittedCounts.reportsCount > 0 && (
-              <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                {submittedCounts.reportsCount} pending
-              </Badge>
-            )}
-          </div>
+      <header className="flex flex-wrap items-center justify-between gap-3 mb-6" role="banner" aria-label="Reports management header">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold">Reports Management</h1>
           <p className="text-muted-foreground">
             {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'Review and approve subcontractor reports'}
           </p>
           {bulkMode && selectedRows.length > 0 && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-primary mt-1">
               {selectedRows.length} report{selectedRows.length !== 1 ? 's' : ''} selected
             </p>
           )}
         </div>
+        
         <div className="flex items-center gap-3">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
             allowedModes={allowedModes}
-            className="h-9"
           />
           <Button
             variant={bulkMode ? "default" : "outline"}
@@ -449,8 +446,9 @@ const table = useReactTable({
             className="h-9"
           >
             <CheckSquare className="h-4 w-4 mr-2" />
-            Select Multiple
+            {bulkMode ? "Exit Bulk Mode" : "Select Multiple"}
           </Button>
+          
           <Button 
             onClick={() => navigate('/admin/invoices/create')}
             className="h-9"
