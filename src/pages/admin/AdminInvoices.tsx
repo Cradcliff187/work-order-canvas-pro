@@ -53,11 +53,12 @@ import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
-import { StatusBadge } from '@/components/ui/status-badge';
+import { StatusBadge, FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { CompactInvoiceFilters } from '@/components/admin/invoices/CompactInvoiceFilters';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
+import { ResponsiveTableContainer } from '@/components/ui/responsive-table-container';
 import { cn } from '@/lib/utils';
 import { InvoiceFiltersValue } from '@/components/admin/invoices/CompactInvoiceFilters';
 
@@ -154,7 +155,7 @@ export default function AdminInvoices() {
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'admin-invoices',
     config: {
-      mobile: ['card', 'list'],
+      mobile: ['card'],
       desktop: ['table', 'card']
     },
     defaultMode: 'table'
@@ -686,13 +687,6 @@ const table = useReactTable({
                 onClear={clearFilters}
               />
               
-              <ViewModeSwitcher
-                value={viewMode}
-                onValueChange={setViewMode}
-                allowedModes={allowedModes}
-                className="shrink-0"
-              />
-              
               {bulkMode && selectedCount > 0 && (
                 <Button 
                   variant="outline" 
@@ -719,10 +713,9 @@ const table = useReactTable({
             />
           ) : (
             <>
-              {/* Desktop Table View */}
-              {viewMode === 'table' && (
-                <div className="hidden lg:block">
-                  <ResponsiveTableWrapper stickyFirstColumn={true}>
+              {/* Table View */}
+              {viewMode === 'table' && !isMobile && (
+                <ResponsiveTableContainer>
                   <Table className="admin-table">
                     <TableHeader>
                       {table.getHeaderGroups().map((headerGroup) => (
@@ -786,117 +779,98 @@ const table = useReactTable({
                       ) : null}
                     </TableBody>
                   </Table>
-                </ResponsiveTableWrapper>
-                </div>
+                </ResponsiveTableContainer>
               )}
 
-              {/* Card and List Views - Desktop */}
-              {(viewMode === 'card' || viewMode === 'list') && (
-                <div className="hidden lg:block p-6">
-                  <div className={cn(
-                    viewMode === 'card' ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"
-                  )}>
-                    {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => {
-                        const invoice = row.original;
-                        return (
-                          <div key={row.id} className="relative">
-                            <MobileTableCard
-                              title={`Invoice #${invoice.internal_invoice_number || 'N/A'}`}
-                              subtitle={`${invoice.subcontractor_organization?.name || 'Unknown Organization'} • ${formatCurrency(Number(invoice.total_amount), true)}`}
-                              status={
-                                <div className="flex flex-col items-end gap-1">
-                                  <StatusBadge type="financialStatus" status={invoice.status} size="sm" />
-                                  {invoice.paid_at && (
-                                    <StatusBadge type="financialStatus" status="paid" size="sm" />
-                                  )}
-                                </div>
-                              }
-                              onClick={() => handleViewInvoice(invoice)}
-                            >
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{invoice.invoice_work_orders?.[0]?.work_order?.work_order_number || 'No WO'}</span>
-                                {invoice.submitted_at && (
-                                  <span>{format(new Date(invoice.submitted_at), 'MMM d, yyyy')}</span>
-                                )}
-                              </div>
-                            </MobileTableCard>
-                            {bulkMode && (
-                              <div className="absolute top-2 right-2">
-                                <input
-                                  type="checkbox"
-                                  checked={row.getIsSelected()}
-                                  onChange={row.getToggleSelectedHandler()}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="rounded border-gray-300 scale-125"
-                                  aria-label={`Select invoice ${invoice.internal_invoice_number}`}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    ) : null}
-                  </div>
-                </div>
-              )}
+              {/* Card View */}
+              {(viewMode === 'card' || isMobile) && (
+                <div className={cn(
+                  "grid gap-4",
+                  !isMobile && "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
+                )}>
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row) => {
+                      const invoice = row.original;
+                      const canApprove = invoice.status === 'submitted';
+                      const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
 
-              {/* Mobile Cards */}
-              <div className="block lg:hidden space-y-3">
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => {
-                    const invoice = row.original;
-                    const canApprove = invoice.status === 'submitted';
-                    const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
-
-                    return (
-                      <SwipeableListItem
-                        key={row.id}
-                        disabled={!(canApprove || canMarkPaid)}
-                        rightAction={canApprove ? { icon: CheckCircle, label: 'Approve', color: 'success' } : (canMarkPaid ? { icon: DollarSign, label: 'Mark Paid', color: 'success' } : undefined)}
-                        leftAction={canApprove ? { icon: XCircle, label: 'Reject', color: 'destructive', confirmMessage: 'Reject this invoice?' } : undefined}
-                        onSwipeRight={() => {
-                          if (canApprove) {
-                            approveInvoice.mutate({ invoiceId: invoice.id });
-                          } else if (canMarkPaid) {
-                            markAsPaid.mutate({ invoiceId: invoice.id, paymentReference: 'MOBILE', paymentDate: new Date() });
-                          }
-                        }}
-                        onSwipeLeft={canApprove ? () => rejectInvoice.mutate({ invoiceId: invoice.id, notes: 'Rejected via swipe' }) : undefined}
-                      >
+                      const cardContent = (
                         <MobileTableCard
-                          title={`Invoice #${invoice.internal_invoice_number || 'N/A'}`}
-                          subtitle={`${invoice.subcontractor_organization?.name || 'Unknown Organization'} • ${formatCurrency(Number(invoice.total_amount), true)}`}
-                          status={
-                            <div className="flex flex-col items-end gap-1">
-                              <StatusBadge type="financialStatus" status={invoice.status} size="sm" />
-                              {invoice.paid_at && (
-                                <StatusBadge type="financialStatus" status="paid" size="sm" />
-                              )}
-                            </div>
+                          key={invoice.id}
+                          title={invoice.internal_invoice_number || 'N/A'}
+                          subtitle={`${invoice.subcontractor_organization?.name || 'Unknown'}`}
+                          badge={
+                            <FinancialStatusBadge 
+                              status={invoice.status === 'submitted' ? 'pending' : invoice.status} 
+                              size="sm" 
+                              showIcon 
+                            />
                           }
+                          data={{
+                            'Amount': formatCurrency(invoice.total_amount),
+                            'Submitted': invoice.submitted_at ? format(new Date(invoice.submitted_at), 'MMM d, yyyy') : 'N/A',
+                            'Work Orders': String(invoice.invoice_work_orders?.length || 0)
+                          }}
+                          actions={[
+                            { label: 'View', icon: FileText, onClick: () => handleViewInvoice(invoice) },
+                            { label: 'Approve', icon: CheckCircle, onClick: () => handleApproveInvoice(invoice) }
+                          ]}
                           onClick={() => handleViewInvoice(invoice)}
-                        >
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{invoice.invoice_work_orders?.[0]?.work_order?.work_order_number || 'No WO'}</span>
-                            {invoice.submitted_at && (
-                              <span>{format(new Date(invoice.submitted_at), 'MMM d, yyyy')}</span>
-                            )}
-                          </div>
-                        </MobileTableCard>
-                      </SwipeableListItem>
-                    );
-                  })
-                ) : (
-                  <div className="rounded-md border p-6 text-center text-muted-foreground">
-                    <FileText className="mx-auto h-8 w-8 mb-2 opacity-60" />
-                    <div className="font-medium">No subcontractor invoices found</div>
-                    <div className="text-sm">
-                      {filters.invoice_status?.length > 0 || filters.search ? 'Try adjusting your filters or search criteria' : 'Subcontractor invoices will appear here when submitted'}
+                        />
+                      );
+
+                      // Mobile: wrap with swipeable functionality
+                      if (isMobile) {
+                        return (
+                          <SwipeableListItem
+                            key={row.id}
+                            disabled={!(canApprove || canMarkPaid)}
+                            rightAction={canApprove ? { icon: CheckCircle, label: 'Approve', color: 'success' } : (canMarkPaid ? { icon: DollarSign, label: 'Mark Paid', color: 'success' } : undefined)}
+                            leftAction={canApprove ? { icon: XCircle, label: 'Reject', color: 'destructive', confirmMessage: 'Reject this invoice?' } : undefined}
+                            onSwipeRight={() => {
+                              if (canApprove) {
+                                approveInvoice.mutate({ invoiceId: invoice.id });
+                              } else if (canMarkPaid) {
+                                markAsPaid.mutate({ invoiceId: invoice.id, paymentReference: 'MOBILE', paymentDate: new Date() });
+                              }
+                            }}
+                            onSwipeLeft={canApprove ? () => rejectInvoice.mutate({ invoiceId: invoice.id, notes: 'Rejected via swipe' }) : undefined}
+                          >
+                            {cardContent}
+                          </SwipeableListItem>
+                        );
+                      }
+
+                      // Desktop: plain card with bulk selection
+                      return (
+                        <div key={row.id} className="relative">
+                          {cardContent}
+                          {bulkMode && (
+                            <div className="absolute top-2 right-2">
+                              <input
+                                type="checkbox"
+                                checked={row.getIsSelected()}
+                                onChange={row.getToggleSelectedHandler()}
+                                onClick={(e) => e.stopPropagation()}
+                                className="rounded border-gray-300 scale-125"
+                                aria-label={`Select invoice ${invoice.internal_invoice_number}`}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="col-span-full rounded-md border p-6 text-center text-muted-foreground">
+                      <FileText className="mx-auto h-8 w-8 mb-2 opacity-60" />
+                      <div className="font-medium">No subcontractor invoices found</div>
+                      <div className="text-sm">
+                        {filters.invoice_status?.length > 0 || filters.search ? 'Try adjusting your filters or search criteria' : 'Subcontractor invoices will appear here when submitted'}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
               {/* Pagination */}
               {totalPages > 1 && (
