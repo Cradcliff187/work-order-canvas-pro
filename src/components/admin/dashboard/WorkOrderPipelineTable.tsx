@@ -45,6 +45,7 @@ interface WorkOrderPipelineTableProps {
     visible: boolean;
     canHide: boolean;
   }>;
+  isMobile?: boolean;
 }
 
 export function WorkOrderPipelineTable({ 
@@ -56,10 +57,11 @@ export function WorkOrderPipelineTable({
   onExport,
   onToggleColumn,
   onResetColumns,
-  columns: columnOptions = []
+  columns: columnOptions = [],
+  isMobile: isMobileProp = false
 }: WorkOrderPipelineTableProps) {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
+  const isMobileDevice = useIsMobile();
 
   // Helper function to get partner billing status based on workflow
   const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
@@ -334,6 +336,65 @@ export function WorkOrderPipelineTable({
     );
   }
 
+  // For mobile, render without card wrapper
+  if (isMobileProp) {
+    if (isError) {
+      return (
+        <div className="p-4">
+          <EmptyState
+            icon={ClipboardList}
+            title="Error loading pipeline data"
+            description="There was an error loading the work order pipeline. Please try again."
+            variant="card"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {isLoading ? (
+          <div className="p-4">
+            <TableSkeleton rows={5} columns={1} />
+          </div>
+        ) : data.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              icon={ClipboardList}
+              title="No work orders found"
+              description="No work orders are currently in the pipeline."
+              variant="card"
+            />
+          </div>
+        ) : (
+          <div className="space-y-4 p-4">
+            {data.map(item => (
+              <MobileTableCard
+                key={item.id}
+                title={item.work_order_number || 'No WO#'}
+                subtitle={`${item.partner_organization_name} • ${item.store_location || 'No location'}`}
+                badge={
+                  <WorkOrderStatusBadge status={item.status} size="sm" />
+                }
+                metadata={[
+                  { label: 'Status', value: item.status },
+                  { label: 'Report', value: item.report_status || 'Not submitted' },
+                  { label: 'Invoice', value: item.invoice_status || 'None' },
+                  { 
+                    label: 'Amount', 
+                    value: item.subcontractor_invoice_amount ? `$${item.subcontractor_invoice_amount.toLocaleString()}` : '—'
+                  }
+                ]}
+                onClick={() => handleRowClick(item)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop rendering with card wrapper
   return (
     <Card>
       <CardHeader>
@@ -348,7 +409,7 @@ export function WorkOrderPipelineTable({
                 disabled={isLoading || data.length === 0} 
               />
             )}
-            {!isMobile && onToggleColumn && onResetColumns && (
+            {onToggleColumn && onResetColumns && (
               <ColumnVisibilityDropdown
                 columns={columnOptions}
                 onToggleColumn={onToggleColumn}
@@ -372,90 +433,78 @@ export function WorkOrderPipelineTable({
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden lg:block overflow-visible">
-              <ResponsiveTableWrapper stickyFirstColumn className="overflow-visible relative">
-                <Table className="admin-table overflow-visible relative">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className="h-12">
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                   <TableBody>
-                     {table.getRowModel().rows.map((row) => (
-                       <TableRow
-                         key={row.id}
-                         className="group cursor-pointer hover:bg-muted/50"
-                         onClick={() => handleRowClick(row.original)}
-                       >
-                         {row.getVisibleCells().map((cell) => (
-                           <TableCell key={cell.id} className="py-2 h-12">
-                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                           </TableCell>
-                         ))}
-                       </TableRow>
-                     ))}
-                   </TableBody>
-                </Table>
-              </ResponsiveTableWrapper>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="lg:hidden space-y-3">
-              {table.getRowModel().rows.map((row) => {
-                const item = row.original;
-                return (
-                  <MobileTableCard
-                    key={row.id}
-                    title={`${item.work_order_number} - ${item.title}`}
-                    subtitle={`${item.partner_organization_name} • ${item.store_location || 'No location'}`}
-                    status={<WorkOrderStatusBadge status={item.status} size="sm" showIcon />}
-                    onClick={() => handleRowClick(item)}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Age:</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {item.age_days || 0} days
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Invoice:</span>
-                        <ComputedFinancialStatusBadge status={item.financial_status} size="sm" />
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Billing:</span>
-                        <StatusBadge type="partnerBilling" status={getPartnerBillingStatus(item)} size="sm" showIcon />
-                      </div>
-                      {item.subcontractor_invoice_amount && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Amount:</span>
-                          <span className="text-sm font-medium">
-                            ${item.subcontractor_invoice_amount.toLocaleString()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </MobileTableCard>
-                );
-              })}
-            </div>
+            {viewMode === 'table' ? (
+              <div className="overflow-visible">
+                <ResponsiveTableWrapper stickyFirstColumn className="overflow-visible relative">
+                  <Table className="admin-table overflow-visible relative">
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id} className="h-12">
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableHeader>
+                     <TableBody>
+                       {table.getRowModel().rows.map((row) => (
+                         <TableRow
+                           key={row.id}
+                           className="group cursor-pointer hover:bg-muted/50"
+                           onClick={() => handleRowClick(row.original)}
+                         >
+                           {row.getVisibleCells().map((cell) => (
+                             <TableCell key={cell.id} className="py-2 h-12">
+                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                             </TableCell>
+                           ))}
+                         </TableRow>
+                       ))}
+                     </TableBody>
+                  </Table>
+                </ResponsiveTableWrapper>
+              </div>
+            ) : (
+              /* Desktop Card View */
+              <div className="space-y-3">
+                {table.getRowModel().rows.map((row) => {
+                  const item = row.original;
+                  return (
+                    <MobileTableCard
+                      key={row.id}
+                      title={item.work_order_number || 'No WO#'}
+                      subtitle={`${item.partner_organization_name} • ${item.store_location || 'No location'}`}
+                      badge={
+                        <WorkOrderStatusBadge status={item.status} size="sm" />
+                      }
+                      metadata={[
+                        { label: 'Status', value: item.status },
+                        { label: 'Report', value: item.report_status || 'Not submitted' },
+                        { label: 'Invoice', value: item.invoice_status || 'None' },
+                        { 
+                          label: 'Amount', 
+                          value: item.subcontractor_invoice_amount ? `$${item.subcontractor_invoice_amount.toLocaleString()}` : '—'
+                        }
+                      ]}
+                      onClick={() => handleRowClick(item)}
+                    />
+                  );
+                })}
+              </div>
+            )}
 
             {/* Enhanced Pagination */}
             <TablePagination
               table={table}
               totalCount={data.length}
-              isMobile={isMobile}
+              isMobile={false}
               itemName="work orders"
             />
           </>

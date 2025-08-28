@@ -26,6 +26,7 @@ import { useViewMode } from '@/hooks/useViewMode';
 import { exportWorkOrders } from '@/lib/utils/export';
 import { supabase } from '@/integrations/supabase/client';
 import { CompactBillingPipelineFilters } from '@/components/admin/billing/CompactBillingPipelineFilters';
+import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 
 // Filter interface for Pipeline - simplified
 interface PipelineFiltersValue {
@@ -50,7 +51,7 @@ export function BillingDashboard() {
   const isMobile = useIsMobile();
 
   // Pipeline controls
-  const { viewMode, setViewMode } = useViewMode({
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'billing-pipeline',
     config: { mobile: ['card'], desktop: ['table', 'card'] },
     defaultMode: 'table'
@@ -389,52 +390,34 @@ export function BillingDashboard() {
           {/* Keep all existing metric cards */}
         </div>
 
-        {/* Pipeline Table Card */}
-        <Card className="overflow-hidden">
-          {/* Desktop toolbar */}
-          <div className="border-b">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
-              <div className="flex items-center gap-4">
-                <h2 className="text-lg font-semibold">Pipeline Items</h2>
-                <ViewModeSwitcher
-                  value={viewMode}
-                  onValueChange={setViewMode}
-                  allowedModes={['table', 'card']}
-                />
-              </div>
-              
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <SmartSearchInput
-                  placeholder="Search WO#, partner..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  storageKey="billing-pipeline-search"
-                  className="max-w-xs"
-                />
-                
+        {/* Conditional Mobile/Desktop Rendering */}
+        {isMobile ? (
+          <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
+            {/* Mobile Toolbar */}
+            <div className="bg-muted/30 border rounded-lg p-3 space-y-3 mx-4 mb-4">
+              <SmartSearchInput
+                placeholder="Search pipeline..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+              <div className="flex items-center gap-2">
                 <CompactBillingPipelineFilters
                   value={filters}
                   onChange={setFilters}
                   onClear={clearFilters}
                 />
-                
-                {!isMobile && (
-                  <>
-                    <ColumnVisibilityDropdown
-                      columns={getAllColumns()}
-                      onToggleColumn={toggleColumn}
-                      onResetToDefaults={resetToDefaults}
-                    />
-                    <ExportDropdown onExport={handleExport} />
-                  </>
-                )}
+                <ViewModeSwitcher
+                  value={viewMode}
+                  onValueChange={setViewMode}
+                  allowedModes={allowedModes}
+                  className="shrink-0"
+                />
               </div>
             </div>
-          </div>
-          
-          {/* Table content */}
-          <CardContent className="p-0">
-            <WorkOrderPipelineTable 
+            
+            {/* Mobile Table */}
+            <WorkOrderPipelineTable
               data={filteredPipelineData}
               isLoading={pipelineLoading}
               isError={pipelineError}
@@ -444,9 +427,66 @@ export function BillingDashboard() {
               onToggleColumn={toggleColumn}
               onResetColumns={resetToDefaults}
               columns={getAllColumns()}
+              isMobile={true}
             />
-          </CardContent>
-        </Card>
+          </MobilePullToRefresh>
+        ) : (
+          /* Desktop Pipeline Table Card */
+          <Card className="overflow-hidden">
+            {/* Desktop toolbar */}
+            <div className="border-b">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-lg font-semibold">Pipeline Items</h2>
+                  <ViewModeSwitcher
+                    value={viewMode}
+                    onValueChange={setViewMode}
+                    allowedModes={allowedModes}
+                  />
+                </div>
+                
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <SmartSearchInput
+                    placeholder="Search WO#, partner..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    storageKey="billing-pipeline-search"
+                    className="max-w-xs"
+                  />
+                  
+                  <CompactBillingPipelineFilters
+                    value={filters}
+                    onChange={setFilters}
+                    onClear={clearFilters}
+                  />
+                  
+                  <ColumnVisibilityDropdown
+                    columns={getAllColumns()}
+                    onToggleColumn={toggleColumn}
+                    onResetToDefaults={resetToDefaults}
+                  />
+                  <ExportDropdown onExport={handleExport} />
+                </div>
+              </div>
+            </div>
+            
+            {/* Table content */}
+            <CardContent className="p-0">
+              <WorkOrderPipelineTable 
+                data={filteredPipelineData}
+                isLoading={pipelineLoading}
+                isError={pipelineError}
+                viewMode={viewMode}
+                columnVisibility={columnVisibility}
+                onExport={handleExport}
+                onToggleColumn={toggleColumn}
+                onResetColumns={resetToDefaults}
+                columns={getAllColumns()}
+                isMobile={false}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Invoice Detail Modal */}
         <InvoiceDetailModal
