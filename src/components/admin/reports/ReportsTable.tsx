@@ -16,9 +16,11 @@ import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { flexRender, ColumnDef, Table as ReactTable, RowSelectionState } from '@tanstack/react-table';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { Search, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatDate } from '@/lib/utils/date';
 
@@ -32,6 +34,12 @@ export interface ReportsTableProps<TData = any> {
   emptyIcon?: React.ComponentType<{ className?: string }>;
   emptyTitle?: string;
   emptyDescription?: string;
+  // Filter Component
+  filterComponent?: React.ReactNode;
+  // Search
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  searchPlaceholder?: string;
   // Column visibility props
   columnVisibilityColumns?: Array<{
     id: string;
@@ -64,6 +72,10 @@ export function ReportsTable<TData = any>({
   emptyIcon,
   emptyTitle = 'No data found',
   emptyDescription = 'Try adjusting your filters or search criteria',
+  filterComponent,
+  searchValue = '',
+  onSearchChange,
+  searchPlaceholder = 'Search reports...',
   columnVisibilityColumns,
   onToggleColumn,
   onResetColumns,
@@ -96,19 +108,49 @@ export function ReportsTable<TData = any>({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Reports</CardTitle>
-        <div className="flex items-center gap-2">
+      <CardHeader className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <CardTitle>Reports</CardTitle>
+          
           {selectedRows.length > 0 && onClearSelection && (
             <Button 
               variant="outline" 
               size="sm" 
               onClick={onClearSelection}
               aria-label={`Clear selection of ${selectedRows.length} reports`}
+              className="shrink-0"
             >
               Clear Selection ({selectedRows.length})
             </Button>
           )}
+
+          {/* Filters and Search */}
+          <div className="flex items-center gap-2">
+            {filterComponent}
+            {onSearchChange && (
+              <div className="relative flex-1 sm:flex-initial sm:w-80">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={searchPlaceholder}
+                  value={searchValue}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className="pl-10 pr-10 h-10"
+                />
+                {searchValue && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onSearchChange('')}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Column visibility */}
           {!isMobile && columnVisibilityColumns && onToggleColumn && onResetColumns && (
             <ColumnVisibilityDropdown
               columns={columnVisibilityColumns}
@@ -118,6 +160,8 @@ export function ReportsTable<TData = any>({
               size="sm"
             />
           )}
+
+          {/* Export */}
           {!isMobile && onExportAll && (
             <ExportDropdown
               onExport={onExportAll}
