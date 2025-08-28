@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { UnifiedUserFilters, type UserFiltersValue } from '@/components/admin/users/UnifiedUserFilters';
+import { CompactUserFilters } from '@/components/admin/users/CompactUserFilters';
+import { type UserFiltersValue } from '@/components/admin/users/UnifiedUserFilters';
 
 import {
   useReactTable,
@@ -43,7 +44,6 @@ import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -54,8 +54,6 @@ export default function AdminUsers() {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   
-  // Search state for the top control bar
-  const [searchTerm, setSearchTerm] = useState('');
   const [bulkMode, setBulkMode] = useState(false);
   
   // View mode configuration
@@ -90,21 +88,6 @@ export default function AdminUsers() {
     'admin-users-filters-v2',
     { search: '', roleFilter: [], organizationId: '', status: [], organizationType: [] }
   );
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-
-  // Sync search term with filters
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setFilters(prev => ({ ...prev, search: value }));
-  };
-
-  const handleSearchClear = () => {
-    localStorage.removeItem('admin-users-search');
-    setSearchTerm('');
-    setFilters(prev => ({ ...prev, search: '' }));
-    setPagination(prev => ({ ...prev, pageIndex: 0 }));
-  };
 
 
   // Fetch data
@@ -329,117 +312,77 @@ export default function AdminUsers() {
         </div>
       </header>
 
-      {/* Desktop Layout */}
-      <div className="hidden lg:flex gap-4 mb-6">
-        <div className="flex flex-1 items-center gap-3">
-          <SmartSearchInput
-            placeholder="Search users by name or email..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onClear={handleSearchClear}
-            showClearButton={true}
-            className="flex-1 h-10"
-          />
-          <Button 
-            variant="outline" 
-            onClick={() => setIsDesktopFilterOpen(true)}
-            className="h-10 px-4 whitespace-nowrap"
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
+      <Card className="overflow-hidden">
+        {/* Desktop toolbar */}
+        <div className="border-b">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg font-semibold">Users</h2>
+              <ViewModeSwitcher
+                value={viewMode}
+                onValueChange={setViewMode}
+                allowedModes={allowedModes}
+              />
+            </div>
+            
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <SmartSearchInput
+                placeholder="Search name, email..."
+                value={filters.search || ''}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                storageKey="admin-users-search"
+                className="max-w-xs"
+              />
+              
+              <CompactUserFilters
+                value={filters}
+                onChange={setFilters}
+                onClear={clearFilters}
+              />
+              
+              {!isMobile && (
+                <>
+                  <ColumnVisibilityDropdown
+                    columns={visibilityOptions}
+                    onToggleColumn={toggleColumn}
+                    onResetToDefaults={resetToDefaults}
+                  />
+                  <ExportDropdown onExport={handleExport} />
+                </>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
-            className="h-9"
-          />
-          <Button 
-            onClick={() => setCreateUserModalOpen(true)}
-            className="h-9"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New User
-          </Button>
-        </div>
-      </div>
 
-      {/* Mobile Layout */}
-      <div className="lg:hidden space-y-3 mb-6">
-        <SmartSearchInput
-          placeholder="Search users by name or email..."
-          value={searchTerm}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          onClear={handleSearchClear}
-          showClearButton={true}
-          className="w-full"
-        />
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
-            className="h-9"
-          />
-          <Button onClick={() => setCreateUserModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New User
-          </Button>
-        </div>
-      </div>
-
-      {/* Mobile Bottom Sheet */}
-      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[85vh]">
-          <SheetHeader>
-            <SheetTitle>Filter Users</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 overflow-y-auto">
-            <UnifiedUserFilters
-              filters={filters}
-              onFiltersChange={setFilters}
-              onClear={clearFilters}
-              filterCount={filterCount}
+        {/* Mobile toolbar */}
+        {isMobile && (
+          <div className="bg-muted/30 border rounded-lg p-3 space-y-3 m-4">
+            <SmartSearchInput
+              placeholder="Search users..."
+              value={filters.search || ''}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              className="w-full"
             />
+            <div className="flex items-center gap-2">
+              <CompactUserFilters
+                value={filters}
+                onChange={setFilters}
+                onClear={clearFilters}
+              />
+              {bulkMode && Object.keys(rowSelection).length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRowSelection({})}
+                  className="shrink-0"
+                >
+                  Clear ({Object.keys(rowSelection).length})
+                </Button>
+              )}
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        )}
 
-      {/* Desktop Right Sidebar */}
-      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-80">
-          <SheetHeader>
-            <SheetTitle>Filter Users</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 overflow-y-auto">
-            <UnifiedUserFilters
-              filters={filters}
-              onFiltersChange={setFilters}
-              onClear={clearFilters}
-              filterCount={filterCount}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-
-       {/* Data Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Users</CardTitle>
-          <div className="flex items-center gap-2">
-             {selectedRows.length > 0 && (
-               <Button variant="outline" size="sm" onClick={handleClearSelection}>
-                 Clear Selection ({selectedRows.length})
-               </Button>
-             )}
-          </div>
-        </CardHeader>
         <CardContent>
           {isLoading ? (
             <EnhancedTableSkeleton rows={5} columns={6} />
