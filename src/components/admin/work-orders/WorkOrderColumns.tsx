@@ -160,7 +160,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
       </Button>
     ),
     cell: ({ row }) => (
-      <div className="font-medium truncate text-ellipsis">
+      <div className="font-medium truncate text-ellipsis min-w-0">
         {row.getValue('title')}
       </div>
     ),

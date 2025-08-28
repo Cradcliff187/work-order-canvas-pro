@@ -425,11 +425,11 @@ export function WorkOrderTable({
             {/* Table View (Desktop Master-Detail) */}
             {viewMode === 'table' && (
               <div className="hidden lg:block w-full max-w-full">
-                <MasterDetailLayout
-                  listContent={
-                    <div className="w-full overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <Table className="admin-table min-w-full" aria-label="Work orders data table">
+                  <MasterDetailLayout
+                    listContent={
+                      <div className="w-full min-w-0 overflow-hidden">
+                        <div className="overflow-x-auto min-w-0">
+                          <Table className="admin-table w-full" aria-label="Work orders data table">
                         <TableHeader>
                           {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>

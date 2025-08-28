@@ -123,7 +123,7 @@ export function MasterDetailLayout({
     <div className={cn("w-full h-full", className)}>
       <ResizablePanelGroup direction="horizontal" className="h-full">
         <ResizablePanel defaultSize={70} minSize={50}>
-          <div className="h-full overflow-auto">
+          <div className="h-full overflow-x-hidden overflow-y-auto min-w-0">
             {listContent}
           </div>
         </ResizablePanel>
