@@ -1,66 +1,47 @@
-/**
- * CORS utilities for Supabase Edge Functions
- * 
- * This module provides standardized Cross-Origin Resource Sharing (CORS) 
- * configuration for edge functions, ensuring proper browser compatibility
- * and security when called from web applications.
- * 
- * Security Considerations:
- * - Uses wildcard origin (*) for development flexibility
- * - In production, consider restricting to specific domains
- * - Includes necessary headers for Supabase client authentication
- */
+// ============= Supabase Edge Functions CORS Utilities =============
 
 /**
- * Standard CORS headers for edge functions
- * 
- * These headers allow:
- * - Requests from any origin (*)
- * - Standard authentication headers (authorization, apikey)
- * - Supabase client info headers (x-client-info)
- * - Content-Type for JSON payloads
+ * Standard CORS headers for all Edge Functions
+ * Allows requests from any origin with common HTTP methods
  */
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
-  'Access-Control-Max-Age': '86400', // 24 hours
-};
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+}
 
 /**
  * Handle CORS preflight requests
+ * Returns a preflight response if the request is an OPTIONS request
  * 
- * Browsers send OPTIONS requests before actual requests to check CORS policy.
- * This function provides a standard response for all edge functions.
- * 
- * @param request - The incoming HTTP request
- * @returns Response with CORS headers if OPTIONS, otherwise null
+ * @param request - The incoming request object
+ * @returns Response object for preflight or null if not a preflight request
  */
 export function handleCors(request: Request): Response | null {
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
-      headers: corsHeaders,
-    });
+      headers: corsHeaders
+    })
   }
-  return null;
+  return null
 }
 
 /**
  * Create a success response with CORS headers
  * 
- * @param data - The response data
+ * @param data - The data to return in the response
  * @param status - HTTP status code (default: 200)
- * @returns Response with CORS headers and JSON data
+ * @returns Response object with CORS headers
  */
 export function createCorsResponse(data: any, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       ...corsHeaders,
-      'Content-Type': 'application/json',
-    },
-  });
+      'Content-Type': 'application/json'
+    }
+  })
 }
 
 /**
@@ -69,43 +50,38 @@ export function createCorsResponse(data: any, status: number = 200): Response {
  * @param error - Error message
  * @param status - HTTP status code (default: 400)
  * @param code - Optional error code
- * @returns Response with CORS headers and error data
+ * @returns Response object with CORS headers and error details
  */
 export function createCorsErrorResponse(
   error: string, 
   status: number = 400, 
   code?: string
 ): Response {
-  return new Response(
-    JSON.stringify({
-      success: false,
-      error,
-      code,
-    }), 
-    {
-      status,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
+  const errorData: any = { error }
+  if (code) {
+    errorData.code = code
+  }
+  
+  return new Response(JSON.stringify(errorData), {
+    status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json'
     }
-  );
+  })
 }
 
 /**
- * Domain-specific CORS configuration
+ * Create CORS headers for specific allowed origins
+ * Use this when you need to restrict access to specific domains
  * 
- * For production deployments, use this function to restrict
- * CORS to specific domains for enhanced security.
- * 
- * @param allowedOrigins - Array of allowed origin domains
- * @returns CORS headers with restricted origins
+ * @param allowedOrigins - Array of allowed origin URLs
+ * @returns CORS headers object with restricted origins
  */
 export function createRestrictedCorsHeaders(allowedOrigins: string[]) {
   return {
     'Access-Control-Allow-Origin': allowedOrigins.join(', '),
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
-    'Access-Control-Max-Age': '86400',
-  };
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+  }
 }

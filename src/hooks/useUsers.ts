@@ -5,6 +5,7 @@ import { onOrganizationChange, syncUserMetadataToJWT } from '@/lib/auth/jwtSync'
 import type { Database } from '@/integrations/supabase/types';
 
 export type User = Database['public']['Tables']['profiles']['Row'] & {
+  last_sign_in_at?: string | null;
   organization_members: Array<{
     id: string;
     role: string;
@@ -20,24 +21,11 @@ export function useUsers() {
   return useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          organization_members(
-            id,
-            role,
-            organization:organizations(
-              id,
-              name,
-              organization_type
-            )
-          )
-        `)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.functions.invoke('get-users-with-auth');
 
       if (error) throw error;
-      return data as User[];
+      
+      return data.users as User[];
     },
   });
 }

@@ -1,1 +1,4 @@
 project_id = "inudoymofztrvxhrlrek"
+
+[functions.get-users-with-auth]
+verify_jwt = true
