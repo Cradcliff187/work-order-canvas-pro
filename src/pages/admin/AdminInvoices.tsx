@@ -43,7 +43,7 @@ import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
-import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
+import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
@@ -423,14 +423,14 @@ const table = useReactTable({
       </Card>
     </div>
   ) : (
-    <>
+    <div className="p-6 overflow-hidden">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 bg-popover text-foreground border rounded px-3 py-2 shadow">Skip to main content</a>
       <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
       {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/admin/dashboard">Dashboard</BreadcrumbLink>
+            <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -534,10 +534,16 @@ const table = useReactTable({
               <EmptyState
                 icon={FileText}
                 title="No invoices found"
-                description={filters.search || filterCount > 0 
-                  ? "No invoices match your filters. Try adjusting your search."
-                  : "No invoices have been submitted yet."
+                description={
+                  filterCount > 0 
+                    ? "No invoices match your current filters."
+                    : "No subcontractor invoices have been submitted yet."
                 }
+                action={filterCount === 0 ? {
+                  label: "Create Invoice",
+                  onClick: () => navigate('/admin/submit-invoice'),
+                  icon: Plus
+                } : undefined}
               />
             ) : (
               data?.data?.map((invoice) => {
@@ -687,12 +693,24 @@ const table = useReactTable({
 
           <CardContent className="p-0 overflow-hidden">
             {isLoading ? (
-              <EnhancedTableSkeleton rows={5} columns={8} />
+              <TableSkeleton 
+                rows={10} 
+                columns={INVOICE_COLUMN_METADATA.columns.length}
+              />
             ) : data?.data?.length === 0 ? (
               <EmptyTableState
                 icon={FileText}
-                title="No subcontractor invoices found"
-                description={filters.invoice_status?.length > 0 || filters.search ? "Try adjusting your filters or search criteria" : "Subcontractor invoices will appear here when submitted"}
+                title="No invoices found"
+                description={
+                  filterCount > 0 
+                    ? "No invoices match your current filters."
+                    : "No subcontractor invoices have been submitted yet."
+                }
+                action={filterCount === 0 ? {
+                  label: "Create Invoice",
+                  onClick: () => navigate('/admin/submit-invoice'),
+                  icon: Plus
+                } : undefined}
                 colSpan={columns.length}
               />
             ) : (
@@ -907,7 +925,7 @@ const table = useReactTable({
         itemType="invoice"
         isLoading={isDeleting}
       />
-    </main>
-    </>
+      </main>
+    </div>
   );
 }
