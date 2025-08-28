@@ -433,22 +433,24 @@ const table = useReactTable({
           )}
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 min-w-0">
           <Button
             variant={bulkMode ? "default" : "outline"}
             onClick={() => setBulkMode(!bulkMode)}
-            className="h-9"
+            className="h-9 whitespace-nowrap"
           >
             <CheckSquare className="h-4 w-4 mr-2" />
-            {bulkMode ? "Exit Bulk Mode" : "Select Multiple"}
+            <span className="hidden sm:inline">{bulkMode ? "Exit Bulk Mode" : "Select Multiple"}</span>
+            <span className="sm:hidden">{bulkMode ? "Exit Bulk" : "Select"}</span>
           </Button>
           
           <Button 
             onClick={() => navigate('/admin/invoices/create')}
-            className="h-9"
+            className="h-9 whitespace-nowrap"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Create Subcontractor Invoice
+            <span className="hidden lg:inline">Create Subcontractor Invoice</span>
+            <span className="lg:hidden">Create Invoice</span>
           </Button>
         </div>
       </header>
@@ -514,30 +516,13 @@ const table = useReactTable({
             </div>
 
             {/* Right side - Search and Actions */}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              {/* Selection clear */}
-              {selectedRows.length > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => table.resetRowSelection()}
-                  className="shrink-0"
-                >
-                  Clear Selection ({selectedRows.length})
-                </Button>
-              )}
-
-              {/* Filters and Search */}
-              <div className="flex items-center gap-2">
-                <CompactReportsFilters
-                  value={filters}
-                  onChange={setFilters}
-                  onClear={handleClearFilters}
-                />
-                <div className="relative flex-1 sm:flex-initial sm:w-80">
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2 w-full lg:w-auto min-w-0">
+              {/* Top row on mobile - Search */}
+              <div className="flex items-center gap-2 min-w-0 lg:order-2">
+                <div className="relative flex-1 sm:flex-initial sm:w-64 lg:w-80">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by work order, location, materials..."
+                    placeholder="Search reports..."
                     value={searchTerm}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 pr-10 h-10"
@@ -555,25 +540,47 @@ const table = useReactTable({
                 </div>
               </div>
 
-              {/* Column visibility */}
-              {columnOptions && (
-                <ColumnVisibilityDropdown
-                  columns={columnOptions}
-                  onToggleColumn={toggleColumn}
-                  onResetToDefaults={resetToDefaults}
+              {/* Bottom row on mobile - Controls */}
+              <div className="flex items-center gap-2 flex-wrap lg:order-1">
+                {/* Selection clear */}
+                {selectedRows.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => table.resetRowSelection()}
+                    className="shrink-0 whitespace-nowrap"
+                  >
+                    <span className="hidden sm:inline">Clear Selection ({selectedRows.length})</span>
+                    <span className="sm:hidden">Clear ({selectedRows.length})</span>
+                  </Button>
+                )}
+
+                <CompactReportsFilters
+                  value={filters}
+                  onChange={setFilters}
+                  onClear={handleClearFilters}
+                />
+
+                {/* Column visibility */}
+                {columnOptions && (
+                  <ColumnVisibilityDropdown
+                    columns={columnOptions}
+                    onToggleColumn={toggleColumn}
+                    onResetToDefaults={resetToDefaults}
+                    variant="outline"
+                    size="sm"
+                  />
+                )}
+
+                {/* Export */}
+                <ExportDropdown
+                  onExport={handleExport}
                   variant="outline"
                   size="sm"
+                  disabled={isLoading || !reportsData?.data?.length}
+                  loading={isLoading}
                 />
-              )}
-
-              {/* Export */}
-              <ExportDropdown
-                onExport={handleExport}
-                variant="outline"
-                size="sm"
-                disabled={isLoading || !reportsData?.data?.length}
-                loading={isLoading}
-              />
+              </div>
             </div>
           </div>
         </div>
