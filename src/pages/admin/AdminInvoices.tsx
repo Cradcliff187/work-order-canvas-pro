@@ -129,9 +129,7 @@ export default function AdminInvoices() {
 
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
 
-  // Filter sheet state
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  // Filter sheet state - removed unused state variables
 
   
   // Wrapper function to handle compact filter changes
@@ -478,110 +476,6 @@ const table = useReactTable({
           </Button>
         </div>
       </header>
-
-      {/* Top Control Bar */}
-      <div className="space-y-4">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Search and Filter Group */}
-          <div className="flex flex-1 gap-2">
-            <SmartSearchInput
-              placeholder="Search invoices..."
-              value={filters.search || ''}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="flex-1"
-              storageKey="admin-invoices-search"
-            />
-            
-            {/* Filter Button */}
-            <Button
-              variant="outline"
-              onClick={() => isMobile ? setIsMobileFilterOpen(true) : setIsDesktopFilterOpen(true)}
-              className="gap-2"
-            >
-              <Filter className="h-4 w-4" />
-              Filters
-              {filterCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
-                  {filterCount}
-                </span>
-              )}
-            </Button>
-          </div>
-          
-          {/* Action Buttons Group */}
-          <div className="flex gap-2 flex-wrap lg:flex-nowrap">
-            <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || (data?.data?.length ?? 0) === 0} />
-            {bulkMode && (
-              <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0} aria-label="Open bulk actions">
-                Bulk Actions{selectedCount > 0 ? ` (${selectedCount})` : ''}
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Filter Sheet */}
-      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Invoice Filters</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 space-y-4">
-            <UnifiedInvoiceFilters
-              filters={filters}
-              onFiltersChange={(next) => {
-                if (JSON.stringify(filters) === JSON.stringify(next)) return;
-                setFilters(next as any);
-                setPage(1);
-              }}
-              onClear={() => { 
-                clearFilters(); 
-                setPage(1); 
-              }}
-            />
-            <Button 
-              onClick={() => setIsMobileFilterOpen(false)} 
-              className="w-full"
-            >
-              Apply Filters
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Desktop Filter Sheet */}
-      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-[480px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Invoice Filters</SheetTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                clearFilters();
-                setPage(1);
-              }}
-              className="absolute right-12 top-4"
-            >
-              Clear All
-            </Button>
-          </SheetHeader>
-          <div className="mt-6">
-            <UnifiedInvoiceFilters
-              filters={filters}
-              onFiltersChange={(next) => {
-                if (JSON.stringify(filters) === JSON.stringify(next)) return;
-                setFilters(next as any);
-                setPage(1);
-              }}
-              onClear={() => { 
-                clearFilters(); 
-                setPage(1); 
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
 
       {/* Results */}
       {isMobile ? (
