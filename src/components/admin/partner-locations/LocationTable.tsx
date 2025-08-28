@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { CompactLocationFilters } from './CompactLocationFilters';
@@ -9,18 +10,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Edit, Trash2, Plus } from 'lucide-react';
+import { MapPin, Edit, Trash2, Plus, Search, X } from 'lucide-react';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { LoadingCard } from '@/components/ui/loading-states';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { cn } from '@/lib/utils';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { LOCATION_COLUMN_METADATA } from './PartnerLocationColumns';
 import { exportToCSV, exportToExcel, ExportColumn } from '@/lib/utils/export';
 import { useToast } from '@/hooks/use-toast';
-import { TableToolbar } from '@/components/admin/shared/TableToolbar';
 import { ViewMode } from '@/hooks/useViewMode';
 
 interface LocationFilters {
@@ -291,41 +294,90 @@ export function LocationTable({
   return (
     <Card className="overflow-hidden">
       {/* Desktop Toolbar */}
-      <div className="border-b p-6">
-        <div className="flex items-center justify-between gap-4">
-          {/* Left side: Title and search */}
-          <div className="flex-1 min-w-0">
-            <TableToolbar
-              title="Partner Locations"
-              subtitle={`${data.length} locations`}
-              searchValue={filters.search || ''}
-              onSearchChange={(value) => onFiltersChange({ ...filters, search: value })}
-              searchPlaceholder="Search locations..."
-              viewMode={viewMode === 'list' ? 'card' : viewMode}
-              onViewModeChange={onViewModeChange}
-              allowedViewModes={['table', 'card']}
-              selectedCount={Object.keys(rowSelection).length}
-              onClearSelection={() => setRowSelection?.({})}
-              onExport={handleExport}
-              columnVisibilityColumns={columnOptions}
-              onToggleColumn={toggleColumn}
-              onResetColumns={resetToDefaults}
-            />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 border-b">
+        {/* Left side - Title and view mode */}
+        <div className="flex items-center gap-4">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold leading-none tracking-tight">
+              Partner Locations
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {data.length} locations
+            </p>
           </div>
           
-          {/* Right side: Filters */}
-          <div className="flex items-center gap-2">
-            <CompactLocationFilters
-              value={{
-                organization_id: filters.organization_id,
-                status: filters.status,
-                location_ids: filters.location_ids
-              }}
-              onChange={(filterValue) => onFiltersChange({ ...filters, ...filterValue })}
-              onClear={() => onFiltersChange({ search: filters.search })}
-              locationOptions={locationOptions}
+          <ViewModeSwitcher
+            value={viewMode === 'list' ? 'card' : viewMode}
+            onValueChange={onViewModeChange}
+            allowedModes={['table', 'card']}
+            className="shrink-0"
+          />
+        </div>
+
+        {/* Right side - Controls in correct order */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Clear selection (if any selected) */}
+          {Object.keys(rowSelection).length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setRowSelection?.({})}
+              className="shrink-0"
+            >
+              Clear Selection ({Object.keys(rowSelection).length})
+            </Button>
+          )}
+          
+          {/* Filters */}
+          <CompactLocationFilters
+            value={{
+              organization_id: filters.organization_id,
+              status: filters.status,
+              location_ids: filters.location_ids
+            }}
+            onChange={(filterValue) => onFiltersChange({ ...filters, ...filterValue })}
+            onClear={() => onFiltersChange({ search: filters.search })}
+            locationOptions={locationOptions}
+          />
+          
+          {/* Search */}
+          <div className="relative flex-1 sm:flex-initial sm:w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search locations..."
+              value={filters.search || ''}
+              onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+              className="pl-10 pr-10 h-10"
             />
+            {filters.search && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onFiltersChange({ ...filters, search: '' })}
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
+          
+          {/* Column visibility */}
+          <ColumnVisibilityDropdown
+            columns={columnOptions}
+            onToggleColumn={toggleColumn}
+            onResetToDefaults={resetToDefaults}
+            variant="outline"
+            size="sm"
+          />
+          
+          {/* Export */}
+          <ExportDropdown
+            onExport={handleExport}
+            variant="outline"
+            size="sm"
+            disabled={false}
+            loading={false}
+          />
         </div>
       </div>
 
