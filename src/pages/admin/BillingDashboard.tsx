@@ -9,7 +9,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { useTrades } from '@/hooks/useWorkOrders';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
-import { FileText, Filter, Download, Receipt } from 'lucide-react';
+import { FileText, Filter, Download, Receipt, TrendingUp } from 'lucide-react';
 import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { Invoice } from '@/hooks/useInvoices';
@@ -27,6 +27,7 @@ import { exportWorkOrders } from '@/lib/utils/export';
 import { supabase } from '@/integrations/supabase/client';
 import { CompactBillingPipelineFilters } from '@/components/admin/billing/CompactBillingPipelineFilters';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
+import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 
 // Filter interface for Pipeline - simplified
 interface PipelineFiltersValue {
@@ -417,18 +418,38 @@ export function BillingDashboard() {
             </div>
             
             {/* Mobile Table */}
-            <WorkOrderPipelineTable
-              data={filteredPipelineData}
-              isLoading={pipelineLoading}
-              isError={pipelineError}
-              viewMode={viewMode}
-              columnVisibility={columnVisibility}
-              onExport={handleExport}
-              onToggleColumn={toggleColumn}
-              onResetColumns={resetToDefaults}
-              columns={getAllColumns()}
-              isMobile={true}
-            />
+            {pipelineLoading ? (
+              <div className="p-4">
+                <TableSkeleton rows={10} columns={4} showHeader={true} />
+              </div>
+            ) : filteredPipelineData.length === 0 ? (
+              <EmptyState
+                icon={TrendingUp}
+                title="No items in pipeline"
+                description={filterCount > 0 
+                  ? "No work orders match your filters. Try adjusting your search."
+                  : "No work orders are currently in the billing pipeline."
+                }
+                action={filterCount > 0 ? {
+                  label: "Clear Filters",
+                  onClick: clearFilters
+                } : undefined}
+                variant="full"
+              />
+            ) : (
+              <WorkOrderPipelineTable
+                data={filteredPipelineData}
+                isLoading={pipelineLoading}
+                isError={pipelineError}
+                viewMode={viewMode}
+                columnVisibility={columnVisibility}
+                onExport={handleExport}
+                onToggleColumn={toggleColumn}
+                onResetColumns={resetToDefaults}
+                columns={getAllColumns()}
+                isMobile={true}
+              />
+            )}
           </MobilePullToRefresh>
         ) : (
           /* Desktop Pipeline Table Card */
@@ -472,18 +493,37 @@ export function BillingDashboard() {
             
             {/* Table content */}
             <CardContent className="p-0">
-              <WorkOrderPipelineTable 
-                data={filteredPipelineData}
-                isLoading={pipelineLoading}
-                isError={pipelineError}
-                viewMode={viewMode}
-                columnVisibility={columnVisibility}
-                onExport={handleExport}
-                onToggleColumn={toggleColumn}
-                onResetColumns={resetToDefaults}
-                columns={getAllColumns()}
-                isMobile={false}
-              />
+              {pipelineLoading ? (
+                <div className="p-6">
+                  <TableSkeleton rows={10} columns={9} showHeader={true} />
+                </div>
+              ) : filteredPipelineData.length === 0 ? (
+                <EmptyState
+                  icon={TrendingUp}
+                  title="No items in pipeline"
+                  description={filterCount > 0 
+                    ? "No work orders match your filters. Try adjusting your search."
+                    : "No work orders are currently in the billing pipeline."
+                  }
+                  action={filterCount > 0 ? {
+                    label: "Clear Filters",
+                    onClick: clearFilters
+                  } : undefined}
+                />
+              ) : (
+                <WorkOrderPipelineTable 
+                  data={filteredPipelineData}
+                  isLoading={pipelineLoading}
+                  isError={pipelineError}
+                  viewMode={viewMode}
+                  columnVisibility={columnVisibility}
+                  onExport={handleExport}
+                  onToggleColumn={toggleColumn}
+                  onResetColumns={resetToDefaults}
+                  columns={getAllColumns()}
+                  isMobile={false}
+                />
+              )}
             </CardContent>
           </Card>
         )}
