@@ -82,8 +82,6 @@ interface ReportsFiltersValue {
   subcontractor_organization_ids?: string[];
   trade_ids?: string[];
   location_filter?: string[];
-  submitted_by?: string;
-  work_order?: string;
 }
 
 export default function AdminReports() {

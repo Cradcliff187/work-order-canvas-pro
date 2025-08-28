@@ -15,8 +15,6 @@ interface ReportsFiltersValue {
   subcontractor_organization_ids?: string[];
   trade_ids?: string[];
   location_filter?: string[];
-  submitted_by?: string;
-  work_order?: string;
 }
 
 export function useAdminReports(
@@ -199,29 +197,6 @@ export function useAdminReports(
         });
       }
 
-      // Apply client-side filters for submitted_by and work_order
-      if (filters.submitted_by) {
-        const submittedByLower = filters.submitted_by.toLowerCase();
-        filteredData = filteredData.filter(report => {
-          const submittedBy = report.submitted_by;
-          return (
-            submittedBy?.first_name?.toLowerCase().includes(submittedByLower) ||
-            submittedBy?.last_name?.toLowerCase().includes(submittedByLower) ||
-            submittedBy?.email?.toLowerCase().includes(submittedByLower)
-          );
-        });
-      }
-
-      if (filters.work_order) {
-        const workOrderLower = filters.work_order.toLowerCase();
-        filteredData = filteredData.filter(report => {
-          const workOrder = report.work_orders;
-          return (
-            workOrder?.work_order_number?.toLowerCase().includes(workOrderLower) ||
-            workOrder?.title?.toLowerCase().includes(workOrderLower)
-          );
-        });
-      }
 
       return {
         data: filteredData,

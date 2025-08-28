@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
+import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,8 +22,6 @@ export interface ReportsFiltersValue {
   subcontractor_organization_ids?: string[];
   trade_ids?: string[];
   location_filter?: string[];
-  submitted_by?: string;
-  work_order?: string;
 }
 
 export interface FilterConfig {
@@ -31,8 +30,6 @@ export interface FilterConfig {
   showSubcontractorFilter?: boolean;
   showTradeFilter?: boolean;
   showLocationFilter?: boolean;
-  showSubmittedBy?: boolean;
-  showWorkOrder?: boolean;
 }
 
 export interface CompactReportsFiltersProps {
@@ -61,8 +58,6 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
     showSubcontractorFilter = true,
     showTradeFilter = true,
     showLocationFilter = true,
-    showSubmittedBy = true,
-    showWorkOrder = true,
   } = config;
   
   const isMobile = useIsMobile();
@@ -73,10 +68,10 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
   // Data fetching
   const { data: organizations = [] } = useOrganizationsForWorkOrders();
   const { data: trades = [] } = useTrades();
+  const { data: subcontractorOrganizations = [] } = useSubcontractorOrganizations();
   
-  // Partner and Subcontractor organizations
+  // Partner organizations
   const partnerOrganizations = organizations.filter(org => org.organization_type === 'partner');
-  const subcontractorOrganizations = organizations.filter(org => org.organization_type === 'subcontractor');
   
   // Partner locations (dependent on selected partners)
   const { data: locations = [] } = useQuery({
@@ -105,9 +100,7 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
       value.trade_ids?.length,
       value.location_filter?.length,
       value.date_from,
-      value.date_to,
-      value.submitted_by,
-      value.work_order
+      value.date_to
     ].filter(Boolean).length;
   }, [value]);
 
@@ -205,10 +198,10 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
             </div>
           )}
 
-          {/* Subcontractor Organization Filter */}
+          {/* Subcontractor Filter */}
           {showSubcontractorFilter && (
             <div>
-              <label className="text-sm font-medium mb-2 block">Subcontractor Organization</label>
+              <label className="text-sm font-medium mb-2 block">Subcontractor</label>
               <MultiSelectFilter
                 options={subcontractorOptions}
                 selectedValues={value.subcontractor_organization_ids || []}
@@ -302,31 +295,6 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
             </div>
           )}
 
-          {/* Submitted By Filter */}
-          {showSubmittedBy && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Submitted By</label>
-              <Input
-                value={value.submitted_by || ''}
-                onChange={(e) => handleStringFilterChange('submitted_by', e.target.value)}
-                placeholder="Enter name or email..."
-                className="w-full h-10"
-              />
-            </div>
-          )}
-
-          {/* Work Order Filter */}
-          {showWorkOrder && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Work Order</label>
-              <Input
-                value={value.work_order || ''}
-                onChange={(e) => handleStringFilterChange('work_order', e.target.value)}
-                placeholder="Enter work order number..."
-                className="w-full h-10"
-              />
-            </div>
-          )}
         </div>
         
         {/* Action buttons */}
@@ -388,10 +356,10 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
             </div>
           )}
 
-          {/* Subcontractor Organization Filter */}
+          {/* Subcontractor Filter */}
           {showSubcontractorFilter && (
             <div>
-              <label className="text-sm font-medium mb-2 block">Subcontractor Organization</label>
+              <label className="text-sm font-medium mb-2 block">Subcontractor</label>
               <MultiSelectFilter
                 options={subcontractorOptions}
                 selectedValues={value.subcontractor_organization_ids || []}
@@ -485,31 +453,6 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
             </div>
           )}
 
-          {/* Submitted By Filter */}
-          {showSubmittedBy && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Submitted By</label>
-              <Input
-                value={value.submitted_by || ''}
-                onChange={(e) => handleStringFilterChange('submitted_by', e.target.value)}
-                placeholder="Enter name or email..."
-                className="w-full h-10"
-              />
-            </div>
-          )}
-
-          {/* Work Order Filter */}
-          {showWorkOrder && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Work Order</label>
-              <Input
-                value={value.work_order || ''}
-                onChange={(e) => handleStringFilterChange('work_order', e.target.value)}
-                placeholder="Enter work order number..."
-                className="w-full h-10"
-              />
-            </div>
-          )}
         </div>
 
         {/* Sticky action buttons */}
