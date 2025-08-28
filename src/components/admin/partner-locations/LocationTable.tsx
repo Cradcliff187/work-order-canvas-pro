@@ -2,10 +2,11 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
+import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { CompactLocationFilters } from './CompactLocationFilters';
 import { ResponsiveTableContainer } from '@/components/ui/responsive-table-container';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Edit, Trash2, Plus } from 'lucide-react';
@@ -69,6 +70,8 @@ export interface LocationTableProps {
   onDelete: (location: PartnerLocation) => void;
   onRefresh?: () => Promise<void>;
   onAddLocation?: () => void;
+  onBulkStatusChange?: (status: 'active' | 'inactive', ids: string[]) => void;
+  onBulkDelete?: (ids: string[]) => void;
 }
 
 export function LocationTable({
@@ -88,7 +91,9 @@ export function LocationTable({
   onEdit,
   onDelete,
   onRefresh,
-  onAddLocation
+  onAddLocation,
+  onBulkStatusChange,
+  onBulkDelete
 }: LocationTableProps) {
   const { toast } = useToast();
   
@@ -168,14 +173,17 @@ export function LocationTable({
     });
   };
 
-  const hasFilters = useMemo(() => {
-    return !!(
-      (filters.search && filters.search.trim()) ||
-      (filters.organization_id && filters.organization_id !== 'all') ||
-      (filters.status && filters.status !== 'all') ||
-      (filters.location_ids && filters.location_ids.length > 0)
-    );
+  // Calculate active filter count
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.search?.trim()) count++;
+    if (filters.organization_id && filters.organization_id !== 'all') count++;
+    if (filters.status && filters.status !== 'all') count++;
+    if (filters.location_ids?.length) count += filters.location_ids.length;
+    return count;
   }, [filters]);
+
+  const hasFilters = activeFilterCount > 0;
 
   // Mobile view with pull-to-refresh
   if (isMobile) {
@@ -220,11 +228,11 @@ export function LocationTable({
               <EmptyState
                 icon={MapPin}
                 title="No locations found"
-                description={hasFilters 
+                description={activeFilterCount > 0 
                   ? "No locations match your filters. Try adjusting your search."
                   : "No partner locations have been added yet."
                 }
-                action={!hasFilters && onAddLocation ? {
+                action={activeFilterCount === 0 && onAddLocation ? {
                   label: "Add Location",
                   onClick: onAddLocation,
                   icon: Plus
@@ -305,26 +313,56 @@ export function LocationTable({
       {/* Table content */}
       {isLoading ? (
         <div className="p-6">
-          <EnhancedTableSkeleton rows={5} columns={7} />
-        </div>
-      ) : data.length === 0 ? (
-        <div className="p-6">
-          <EmptyState
-            icon={MapPin}
-            title="No locations found"
-            description={hasFilters 
-              ? "No locations match your filters. Try adjusting your search."
-              : "No partner locations have been added yet."
-            }
-            action={!hasFilters && onAddLocation ? {
-              label: "Add Location",
-              onClick: onAddLocation,
-              icon: Plus
-            } : undefined}
+          <TableSkeleton 
+            rows={10} 
+            columns={getVisibleColumnCount() + (bulkMode ? 1 : 0) + 1}
           />
         </div>
-      ) : (
+      ) : data.length === 0 ? (
         <div className="p-0">
+          <ResponsiveTableContainer>
+            <Table className="admin-table">
+              <TableHeader>
+                <TableRow>
+                  {bulkMode && (
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        disabled
+                        aria-label="Select all locations"
+                      />
+                    </TableHead>
+                  )}
+                  {columnOptions.find(col => col.id === 'organization')?.visible && <TableHead>Organization</TableHead>}
+                  {columnOptions.find(col => col.id === 'location_number')?.visible && <TableHead>Location #</TableHead>}
+                  {columnOptions.find(col => col.id === 'location_name')?.visible && <TableHead>Location Name</TableHead>}
+                  {columnOptions.find(col => col.id === 'address')?.visible && <TableHead>Address</TableHead>}
+                  {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
+                  {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <EmptyTableState
+                  icon={MapPin}
+                  title="No partner locations"
+                  description={
+                    activeFilterCount > 0 
+                      ? "No locations match your current filters."
+                      : "Start by adding your first partner location."
+                  }
+                  action={activeFilterCount === 0 && onAddLocation ? {
+                    label: "Add Location",
+                    onClick: onAddLocation,
+                    icon: Plus
+                  } : undefined}
+                  colSpan={getVisibleColumnCount() + (bulkMode ? 1 : 0) + 1}
+                />
+              </TableBody>
+            </Table>
+          </ResponsiveTableContainer>
+        </div>
+      ) : (
+        <div className="p-0 overflow-x-auto">
           <ResponsiveTableContainer>
             <Table className="admin-table">
               <TableHeader>
@@ -380,22 +418,22 @@ export function LocationTable({
                         </TableCell>
                       )}
                       {columnOptions.find(col => col.id === 'organization')?.visible && (
-                        <TableCell>
+                        <TableCell className="max-w-[200px] truncate">
                           {org?.name || 'Unknown'}
                         </TableCell>
                       )}
                       {columnOptions.find(col => col.id === 'location_number')?.visible && (
-                        <TableCell className="font-mono text-sm">
+                        <TableCell className="font-mono text-sm max-w-[120px] truncate">
                           #{location.location_number}
                         </TableCell>
                       )}
                       {columnOptions.find(col => col.id === 'location_name')?.visible && (
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium max-w-[250px] truncate">
                           {location.location_name}
                         </TableCell>
                       )}
                       {columnOptions.find(col => col.id === 'address')?.visible && (
-                        <TableCell>
+                        <TableCell className="max-w-[300px] truncate">
                           {formatAddress(location)}
                         </TableCell>
                       )}
@@ -407,7 +445,7 @@ export function LocationTable({
                         </TableCell>
                       )}
                       {columnOptions.find(col => col.id === 'created_at')?.visible && (
-                        <TableCell>
+                        <TableCell className="max-w-[120px] truncate">
                           {new Date(location.created_at).toLocaleDateString()}
                         </TableCell>
                       )}
@@ -419,7 +457,7 @@ export function LocationTable({
                               ⋮
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="z-50 bg-popover">
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               onEdit(location);

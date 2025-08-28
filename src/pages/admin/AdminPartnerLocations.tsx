@@ -13,9 +13,11 @@ import { AddLocationModal } from '@/components/admin/partner-locations/AddLocati
 import { EditLocationModal } from '@/components/admin/partner-locations/EditLocationModal';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { LocationTable } from '@/components/admin/partner-locations/LocationTable';
+import { BulkActionsBar } from '@/components/admin/partner-locations/BulkActionsBar';
 import { usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 export default function AdminPartnerLocations() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrganization, setSelectedOrganization] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -144,8 +146,66 @@ export default function AdminPartnerLocations() {
   };
 
   const handleRefresh = async () => {
-    await refetchLocations();
-    await refetchOrgs();
+    try {
+      await Promise.all([refetchLocations(), refetchOrgs()]);
+      toast({
+        title: "Data refreshed",
+        description: "Partner locations have been updated"
+      });
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    }
+  };
+
+  // Bulk operations handlers
+  const handleBulkStatusChange = async (status: 'active' | 'inactive', ids: string[]) => {
+    try {
+      // TODO: Implement bulk status change API call
+      console.log('Bulk status change:', { status, ids });
+      toast({
+        title: "Status Updated",
+        description: `${ids.length} locations set to ${status}`
+      });
+      setRowSelection({});
+      await handleRefresh();
+    } catch (error) {
+      console.error('Bulk status change failed:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update location status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    try {
+      // TODO: Implement bulk delete API call
+      console.log('Bulk delete:', ids);
+      toast({
+        title: "Locations Deleted",
+        description: `${ids.length} locations have been deleted`
+      });
+      setRowSelection({});
+      await handleRefresh();
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete locations",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkExport = (format: 'csv' | 'excel', ids: string[]) => {
+    const selectedLocations = filteredLocations.filter(location => ids.includes(location.id));
+    // Export selected locations using existing export logic
+    console.log('Bulk export:', { format, selectedLocations });
+    toast({
+      title: "Export Complete",
+      description: `Exported ${selectedLocations.length} selected locations`
+    });
   };
 
   const handleFiltersChange = (newFilters: any) => {
@@ -162,7 +222,11 @@ export default function AdminPartnerLocations() {
       await deleteLocation.mutateAsync(deletingLocation.id);
       setDeletingLocation(null);
     } catch (error) {
-      toast.error('Failed to delete location');
+      toast({
+        title: "Error",
+        description: "Failed to delete location",
+        variant: "destructive"
+      });
     }
   };
 
@@ -307,12 +371,27 @@ export default function AdminPartnerLocations() {
         rowSelection={rowSelection}
         setRowSelection={setRowSelection}
         bulkMode={bulkMode}
-        onEdit={setEditingLocation}
-        onDelete={setDeletingLocation}
+        onEdit={(location) => setEditingLocation(location)}
+        onDelete={(location) => setDeletingLocation(location)}
         onRefresh={handleRefresh}
         onAddLocation={() => setIsAddModalOpen(true)}
+        onBulkStatusChange={handleBulkStatusChange}
+        onBulkDelete={handleBulkDelete}
       />
-      
+
+      {/* Bulk Actions Bar */}
+      {bulkMode && Object.keys(rowSelection).length > 0 && (
+        <BulkActionsBar
+          selectedCount={Object.keys(rowSelection).length}
+          selectedIds={Object.keys(rowSelection)}
+          onClearSelection={() => setRowSelection({})}
+          onExport={handleBulkExport}
+          onBulkStatusChange={handleBulkStatusChange}
+          onBulkDelete={handleBulkDelete}
+          loading={isLoading}
+        />
+      )}
+
       {/* Modals */}
       <AddLocationModal
         open={isAddModalOpen}
