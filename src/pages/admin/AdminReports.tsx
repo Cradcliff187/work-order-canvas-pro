@@ -66,7 +66,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
-// ReportsFiltersValue type import moved to local definition
+import { CompactReportsFilters } from '@/components/admin/reports/CompactReportsFilters';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { cn } from '@/lib/utils';
 
@@ -438,25 +438,8 @@ const table = useReactTable({
         </div>
       </div>
 
-      {/* Desktop Layout */}
-      <div className="hidden lg:flex gap-4 mb-6">
-        <div className="flex flex-1 items-center gap-3">
-          <SmartSearchInput
-            placeholder="Search by work order, location, materials..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onClear={handleSearchClear}
-            showClearButton={true}
-            className="flex-1 h-10"
-          />
-          <Button 
-            variant="outline" 
-            className="h-10 px-4 whitespace-nowrap"
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-        </div>
+      {/* Header Actions */}
+      <div className="flex justify-between items-center mb-6">
         <div className="flex gap-2">
           <ViewModeSwitcher
             value={viewMode}
@@ -472,46 +455,15 @@ const table = useReactTable({
             <CheckSquare className="h-4 w-4 mr-2" />
             Bulk Actions
           </Button>
-          <Button 
-            onClick={() => navigate('/admin/invoices/create')}
-            className="h-9"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Subcontractor Invoice
-          </Button>
         </div>
+        <Button 
+          onClick={() => navigate('/admin/invoices/create')}
+          className="h-9"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create Subcontractor Invoice
+        </Button>
       </div>
-
-      {/* Mobile Layout */}
-      <div className="lg:hidden space-y-3 mb-6">
-        <SmartSearchInput
-          placeholder="Search by work order, location, materials..."
-          value={searchTerm}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full"
-        />
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex-1">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-          <Button
-            variant={bulkMode ? "default" : "outline"}
-            onClick={() => setBulkMode(!bulkMode)}
-            className="h-9"
-          >
-            <CheckSquare className="h-4 w-4" />
-          </Button>
-          <Button 
-            onClick={() => navigate('/admin/partner-billing/select-reports')}
-            className="h-9"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* ReportsFiltersV2 component removed - filter logic remains for future CompactReportsFilters */}
 
       {/* Bulk Actions */}
       {selectedRows.length > 0 && (
@@ -557,6 +509,16 @@ const table = useReactTable({
         onResetColumns={resetToDefaults}
         onExportAll={handleExport}
         isMobile={isMobile}
+        filterComponent={
+          <CompactReportsFilters
+            value={filters}
+            onChange={setFilters}
+            onClear={handleClearFilters}
+          />
+        }
+        searchValue={searchTerm}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder="Search by work order, location, materials..."
         renderMobileCard={(report: any) => {
               const workOrder = report.work_orders;
               const subcontractor = report.subcontractor;
