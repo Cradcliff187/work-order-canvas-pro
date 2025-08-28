@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { LOCATION_COLUMN_METADATA } from './PartnerLocationColumns';
 import { exportToCSV, exportToExcel, ExportColumn } from '@/lib/utils/export';
+import { generateMapUrl } from '@/lib/utils/addressUtils';
 import { useToast } from '@/hooks/use-toast';
 import { ViewMode } from '@/hooks/useViewMode';
 
@@ -404,6 +405,10 @@ export function LocationTable({
                   {columnOptions.find(col => col.id === 'location_number')?.visible && <TableHead>Location #</TableHead>}
                   {columnOptions.find(col => col.id === 'location_name')?.visible && <TableHead>Location Name</TableHead>}
                   {columnOptions.find(col => col.id === 'address')?.visible && <TableHead>Address</TableHead>}
+                  {columnOptions.find(col => col.id === 'city')?.visible && <TableHead>City</TableHead>}
+                  {columnOptions.find(col => col.id === 'state')?.visible && <TableHead>State</TableHead>}
+                  {columnOptions.find(col => col.id === 'zip_code')?.visible && <TableHead>ZIP</TableHead>}
+                  {columnOptions.find(col => col.id === 'contact_name')?.visible && <TableHead>Contact</TableHead>}
                   {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
                   {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
@@ -459,6 +464,10 @@ export function LocationTable({
                   {columnOptions.find(col => col.id === 'location_number')?.visible && <TableHead>Location #</TableHead>}
                   {columnOptions.find(col => col.id === 'location_name')?.visible && <TableHead>Location Name</TableHead>}
                   {columnOptions.find(col => col.id === 'address')?.visible && <TableHead>Address</TableHead>}
+                  {columnOptions.find(col => col.id === 'city')?.visible && <TableHead>City</TableHead>}
+                  {columnOptions.find(col => col.id === 'state')?.visible && <TableHead>State</TableHead>}
+                  {columnOptions.find(col => col.id === 'zip_code')?.visible && <TableHead>ZIP</TableHead>}
+                  {columnOptions.find(col => col.id === 'contact_name')?.visible && <TableHead>Contact</TableHead>}
                   {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
                   {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
@@ -502,7 +511,36 @@ export function LocationTable({
                       )}
                       {columnOptions.find(col => col.id === 'address')?.visible && (
                         <TableCell className="max-w-[300px] truncate">
-                          {formatAddress(location)}
+                          {location.street_address && (
+                            <a
+                              href={generateMapUrl(location) || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {location.street_address}
+                            </a>
+                          )}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'city')?.visible && (
+                        <TableCell className="max-w-[150px] truncate">
+                          {location.city || '-'}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'state')?.visible && (
+                        <TableCell className="max-w-[100px] truncate">
+                          {location.state || '-'}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'zip_code')?.visible && (
+                        <TableCell className="max-w-[100px] truncate">
+                          {location.zip_code || '-'}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'contact_name')?.visible && (
+                        <TableCell className="max-w-[200px] truncate">
+                          {location.contact_name || '-'}
                         </TableCell>
                       )}
                       {columnOptions.find(col => col.id === 'status')?.visible && (

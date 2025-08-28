@@ -9,7 +9,8 @@ export type PartnerLocationColumnId =
   | "address"
   | "city"
   | "state"
-  | "zip"
+  | "zip_code"
+  | "contact_name"
   | "status"
   | "created_at"
   | "actions";
