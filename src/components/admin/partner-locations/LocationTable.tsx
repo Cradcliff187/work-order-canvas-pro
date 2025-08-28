@@ -292,22 +292,41 @@ export function LocationTable({
     <Card className="overflow-hidden">
       {/* Desktop Toolbar */}
       <div className="border-b p-6">
-        <TableToolbar
-          title="Partner Locations"
-          subtitle={`${data.length} locations`}
-          searchValue={filters.search || ''}
-          onSearchChange={(value) => onFiltersChange({ ...filters, search: value })}
-          searchPlaceholder="Search locations..."
-          viewMode={viewMode === 'list' ? 'card' : viewMode}
-          onViewModeChange={onViewModeChange}
-          allowedViewModes={['table', 'card']}
-          selectedCount={Object.keys(rowSelection).length}
-          onClearSelection={() => setRowSelection?.({})}
-          onExport={handleExport}
-          columnVisibilityColumns={columnOptions}
-          onToggleColumn={toggleColumn}
-          onResetColumns={resetToDefaults}
-        />
+        <div className="flex items-center justify-between gap-4">
+          {/* Left side: Title and search */}
+          <div className="flex-1 min-w-0">
+            <TableToolbar
+              title="Partner Locations"
+              subtitle={`${data.length} locations`}
+              searchValue={filters.search || ''}
+              onSearchChange={(value) => onFiltersChange({ ...filters, search: value })}
+              searchPlaceholder="Search locations..."
+              viewMode={viewMode === 'list' ? 'card' : viewMode}
+              onViewModeChange={onViewModeChange}
+              allowedViewModes={['table', 'card']}
+              selectedCount={Object.keys(rowSelection).length}
+              onClearSelection={() => setRowSelection?.({})}
+              onExport={handleExport}
+              columnVisibilityColumns={columnOptions}
+              onToggleColumn={toggleColumn}
+              onResetColumns={resetToDefaults}
+            />
+          </div>
+          
+          {/* Right side: Filters */}
+          <div className="flex items-center gap-2">
+            <CompactLocationFilters
+              value={{
+                organization_id: filters.organization_id,
+                status: filters.status,
+                location_ids: filters.location_ids
+              }}
+              onChange={(filterValue) => onFiltersChange({ ...filters, ...filterValue })}
+              onClear={() => onFiltersChange({ search: filters.search })}
+              locationOptions={locationOptions}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Table content */}
