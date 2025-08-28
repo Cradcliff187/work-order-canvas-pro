@@ -131,28 +131,22 @@ export default function AdminInvoices() {
   
   // Wrapper function to handle compact filter changes
   const handleCompactFiltersChange = (compactFilters: InvoiceFiltersValue) => {
-    // Convert CompactFilters format to Admin format
-    const adminFilters = {
-      ...filters, // Keep existing admin-specific fields
-      search: compactFilters.search,
-      overdue: compactFilters.overdue,
-      invoice_status: compactFilters.invoice_status,
-      partner_organization_id: compactFilters.partner_organization_id,
-      location_filter: compactFilters.location_filter,
-      ...(compactFilters.amount_range && { amount_range: compactFilters.amount_range })
-    } as any;
-    
-    setFilters(adminFilters);
+    // Merge compact filters with existing admin filters
+    setFilters({
+      ...filters,
+      overdue: compactFilters.overdue || false,
+      invoice_status: compactFilters.invoice_status || [],
+      partner_billing_status: compactFilters.partner_billing_status || [],
+      subcontractor_organization_id: compactFilters.subcontractor_organization_id,
+    });
   };
 
   // Convert admin filters to compact format for CompactInvoiceFilters
   const compactFilters: InvoiceFiltersValue = {
-    search: filters.search,
-    overdue: filters.overdue,
-    invoice_status: filters.invoice_status,
-    partner_organization_id: filters.partner_organization_id,
-    location_filter: filters.location_filter,
-    amount_range: (filters as any).amount_range // Safe access with type assertion
+    overdue: filters.overdue || false,
+    invoice_status: filters.invoice_status || [],
+    partner_billing_status: filters.partner_billing_status || [],
+    subcontractor_organization_id: filters.subcontractor_organization_id
   };
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
   const [bulkOpen, setBulkOpen] = useState(false);
