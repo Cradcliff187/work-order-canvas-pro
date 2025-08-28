@@ -66,9 +66,23 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
-import { ReportsFiltersV2, ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersV2';
+// ReportsFiltersValue type import moved to local definition
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { cn } from '@/lib/utils';
+
+// ReportsFiltersValue type definition (matching ReportsFiltersV2 structure)
+interface ReportsFiltersValue {
+  search?: string;
+  status?: string[];
+  date_from?: string;
+  date_to?: string;
+  partner_organization_ids?: string[];
+  subcontractor_organization_ids?: string[];
+  trade_ids?: string[];
+  location_filter?: string[];
+  submitted_by?: string;
+  work_order?: string;
+}
 
 export default function AdminReports() {
   const navigate = useNavigate();
@@ -92,8 +106,6 @@ export default function AdminReports() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
 
   // Persist filters using the ReportsFiltersV2 structure
@@ -439,7 +451,6 @@ const table = useReactTable({
           />
           <Button 
             variant="outline" 
-            onClick={() => setIsDesktopFilterOpen(true)}
             className="h-10 px-4 whitespace-nowrap"
           >
             <Filter className="h-4 w-4 mr-2" />
@@ -480,7 +491,7 @@ const table = useReactTable({
           className="w-full"
         />
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
+          <Button variant="outline" className="flex-1">
             <Filter className="h-4 w-4 mr-2" />
             Filters {filterCount > 0 && `(${filterCount})`}
           </Button>
@@ -500,13 +511,7 @@ const table = useReactTable({
         </div>
       </div>
 
-      <ReportsFiltersV2
-        value={filters}
-        onChange={handleFiltersChange}
-        searchTerm={searchTerm}
-        onSearchChange={handleSearchChange}
-        onClear={handleClearFilters}
-      />
+      {/* ReportsFiltersV2 component removed - filter logic remains for future CompactReportsFilters */}
 
       {/* Bulk Actions */}
       {selectedRows.length > 0 && (

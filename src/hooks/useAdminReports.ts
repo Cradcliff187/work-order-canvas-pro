@@ -3,7 +3,21 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { WorkOrderReport, PaginationState, SortingState } from '@/types/reports';
-import { ReportsFiltersValue } from '@/components/admin/reports/ReportsFiltersV2';
+// ReportsFiltersValue type now defined locally in AdminReports.tsx
+
+// Local ReportsFiltersValue type definition (matching original ReportsFiltersV2)
+interface ReportsFiltersValue {
+  search?: string;
+  status?: string[];
+  date_from?: string;
+  date_to?: string;
+  partner_organization_ids?: string[];
+  subcontractor_organization_ids?: string[];
+  trade_ids?: string[];
+  location_filter?: string[];
+  submitted_by?: string;
+  work_order?: string;
+}
 
 export function useAdminReports(
   pagination: PaginationState,
