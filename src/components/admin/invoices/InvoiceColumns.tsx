@@ -251,7 +251,7 @@ export const createInvoiceColumns = ({
       const invoice = row.original;
       const canApprove = invoice.status === 'submitted';
       const canReject = invoice.status === 'submitted';
-      const canMarkPaid = invoice.status !== 'cancelled' && !invoice.paid_at;
+      const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
       const canSend = !!onSendInvoice && !invoice.paid_at;
       const canDownload = !!onDownloadPdf;
 
