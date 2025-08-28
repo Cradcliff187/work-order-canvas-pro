@@ -107,73 +107,7 @@ export function ReportsTable<TData = any>({
   }
 
   return (
-    <Card>
-      <CardHeader className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <CardTitle>Reports</CardTitle>
-          
-          {selectedRows.length > 0 && onClearSelection && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onClearSelection}
-              aria-label={`Clear selection of ${selectedRows.length} reports`}
-              className="shrink-0"
-            >
-              Clear Selection ({selectedRows.length})
-            </Button>
-          )}
-
-          {/* Filters and Search */}
-          <div className="flex items-center gap-2">
-            {filterComponent}
-            {onSearchChange && (
-              <div className="relative flex-1 sm:flex-initial sm:w-80">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={searchPlaceholder}
-                  value={searchValue}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-10 pr-10 h-10"
-                />
-                {searchValue && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onSearchChange('')}
-                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Column visibility */}
-          {!isMobile && columnVisibilityColumns && onToggleColumn && onResetColumns && (
-            <ColumnVisibilityDropdown
-              columns={columnVisibilityColumns}
-              onToggleColumn={onToggleColumn}
-              onResetToDefaults={onResetColumns}
-              variant="outline"
-              size="sm"
-            />
-          )}
-
-          {/* Export */}
-          {!isMobile && onExportAll && (
-            <ExportDropdown
-              onExport={onExportAll}
-              variant="outline"
-              size="sm"
-              disabled={isLoading || !hasRows}
-              loading={isLoading}
-            />
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
+    <div>
         {viewMode === 'table' ? (
           <div className="hidden lg:block">
             <ResponsiveTableWrapper stickyFirstColumn>
@@ -311,7 +245,6 @@ export function ReportsTable<TData = any>({
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

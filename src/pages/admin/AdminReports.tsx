@@ -22,6 +22,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ReportsBreadcrumb } from '@/components/admin/reports/ReportsBreadcrumb';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { 
   Eye, 
   Edit,
@@ -492,28 +493,119 @@ const table = useReactTable({
         </Card>
       )}
 
-      <ReportsTable
-        table={table}
-        columns={columns}
-        isLoading={isLoading}
-        viewMode={viewMode === 'card' ? 'card' : 'table'}
-        onRowClick={(report) => navigate(`/admin/reports/${(report as any).id}`)}
-        columnVisibilityColumns={columnOptions}
-        onToggleColumn={toggleColumn}
-        onResetColumns={resetToDefaults}
-        onExportAll={handleExport}
-        isMobile={isMobile}
-        filterComponent={
-          <CompactReportsFilters
-            value={filters}
-            onChange={setFilters}
-            onClear={handleClearFilters}
-          />
-        }
-        searchValue={searchTerm}
-        onSearchChange={handleSearchChange}
-        searchPlaceholder="Search by work order, location, materials..."
-        renderMobileCard={(report: any) => {
+      {/* Reports Table with Control Bar */}
+      <Card>
+        {/* Table toolbar with search and actions */}
+        <div className="border-b">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
+            {/* Left side - Title and view mode */}
+            <div className="flex items-center gap-4">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold leading-none tracking-tight">
+                  Reports
+                </h2>
+                {reportsData?.totalCount !== undefined && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {reportsData.totalCount} total reports
+                  </p>
+                )}
+              </div>
+              
+              {/* View mode switcher */}
+              <ViewModeSwitcher
+                value={viewMode}
+                onValueChange={setViewMode}
+                allowedModes={allowedModes}
+                className="shrink-0"
+              />
+            </div>
+
+            {/* Right side - Search and Actions */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {/* Selection clear */}
+              {selectedRows.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => table.resetRowSelection()}
+                  className="shrink-0"
+                >
+                  Clear Selection ({selectedRows.length})
+                </Button>
+              )}
+
+              {/* Filters and Search */}
+              <div className="flex items-center gap-2">
+                <CompactReportsFilters
+                  value={filters}
+                  onChange={setFilters}
+                  onClear={handleClearFilters}
+                />
+                <div className="relative flex-1 sm:flex-initial sm:w-80">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by work order, location, materials..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="pl-10 pr-10 h-10"
+                  />
+                  {searchTerm && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSearchChange('')}
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Column visibility */}
+              {columnOptions && (
+                <ColumnVisibilityDropdown
+                  columns={columnOptions}
+                  onToggleColumn={toggleColumn}
+                  onResetToDefaults={resetToDefaults}
+                  variant="outline"
+                  size="sm"
+                />
+              )}
+
+              {/* Export */}
+              <ExportDropdown
+                onExport={handleExport}
+                variant="outline"
+                size="sm"
+                disabled={isLoading || !reportsData?.data?.length}
+                loading={isLoading}
+              />
+            </div>
+          </div>
+        </div>
+
+        <CardContent>
+          {isLoading ? (
+            <EnhancedTableSkeleton rows={5} columns={9} />
+          ) : !reportsData?.data?.length ? (
+            <EmptyTableState
+              icon={FileText}
+              title="No reports found"
+              description={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) 
+                ? "Try adjusting your filters or search criteria" 
+                : "Reports will appear here when subcontractors submit them"}
+              colSpan={viewMode === 'table' ? columns.length : 1}
+            />
+          ) : (
+            <ReportsTable
+            table={table}
+            columns={columns}
+            isLoading={false}
+            viewMode={viewMode === 'card' ? 'card' : 'table'}
+            onRowClick={(report) => navigate(`/admin/reports/${(report as any).id}`)}
+            isMobile={isMobile}
+            renderMobileCard={(report: any) => {
               const workOrder = report.work_orders;
               const subcontractor = report.subcontractor;
               const subcontractorOrg = report.subcontractor_organization;
@@ -558,11 +650,11 @@ const table = useReactTable({
                   </MobileTableCard>
                 </SwipeableListItem>
               );
-        }}
-        emptyIcon={FileText}
-        emptyTitle="No reports found"
-        emptyDescription={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Reports will appear here when subcontractors submit them"}
-      />
+            }}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
