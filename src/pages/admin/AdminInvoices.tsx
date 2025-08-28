@@ -61,7 +61,7 @@ import { CompactInvoiceFilters } from '@/components/admin/invoices/CompactInvoic
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { ResponsiveTableContainer } from '@/components/ui/responsive-table-container';
 import { cn } from '@/lib/utils';
-import { InvoiceFiltersValue } from '@/components/admin/invoices/CompactInvoiceFilters';
+import { type InvoiceFiltersValue } from '@/components/admin/invoices/InvoiceFilters';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { LoadingCard } from '@/components/ui/loading-states';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -137,19 +137,29 @@ export default function AdminInvoices() {
     // Merge compact filters with existing admin filters
     setFilters({
       ...filters,
+      search: compactFilters.search || filters.search,
       overdue: compactFilters.overdue || false,
+      partner_organization_id: compactFilters.partner_organization_id,
+      location_filter: compactFilters.location_filter || [],
+      subcontractor_organization_id: compactFilters.subcontractor_organization_id,
+      operational_status: compactFilters.operational_status || [],
+      report_status: compactFilters.report_status || [],
       invoice_status: compactFilters.invoice_status || [],
       partner_billing_status: compactFilters.partner_billing_status || [],
-      subcontractor_organization_id: compactFilters.subcontractor_organization_id,
     });
   };
 
   // Convert admin filters to compact format for CompactInvoiceFilters
   const compactFilters: InvoiceFiltersValue = {
+    search: filters.search,
     overdue: filters.overdue || false,
+    partner_organization_id: filters.partner_organization_id,
+    location_filter: filters.location_filter || [],
+    subcontractor_organization_id: filters.subcontractor_organization_id,
+    operational_status: filters.operational_status || [],
+    report_status: filters.report_status || [],
     invoice_status: filters.invoice_status || [],
     partner_billing_status: filters.partner_billing_status || [],
-    subcontractor_organization_id: filters.subcontractor_organization_id
   };
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
   const [bulkOpen, setBulkOpen] = useState(false);
