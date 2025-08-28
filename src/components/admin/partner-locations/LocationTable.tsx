@@ -11,7 +11,10 @@ import { ResponsiveTableContainer } from '@/components/ui/responsive-table-conta
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Building2, Phone, Mail, Edit, Trash2 } from 'lucide-react';
+import { MapPin, Building2, Phone, Mail, Edit, Trash2, Plus } from 'lucide-react';
+import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
+import { LoadingCard } from '@/components/ui/loading-states';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -61,6 +64,8 @@ interface LocationTableProps {
   onEdit: (location: PartnerLocation) => void;
   onDelete: (location: PartnerLocation) => void;
   onExport: (format: 'csv' | 'excel') => void;
+  onRefresh?: () => Promise<void>;
+  onAddLocation?: () => void;
 }
 
 export function LocationTable({
@@ -82,7 +87,9 @@ export function LocationTable({
   resetToDefaults,
   onEdit,
   onDelete,
-  onExport
+  onExport,
+  onRefresh,
+  onAddLocation
 }: LocationTableProps) {
   
   // Helper functions
@@ -144,6 +151,16 @@ export function LocationTable({
   const handleExport = (format: 'csv' | 'excel') => {
     onExport(format);
   };
+
+  // Helper to check if filters are active
+  const hasFilters = useMemo(() => {
+    return !!(
+      (filters.search && filters.search.trim()) ||
+      (filters.organization_id && filters.organization_id !== 'all') ||
+      (filters.status && filters.status !== 'all') ||
+      (filters.location_ids && filters.location_ids.length > 0)
+    );
+  }, [filters]);
 
   // Render table content
   const renderTableContent = () => {
@@ -326,6 +343,109 @@ export function LocationTable({
     );
   };
 
+  // Mobile view with pull-to-refresh
+  if (isMobile) {
+    return (
+      <MobilePullToRefresh onRefresh={onRefresh}>
+        {/* Mobile toolbar */}
+        <div className="bg-muted/30 border rounded-lg p-3 space-y-3 mx-4 mt-4">
+          <SmartSearchInput
+            placeholder="Search..."
+            value={filters.search || ''}
+            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+            className="w-full min-h-[44px]"
+          />
+          <div className="flex items-center gap-2">
+            <CompactLocationFilters
+              value={filters}
+              onChange={onFiltersChange}
+              onClear={onClearFilters}
+              locationOptions={locationOptions}
+            />
+            {bulkMode && rowSelection && Object.keys(rowSelection).length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRowSelection && setRowSelection({})}
+                className="shrink-0 min-h-[44px] px-4"
+              >
+                Clear ({Object.keys(rowSelection).length})
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        {/* Mobile content area */}
+        <div className="px-4 pb-4">
+          {isLoading ? (
+            <div className="space-y-4 mt-4">
+              <LoadingCard count={5} showHeader={false} />
+            </div>
+          ) : data.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState
+                icon={MapPin}
+                title="No locations found"
+                description={hasFilters 
+                  ? "No locations match your filters. Try adjusting your search."
+                  : "No partner locations have been added yet."
+                }
+                action={!hasFilters && onAddLocation ? {
+                  label: "Add Location",
+                  onClick: onAddLocation,
+                  icon: Plus
+                } : undefined}
+                variant="full"
+              />
+            </div>
+          ) : (
+            <div className="space-y-3 mt-4">
+              {data.map(location => (
+                <MobileTableCard
+                  key={location.id}
+                  title={location.location_name}
+                  subtitle={`#${location.location_number} - ${organizationMap[location.organization_id]?.name || 'Unknown Org'}`}
+                  badge={
+                    <Badge variant={location.is_active ? 'default' : 'secondary'}>
+                      {location.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  }
+                  metadata={[
+                    { 
+                      label: 'Address', 
+                      value: formatAddress(location)
+                    },
+                    { 
+                      label: 'Contact', 
+                      value: location.contact_name || 'No contact' 
+                    }
+                  ]}
+                  actions={[
+                    { 
+                      label: 'Edit', 
+                      icon: Edit,
+                      onClick: () => onEdit(location) 
+                    },
+                    { 
+                      label: 'Delete', 
+                      icon: Trash2,
+                      onClick: () => onDelete(location), 
+                      variant: 'destructive' 
+                    }
+                  ]}
+                  selected={bulkMode && !!rowSelection[location.id]}
+                  onSelect={bulkMode ? () => toggleRowSelection(location.id) : undefined}
+                  onClick={() => !bulkMode && handleLocationClick(location)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </MobilePullToRefresh>
+    );
+  }
+
+  // Desktop view
   return (
     <Card className="overflow-hidden">
       {/* Desktop Toolbar */}
@@ -358,52 +478,17 @@ export function LocationTable({
               locationOptions={locationOptions}
             />
             
-            {/* Desktop only */}
-            {!isMobile && (
-              <>
-                <ColumnVisibilityDropdown
-                  columns={columnOptions}
-                  onToggleColumn={toggleColumn}
-                  onResetToDefaults={resetToDefaults}
-                />
-                <ExportDropdown onExport={handleExport} />
-              </>
-            )}
+            <ColumnVisibilityDropdown
+              columns={columnOptions}
+              onToggleColumn={toggleColumn}
+              onResetToDefaults={resetToDefaults}
+            />
+            <ExportDropdown onExport={handleExport} />
           </div>
         </div>
       </div>
 
-      {/* Mobile Toolbar */}
-      {isMobile && (
-        <div className="bg-muted/30 border rounded-lg p-3 space-y-3 m-4">
-          <SmartSearchInput
-            placeholder="Search..."
-            value={filters.search || ''}
-            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-            className="w-full"
-          />
-          <div className="flex items-center gap-2">
-            <CompactLocationFilters
-              value={filters}
-              onChange={onFiltersChange}
-              onClear={onClearFilters}
-              locationOptions={locationOptions}
-            />
-            {bulkMode && rowSelection && Object.keys(rowSelection).length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRowSelection && setRowSelection({})}
-                className="shrink-0"
-              >
-                Clear ({Object.keys(rowSelection).length})
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Table/Card Content */}
+      {/* Desktop Content */}
       {isLoading ? (
         <EnhancedTableSkeleton rows={10} columns={8} />
       ) : (
