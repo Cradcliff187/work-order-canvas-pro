@@ -20,6 +20,7 @@ import { LOCATION_COLUMN_METADATA } from './PartnerLocationColumns';
 import { exportToCSV, exportToExcel, ExportColumn } from '@/lib/utils/export';
 import { useToast } from '@/hooks/use-toast';
 import { TableToolbar } from '@/components/admin/shared/TableToolbar';
+import { ViewMode } from '@/hooks/useViewMode';
 
 interface LocationFilters {
   search?: string;
@@ -55,8 +56,8 @@ export interface LocationTableProps {
   
   // View mode and mobile
   isMobile: boolean;
-  viewMode: 'table' | 'card';
-  onViewModeChange: (mode: 'table' | 'card') => void;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
   
   // Row selection for bulk operations  
   rowSelection?: Record<string, boolean>;
@@ -289,16 +290,15 @@ export function LocationTable({
           searchValue={filters.search || ''}
           onSearchChange={(value) => onFiltersChange({ ...filters, search: value })}
           searchPlaceholder="Search locations..."
-          viewMode={viewMode}
+          viewMode={viewMode === 'list' ? 'card' : viewMode}
           onViewModeChange={onViewModeChange}
-          showViewModeSwitch={true}
+          allowedViewModes={['table', 'card']}
           selectedCount={Object.keys(rowSelection).length}
           onClearSelection={() => setRowSelection?.({})}
           onExport={handleExport}
-          columnOptions={columnOptions}
+          columnVisibilityColumns={columnOptions}
           onToggleColumn={toggleColumn}
           onResetColumns={resetToDefaults}
-          visibleColumnCount={getVisibleColumnCount()}
         />
       </div>
 
