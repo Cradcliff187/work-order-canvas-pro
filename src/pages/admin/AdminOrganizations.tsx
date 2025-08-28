@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare } from 'lucide-react';
+import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Building2 } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
@@ -39,6 +39,9 @@ import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/li
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { CompactOrganizationFilters } from '@/components/admin/organizations/CompactOrganizationFilters';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
+import { LoadingCard } from '@/components/ui/loading-states';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface OrganizationFilters {
   search?: string;
@@ -124,6 +127,27 @@ export default function AdminOrganizations() {
   const { mutate: updateOrg } = useUpdateOrganization();
   const handleToggleActive = (org: Organization) => {
     updateOrg({ id: org.id as string, is_active: !org.is_active });
+  };
+
+  // Handler functions for mobile cards
+  const handleEdit = (org: Organization) => {
+    setSelectedOrganization(org);
+    setShowEditModal(true);
+  };
+
+  const handleToggleStatus = (org: Organization) => {
+    handleToggleActive(org);
+  };
+
+  const toggleRowSelection = (orgId: string) => {
+    setRowSelection(prev => ({
+      ...prev,
+      [orgId]: !prev[orgId]
+    }));
+  };
+
+  const handleRefresh = async () => {
+    await refetch();
   };
 
   const columnMetadata = {
@@ -334,44 +358,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
           </div>
         </div>
 
-        {/* Mobile toolbar */}
-        {isMobile && (
-          <div className="bg-muted/30 border rounded-lg p-3 space-y-3 m-4">
-            <SmartSearchInput
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full"
-            />
-            <div className="flex items-center gap-2">
-              <CompactOrganizationFilters
-                value={{
-                  organizationType: typeFilter,
-                  status: statusFilter
-                }}
-                onChange={(filters) => {
-                  setTypeFilter(filters.organizationType || 'all');
-                  setStatusFilter(filters.status || 'all');
-                }}
-                onClear={() => {
-                  setTypeFilter('all');
-                  setStatusFilter('all');
-                }}
-              />
-              {bulkMode && Object.keys(rowSelection).length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRowSelection({})}
-                  className="shrink-0"
-                >
-                  Clear ({Object.keys(rowSelection).length})
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
             <EnhancedTableSkeleton rows={5} columns={5} />
           ) : filteredOrganizations.length === 0 ? (
@@ -394,195 +381,254 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             </div>
           ) : (
             <>
-              {/* Table View */}
-              {viewMode === 'table' && (
-                <div className="hidden lg:block rounded-md border">
-                <Table className="admin-table">
-                    <TableHeader>
-                      <TableRow>
-                        {columnVisibility['initials'] && (
-                          <TableHead className="w-[120px]">
-                            <button
-                              className="flex items-center gap-1"
-                              onClick={() => setSort((s) => ({ key: 'initials', desc: s.key === 'initials' ? !s.desc : false }))}
-                              aria-label={`Sort by initials ${sort.key === 'initials' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
-                            >
-                              <span>Initials</span>
-                              {sort.key === 'initials' ? (
-                                sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </button>
-                          </TableHead>
-                        )}
-                        {columnVisibility['name'] && (
-                          <TableHead>
-                            <button
-                              className="flex items-center gap-1"
-                              onClick={() => setSort((s) => ({ key: 'name', desc: s.key === 'name' ? !s.desc : false }))}
-                              aria-label={`Sort by name ${sort.key === 'name' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
-                            >
-                              <span>Name</span>
-                              {sort.key === 'name' ? (
-                                sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </button>
-                          </TableHead>
-                        )}
-                        {columnVisibility['contact_email'] && (
-                          <TableHead>
-                            <button
-                              className="flex items-center gap-1"
-                              onClick={() => setSort((s) => ({ key: 'contact_email', desc: s.key === 'contact_email' ? !s.desc : false }))}
-                              aria-label={`Sort by contact email ${sort.key === 'contact_email' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
-                            >
-                              <span>Contact Email</span>
-                              {sort.key === 'contact_email' ? (
-                                sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </button>
-                          </TableHead>
-                        )}
-                        {columnVisibility['organization_type'] && (
-                          <TableHead>
-                            <button
-                              className="flex items-center gap-1"
-                              onClick={() => setSort((s) => ({ key: 'organization_type', desc: s.key === 'organization_type' ? !s.desc : false }))}
-                              aria-label={`Sort by type ${sort.key === 'organization_type' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
-                            >
-                              <span>Type</span>
-                              {sort.key === 'organization_type' ? (
-                                sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </button>
-                          </TableHead>
-                        )}
-                        {columnVisibility['actions'] && (
-                          <TableHead className="text-right">Actions</TableHead>
-                        )}
-                      </TableRow>
-                    </TableHeader>
-                  <TableBody>
-                    {filteredOrganizations.map((organization) => (
-                      <TableRow 
-                        key={organization.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => {
-                          // Don't navigate if clicking interactive elements
-                          const target = e.target as HTMLElement;
-                          if (target instanceof HTMLButtonElement || 
-                              target instanceof HTMLInputElement ||
-                              target.closest('[role="checkbox"]') ||
-                              target.closest('[data-radix-collection-item]') ||
-                              target.closest('.dropdown-trigger')) {
-                            return;
-                          }
-                          setSelectedOrganization(organization);
-                          setShowEditModal(true);
-                        }}
-                        onKeyDown={(e) => {
-                          const target = e.target as HTMLElement;
-                          if (target instanceof HTMLButtonElement || 
-                              target instanceof HTMLInputElement ||
-                              target.closest('[role=\"checkbox\"]') ||
-                              target.closest('[data-radix-collection-item]') ||
-                              target.closest('.dropdown-trigger')) {
-                            return;
-                          }
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            setSelectedOrganization(organization);
-                            setShowEditModal(true);
-                          }
-                        }}
-                      >
-                        {columnVisibility['initials'] && (
-                          <TableCell className="font-medium">{organization.initials}</TableCell>
-                        )}
-                        {columnVisibility['name'] && (
-                          <TableCell>{organization.name}</TableCell>
-                        )}
-                        {columnVisibility['contact_email'] && (
-                          <TableCell>{organization.contact_email}</TableCell>
-                        )}
-                        {columnVisibility['organization_type'] && (
-                          <TableCell>
-                            <Badge 
-                              variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
-                              className="h-5 text-[10px] px-1.5"
-                            >
-                              {organization.organization_type}
-                            </Badge>
-                          </TableCell>
-                        )}
-                        {columnVisibility['actions'] && (
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedOrganization(organization);
-                                setShowEditModal(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </Button>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                </div>
+        {isMobile ? (
+          <MobilePullToRefresh onRefresh={handleRefresh}>
+            {/* Mobile toolbar */}
+            <div className="bg-muted/30 border rounded-lg p-3 space-y-3 m-4">
+              <SmartSearchInput
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full"
+              />
+              <div className="flex items-center gap-2">
+                <CompactOrganizationFilters
+                  value={{
+                    organizationType: typeFilter,
+                    status: statusFilter
+                  }}
+                  onChange={(filters) => {
+                    setTypeFilter(filters.organizationType || 'all');
+                    setStatusFilter(filters.status || 'all');
+                  }}
+                  onClear={() => {
+                    setTypeFilter('all');
+                    setStatusFilter('all');
+                  }}
+                />
+                {bulkMode && Object.keys(rowSelection).length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRowSelection({})}
+                    className="shrink-0"
+                  >
+                    Clear ({Object.keys(rowSelection).length})
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            {/* Organization cards */}
+            <div className="space-y-4 p-4">
+              {isLoading ? (
+                <LoadingCard count={5} />
+              ) : filteredOrganizations.length === 0 ? (
+                <EmptyState
+                  icon={Building2}
+                  title="No organizations found"
+                  description={activeFilterCount > 0 
+                    ? "No organizations match your filters."
+                    : "No organizations have been created yet."
+                  }
+                  action={activeFilterCount === 0 ? {
+                    label: "Create Organization",
+                    onClick: () => setShowCreateModal(true),
+                    icon: Plus
+                  } : undefined}
+                />
+              ) : (
+                filteredOrganizations.map(org => (
+                  <MobileTableCard
+                    key={org.id}
+                    title={org.name}
+                    subtitle={`${org.initials || 'N/A'} • ${org.organization_type}`}
+                    badge={
+                      <Badge variant={org.is_active ? 'default' : 'secondary'}>
+                        {org.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    }
+                    metadata={[
+                      { label: 'Type', value: org.organization_type },
+                      { label: 'Email', value: org.contact_email || 'No email' },
+                      { label: 'Phone', value: org.contact_phone || 'No phone' }
+                    ]}
+                    actions={[
+                      { label: 'Edit', onClick: () => handleEdit(org), icon: Edit },
+                      { 
+                        label: org.is_active ? 'Deactivate' : 'Activate',
+                        onClick: () => handleToggleStatus(org),
+                        icon: Power,
+                        variant: org.is_active ? 'destructive' : 'default'
+                      }
+                    ]}
+                    selected={bulkMode && rowSelection[org.id]}
+                    onSelect={bulkMode ? () => toggleRowSelection(org.id) : undefined}
+                    onClick={() => !bulkMode && handleEdit(org)}
+                  />
+                ))
               )}
-
-              {/* Card View */}
-              {viewMode === 'card' && (
-                <div className="space-y-3">
+            </div>
+          </MobilePullToRefresh>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            {viewMode === 'table' && (
+              <div className="hidden lg:block rounded-md border">
+              <Table className="admin-table">
+                  <TableHeader>
+                    <TableRow>
+                      {columnVisibility['initials'] && (
+                        <TableHead className="w-[120px]">
+                          <button
+                            className="flex items-center gap-1"
+                            onClick={() => setSort((s) => ({ key: 'initials', desc: s.key === 'initials' ? !s.desc : false }))}
+                            aria-label={`Sort by initials ${sort.key === 'initials' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                          >
+                            <span>Initials</span>
+                            {sort.key === 'initials' ? (
+                              sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </TableHead>
+                      )}
+                      {columnVisibility['name'] && (
+                        <TableHead>
+                          <button
+                            className="flex items-center gap-1"
+                            onClick={() => setSort((s) => ({ key: 'name', desc: s.key === 'name' ? !s.desc : false }))}
+                            aria-label={`Sort by name ${sort.key === 'name' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                          >
+                            <span>Name</span>
+                            {sort.key === 'name' ? (
+                              sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </TableHead>
+                      )}
+...
+                    </TableRow>
+                  </TableHeader>
+                <TableBody>
                   {filteredOrganizations.map((organization) => (
-                    <SwipeableListItem
+                    <TableRow 
                       key={organization.id}
-                      itemName={organization.name}
-                      itemType="organization"
-                      onSwipeRight={() => {
+                      className="cursor-pointer hover:bg-muted/50"
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        // Don't navigate if clicking interactive elements
+                        const target = e.target as HTMLElement;
+                        if (target instanceof HTMLButtonElement || 
+                            target instanceof HTMLInputElement ||
+                            target.closest('[role="checkbox"]') ||
+                            target.closest('[data-radix-collection-item]') ||
+                            target.closest('.dropdown-trigger')) {
+                          return;
+                        }
                         setSelectedOrganization(organization);
                         setShowEditModal(true);
                       }}
-                      onSwipeLeft={() => handleToggleActive(organization)}
-                      rightAction={{ icon: Edit, label: 'Edit', color: 'default' }}
-                      leftAction={{ icon: Power, label: organization.is_active ? 'Deactivate' : 'Activate', color: organization.is_active ? 'destructive' : 'success' }}
+                      onKeyDown={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (target instanceof HTMLButtonElement || 
+                            target instanceof HTMLInputElement ||
+                            target.closest('[role=\"checkbox\"]') ||
+                            target.closest('[data-radix-collection-item]') ||
+                            target.closest('.dropdown-trigger')) {
+                          return;
+                        }
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedOrganization(organization);
+                          setShowEditModal(true);
+                        }
+                      }}
                     >
-                      <MobileTableCard
-                        title={organization.name}
-                        subtitle={`${organization.initials} • ${organization.contact_email}`}
-                        status={
+                      {columnVisibility['initials'] && (
+                        <TableCell className="font-medium">{organization.initials}</TableCell>
+                      )}
+                      {columnVisibility['name'] && (
+                        <TableCell>{organization.name}</TableCell>
+                      )}
+                      {columnVisibility['contact_email'] && (
+                        <TableCell>{organization.contact_email}</TableCell>
+                      )}
+                      {columnVisibility['organization_type'] && (
+                        <TableCell>
                           <Badge 
                             variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
                             className="h-5 text-[10px] px-1.5"
                           >
                             {organization.organization_type}
                           </Badge>
-                        }
-                        onClick={() => {
-                          setSelectedOrganization(organization);
-                          setShowEditModal(true);
-                        }}
-                      />
-                    </SwipeableListItem>
+                        </TableCell>
+                      )}
+                      {columnVisibility['actions'] && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOrganization(organization);
+                              setShowEditModal(true);
+                            }}
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
                   ))}
-                </div>
-              )}
+                </TableBody>
+              </Table>
+              </div>
+            )}
+
+            {/* Desktop Card View */}
+            {viewMode === 'card' && (
+              <div className="space-y-3">
+                {filteredOrganizations.map((organization) => (
+                  <SwipeableListItem
+                    key={organization.id}
+                    itemName={organization.name}
+                    itemType="organization"
+                    onSwipeRight={() => {
+                      setSelectedOrganization(organization);
+                      setShowEditModal(true);
+                    }}
+                    onSwipeLeft={() => handleToggleActive(organization)}
+                    rightAction={{ icon: Edit, label: 'Edit', color: 'default' }}
+                    leftAction={{ icon: Power, label: organization.is_active ? 'Deactivate' : 'Activate', color: organization.is_active ? 'destructive' : 'success' }}
+                  >
+                    <MobileTableCard
+                      title={organization.name}
+                      subtitle={`${organization.initials} • ${organization.contact_email}`}
+                      status={
+                        <Badge 
+                          variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
+                          className="h-5 text-[10px] px-1.5"
+                        >
+                          {organization.organization_type}
+                        </Badge>
+                      }
+                      onClick={() => {
+                        setSelectedOrganization(organization);
+                        setShowEditModal(true);
+                      }}
+                    />
+                  </SwipeableListItem>
+                ))}
+              </div>
+            )}
+          </>
+        )}
             </>
           )}
         </CardContent>
