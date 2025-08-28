@@ -410,7 +410,8 @@ export default function AdminWorkOrders() {
       </Card>
     </div>
   ) : (
-    <div className={cn("min-h-screen bg-background w-full max-w-full p-4 md:p-6 space-y-6", bulkMode && Object.keys(rowSelection).length > 0 && "pb-24 sm:pb-28")}>
+    <div className="flex-1 space-y-4 overflow-x-hidden">
+      <div className={cn("max-w-full p-4 md:p-6 space-y-6", bulkMode && Object.keys(rowSelection).length > 0 && "pb-24 sm:pb-28")}>
       {/* Breadcrumb */}
       <WorkOrderBreadcrumb />
       
@@ -565,6 +566,7 @@ export default function AdminWorkOrders() {
         isVisible={showLoadingOverlay}
         message={getLoadingMessage()}
       />
+      </div>
     </div>
   );
 }
