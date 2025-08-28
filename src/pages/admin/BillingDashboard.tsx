@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -24,7 +23,7 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useViewMode } from '@/hooks/useViewMode';
 import { exportWorkOrders } from '@/lib/utils/export';
 import { supabase } from '@/integrations/supabase/client';
-import { SimplePipelineFilters } from '@/components/admin/billing/SimplePipelineFilters';
+import { CompactBillingPipelineFilters } from '@/components/admin/billing/CompactBillingPipelineFilters';
 
 // Filter interface for Pipeline - simplified
 interface PipelineFiltersValue {
@@ -46,7 +45,6 @@ interface PipelineFiltersValue {
 export function BillingDashboard() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const isMobile = useIsMobile();
 
   // Pipeline controls
@@ -126,6 +124,14 @@ export function BillingDashboard() {
   const debouncedSearch = useDebounce(filters.search || '', 300);
   
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
+
+  // Sync search term with filters
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setFilters({ ...filters, search: searchTerm });
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   // Helper function to get financial status based on invoicing
   const getFinancialStatus = (item: WorkOrderPipelineItem): string => {
@@ -344,67 +350,65 @@ export function BillingDashboard() {
           <p className="text-muted-foreground">Track work orders through the complete billing workflow</p>
         </header>
 
-        {/* Top Control Bar */}
-        <div className="space-y-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search and Filter Group */}
-            <div className="flex flex-1 gap-2">
+        {/* Desktop Control Bar */}
+        {!isMobile && (
+          <div className="flex items-center gap-2 w-full">
+            <div className="flex items-center gap-2 flex-1">
               <SmartSearchInput
-                placeholder="Search pipeline..."
-                value={filters.search || ''}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="flex-1"
+                placeholder="Search WO#, partner, location..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                storageKey="billing-pipeline-search"
+                className="max-w-xs"
               />
-              <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Filters {filterCount > 0 && `(${filterCount})`}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="flex flex-col">
-                  <SheetHeader>
-                    <SheetTitle>Filter Pipeline</SheetTitle>
-                  </SheetHeader>
-                  <div className="flex-1 overflow-y-auto">
-                    <SimplePipelineFilters
-                      filters={filters}
-                      onFiltersChange={setFilters}
-                      onClear={handleClearFilters}
-                      organizations={organizations}
-                      subcontractors={subcontractors}
-                      locations={locationOptions}
-                      trades={trades}
-                    />
-                  </div>
-                </SheetContent>
-              </Sheet>
+              
+              <CompactBillingPipelineFilters
+                value={filters}
+                onChange={setFilters}
+                onClear={clearFilters}
+              />
             </div>
             
-            {/* Action Buttons Group - Hidden on mobile since mobile always uses cards */}
-            {!isMobile && (
-              <div className="flex gap-2 flex-wrap lg:flex-nowrap">
-                <ViewModeSwitcher 
-                  value={viewMode} 
-                  onValueChange={setViewMode} 
-                  allowedModes={['table', 'card']} 
-                />
-                <ExportDropdown 
-                  onExport={handleExport} 
-                  variant="outline" 
-                  size="default"
-                  disabled={pipelineLoading || filteredPipelineData.length === 0} 
-                />
-                <ColumnVisibilityDropdown
-                  columns={getAllColumns()}
-                  onToggleColumn={toggleColumn}
-                  onResetToDefaults={resetToDefaults}
-                  variant="outline"
-                />
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <ViewModeSwitcher 
+                value={viewMode} 
+                onValueChange={setViewMode} 
+                allowedModes={['table', 'card']} 
+              />
+              <ColumnVisibilityDropdown
+                columns={getAllColumns()}
+                onToggleColumn={toggleColumn}
+                onResetToDefaults={resetToDefaults}
+                variant="outline"
+              />
+              <ExportDropdown 
+                onExport={handleExport} 
+                variant="outline" 
+                size="default"
+                disabled={pipelineLoading || filteredPipelineData.length === 0} 
+              />
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Mobile Control Bar */}
+        {isMobile && (
+          <div className="bg-muted/30 border rounded-lg p-3 space-y-3 mx-4">
+            <SmartSearchInput
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full"
+            />
+            <div className="flex items-center gap-2">
+              <CompactBillingPipelineFilters
+                value={filters}
+                onChange={setFilters}
+                onClear={clearFilters}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Results Table */}
         <WorkOrderPipelineTable 
