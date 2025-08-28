@@ -301,9 +301,6 @@ export function LocationTable({
             <h2 className="text-lg font-semibold leading-none tracking-tight">
               Partner Locations
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {data.length} locations
-            </p>
           </div>
           
           <ViewModeSwitcher

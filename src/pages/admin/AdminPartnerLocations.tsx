@@ -276,9 +276,6 @@ export default function AdminPartnerLocations() {
           <h1 className="text-2xl font-bold tracking-tight">
             Partner Locations
           </h1>
-          <p className="text-muted-foreground">
-            {filteredLocations.length} of {allLocations.length} locations
-          </p>
         </div>
         
         <div className="flex items-center gap-2 w-full sm:w-auto">
