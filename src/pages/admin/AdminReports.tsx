@@ -506,13 +506,15 @@ const table = useReactTable({
                 )}
               </div>
               
-              {/* View mode switcher */}
-              <ViewModeSwitcher
-                value={viewMode}
-                onValueChange={setViewMode}
-                allowedModes={allowedModes}
-                className="shrink-0"
-              />
+              {/* View mode switcher - desktop only */}
+              {!isMobile && (
+                <ViewModeSwitcher
+                  value={viewMode}
+                  onValueChange={setViewMode}
+                  allowedModes={allowedModes}
+                  className="shrink-0"
+                />
+              )}
             </div>
 
             {/* Right side - Search and Actions */}
@@ -561,8 +563,8 @@ const table = useReactTable({
                   onClear={handleClearFilters}
                 />
 
-                {/* Column visibility */}
-                {columnOptions && (
+                {/* Column visibility - desktop only */}
+                {!isMobile && columnOptions && (
                   <ColumnVisibilityDropdown
                     columns={columnOptions}
                     onToggleColumn={toggleColumn}
@@ -572,14 +574,16 @@ const table = useReactTable({
                   />
                 )}
 
-                {/* Export */}
-                <ExportDropdown
-                  onExport={handleExport}
-                  variant="outline"
-                  size="sm"
-                  disabled={isLoading || !reportsData?.data?.length}
-                  loading={isLoading}
-                />
+                {/* Export - desktop only */}
+                {!isMobile && (
+                  <ExportDropdown
+                    onExport={handleExport}
+                    variant="outline"
+                    size="sm"
+                    disabled={isLoading || !reportsData?.data?.length}
+                    loading={isLoading}
+                  />
+                )}
               </div>
             </div>
           </div>
