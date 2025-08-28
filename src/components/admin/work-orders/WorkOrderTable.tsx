@@ -193,7 +193,7 @@ export function WorkOrderTable({
       <MobilePullToRefresh onRefresh={onRefresh} threshold={refreshThreshold}>
         <div className="space-y-4">
           {/* Mobile Toolbar */}
-          <div className="bg-background border rounded-lg p-4 space-y-3">
+          <div className="bg-muted/30 border rounded-lg p-3 space-y-3">
             {/* Search bar */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -201,24 +201,24 @@ export function WorkOrderTable({
                 placeholder={searchPlaceholder}
                 value={searchValue}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10 pr-10"
+                className="pl-10 pr-10 h-9"
               />
               {searchValue && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onSearchChange('')}
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
 
             {/* Filter and bulk actions row */}
-            <div className="flex items-center justify-between gap-2">
-              {/* Filters */}
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {/* Filters - Make filter button full width on mobile */}
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 {filterComponent}
               </div>
 
@@ -228,7 +228,7 @@ export function WorkOrderTable({
                   variant="outline"
                   size="sm"
                   onClick={onClearSelection}
-                  className="shrink-0"
+                  className="shrink-0 h-9 px-3 text-xs"
                 >
                   Clear ({selectedIds.length})
                 </Button>

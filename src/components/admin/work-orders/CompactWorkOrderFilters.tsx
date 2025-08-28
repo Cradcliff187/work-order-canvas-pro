@@ -357,13 +357,13 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
       {isMobile ? (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline">
+            <Button variant="outline" className="w-full justify-start h-9">
               <Filter className="h-4 w-4 mr-2" />
               Filters {activeCount > 0 && `(${activeCount})`}
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="max-h-[80vh]">
-            <SheetHeader>
+          <SheetContent side="bottom" className="max-h-[85vh] z-50">
+            <SheetHeader className="pb-4">
               <SheetTitle>Filter Work Orders</SheetTitle>
             </SheetHeader>
             <FilterContent />
