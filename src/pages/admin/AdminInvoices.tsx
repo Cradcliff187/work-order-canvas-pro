@@ -131,35 +131,19 @@ export default function AdminInvoices() {
 
   // Filter sheet state - removed unused state variables
 
-  
-  // Wrapper function to handle compact filter changes
-  const handleCompactFiltersChange = (compactFilters: InvoiceFiltersValue) => {
-    // Merge compact filters with existing admin filters
+  // Wrapper function to handle CompactInvoiceFilters type compatibility
+  const handleFiltersChange = (newFilters: InvoiceFiltersValue) => {
     setFilters({
-      ...filters,
-      search: compactFilters.search || filters.search,
-      overdue: compactFilters.overdue || false,
-      partner_organization_id: compactFilters.partner_organization_id,
-      location_filter: compactFilters.location_filter || [],
-      subcontractor_organization_id: compactFilters.subcontractor_organization_id,
-      operational_status: compactFilters.operational_status || [],
-      report_status: compactFilters.report_status || [],
-      invoice_status: compactFilters.invoice_status || [],
-      partner_billing_status: compactFilters.partner_billing_status || [],
+      search: newFilters.search || '',
+      overdue: newFilters.overdue || false,
+      partner_organization_id: newFilters.partner_organization_id,
+      location_filter: newFilters.location_filter || [],
+      subcontractor_organization_id: newFilters.subcontractor_organization_id,
+      operational_status: newFilters.operational_status || [],
+      report_status: newFilters.report_status || [],
+      invoice_status: newFilters.invoice_status || [],
+      partner_billing_status: newFilters.partner_billing_status || [],
     });
-  };
-
-  // Convert admin filters to compact format for CompactInvoiceFilters
-  const compactFilters: InvoiceFiltersValue = {
-    search: filters.search,
-    overdue: filters.overdue || false,
-    partner_organization_id: filters.partner_organization_id,
-    location_filter: filters.location_filter || [],
-    subcontractor_organization_id: filters.subcontractor_organization_id,
-    operational_status: filters.operational_status || [],
-    report_status: filters.report_status || [],
-    invoice_status: filters.invoice_status || [],
-    partner_billing_status: filters.partner_billing_status || [],
   };
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -492,7 +476,7 @@ const table = useReactTable({
         <MobilePullToRefresh onRefresh={async () => { await refetch(); }}>
           {/* Mobile toolbar */}
           <div className="bg-muted/30 border rounded-lg p-3 space-y-3 mb-4">
-            {/* Mobile search */}
+            {/* Search bar */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <SmartSearchInput
@@ -500,37 +484,40 @@ const table = useReactTable({
                 value={filters.search || ''}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                 storageKey="admin-invoices-search"
-                className="pl-10 pr-10 min-h-[44px] w-full"
+                className="pl-10 pr-10 h-9"
               />
               {filters.search && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setFilters({ ...filters, search: '' })}
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 min-h-[44px] min-w-[44px] p-0 hover:bg-muted"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
-            
-            {/* Mobile filters and actions */}
-            <div className="flex items-center gap-2">
-              <CompactInvoiceFilters
-                value={compactFilters}
-                onChange={handleCompactFiltersChange}
-                onClear={clearFilters}
-              />
-              
+
+            {/* Filter and bulk actions row */}
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {/* Filters - Make filter button full width on mobile */}
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <CompactInvoiceFilters
+                  value={filters}
+                  onChange={handleFiltersChange}
+                  onClear={clearFilters}
+                />
+              </div>
+
+              {/* Bulk mode actions */}
               {bulkMode && selectedCount > 0 && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => setRowSelection({})}
-                  className="shrink-0 min-h-[44px] px-3 text-xs"
+                  className="shrink-0 h-9 px-3 text-xs"
                 >
-                  <span className="hidden sm:inline">Clear ({selectedCount})</span>
-                  <span className="sm:hidden">Clear</span>
+                  Clear ({selectedCount})
                 </Button>
               )}
             </div>
@@ -647,41 +634,40 @@ const table = useReactTable({
                     variant="outline" 
                     size="sm" 
                     onClick={() => setRowSelection({})}
-                    className="shrink-0 min-h-[44px]"
+                    className="shrink-0"
                   >
-                    <span className="hidden sm:inline">Clear ({selectedCount})</span>
-                    <span className="sm:hidden">Clear</span>
+                    Clear Selection ({selectedCount})
                   </Button>
                 )}
 
-                {/* Search */}
-                <div className="relative flex-1 sm:flex-initial sm:w-80">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <SmartSearchInput
-                    placeholder="Search invoice #, vendor, amount..."
-                    value={filters.search || ''}
-                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                    storageKey="admin-invoices-search"
-                    className="pl-10 pr-10 h-10 min-h-[44px]"
+                {/* Filters and Search */}
+                <div className="flex items-center gap-2">
+                  <CompactInvoiceFilters
+                    value={filters}
+                    onChange={handleFiltersChange}
+                    onClear={clearFilters}
                   />
-                  {filters.search && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setFilters({ ...filters, search: '' })}
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted min-h-[44px] min-w-[44px]"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <div className="relative flex-1 sm:flex-initial sm:w-80">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <SmartSearchInput
+                      placeholder="Search invoice #, vendor, amount..."
+                      value={filters.search || ''}
+                      onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                      storageKey="admin-invoices-search"
+                      className="pl-10 pr-10 h-10"
+                    />
+                    {filters.search && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFilters({ ...filters, search: '' })}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-
-                {/* Compact filters */}
-                <CompactInvoiceFilters
-                  value={compactFilters}
-                  onChange={handleCompactFiltersChange}
-                  onClear={clearFilters}
-                />
 
                 {/* Desktop only controls */}
                 <ColumnVisibilityDropdown
