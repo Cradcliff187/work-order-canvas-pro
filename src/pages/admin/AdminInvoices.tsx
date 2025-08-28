@@ -52,6 +52,7 @@ import { useViewMode } from '@/hooks/useViewMode';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
+import { toast } from '@/hooks/use-toast';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { StatusBadge, FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -330,36 +331,53 @@ const table = useReactTable({
     { value: 'rejected', label: 'Rejected' },
   ];
 
+  const INVOICE_COLUMN_METADATA = {
+    columns: [
+      { id: 'internal_invoice_number', label: 'Invoice #', defaultVisible: true },
+      { id: 'external_invoice_number', label: 'Vendor Invoice #', defaultVisible: true },
+      { id: 'subcontractor', label: 'Subcontractor', defaultVisible: true },
+      { id: 'total_amount', label: 'Amount', defaultVisible: true },
+      { id: 'status', label: 'Status', defaultVisible: true },
+      { id: 'due_date', label: 'Due Date', defaultVisible: true },
+      { id: 'work_orders', label: 'Work Orders', defaultVisible: false },
+      { id: 'created_at', label: 'Created', defaultVisible: false },
+    ]
+  };
+
   const exportColumns: ExportColumn[] = [
     { key: 'internal_invoice_number', label: 'Invoice #', type: 'string' },
     { key: 'external_invoice_number', label: 'Vendor Invoice #', type: 'string' },
-    { key: 'work_order_numbers', label: 'Work Orders', type: 'string' },
-    { key: 'subcontractor_organization.name', label: 'Partner', type: 'string' },
-    { key: 'submitted_by_user.first_name', label: 'Submitted By (First)', type: 'string' },
-    { key: 'submitted_by_user.last_name', label: 'Submitted By (Last)', type: 'string' },
-    { key: 'total_amount', label: 'Total Amount', type: 'currency' },
+    { key: 'subcontractor_name', label: 'Subcontractor', type: 'string' },
+    { key: 'total_amount', label: 'Amount', type: 'currency' },
     { key: 'status', label: 'Status', type: 'string' },
-    { key: 'submitted_at', label: 'Submitted At', type: 'date' },
-    { key: 'approved_at', label: 'Approved At', type: 'date' },
-    { key: 'paid_at', label: 'Paid At', type: 'date' },
-    { key: 'payment_reference', label: 'Payment Ref', type: 'string' },
-    { key: 'attachment_count', label: 'Attachments', type: 'number' },
+    { key: 'due_date', label: 'Due Date', type: 'date' },
+    { key: 'work_orders', label: 'Work Orders', type: 'string' },
+    { key: 'created_at', label: 'Created', type: 'date' },
   ];
 
-  const handleExport = (format: 'csv' | 'excel') => {
-    const rows = (data?.data || []).map((inv) => ({
-      ...inv,
-      work_order_numbers: (inv.invoice_work_orders || [])
-        .map((iwo) => iwo.work_order?.work_order_number)
-        .filter(Boolean)
-        .join(', '),
+  const handleExport = (exportFormat: 'csv' | 'excel') => {
+    const exportData = data?.data?.map(invoice => ({
+      'Invoice #': invoice.internal_invoice_number,
+      'Vendor Invoice #': invoice.external_invoice_number || '',
+      'Subcontractor': invoice.subcontractor_organization?.name || '',
+      'Amount': invoice.total_amount,
+      'Status': invoice.status,
+      'Due Date': invoice.due_date ? format(new Date(invoice.due_date), 'yyyy-MM-dd') : '',
+      'Work Orders': invoice.invoice_work_orders?.map(iwo => iwo.work_order?.work_order_number).filter(Boolean).join(', ') || '',
+      'Created': format(new Date(invoice.created_at), 'yyyy-MM-dd'),
     }));
-    const filename = generateFilename('invoices', format === 'excel' ? 'xlsx' : 'csv');
-    if (format === 'excel') {
-      exportToExcel(rows, exportColumns, filename);
+    
+    const filename = `invoices-${exportFormat === 'csv' ? 'export' : 'report'}-${Date.now()}`;
+    if (exportFormat === 'csv') {
+      exportToCSV(exportData || [], exportColumns, filename);
     } else {
-      exportToCSV(rows, exportColumns, filename);
+      exportToExcel(exportData || [], exportColumns, filename);
     }
+    
+    toast({
+      title: "Export Complete",
+      description: `Exported ${exportData?.length || 0} invoices as ${exportFormat.toUpperCase()}`
+    });
   };
 
 
@@ -951,351 +969,6 @@ const table = useReactTable({
         </div>
       </div>
     )}
-      <Card className="overflow-hidden">
-        {/* Desktop toolbar */}
-        <div className="border-b">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
-            {/* Left side - Title and view mode */}
-            <div className="flex items-center gap-4">
-              <div className="min-w-0">
-                <h2 className="text-lg font-semibold leading-none tracking-tight">
-                  Invoices
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {data?.totalCount || 0} total invoice{(data?.totalCount || 0) !== 1 ? 's' : ''}
-                </p>
-              </div>
-              
-              {/* View mode switcher - Desktop only */}
-              {!isMobile && (
-                <ViewModeSwitcher
-                  value={viewMode}
-                  onValueChange={setViewMode}
-                  allowedModes={allowedModes}
-                  className="shrink-0"
-                />
-              )}
-            </div>
-
-            {/* Right side - Search and Actions */}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              {/* Selection clear */}
-              {bulkMode && selectedCount > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setRowSelection({})}
-                  className="shrink-0"
-                >
-                  Clear ({selectedCount})
-                </Button>
-              )}
-
-              {/* Search */}
-              <div className="relative flex-1 sm:flex-initial sm:w-80">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <SmartSearchInput
-                  placeholder="Search invoice #, vendor, amount..."
-                  value={filters.search || ''}
-                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                  storageKey="admin-invoices-search"
-                  className="pl-10 pr-10 h-10"
-                />
-                {filters.search && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFilters({ ...filters, search: '' })}
-                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-
-              {/* Compact filters */}
-              <CompactInvoiceFilters
-                value={compactFilters}
-                onChange={handleCompactFiltersChange}
-                onClear={clearFilters}
-              />
-
-              {/* Desktop only controls */}
-              {!isMobile && (
-                <>
-                  <ColumnVisibilityDropdown
-                    columns={columnOptions}
-                    onToggleColumn={toggleColumn}
-                    onResetToDefaults={resetToDefaults}
-                    variant="outline"
-                    size="sm"
-                  />
-                  <ExportDropdown 
-                    onExport={handleExport} 
-                    variant="outline" 
-                    size="sm" 
-                    disabled={isLoading || (data?.data?.length ?? 0) === 0} 
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile toolbar */}
-        {isMobile && (
-          <div className="bg-muted/30 border-b p-3 space-y-3">
-            {/* Mobile search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <SmartSearchInput
-                placeholder="Search invoices..."
-                value={filters.search || ''}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                storageKey="admin-invoices-search"
-                className="pl-10 pr-10 h-9 w-full"
-              />
-              {filters.search && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFilters({ ...filters, search: '' })}
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </div>
-            
-            {/* Mobile filters and actions */}
-            <div className="flex items-center gap-2">
-              <CompactInvoiceFilters
-                value={compactFilters}
-                onChange={handleCompactFiltersChange}
-                onClear={clearFilters}
-              />
-              
-              {bulkMode && selectedCount > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setRowSelection({})}
-                  className="shrink-0 h-9 px-3 text-xs"
-                >
-                  Clear ({selectedCount})
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        <CardContent className="p-0 overflow-hidden">
-          {isLoading ? (
-            <EnhancedTableSkeleton rows={5} columns={8} />
-          ) : data?.data?.length === 0 ? (
-            <EmptyTableState
-              icon={FileText}
-              title="No subcontractor invoices found"
-              description={filters.invoice_status?.length > 0 || filters.search ? "Try adjusting your filters or search criteria" : "Subcontractor invoices will appear here when submitted"}
-              colSpan={columns.length}
-            />
-          ) : (
-            <>
-              {/* Table View */}
-              {viewMode === 'table' && !isMobile && (
-                <ResponsiveTableContainer>
-                  <Table className="admin-table">
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id}>
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`View invoice ${row.original.internal_invoice_number || row.original.id}`}
-                            data-state={row.getIsSelected() && 'selected'}
-                            className="cursor-pointer hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
-                            onClick={() => {
-                              const invoice = row.original;
-                              handleViewInvoice(invoice);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                const invoice = row.original;
-                                handleViewInvoice(invoice);
-                              }
-                            }}
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell 
-                                key={cell.id}
-                                onClick={(e) => {
-                                  // Prevent row click when interacting with dropdown or checkboxes
-                                  const target = e.target as HTMLElement;
-                                  if (target.closest('[data-radix-collection-item]') || 
-                                      target.closest('input[type="checkbox"]') ||
-                                      target.closest('button')) {
-                                    e.stopPropagation();
-                                  }
-                                }}
-                              >
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : null}
-                    </TableBody>
-                  </Table>
-                </ResponsiveTableContainer>
-              )}
-
-              {/* Card View */}
-              {(viewMode === 'card' || isMobile) && (
-                <div className={cn(
-                  "grid gap-4",
-                  !isMobile && "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
-                )}>
-                  {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => {
-                      const invoice = row.original;
-                      const canApprove = invoice.status === 'submitted';
-                      const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
-
-                      const cardContent = (
-                        <MobileTableCard
-                          key={invoice.id}
-                          title={invoice.internal_invoice_number || 'N/A'}
-                          subtitle={`${invoice.subcontractor_organization?.name || 'Unknown'}`}
-                          badge={
-                            <FinancialStatusBadge 
-                              status={invoice.status === 'submitted' ? 'pending' : invoice.status} 
-                              size="sm" 
-                              showIcon 
-                            />
-                          }
-                          data={{
-                            'Amount': formatCurrency(invoice.total_amount),
-                            'Submitted': invoice.submitted_at ? format(new Date(invoice.submitted_at), 'MMM d, yyyy') : 'N/A',
-                            'Work Orders': String(invoice.invoice_work_orders?.length || 0)
-                          }}
-                          actions={[
-                            { label: 'View', icon: FileText, onClick: () => handleViewInvoice(invoice) },
-                            { label: 'Approve', icon: CheckCircle, onClick: () => handleApproveInvoice(invoice) }
-                          ]}
-                          onClick={() => handleViewInvoice(invoice)}
-                        />
-                      );
-
-                      // Mobile: wrap with swipeable functionality
-                      if (isMobile) {
-                        return (
-                          <SwipeableListItem
-                            key={row.id}
-                            disabled={!(canApprove || canMarkPaid)}
-                            rightAction={canApprove ? { icon: CheckCircle, label: 'Approve', color: 'success' } : (canMarkPaid ? { icon: DollarSign, label: 'Mark Paid', color: 'success' } : undefined)}
-                            leftAction={canApprove ? { icon: XCircle, label: 'Reject', color: 'destructive', confirmMessage: 'Reject this invoice?' } : undefined}
-                            onSwipeRight={() => {
-                              if (canApprove) {
-                                approveInvoice.mutate({ invoiceId: invoice.id });
-                              } else if (canMarkPaid) {
-                                markAsPaid.mutate({ invoiceId: invoice.id, paymentReference: 'MOBILE', paymentDate: new Date() });
-                              }
-                            }}
-                            onSwipeLeft={canApprove ? () => rejectInvoice.mutate({ invoiceId: invoice.id, notes: 'Rejected via swipe' }) : undefined}
-                          >
-                            {cardContent}
-                          </SwipeableListItem>
-                        );
-                      }
-
-                      // Desktop: plain card with bulk selection
-                      return (
-                        <div key={row.id} className="relative">
-                          {cardContent}
-                          {bulkMode && (
-                            <div className="absolute top-2 right-2">
-                              <input
-                                type="checkbox"
-                                checked={row.getIsSelected()}
-                                onChange={row.getToggleSelectedHandler()}
-                                onClick={(e) => e.stopPropagation()}
-                                className="rounded border-gray-300 scale-125"
-                                aria-label={`Select invoice ${invoice.internal_invoice_number}`}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="col-span-full rounded-md border p-6 text-center text-muted-foreground">
-                      <FileText className="mx-auto h-8 w-8 mb-2 opacity-60" />
-                      <div className="font-medium">No subcontractor invoices found</div>
-                      <div className="text-sm">
-                        {filters.invoice_status?.length > 0 || filters.search ? 'Try adjusting your filters or search criteria' : 'Subcontractor invoices will appear here when submitted'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className={`flex items-center py-4 ${isMobile ? 'flex-col space-y-4' : 'justify-between space-x-2'}`}>
-                  <div className="flex-1 text-sm text-muted-foreground">
-                    {table.getFilteredSelectedRowModel().rows.length} of{' '}
-                    {table.getFilteredRowModel().rows.length} {isMobile ? 'items' : 'row(s)'} selected.
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(page - 1)}
-                      disabled={page <= 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <div className="text-sm font-medium">
-                      Page {page} of {totalPages}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(page + 1)}
-                      disabled={page >= totalPages}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Detail Modal */}
       <InvoiceDetailModal
