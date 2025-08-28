@@ -211,146 +211,296 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
     setIsOpen(false);
   };
 
-  // Extract filter content into reusable component
-  const FilterContent = () => (
-    <>
-      <div className="space-y-4 max-h-[500px] overflow-y-auto">
-        {/* Status Filter */}
-        <div>
-          <label className="text-sm font-medium mb-2 block">Status</label>
-          <MultiSelectFilter
-            options={statusOptions}
-            selectedValues={value.status || []}
-            onSelectionChange={(filterValue) => handleFilterChange('status', filterValue)}
-            placeholder="Filter by status..."
-            className="w-full h-10"
-          />
-        </div>
+  // Extract filter content into reusable component - Split into scrollable content and sticky footer
+  const FilterContent = ({ isMobileSheet = false }: { isMobileSheet?: boolean }) => {
+    if (isMobileSheet) {
+      return (
+        <div className="flex flex-col h-full">
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+            {/* Status Filter */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Status</label>
+              <MultiSelectFilter
+                options={statusOptions}
+                selectedValues={value.status || []}
+                onSelectionChange={(filterValue) => handleFilterChange('status', filterValue)}
+                placeholder="Filter by status..."
+                className="w-full h-10"
+              />
+            </div>
 
-        {/* Partner Filter */}
-        <div>
-          <label className="text-sm font-medium mb-2 block">Partner</label>
-          <MultiSelectFilter
-            options={organizationOptions}
-            selectedValues={value.organizations || []}
-            onSelectionChange={(filterValue) => handleFilterChange('organizations', filterValue)}
-            placeholder="Filter by partner..."
-            className="w-full h-10"
-          />
-        </div>
+            {/* Partner Filter */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Partner</label>
+              <MultiSelectFilter
+                options={organizationOptions}
+                selectedValues={value.organizations || []}
+                onSelectionChange={(filterValue) => handleFilterChange('organizations', filterValue)}
+                placeholder="Filter by partner..."
+                className="w-full h-10"
+              />
+            </div>
 
-        {/* Assigned To Filter */}
-        {showCompleted && (
+            {/* Assigned To Filter */}
+            {showCompleted && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">{assignedToLabel}</label>
+                <MultiSelectFilter
+                  options={assignedToOptions}
+                  selectedValues={value.assigned_to || []}
+                  onSelectionChange={(filterValue) => handleFilterChange('assigned_to', filterValue)}
+                  placeholder="Filter by assignment..."
+                  className="w-full h-10"
+                />
+              </div>
+            )}
+
+            {/* Date Submitted Range */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Date Submitted</label>
+              <div className="grid grid-cols-2 gap-2">
+                <Popover open={showDateFrom} onOpenChange={setShowDateFrom}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-10 justify-start text-left font-normal flex-1",
+                        !value.date_submitted_from && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {value.date_submitted_from ? format(new Date(value.date_submitted_from), "PP") : "From date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start" disablePortal={isMobile}>
+                    <Calendar
+                      mode="single"
+                      selected={value.date_submitted_from ? new Date(value.date_submitted_from) : undefined}
+                      onSelect={handleDateFromChange}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <Popover open={showDateTo} onOpenChange={setShowDateTo}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-10 justify-start text-left font-normal flex-1",
+                        !value.date_submitted_to && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {value.date_submitted_to ? format(new Date(value.date_submitted_to), "PP") : "To date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start" disablePortal={isMobile}>
+                    <Calendar
+                      mode="single"
+                      selected={value.date_submitted_to ? new Date(value.date_submitted_to) : undefined}
+                      onSelect={handleDateToChange}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Locations Filter */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Locations</label>
+              <MultiSelectFilter
+                options={locationOptions}
+                selectedValues={value.location_filter || value.location || []}
+                onSelectionChange={(filterValue) => handleFilterChange(value.location_filter !== undefined ? 'location_filter' : 'location', filterValue)}
+                placeholder="Select locations..."
+                className="w-full h-10"
+              />
+            </div>
+
+            {/* Priority Filter */}
+            {showPriority && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">Priority</label>
+                <MultiSelectFilter
+                  options={priorityOptions}
+                  selectedValues={value.priority || []}
+                  onSelectionChange={(filterValue) => handleFilterChange('priority', filterValue)}
+                  placeholder="Filter by priority..."
+                  className="w-full h-10"
+                />
+              </div>
+            )}
+
+            {/* Trades Filter */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Trades</label>
+              <MultiSelectFilter
+                options={tradeOptions}
+                selectedValues={value.trades || []}
+                onSelectionChange={(filterValue) => handleFilterChange('trades', filterValue)}
+                placeholder="Filter by trades..."
+                className="w-full h-10"
+              />
+            </div>
+          </div>
+          
+          {/* Sticky footer with action buttons */}
+          <div className="shrink-0 border-t bg-background p-4">
+            <div className="flex gap-2">
+              <Button onClick={handleApplyFilters} className="flex-1">Apply</Button>
+              <Button variant="outline" onClick={handleClearFilters} className="flex-1">Clear</Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Desktop version - unchanged
+    return (
+      <>
+        <div className="space-y-4 max-h-[500px] overflow-y-auto">
+          {/* Status Filter */}
           <div>
-            <label className="text-sm font-medium mb-2 block">{assignedToLabel}</label>
+            <label className="text-sm font-medium mb-2 block">Status</label>
             <MultiSelectFilter
-              options={assignedToOptions}
-              selectedValues={value.assigned_to || []}
-              onSelectionChange={(filterValue) => handleFilterChange('assigned_to', filterValue)}
-              placeholder="Filter by assignment..."
+              options={statusOptions}
+              selectedValues={value.status || []}
+              onSelectionChange={(filterValue) => handleFilterChange('status', filterValue)}
+              placeholder="Filter by status..."
               className="w-full h-10"
             />
           </div>
-        )}
 
-        {/* Date Submitted Range */}
-        <div>
-          <label className="text-sm font-medium mb-2 block">Date Submitted</label>
-          <div className="grid grid-cols-2 gap-2">
-            <Popover open={showDateFrom} onOpenChange={setShowDateFrom}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full h-10 justify-start text-left font-normal flex-1",
-                    !value.date_submitted_from && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {value.date_submitted_from ? format(new Date(value.date_submitted_from), "PP") : "From date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start" disablePortal={isMobile}>
-                <Calendar
-                  mode="single"
-                  selected={value.date_submitted_from ? new Date(value.date_submitted_from) : undefined}
-                  onSelect={handleDateFromChange}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-
-            <Popover open={showDateTo} onOpenChange={setShowDateTo}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full h-10 justify-start text-left font-normal flex-1",
-                    !value.date_submitted_to && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {value.date_submitted_to ? format(new Date(value.date_submitted_to), "PP") : "To date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start" disablePortal={isMobile}>
-                <Calendar
-                  mode="single"
-                  selected={value.date_submitted_to ? new Date(value.date_submitted_to) : undefined}
-                  onSelect={handleDateToChange}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-
-        {/* Locations Filter */}
-        <div>
-          <label className="text-sm font-medium mb-2 block">Locations</label>
-          <MultiSelectFilter
-            options={locationOptions}
-            selectedValues={value.location_filter || value.location || []}
-            onSelectionChange={(filterValue) => handleFilterChange(value.location_filter !== undefined ? 'location_filter' : 'location', filterValue)}
-            placeholder="Select locations..."
-            className="w-full h-10"
-          />
-        </div>
-
-        {/* Priority Filter */}
-        {showPriority && (
+          {/* Partner Filter */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Priority</label>
+            <label className="text-sm font-medium mb-2 block">Partner</label>
             <MultiSelectFilter
-              options={priorityOptions}
-              selectedValues={value.priority || []}
-              onSelectionChange={(filterValue) => handleFilterChange('priority', filterValue)}
-              placeholder="Filter by priority..."
+              options={organizationOptions}
+              selectedValues={value.organizations || []}
+              onSelectionChange={(filterValue) => handleFilterChange('organizations', filterValue)}
+              placeholder="Filter by partner..."
               className="w-full h-10"
             />
           </div>
-        )}
 
-        {/* Trades Filter */}
-        <div>
-          <label className="text-sm font-medium mb-2 block">Trades</label>
-          <MultiSelectFilter
-            options={tradeOptions}
-            selectedValues={value.trades || []}
-            onSelectionChange={(filterValue) => handleFilterChange('trades', filterValue)}
-            placeholder="Filter by trades..."
-            className="w-full h-10"
-          />
+          {/* Assigned To Filter */}
+          {showCompleted && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">{assignedToLabel}</label>
+              <MultiSelectFilter
+                options={assignedToOptions}
+                selectedValues={value.assigned_to || []}
+                onSelectionChange={(filterValue) => handleFilterChange('assigned_to', filterValue)}
+                placeholder="Filter by assignment..."
+                className="w-full h-10"
+              />
+            </div>
+          )}
+
+          {/* Date Submitted Range */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Date Submitted</label>
+            <div className="grid grid-cols-2 gap-2">
+              <Popover open={showDateFrom} onOpenChange={setShowDateFrom}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-10 justify-start text-left font-normal flex-1",
+                      !value.date_submitted_from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {value.date_submitted_from ? format(new Date(value.date_submitted_from), "PP") : "From date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start" disablePortal={isMobile}>
+                  <Calendar
+                    mode="single"
+                    selected={value.date_submitted_from ? new Date(value.date_submitted_from) : undefined}
+                    onSelect={handleDateFromChange}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover open={showDateTo} onOpenChange={setShowDateTo}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-10 justify-start text-left font-normal flex-1",
+                      !value.date_submitted_to && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {value.date_submitted_to ? format(new Date(value.date_submitted_to), "PP") : "To date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start" disablePortal={isMobile}>
+                  <Calendar
+                    mode="single"
+                    selected={value.date_submitted_to ? new Date(value.date_submitted_to) : undefined}
+                    onSelect={handleDateToChange}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {/* Locations Filter */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Locations</label>
+            <MultiSelectFilter
+              options={locationOptions}
+              selectedValues={value.location_filter || value.location || []}
+              onSelectionChange={(filterValue) => handleFilterChange(value.location_filter !== undefined ? 'location_filter' : 'location', filterValue)}
+              placeholder="Select locations..."
+              className="w-full h-10"
+            />
+          </div>
+
+          {/* Priority Filter */}
+          {showPriority && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">Priority</label>
+              <MultiSelectFilter
+                options={priorityOptions}
+                selectedValues={value.priority || []}
+                onSelectionChange={(filterValue) => handleFilterChange('priority', filterValue)}
+                placeholder="Filter by priority..."
+                className="w-full h-10"
+              />
+            </div>
+          )}
+
+          {/* Trades Filter */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Trades</label>
+            <MultiSelectFilter
+              options={tradeOptions}
+              selectedValues={value.trades || []}
+              onSelectionChange={(filterValue) => handleFilterChange('trades', filterValue)}
+              placeholder="Filter by trades..."
+              className="w-full h-10"
+            />
+          </div>
         </div>
-      </div>
-      <div className="flex gap-2 mt-4 pt-4 border-t">
-        <Button onClick={handleApplyFilters}>Apply</Button>
-        <Button variant="outline" onClick={handleClearFilters}>Clear</Button>
-      </div>
-    </>
-  );
+        <div className="flex gap-2 mt-4 pt-4 border-t">
+          <Button onClick={handleApplyFilters}>Apply</Button>
+          <Button variant="outline" onClick={handleClearFilters}>Clear</Button>
+        </div>
+      </>
+    );
+  };
 
   return (
     <>
@@ -362,11 +512,13 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
               Filters {activeCount > 0 && `(${activeCount})`}
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="max-h-[85vh] z-50">
-            <SheetHeader className="pb-4">
+          <SheetContent side="bottom" className="max-h-[85vh] z-50 flex flex-col p-0">
+            <SheetHeader className="px-6 py-4 border-b shrink-0">
               <SheetTitle>Filter Work Orders</SheetTitle>
             </SheetHeader>
-            <FilterContent />
+            <div className="flex-1 min-h-0 px-6">
+              <FilterContent isMobileSheet={true} />
+            </div>
           </SheetContent>
         </Sheet>
       ) : (
