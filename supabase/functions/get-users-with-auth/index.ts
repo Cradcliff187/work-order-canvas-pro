@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
           id,
           role,
           organization_id,
-          organizations(
+          organization:organizations(
             id,
             name,
             organization_type,

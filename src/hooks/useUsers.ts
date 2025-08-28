@@ -23,7 +23,14 @@ export function useUsers() {
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-users-with-auth');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching users:', error);
+        throw new Error(error.message || 'Failed to fetch users');
+      }
+      
+      if (!data?.users) {
+        throw new Error('No user data returned from server');
+      }
       
       return data.users as User[];
     },
@@ -71,47 +78,26 @@ export function useCreateUser() {
       organization_id: string;
       role?: 'admin' | 'employee' | 'member';
     }) => {
-      // Create user in auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: userData.email,
-        password: userData.password,
-        user_metadata: {
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-        },
+      // Use the create-admin-user Edge Function instead of admin API
+      const { data, error } = await supabase.functions.invoke('create-admin-user', {
+        body: {
+          userData: {
+            email: userData.email,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            organization_id: userData.organization_id,
+            organization_role: userData.role || 'member',
+          }
+        }
       });
 
-      if (authError) throw authError;
+      if (error) throw error;
+      
+      if (!data?.success) {
+        throw new Error(data?.message || 'User creation failed');
+      }
 
-      // Create profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: authData.user.id,
-          email: userData.email,
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-        })
-        .select()
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Create organization membership
-      const { error: orgError } = await supabase
-        .from('organization_members')
-        .insert({
-          user_id: profileData.id,
-          organization_id: userData.organization_id,
-          role: userData.role || 'member',
-        });
-
-      if (orgError) throw orgError;
-
-      // Sync JWT metadata after organization assignment
-      await onOrganizationChange(authData.user.id);
-
-      return profileData;
+      return data.user;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
