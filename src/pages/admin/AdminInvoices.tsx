@@ -612,9 +612,6 @@ const table = useReactTable({
                   <h2 className="text-lg font-semibold leading-none tracking-tight">
                     Invoices
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {data?.totalCount || 0} total invoice{(data?.totalCount || 0) !== 1 ? 's' : ''}
-                  </p>
                 </div>
                 
                 {/* View mode switcher - Desktop only */}
