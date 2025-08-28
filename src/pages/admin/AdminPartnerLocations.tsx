@@ -18,17 +18,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AddLocationModal } from '@/components/admin/partner-locations/AddLocationModal';
 import { EditLocationModal } from '@/components/admin/partner-locations/EditLocationModal';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
-import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
-import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { LocationTable } from '@/components/admin/partner-locations/LocationTable';
 import { usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
 import { toast } from 'sonner';
-import { ExportDropdown } from '@/components/ui/export-dropdown';
-import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
-import { useColumnVisibility } from '@/hooks/useColumnVisibility';
-import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { EmptyTableState } from '@/components/ui/empty-table-state';
-import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
-import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 export default function AdminPartnerLocations() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrganization, setSelectedOrganization] = useState('all');
@@ -216,54 +208,19 @@ export default function AdminPartnerLocations() {
     })).filter(item => item.count > 0)
   };
 
-  // Column visibility setup
-  const columnMetadata = {
-    organization: { label: 'Organization', defaultVisible: true },
-    location_name: { label: 'Location', defaultVisible: true },
-    location_number: { label: 'Number', defaultVisible: true },
-    address: { label: 'Address', defaultVisible: true },
-    contact: { label: 'Contact', defaultVisible: true },
-    status: { label: 'Status', defaultVisible: true },
-    actions: { label: 'Actions', defaultVisible: true },
-  } as const;
+  // Convert filters to LocationTable format
+  const locationFilters = {
+    search: searchTerm,
+    organization_id: selectedOrganization,
+    status: statusFilter as 'all' | 'active' | 'inactive',
+    location_ids: selectedLocations,
+  };
 
-const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisibleColumnCount } = useColumnVisibility({
-  storageKey: 'admin-partner-locations-columns-v1',
-  legacyKeys: ['admin-partner-locations-columns'],
-  columnMetadata: columnMetadata as any,
-});
-
-  const columnOptions = getAllColumns().map((c) => ({
-    ...c,
-    canHide: c.id !== 'actions',
-  }));
-
-  // Export
-  const exportColumns: ExportColumn[] = [
-    { key: 'organization_name', label: 'Organization', type: 'string' },
-    { key: 'location_name', label: 'Location', type: 'string' },
-    { key: 'location_number', label: 'Number', type: 'string' },
-    { key: 'street_address', label: 'Street', type: 'string' },
-    { key: 'city', label: 'City', type: 'string' },
-    { key: 'state', label: 'State', type: 'string' },
-    { key: 'zip_code', label: 'ZIP', type: 'string' },
-    { key: 'contact_name', label: 'Contact Name', type: 'string' },
-    { key: 'contact_email', label: 'Contact Email', type: 'string' },
-    { key: 'is_active', label: 'Active', type: 'boolean' },
-  ];
-
-  const handleExport = (format: 'csv' | 'excel') => {
-    const rows = filteredLocations.map((loc) => ({
-      ...loc,
-      organization_name: organizationMap[loc.organization_id]?.name || '',
-    }));
-    if (rows.length === 0) return;
-    const filename = generateFilename('partner-locations', format === 'excel' ? 'xlsx' : 'csv');
-    if (format === 'excel') {
-      exportToExcel(rows, exportColumns, filename);
-    } else {
-      exportToCSV(rows, exportColumns, filename);
-    }
+  const handleFiltersChange = (newFilters: any) => {
+    setSearchTerm(newFilters.search || '');
+    setSelectedOrganization(newFilters.organization_id || 'all');
+    setStatusFilter(newFilters.status || 'all');
+    setSelectedLocations(newFilters.location_ids || []);
   };
 
   const handleDeleteLocation = async () => {
@@ -276,6 +233,11 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
       toast.error('Failed to delete location');
     }
   };
+
+  const handleRefresh = async () => {
+    await refetchLocations();
+    await refetchOrgs();
+  };
   if (loadError) {
     return (
       <div className="p-6">
@@ -283,21 +245,11 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
           <CardContent className="p-6">
             <div className="text-center space-y-4">
               <p className="text-destructive">We couldn't load partner locations. Please try again.</p>
-              <Button onClick={() => { refetchLocations(); refetchOrgs(); }} variant="outline">
+              <Button onClick={handleRefresh} variant="outline">
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Retry
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  } else if (isLoading) {
-    return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6">
-            <EnhancedTableSkeleton rows={5} columns={7} />
           </CardContent>
         </Card>
       </div>
@@ -351,53 +303,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         </div>
       </header>
 
-      {/* Top Control Bar */}
-      {/* Desktop Layout */}
-      <div className="hidden lg:flex gap-4 mb-6">
-        <div className="flex flex-1 gap-2">
-          <SmartSearchInput
-            placeholder="Search locations..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onSearchSubmit={handleSearchChange}
-            className="flex-1"
-            storageKey="admin-partner-locations-search"
-          />
-          <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-        </div>
-        <div className="flex gap-2">
-          <ColumnVisibilityDropdown
-            columns={columnOptions}
-            onToggleColumn={toggleColumn}
-            onResetToDefaults={resetToDefaults}
-            visibleCount={getVisibleColumnCount()}
-          />
-          <ExportDropdown onExport={handleExport} />
-        </div>
-      </div>
-
-      {/* Mobile Layout */}
-      <div className="lg:hidden space-y-3">
-        <SmartSearchInput
-          placeholder="Search locations..."
-          value={searchTerm}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          onSearchSubmit={handleSearchChange}
-          className="w-full"
-          storageKey="admin-partner-locations-search"
-        />
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="flex-1">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters {filterCount > 0 && `(${filterCount})`}
-          </Button>
-        </div>
-      </div>
-
-      {/* Statistics Cards */}
+      {/* Statistics Cards */}  
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -435,337 +341,31 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.byOrganization.length}</div>
+            <div className="text-2xl font-bold">{partnerOrganizations.length}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Mobile Bottom Sheet */}
-      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <SheetContent side="bottom" className="h-[85vh]">
-          <SheetHeader>
-            <SheetTitle>Location Filters</SheetTitle>
-          </SheetHeader>
-          <div className="overflow-y-auto max-h-[calc(85vh-8rem)] space-y-4 py-4 pb-20">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Organization</Label>
-              <Select value={selectedOrganization} onValueChange={setSelectedOrganization}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All organizations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
-                  {partnerOrganizations.map(org => (
-                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Locations</Label>
-              <MultiSelectFilter
-                placeholder="Select locations"
-                options={locationOptions}
-                selectedValues={selectedLocations}
-                onSelectionChange={setSelectedLocations}
-                maxDisplayCount={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={() => setIsMobileFilterOpen(false)} className="w-full">
-              Apply Filters
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Desktop Right Sidebar */}
-      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
-        <SheetContent side="right" className="w-[480px] flex flex-col">
-          <SheetHeader>
-            <SheetTitle>Location Filters</SheetTitle>
-          </SheetHeader>
-          <div className="overflow-y-auto max-h-[calc(100vh-8rem)] space-y-4 py-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Organization</Label>
-              <Select value={selectedOrganization} onValueChange={setSelectedOrganization}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All organizations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
-                  {partnerOrganizations.map(org => (
-                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Locations</Label>
-              <MultiSelectFilter
-                placeholder="Select locations"
-                options={locationOptions}
-                selectedValues={selectedLocations}
-                onSelectionChange={setSelectedLocations}
-                maxDisplayCount={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2 pt-4">
-              <Button onClick={() => setIsDesktopFilterOpen(false)} className="flex-1">
-                Apply Filters
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleClearFilters}
-              >
-                Clear All
-              </Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Locations Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Locations ({filteredLocations.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Desktop Table */}
-          <div className="hidden lg:block rounded-md border">
-            <Table className="admin-table">
-              <TableHeader>
-                <TableRow>
-                  {columnVisibility['organization'] && (
-                    <TableHead>
-                      <button type="button" onClick={() => handleSort('organization')} className="inline-flex items-center gap-1" aria-label={`Sort by Organization${sortKey==='organization'?` (${sortDir})`:''}`}>
-                        <span>Organization</span>
-                        {sortKey==='organization' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
-                      </button>
-                    </TableHead>
-                  )}
-                  {columnVisibility['location_name'] && (
-                    <TableHead>
-                      <button type="button" onClick={() => handleSort('location_name')} className="inline-flex items-center gap-1" aria-label={`Sort by Location${sortKey==='location_name'?` (${sortDir})`:''}`}>
-                        <span>Location</span>
-                        {sortKey==='location_name' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
-                      </button>
-                    </TableHead>
-                  )}
-                  {columnVisibility['location_number'] && (
-                    <TableHead>
-                      <button type="button" onClick={() => handleSort('location_number')} className="inline-flex items-center gap-1" aria-label={`Sort by Number${sortKey==='location_number'?` (${sortDir})`:''}`}>
-                        <span>Number</span>
-                        {sortKey==='location_number' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
-                      </button>
-                    </TableHead>
-                  )}
-                  {columnVisibility['address'] && (
-                    <TableHead>
-                      <button type="button" onClick={() => handleSort('address')} className="inline-flex items-center gap-1" aria-label={`Sort by Address${sortKey==='address'?` (${sortDir})`:''}`}>
-                        <span>Address</span>
-                        {sortKey==='address' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
-                      </button>
-                    </TableHead>
-                  )}
-                  {columnVisibility['contact'] && (
-                    <TableHead>Contact</TableHead>
-                  )}
-                  {columnVisibility['status'] && (
-                    <TableHead>
-                      <button type="button" onClick={() => handleSort('status')} className="inline-flex items-center gap-1" aria-label={`Sort by Status${sortKey==='status'?` (${sortDir})`:''}`}>
-                        <span>Status</span>
-                        {sortKey==='status' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
-                      </button>
-                    </TableHead>
-                  )}
-                  {columnVisibility['actions'] && (
-                    <TableHead className="text-right">Actions</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLocations.length === 0 ? (
-                  <EmptyTableState
-                    icon={MapPin}
-                    title="No locations found"
-                    description={(searchTerm || selectedOrganization !== 'all' || statusFilter !== 'all') ? "Try adjusting your search or filters" : "Get started by adding your first partner location"}
-                    action={{
-                      label: "Add Location",
-                      onClick: () => setIsAddModalOpen(true)
-                    }}
-                    colSpan={7}
-                  />
-                ) : (
-                  sortedLocations.map((location) => {
-                    const organization = organizationMap[location.organization_id];
-                    return (
-                      <TableRow key={location.id}>
-                        <TableCell className="font-medium">
-                          {organization?.name || 'Unknown Organization'}
-                        </TableCell>
-                        <TableCell>{location.location_name}</TableCell>
-                        <TableCell>{location.location_number}</TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {location.street_address && (
-                              <div>{location.street_address}</div>
-                            )}
-                            {(location.city || location.state || location.zip_code) && (
-                              <div className="text-muted-foreground">
-                                {[location.city, location.state, location.zip_code].filter(Boolean).join(', ')}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {location.contact_name && (
-                            <div className="text-sm">
-                              <div>{location.contact_name}</div>
-                              {location.contact_email && (
-                                <div className="text-muted-foreground">{location.contact_email}</div>
-                              )}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={location.is_active ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
-                            {location.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingLocation(location)}
-                              aria-label={`Edit location ${location.location_name}`}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeletingLocation(location)}
-                              className="text-destructive hover:text-destructive"
-                              aria-label={`Delete location ${location.location_name}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Mobile Cards */}
-          <div className="block lg:hidden space-y-3">
-            {filteredLocations.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground mb-3">{(searchTerm || selectedOrganization !== 'all' || statusFilter !== 'all') ? "No locations match your current filters" : "No partner locations yet"}</p>
-                <Button onClick={() => setIsAddModalOpen(true)} variant="outline" size="sm" aria-label="Add first location">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Location
-                </Button>
-              </div>
-            ) : (
-              sortedLocations.map((location) => {
-                const organization = organizationMap[location.organization_id];
-                const address = [location.city, location.state, location.zip_code].filter(Boolean).join(', ');
-                
-                return (
-                  <SwipeableListItem
-                    key={location.id}
-                    itemName={location.location_name}
-                    itemType="location"
-                    rightAction={{ icon: Edit, label: 'Edit', color: 'default' }}
-                    leftAction={{ icon: Trash2, label: 'Delete', color: 'destructive', confirmMessage: `Delete location "${location.location_name}"?` }}
-                    onSwipeRight={() => setEditingLocation(location)}
-                    onSwipeLeft={() => setDeletingLocation(location)}
-                  >
-                    <MobileTableCard
-                      title={location.location_name}
-                      subtitle={`${organization?.name || 'Unknown Organization'} • #${location.location_number}${address ? ` • ${address}` : ''}`}
-                      status={
-                        <Badge variant={location.is_active ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
-                          {location.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      }
-                      onClick={() => setEditingLocation(location)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-muted-foreground">
-                          {location.contact_name && (
-                            <div>{location.contact_name}</div>
-                          )}
-                          {location.contact_email && (
-                            <div>{location.contact_email}</div>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingLocation(location);
-                            }}
-                            aria-label={`Edit location ${location.location_name}`}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeletingLocation(location);
-                            }}
-                            className="text-destructive hover:text-destructive"
-                            aria-label={`Delete location ${location.location_name}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </MobileTableCard>
-                  </SwipeableListItem>
-                );
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* Location Table */}
+      <LocationTable
+        data={sortedLocations}
+        isLoading={isLoading}
+        filters={locationFilters}
+        onFiltersChange={handleFiltersChange}
+        onClearFilters={handleClearFilters}
+        locationOptions={locationOptions}
+        organizationMap={organizationMap}
+        isMobile={isMobile}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        rowSelection={rowSelection}
+        setRowSelection={setRowSelection}
+        bulkMode={bulkMode}
+        onEdit={setEditingLocation}
+        onDelete={setDeletingLocation}
+        onRefresh={handleRefresh}
+        onAddLocation={() => setIsAddModalOpen(true)}
+      />
       {/* Modals */}
       <AddLocationModal
         open={isAddModalOpen}

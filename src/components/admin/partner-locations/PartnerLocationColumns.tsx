@@ -21,18 +21,17 @@ export interface ColumnMeta {
   locked?: boolean; // locked columns cannot be hidden
 }
 
-export const PARTNER_LOCATION_COLUMN_DEFAULTS: Record<PartnerLocationColumnId, ColumnMeta> = {
-  select: { label: "Select", visible: true, locked: true },
-  location_number: { label: "Location #", visible: true, description: "Copyable location number" },
-  location_name: { label: "Location Name", visible: true },
-  organization: { label: "Organization", visible: true, description: "Owning organization" },
-  address: { label: "Address", visible: true, description: "Street address with map link" },
-  city: { label: "City", visible: false },
-  state: { label: "State", visible: false },
-  zip: { label: "ZIP", visible: false },
-  status: { label: "Status", visible: true },
-  created_at: { label: "Created", visible: true },
-  actions: { label: "Actions", visible: true, locked: true },
+export const LOCATION_COLUMN_METADATA = {
+  organization: { label: "Organization", defaultVisible: true, description: "Owning organization" },
+  location_number: { label: "Location #", defaultVisible: true, description: "Copyable location number" },
+  location_name: { label: "Location Name", defaultVisible: true },
+  address: { label: "Address", defaultVisible: true, description: "Street address with map link" },
+  city: { label: "City", defaultVisible: false },
+  state: { label: "State", defaultVisible: false },
+  zip_code: { label: "ZIP", defaultVisible: false },
+  contact_name: { label: "Contact", defaultVisible: false },
+  status: { label: "Status", defaultVisible: true },
+  created_at: { label: "Created", defaultVisible: false },
 };
 
 export const PARTNER_LOCATION_DEFAULT_VISIBLE_ORDER: PartnerLocationColumnId[] = [
