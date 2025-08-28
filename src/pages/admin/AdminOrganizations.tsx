@@ -21,7 +21,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
-import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown, Filter } from 'lucide-react';
+import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown, Filter, CheckSquare } from 'lucide-react';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
@@ -66,6 +67,8 @@ export default function AdminOrganizations() {
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [bulkMode, setBulkMode] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const { data: organizations, isLoading, error, refetch } = useOrganizations();
 
@@ -225,18 +228,58 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold">Organizations Management</h1>
-            <p className="text-muted-foreground">
-              {filteredOrganizations?.length ? `${filteredOrganizations.length} matching organizations` : (organizations?.length ? `${organizations.length} total organizations` : 'Manage all organizations')}
-            </p>
-          </div>
-        </div>
+      {/* Add breadcrumb */}
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Organizations</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
-        {/* Desktop Control Bar */}
+      {/* Page header */}
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Organizations
+          </h1>
+          <p className="text-muted-foreground">
+            {filteredOrganizations.length !== organizations?.length
+              ? `${filteredOrganizations.length} matching of ${organizations?.length || 0} organizations`
+              : `${organizations?.length || 0} total organizations`
+            }
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Bulk select */}
+          <Button
+            variant={bulkMode ? "default" : "outline"}
+            onClick={() => setBulkMode(!bulkMode)}
+            className="flex-1 sm:flex-initial"
+          >
+            <CheckSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Select Multiple</span>
+            <span className="sm:hidden">Select</span>
+          </Button>
+          
+          {/* Create button */}
+          <Button 
+            onClick={() => setShowCreateModal(true)} 
+            className="flex-1 sm:flex-initial"
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Create Organization</span>
+            <span className="sm:hidden">New</span>
+          </Button>
+        </div>
+      </header>
+
+      {/* Desktop Control Bar */}
         <div className="hidden lg:flex gap-4 mb-6">
           <div className="flex flex-1 gap-2">
             <SmartSearchInput
@@ -278,7 +321,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
               <Plus className="w-4 h-4 mr-2" />
               New Organization
             </Button>
-          </div>
+            </div>
         </div>
 
         {/* Mobile Control Bar */}
@@ -312,7 +355,6 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             </Button>
           </div>
         </div>
-      </div>
 
       {/* Mobile Bottom Sheet */}
       <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
