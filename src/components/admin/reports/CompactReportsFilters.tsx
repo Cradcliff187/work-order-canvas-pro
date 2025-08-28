@@ -298,7 +298,7 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
         </div>
         
         {/* Action buttons */}
-        <div className="flex justify-between pt-4 border-t">
+        <div className="flex gap-2 pt-4 border-t">
           <Button variant="outline" onClick={handleClearFilters}>
             Clear
           </Button>
@@ -457,19 +457,19 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
 
         {/* Sticky action buttons */}
         <div className="border-t bg-background p-4">
-          <div className="flex justify-between gap-3">
+          <div className="flex gap-2">
             <Button 
               variant="outline" 
               onClick={handleClearFilters}
               className="flex-1"
             >
-              Clear Filters
+              Clear
             </Button>
             <Button 
               onClick={handleApplyFilters}
               className="flex-1"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         </div>
@@ -478,28 +478,24 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
   };
 
   // Render mobile overlay or desktop popover
-  if (isMobile) {
-    return (
-      <>
-        <Button
-          variant="outline"
-          onClick={() => setIsOpen(true)}
-          className="h-9 relative"
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-          {activeCount > 0 && (
-            <span className="ml-2 bg-primary text-primary-foreground text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">
-              {activeCount}
-            </span>
-          )}
-        </Button>
-        <MobileFilterOverlay />
-      </>
-    );
-  }
-
-  return (
+  return isMobile ? (
+    <>
+      <Button
+        variant="outline"
+        onClick={() => setIsOpen(true)}
+        className="h-9 relative"
+      >
+        <Filter className="h-4 w-4 mr-2" />
+        Filters
+        {activeCount > 0 && (
+          <span className="ml-2 bg-primary text-primary-foreground text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">
+            {activeCount}
+          </span>
+        )}
+      </Button>
+      <MobileFilterOverlay />
+    </>
+  ) : (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
