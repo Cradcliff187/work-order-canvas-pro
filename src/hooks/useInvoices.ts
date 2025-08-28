@@ -185,11 +185,7 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
 
       // Location and other complex filters handled client-side below
 
-      // Apply search filter (search both internal and external invoice numbers)
-      if (otherFilters.search) {
-        const searchTerm = `%${otherFilters.search.trim()}%`;
-        query = query.or(`internal_invoice_number.ilike.${searchTerm},external_invoice_number.ilike.${searchTerm}`);
-      }
+      // Search will be handled client-side to include work order data
 
       
 
@@ -225,11 +221,34 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
       // Apply client-side filters for complex relationships
       let filteredData = transformedData;
 
+      // Apply search filter (search across invoice numbers, work order numbers, and locations)
+      if (otherFilters.search && otherFilters.search.trim()) {
+        const searchTerm = otherFilters.search.trim().toLowerCase();
+        filteredData = filteredData.filter(invoice => {
+          // Search in invoice numbers
+          const matchesInvoiceNumber = 
+            (invoice.internal_invoice_number || '').toLowerCase().includes(searchTerm) ||
+            (invoice.external_invoice_number || '').toLowerCase().includes(searchTerm);
+          
+          // Search in work order numbers and locations
+          const matchesWorkOrder = invoice.invoice_work_orders.some(iwo => {
+            const workOrder = iwo.work_order;
+            return (
+              (workOrder.work_order_number || '').toLowerCase().includes(searchTerm) ||
+              (workOrder.store_location || '').toLowerCase().includes(searchTerm) ||
+              (workOrder.title || '').toLowerCase().includes(searchTerm)
+            );
+          });
+          
+          return matchesInvoiceNumber || matchesWorkOrder;
+        });
+      }
+
       // Filter by partner organization (through work orders)
       if (otherFilters.partner_organization_id && otherFilters.partner_organization_id !== 'all') {
         filteredData = filteredData.filter(invoice => 
           invoice.invoice_work_orders.some(iwo => 
-            iwo.work_order.organization_id === otherFilters.partner_organization_id
+            iwo.work_order?.organization_id === otherFilters.partner_organization_id
           )
         );
       }
