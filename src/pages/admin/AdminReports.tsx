@@ -417,7 +417,7 @@ const table = useReactTable({
   ) : (
     <div className={cn("p-6 space-y-6", bulkMode && selectedRows.length > 0 && "pb-24")}>
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <header className="flex justify-between items-center mb-6">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Reports Management</h1>
@@ -436,11 +436,7 @@ const table = useReactTable({
             </p>
           )}
         </div>
-      </div>
-
-      {/* Header Actions */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
@@ -453,17 +449,17 @@ const table = useReactTable({
             className="h-9"
           >
             <CheckSquare className="h-4 w-4 mr-2" />
-            Bulk Actions
+            Select Multiple
+          </Button>
+          <Button 
+            onClick={() => navigate('/admin/invoices/create')}
+            className="h-9"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Subcontractor Invoice
           </Button>
         </div>
-        <Button 
-          onClick={() => navigate('/admin/invoices/create')}
-          className="h-9"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Subcontractor Invoice
-        </Button>
-      </div>
+      </header>
 
       {/* Bulk Actions */}
       {selectedRows.length > 0 && (
