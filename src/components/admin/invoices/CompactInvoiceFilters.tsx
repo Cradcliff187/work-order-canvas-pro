@@ -8,35 +8,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import type { InvoiceFiltersValue } from './InvoiceFilters';
 
-const operationalStatusOptions = [
-  { value: 'new', label: 'New Orders' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'reports_pending', label: 'Reports Pending Review' },
-  { value: 'complete', label: 'Completed' }
-];
 
-const reportStatusOptions = [
-  { value: 'not_submitted', label: 'Not Submitted' },
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'reviewed', label: 'Under Review' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Needs Revision' }
-];
-
-const invoiceStatusOptions = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'reviewed', label: 'Under Review' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' }
-];
-
-const partnerBillingStatusOptions = [
-  { value: 'report_pending', label: 'Report Pending' },
-  { value: 'invoice_needed', label: 'Subcontractor Invoice Needed' },
-  { value: 'invoice_pending', label: 'Invoice Pending Approval' },
-  { value: 'ready_to_bill', label: 'Ready to Bill Partner' },
+const paymentStatusOptions = [
+  { value: 'pending', label: 'Pending Payment' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'ready_to_bill', label: 'Ready to Bill' },
   { value: 'billed', label: 'Partner Billed' }
 ];
 
@@ -58,18 +34,6 @@ export function CompactInvoiceFilters({
     setLocalValue(value);
   }, [value]);
   
-  // Get partner locations for the selected partner organization
-  const { data: partnerLocations } = usePartnerLocations(localValue.partner_organization_id);
-  
-  // Create location options from partner locations
-  const locationOptions = useMemo(() => {
-    if (!partnerLocations) return [];
-    
-    return partnerLocations.map(location => ({
-      value: location.location_name,
-      label: `${location.location_name} (${location.location_number})`
-    }));
-  }, [partnerLocations]);
   
   // Calculate active filter count
   const activeCount = useMemo(() => {
@@ -78,8 +42,6 @@ export function CompactInvoiceFilters({
     if (localValue.partner_organization_id) count++;
     if (localValue.location_filter?.length) count += localValue.location_filter.length;
     if (localValue.subcontractor_organization_id) count++;
-    if (localValue.operational_status?.length) count += localValue.operational_status.length;
-    if (localValue.report_status?.length) count += localValue.report_status.length;
     if (localValue.invoice_status?.length) count += localValue.invoice_status.length;
     if (localValue.partner_billing_status?.length) count += localValue.partner_billing_status.length;
     return count;
@@ -103,53 +65,93 @@ export function CompactInvoiceFilters({
 
   // Filter content component
   const FilterContent = () => {
+    const { data: partnerLocations } = usePartnerLocations(localValue.partner_organization_id);
+    
+    const locationOptions = useMemo(() => {
+      if (!partnerLocations) return [];
+      return partnerLocations.map(location => ({
+        value: location.location_name,
+        label: `${location.location_name} (${location.location_number})`
+      }));
+    }, [partnerLocations]);
+
     return (
       <>
-        <div className="space-y-4 max-h-[500px] overflow-y-auto">
-          {/* Overdue Filter */}
+        <div className="space-y-4">
+          {/* Overdue Quick Filter */}
           <div>
             <label className="text-sm font-medium mb-2 block">Quick Filters</label>
             <Button
               variant={localValue.overdue ? "default" : "outline"}
               size="sm"
               onClick={() => handleFilterChange('overdue', !localValue.overdue)}
-              className="w-full justify-start"
+              className="w-full h-10 justify-start"
             >
-              <AlertTriangle className="w-4 h-4 mr-2" />
+              <AlertTriangle className="mr-2 h-4 w-4" />
               Overdue Only
             </Button>
           </div>
 
-          {/* Invoice Status Filter */}
+          {/* Invoice Status */}
           <div>
             <label className="text-sm font-medium mb-2 block">Invoice Status</label>
             <MultiSelectFilter
-              options={invoiceStatusOptions}
+              options={[
+                { value: 'submitted', label: 'Submitted' },
+                { value: 'reviewed', label: 'Under Review' },
+                { value: 'approved', label: 'Approved' },
+                { value: 'rejected', label: 'Rejected' }
+              ]}
               selectedValues={localValue.invoice_status || []}
               onSelectionChange={(filterValue) => handleFilterChange('invoice_status', filterValue)}
-              placeholder="Filter by invoice status..."
+              placeholder="Filter by status..."
               className="w-full h-10"
             />
           </div>
 
-          {/* Partner Organization Filter */}
+          {/* Payment Status */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Payment Status</label>
+            <MultiSelectFilter
+              options={paymentStatusOptions}
+              selectedValues={localValue.partner_billing_status || []}
+              onSelectionChange={(filterValue) => handleFilterChange('partner_billing_status', filterValue)}
+              placeholder="Filter by payment..."
+              className="w-full h-10"
+            />
+          </div>
+
+          {/* Subcontractor Organization */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Subcontractor</label>
+            <OrganizationSelector
+              value={localValue.subcontractor_organization_id}
+              onChange={(orgId) => handleFilterChange('subcontractor_organization_id', orgId)}
+              organizationType="subcontractor"
+              placeholder="Select subcontractor..."
+              className="h-10"
+            />
+          </div>
+
+          {/* Partner Organization */}
           <div>
             <label className="text-sm font-medium mb-2 block">Partner Organization</label>
             <OrganizationSelector
-              value={localValue.partner_organization_id || ''}
-              onChange={(partnerId) => {
-                handleFilterChange('partner_organization_id', partnerId);
-                // Clear location filter when partner changes
-                if (localValue.location_filter?.length) {
+              value={localValue.partner_organization_id}
+              onChange={(orgId) => {
+                handleFilterChange('partner_organization_id', orgId);
+                // Clear locations when partner changes
+                if (orgId !== localValue.partner_organization_id) {
                   handleFilterChange('location_filter', []);
                 }
               }}
               organizationType="partner"
-              placeholder="Select Partner"
+              placeholder="Select partner..."
+              className="h-10"
             />
           </div>
 
-          {/* Locations Filter */}
+          {/* Locations (only if partner selected) */}
           {localValue.partner_organization_id && (
             <div>
               <label className="text-sm font-medium mb-2 block">Locations</label>
@@ -162,56 +164,9 @@ export function CompactInvoiceFilters({
               />
             </div>
           )}
-
-          {/* Subcontractor Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Subcontractor</label>
-            <OrganizationSelector
-              value={localValue.subcontractor_organization_id || ''}
-              onChange={(subcontractorId) => handleFilterChange('subcontractor_organization_id', subcontractorId)}
-              organizationType="subcontractor"
-              placeholder="Select Subcontractor"
-            />
-          </div>
-
-          {/* Operational Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Work Status</label>
-            <MultiSelectFilter
-              options={operationalStatusOptions}
-              selectedValues={localValue.operational_status || []}
-              onSelectionChange={(filterValue) => handleFilterChange('operational_status', filterValue)}
-              placeholder="Filter by work status..."
-              className="w-full h-10"
-            />
-          </div>
-
-          {/* Report Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Report Status</label>
-            <MultiSelectFilter
-              options={reportStatusOptions}
-              selectedValues={localValue.report_status || []}
-              onSelectionChange={(filterValue) => handleFilterChange('report_status', filterValue)}
-              placeholder="Filter by report status..."
-              className="w-full h-10"
-            />
-          </div>
-
-          {/* Partner Billing Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Partner Billing Status</label>
-            <MultiSelectFilter
-              options={partnerBillingStatusOptions}
-              selectedValues={localValue.partner_billing_status || []}
-              onSelectionChange={(filterValue) => handleFilterChange('partner_billing_status', filterValue)}
-              placeholder="Filter by billing status..."
-              className="w-full h-10"
-            />
-          </div>
         </div>
         
-        {/* Action buttons */}
+        {/* Action buttons - exactly like Work Orders */}
         <div className="flex justify-between pt-4 border-t">
           <Button variant="outline" onClick={handleClearFilters}>
             Clear
@@ -243,110 +198,8 @@ export function CompactInvoiceFilters({
         </div>
         
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Overdue Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Quick Filters</label>
-            <Button
-              variant={localValue.overdue ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleFilterChange('overdue', !localValue.overdue)}
-              className="w-full justify-start"
-            >
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Overdue Only
-            </Button>
-          </div>
-
-          {/* Invoice Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Invoice Status</label>
-            <MultiSelectFilter
-              options={invoiceStatusOptions}
-              selectedValues={localValue.invoice_status || []}
-              onSelectionChange={(filterValue) => handleFilterChange('invoice_status', filterValue)}
-              placeholder="Filter by invoice status..."
-              className="w-full h-10"
-            />
-          </div>
-
-          {/* Partner Organization Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Partner Organization</label>
-            <OrganizationSelector
-              value={localValue.partner_organization_id || ''}
-              onChange={(partnerId) => {
-                handleFilterChange('partner_organization_id', partnerId);
-                // Clear location filter when partner changes
-                if (localValue.location_filter?.length) {
-                  handleFilterChange('location_filter', []);
-                }
-              }}
-              organizationType="partner"
-              placeholder="Select Partner"
-            />
-          </div>
-
-          {/* Locations Filter */}
-          {localValue.partner_organization_id && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Locations</label>
-              <MultiSelectFilter
-                options={locationOptions}
-                selectedValues={localValue.location_filter || []}
-                onSelectionChange={(filterValue) => handleFilterChange('location_filter', filterValue)}
-                placeholder="Select locations..."
-                className="w-full h-10"
-              />
-            </div>
-          )}
-
-          {/* Subcontractor Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Subcontractor</label>
-            <OrganizationSelector
-              value={localValue.subcontractor_organization_id || ''}
-              onChange={(subcontractorId) => handleFilterChange('subcontractor_organization_id', subcontractorId)}
-              organizationType="subcontractor"
-              placeholder="Select Subcontractor"
-            />
-          </div>
-
-          {/* Operational Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Work Status</label>
-            <MultiSelectFilter
-              options={operationalStatusOptions}
-              selectedValues={localValue.operational_status || []}
-              onSelectionChange={(filterValue) => handleFilterChange('operational_status', filterValue)}
-              placeholder="Filter by work status..."
-              className="w-full h-10"
-            />
-          </div>
-
-          {/* Report Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Report Status</label>
-            <MultiSelectFilter
-              options={reportStatusOptions}
-              selectedValues={localValue.report_status || []}
-              onSelectionChange={(filterValue) => handleFilterChange('report_status', filterValue)}
-              placeholder="Filter by report status..."
-              className="w-full h-10"
-            />
-          </div>
-
-          {/* Partner Billing Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Partner Billing Status</label>
-            <MultiSelectFilter
-              options={partnerBillingStatusOptions}
-              selectedValues={localValue.partner_billing_status || []}
-              onSelectionChange={(filterValue) => handleFilterChange('partner_billing_status', filterValue)}
-              placeholder="Filter by billing status..."
-              className="w-full h-10"
-            />
-          </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          <FilterContent />
         </div>
         
         {/* Fixed bottom action buttons */}
