@@ -19,13 +19,16 @@ import {
   RowSelectionState,
 } from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { BulkUserActions } from '@/components/admin/users/BulkUserActions';
+import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { Plus, RotateCcw, Users, Power, Edit, Filter, CheckSquare } from 'lucide-react';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
-import { EmptyState } from '@/components/ui/empty-state';
 import { useUsers, useUserMutations, User } from '@/hooks/useUsers';
 import { createUserColumns } from '@/components/admin/users/UserColumns';
 import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
@@ -39,11 +42,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
@@ -96,7 +98,7 @@ export default function AdminUsers() {
 
   // Fetch data
   const { data: users, isLoading, error, refetch } = useUsers();
-  const { deleteUser, updateUser } = useUserMutations();
+  const { deleteUser, updateUser, bulkUpdateUsers } = useUserMutations();
 
   // Pull to refresh hook for mobile
   usePullToRefresh({
@@ -242,6 +244,49 @@ export default function AdminUsers() {
     }));
   };
 
+  const handleBulkStatusChange = async (status: 'active' | 'inactive') => {
+    const selectedIds = Object.keys(rowSelection);
+    try {
+      await bulkUpdateUsers.mutateAsync({
+        ids: selectedIds,
+        data: { is_active: status === 'active' }
+      });
+      setRowSelection({});
+      toast({
+        title: "Users Updated",
+        description: `${selectedIds.length} users ${status === 'active' ? 'activated' : 'deactivated'}`
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update users",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const selectedIds = Object.keys(rowSelection);
+    if (!confirm(`Delete ${selectedIds.length} users? This action cannot be undone.`)) return;
+    
+    try {
+      for (const userId of selectedIds) {
+        await deleteUser.mutateAsync(userId);
+      }
+      setRowSelection({});
+      toast({
+        title: "Users Deleted",
+        description: `${selectedIds.length} users deleted successfully`
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete users",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleClearFilters = () => {
     clearFilters();
   };
@@ -250,27 +295,34 @@ export default function AdminUsers() {
     setRowSelection({});
   };
 
-  const handleExport = (format: 'csv' | 'excel') => {
-    try {
-      const data = filteredUsers || [];
-      if (!data.length) {
-        toast({
-          variant: 'destructive',
-          title: 'Nothing to export',
-          description: 'No users match the current filters.',
-        });
-        return;
-      }
-      const filename = generateFilename('users', format === 'excel' ? 'xlsx' : 'csv');
-      if (format === 'excel') {
-        exportToExcel(data, exportColumns, filename);
-      } else {
-        exportToCSV(data, exportColumns, filename);
-      }
-      toast({ title: 'Export started', description: `Downloading ${format.toUpperCase()} file...` });
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Export failed', description: err?.message || 'Please try again.' });
+  const handleExport = (exportFormat: 'csv' | 'excel') => {
+    const exportData = filteredUsers.map(user => {
+      const memberships = (user as any).organization_members || [];
+      const primaryMembership = memberships[0];
+      
+      return {
+        'First Name': user.first_name,
+        'Last Name': user.last_name,
+        'Email': user.email,
+        'Role': primaryMembership?.role || '',
+        'Organization': primaryMembership?.organization?.name || '',
+        'Status': (user as any).is_active ? 'Active' : 'Inactive',
+        'Last Login': (user as any).last_login || 'Never',
+        'Created': format(new Date(user.created_at), 'yyyy-MM-dd')
+      };
+    });
+    
+    const filename = `users-${Date.now()}`;
+    if (exportFormat === 'csv') {
+      exportToCSV(exportData, exportColumns, filename);
+    } else {
+      exportToExcel(exportData, exportColumns, filename);
     }
+    
+    toast({
+      title: "Export Complete",
+      description: `Exported ${exportData.length} users`
+    });
   };
 
   if (error) {
@@ -420,10 +472,23 @@ export default function AdminUsers() {
           </div>
         )}
 
-        <CardContent>
-          {isLoading ? (
-            <EnhancedTableSkeleton rows={5} columns={6} />
-          ) : !users || users.length === 0 ? (
+        <CardContent className="p-0">
+          {Object.keys(rowSelection).length > 0 && (
+            <BulkActionsBar
+              selectedCount={Object.keys(rowSelection).length}
+              selectedIds={Object.keys(rowSelection)}
+              onClearSelection={() => setRowSelection({})}
+              onExport={(exportFormat, ids) => handleExport(exportFormat)}
+              onBulkAssign={() => {}}
+              onBulkEdit={() => {}}
+              loading={bulkUpdateUsers.isPending || deleteUser.isPending}
+            />
+          )}
+          
+          <div className="p-6">
+            {isLoading ? (
+              <TableSkeleton rows={10} columns={9} />
+            ) : !users || users.length === 0 ? (
             <EmptyState
               icon={Users}
               title="No users found"
@@ -707,6 +772,7 @@ export default function AdminUsers() {
               </div>
             </>
           )}
+          </div>
         </CardContent>
       </Card>
 
