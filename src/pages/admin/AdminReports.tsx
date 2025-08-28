@@ -434,11 +434,6 @@ const table = useReactTable({
         </div>
         
         <div className="flex items-center gap-3">
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
-          />
           <Button
             variant={bulkMode ? "default" : "outline"}
             onClick={() => setBulkMode(!bulkMode)}
