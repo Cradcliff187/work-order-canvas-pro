@@ -15,6 +15,7 @@ import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { TablePagination } from '@/components/admin/shared/TablePagination';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
@@ -99,10 +100,15 @@ export default function SelectReports() {
     defaultMode: 'table'
   });
 
-  // Sorting for table
+  // Sorting and pagination for table
   type SortKey = 'work_order' | 'submitted' | 'amount';
   const [sortKey, setSortKey] = useState<SortKey>('submitted');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 20,
+  });
+  
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     else { setSortKey(key); setSortDir('asc'); }
@@ -161,7 +167,7 @@ export default function SelectReports() {
     });
   }, [reports, filters]);
 
-  // Sort the filtered reports
+  // Sort and paginate the filtered reports
   const filteredAndSortedReports = useMemo(() => {
     if (!filteredReports) return [];
     
@@ -192,6 +198,29 @@ export default function SelectReports() {
     
     return sorted;
   }, [filteredReports, sortKey, sortDir]);
+
+  // Create paginated reports for display
+  const paginatedReports = useMemo(() => {
+    const startIndex = pagination.pageIndex * pagination.pageSize;
+    const endIndex = startIndex + pagination.pageSize;
+    return filteredAndSortedReports.slice(startIndex, endIndex);
+  }, [filteredAndSortedReports, pagination]);
+
+  // Mock table for pagination component
+  const mockTable = {
+    getRowModel: () => ({ rows: paginatedReports.map((_, i) => ({ id: i })) }),
+    getFilteredRowModel: () => ({ rows: filteredAndSortedReports.map((_, i) => ({ id: i })) }),
+    getState: () => ({ pagination }),
+    setPageSize: (size: number) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
+    previousPage: () => setPagination(prev => ({ ...prev, pageIndex: Math.max(0, prev.pageIndex - 1) })),
+    nextPage: () => setPagination(prev => ({ 
+      ...prev, 
+      pageIndex: Math.min(Math.ceil(filteredAndSortedReports.length / prev.pageSize) - 1, prev.pageIndex + 1) 
+    })),
+    getCanPreviousPage: () => pagination.pageIndex > 0,
+    getCanNextPage: () => (pagination.pageIndex + 1) * pagination.pageSize < filteredAndSortedReports.length,
+    getPageCount: () => Math.ceil(filteredAndSortedReports.length / pagination.pageSize)
+  };
 
   // Calculate totals based on selected reports
   const calculations = useMemo(() => {
@@ -482,6 +511,18 @@ export default function SelectReports() {
                     size="sm"
                   />
                   
+                  {filteredAndSortedReports && filteredAndSortedReports.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAll}
+                      className="flex items-center gap-2"
+                    >
+                      <CheckSquare className="w-4 h-4" />
+                      {selectedReportIds.size === filteredAndSortedReports.length ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  )}
+                  
                   {selectedReportIds.size > 0 && (
                     <ExportDropdown 
                       onExport={handleExportSelected}
@@ -515,50 +556,6 @@ export default function SelectReports() {
                 )
               ) : (
                 <>
-                  {/* Table Actions Header */}
-                  {filteredAndSortedReports && filteredAndSortedReports.length > 0 && (
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSelectAll}
-                          className="flex items-center gap-2"
-                        >
-                          <CheckSquare className="w-4 h-4" />
-                          {selectedReportIds.size === filteredAndSortedReports.length ? 'Deselect All' : 'Select All'}
-                        </Button>
-                        <Badge variant="secondary" className="h-5 text-[10px] px-2">
-                          {filteredAndSortedReports.length} of {reports?.length || 0} report{(reports?.length || 0) !== 1 ? 's' : ''} shown
-                        </Badge>
-                        <Badge variant="outline" className="h-5 text-[10px] px-2 flex items-center gap-2">
-                          <DollarSign className="w-3 h-3" />
-                          {formatCurrency(totalApprovedInvoiceAmount)} available
-                        </Badge>
-                        {selectedReportIds.size > 0 && (
-                          <div className="flex gap-2">
-                            <ExportDropdown 
-                              onExport={handleExportSelected}
-                              variant="outline"
-                              size="sm"
-                            />
-                            <TableActionsDropdown
-                              actions={[
-                                {
-                                  label: 'Clear Selection',
-                                  icon: X,
-                                  onClick: () => setSelectedReportIds(new Set()),
-                                },
-                              ]}
-                              align="end"
-                              itemName="selected reports"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Table or Cards based on view mode */}
                   {viewMode === 'table' ? (
                     <div className="hidden md:block">
@@ -568,7 +565,7 @@ export default function SelectReports() {
                             <TableRow>
                               <TableHead className="w-12">
                                 <Checkbox
-                                  checked={filteredAndSortedReports.length > 0 && selectedReportIds.size === filteredAndSortedReports.length}
+                                  checked={paginatedReports.length > 0 && paginatedReports.every(report => selectedReportIds.has(report.id))}
                                   onCheckedChange={handleSelectAll}
                                   aria-label="Select all visible reports"
                                 />
@@ -612,7 +609,7 @@ export default function SelectReports() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {filteredAndSortedReports.map((report) => {
+                            {paginatedReports.map((report) => {
                               const isSelected = selectedReportIds.has(report.id);
                               const reportInvoiceDetails = invoiceDetails?.find(inv => inv.report_id === report.id);
 
@@ -761,7 +758,7 @@ export default function SelectReports() {
                   ) : (
                     /* Card View */
                     <div className="space-y-3">
-                      {filteredAndSortedReports.map((report) => {
+                      {paginatedReports.map((report) => {
                         const isSelected = selectedReportIds.has(report.id);
 
                         return (
@@ -798,6 +795,15 @@ export default function SelectReports() {
                         );
                       })}
                     </div>
+                  )}
+                  
+                  {/* Pagination */}
+                  {filteredAndSortedReports.length > 0 && (
+                    <TablePagination
+                      table={mockTable as any}
+                      totalCount={filteredAndSortedReports.length}
+                      itemName="reports"
+                    />
                   )}
                 </>
               )}
