@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { TablePagination } from '@/components/admin/shared/TablePagination';
 import { BulkUserActions } from '@/components/admin/users/BulkUserActions';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { Button } from '@/components/ui/button';
@@ -738,38 +739,12 @@ export default function AdminUsers() {
               )}
 
               {/* Pagination */}
-              <div className={`flex items-center py-4 ${isMobile ? 'flex-col space-y-4' : 'justify-between space-x-2'}`}>
-                <div className="flex-1 text-sm text-muted-foreground">
-                  {selectedRows.length > 0 && (
-                    <span>
-                      {selectedRows.length} of {table.getFilteredRowModel().rows.length} {isMobile ? 'items' : 'row(s)'} selected.
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    Previous
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm text-muted-foreground">
-                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
+              <TablePagination 
+                table={table}
+                totalCount={filteredUsers.length}
+                itemName="users"
+                isMobile={isMobile}
+              />
             </>
           )}
           </div>

@@ -34,6 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { TablePagination } from '@/components/admin/shared/TablePagination';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
@@ -72,6 +73,11 @@ export default function AdminOrganizations() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [bulkMode, setBulkMode] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 25,
+  });
+  const [sorting, setSorting] = useState<SortingState>([]);
   const isMobile = useIsMobile();
 
   const { data: organizations, isLoading, error, refetch } = useOrganizations();
@@ -683,6 +689,23 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             </>
           )}
         </CardContent>
+        
+        {/* Pagination */}
+        <TablePagination 
+          table={{
+            getState: () => ({ pagination }),
+            getPageCount: () => Math.ceil(filteredOrganizations.length / pagination.pageSize),
+            getCanPreviousPage: () => pagination.pageIndex > 0,
+            getCanNextPage: () => (pagination.pageIndex + 1) * pagination.pageSize < filteredOrganizations.length,
+            previousPage: () => setPagination(prev => ({ ...prev, pageIndex: Math.max(0, prev.pageIndex - 1) })),
+            nextPage: () => setPagination(prev => ({ ...prev, pageIndex: prev.pageIndex + 1 })),
+            setPageSize: (size: number) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
+            getRowModel: () => ({ rows: filteredOrganizations })
+          } as any}
+          totalCount={filteredOrganizations.length}
+          itemName="organizations"
+          isMobile={isMobile}
+        />
       </Card>
 
       {/* Bulk Actions Bar */}

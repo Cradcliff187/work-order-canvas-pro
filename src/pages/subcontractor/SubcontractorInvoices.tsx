@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingCard } from "@/components/ui/loading-states";
 import { QueryError, QueryErrorBoundary } from "@/components/ui/query-error-boundary";
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
+import { TablePagination } from '@/components/admin/shared/TablePagination';
 import { Plus, Search, DollarSign, Paperclip, FileText, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
@@ -223,24 +224,26 @@ const SubcontractorInvoices = () => {
       </div>
 
       {/* Pagination */}
-      {totalCount > 20 && (
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            disabled={page * 20 >= totalCount}
-            onClick={() => setPage(page + 1)}
-          >
-            Next
-          </Button>
-        </div>
-      )}
+      <TablePagination 
+        table={{
+          getState: () => ({ 
+            pagination: { 
+              pageIndex: page - 1, 
+              pageSize: 20 
+            } 
+          }),
+          getPageCount: () => Math.ceil(totalCount / 20),
+          getCanPreviousPage: () => page > 1,
+          getCanNextPage: () => page * 20 < totalCount,
+          previousPage: () => setPage(page - 1),
+          nextPage: () => setPage(page + 1),
+          setPageSize: (size: number) => console.log('Page size change not implemented'),
+          getRowModel: () => ({ rows: invoices })
+        } as any}
+        totalCount={totalCount}
+        itemName="invoices"
+        isMobile={false}
+      />
     </div>
     </QueryErrorBoundary>
   );

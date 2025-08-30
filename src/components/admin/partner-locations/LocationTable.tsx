@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { LOCATION_COLUMN_METADATA } from './PartnerLocationColumns';
 import { exportToCSV, exportToExcel, ExportColumn } from '@/lib/utils/export';
+import { TablePagination } from '@/components/admin/shared/TablePagination';
 import { generateMapUrl } from '@/lib/utils/addressUtils';
 import { useToast } from '@/hooks/use-toast';
 import { ViewMode } from '@/hooks/useViewMode';
@@ -592,6 +593,28 @@ export function LocationTable({
           </ResponsiveTableContainer>
         </div>
       )}
+      
+      {/* Pagination */}
+      <TablePagination 
+        table={{
+          getState: () => ({ 
+            pagination: { 
+              pageIndex: 0, 
+              pageSize: data.length 
+            } 
+          }),
+          getPageCount: () => 1,
+          getCanPreviousPage: () => false,
+          getCanNextPage: () => false,
+          previousPage: () => {},
+          nextPage: () => {},
+          setPageSize: (size: number) => {},
+          getRowModel: () => ({ rows: data })
+        } as any}
+        totalCount={data.length}
+        itemName="locations"
+        isMobile={isMobile}
+      />
     </Card>
   );
 }
