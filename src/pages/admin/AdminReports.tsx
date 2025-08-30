@@ -609,6 +609,7 @@ const table = useReactTable({
             viewMode={viewMode === 'card' ? 'card' : 'table'}
             onRowClick={(report) => navigate(`/admin/reports/${(report as any).id}`)}
             isMobile={isMobile}
+            totalCount={reportsData?.totalCount}
             renderMobileCard={(report: any) => {
               const workOrder = report.work_orders;
               const subcontractor = report.subcontractor;
