@@ -119,19 +119,8 @@ export default function AdminInvoices() {
     partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
   }), [filters]);
 
-  // Wrapper function to handle CompactInvoiceFilters type compatibility
   const handleFiltersChange = (newFilters: InvoiceFiltersValue) => {
-    setFilters({
-      search: newFilters.search || '',
-      overdue: newFilters.overdue || false,
-      partner_organization_ids: Array.isArray(newFilters.partner_organization_ids) ? newFilters.partner_organization_ids : [],
-      location_filter: Array.isArray(newFilters.location_filter) ? newFilters.location_filter : [],
-      subcontractor_organization_ids: Array.isArray(newFilters.subcontractor_organization_ids) ? newFilters.subcontractor_organization_ids : [],
-      operational_status: Array.isArray(newFilters.operational_status) ? newFilters.operational_status : [],
-      report_status: Array.isArray(newFilters.report_status) ? newFilters.report_status : [],
-      invoice_status: Array.isArray(newFilters.invoice_status) ? newFilters.invoice_status : [],
-      partner_billing_status: Array.isArray(newFilters.partner_billing_status) ? newFilters.partner_billing_status : [],
-    });
+    setFilters(newFilters);
   };
   const { approveSubcontractorBill, rejectSubcontractorBill, markAsPaid } = useSubcontractorBillMutations();
   const [bulkOpen, setBulkOpen] = useState(false);
