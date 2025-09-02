@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -128,7 +128,7 @@ export default function AdminInvoices() {
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
 
   // Clean filters to ensure array fields are always arrays
-  const cleanFilters = {
+  const cleanFilters = useMemo(() => ({
     search: filters.search || '',
     overdue: Boolean(filters.overdue),
     partner_organization_ids: Array.isArray(filters.partner_organization_ids) ? filters.partner_organization_ids : [],
@@ -138,7 +138,7 @@ export default function AdminInvoices() {
     report_status: Array.isArray(filters.report_status) ? filters.report_status : [],
     invoice_status: Array.isArray(filters.invoice_status) ? filters.invoice_status : [],
     partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
-  };
+  }), [filters]);
 
   // Wrapper function to handle CompactInvoiceFilters type compatibility
   const handleFiltersChange = (newFilters: InvoiceFiltersValue) => {
