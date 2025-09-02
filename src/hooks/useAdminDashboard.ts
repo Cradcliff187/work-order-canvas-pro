@@ -114,7 +114,7 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
 
   // Pending invoices
   const { count: pendingInvoicesCount } = await supabase
-    .from('invoices')
+    .from('subcontractor_bills')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'submitted');
 
@@ -126,7 +126,7 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
 
   // Unpaid approved invoices
   const { count: unpaidApprovedCount } = await supabase
-    .from('invoices')
+    .from('subcontractor_bills')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'approved')
     .is('paid_at', null);
@@ -149,7 +149,7 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   
   const { data: recentPaymentsData } = await supabase
-    .from('invoices')
+    .from('subcontractor_bills')
     .select(`
       id,
       internal_invoice_number,
@@ -466,7 +466,7 @@ export const useAdminDashboard = () => {
         } else if (table === 'work_order_reports') {
           recentReportsQuery.refetch();
           metricsQuery.refetch();
-        } else if (table === 'invoices') {
+        } else if (table === 'subcontractor_bills') {
           metricsQuery.refetch();
         }
       }, 750);
@@ -476,7 +476,7 @@ export const useAdminDashboard = () => {
       .channel('admin-dashboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'work_orders' }, () => invalidateForTable('work_orders'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'work_order_reports' }, () => invalidateForTable('work_order_reports'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => invalidateForTable('invoices'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'subcontractor_bills' }, () => invalidateForTable('subcontractor_bills'))
       .subscribe();
 
     return () => {

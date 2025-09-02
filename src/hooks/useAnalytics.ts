@@ -112,9 +112,9 @@ export const useAnalytics = (dateRange: DateRange) => {
           }, 0) / completedOrders.length
         : 0;
 
-      // Get invoice total from invoices table
+      // Get invoice total from subcontractor_bills table
       const { data: invoiceData } = await supabase
-        .from('invoices')
+        .from('subcontractor_bills')
         .select('total_amount')
         .gte('created_at', startDate)
         .lte('created_at', endDate);

@@ -6,24 +6,24 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { Eye, CheckCircle, XCircle, DollarSign, Paperclip, UserCheck, Download, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Invoice } from '@/hooks/useInvoices';
+import { SubcontractorBill } from '@/hooks/useSubcontractorBills';
 import { formatCurrency } from '@/utils/formatting';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
 
 interface InvoiceColumnsProps {
-  onViewInvoice: (invoice: Invoice) => void;
-  onApproveInvoice: (invoice: Invoice) => void;
-  onRejectInvoice: (invoice: Invoice) => void;
-  onMarkAsPaid: (invoice: Invoice) => void;
+  onViewInvoice: (invoice: SubcontractorBill) => void;
+  onApproveInvoice: (invoice: SubcontractorBill) => void;
+  onRejectInvoice: (invoice: SubcontractorBill) => void;
+  onMarkAsPaid: (invoice: SubcontractorBill) => void;
   // Optional billing actions
-  onSendInvoice?: (invoice: Invoice) => void;
-  onDownloadPdf?: (invoice: Invoice) => void;
+  onSendInvoice?: (invoice: SubcontractorBill) => void;
+  onDownloadPdf?: (invoice: SubcontractorBill) => void;
   // Optional due date resolver for overdue highlighting
-  getDueDate?: (invoice: Invoice) => string | null;
+  getDueDate?: (invoice: SubcontractorBill) => string | null;
   // Admin CRUD
-  onEditInvoice?: (invoice: Invoice) => void;
-  onDeleteInvoice?: (invoice: Invoice) => void;
+  onEditInvoice?: (invoice: SubcontractorBill) => void;
+  onDeleteInvoice?: (invoice: SubcontractorBill) => void;
 }
 
 export const createInvoiceColumns = ({
@@ -36,7 +36,7 @@ export const createInvoiceColumns = ({
   getDueDate,
   onEditInvoice,
   onDeleteInvoice,
-}: InvoiceColumnsProps): ColumnDef<Invoice>[] => [
+}: InvoiceColumnsProps): ColumnDef<SubcontractorBill>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -84,7 +84,7 @@ export const createInvoiceColumns = ({
     id: 'work_orders',
     header: 'Work Orders',
     cell: ({ row }) => {
-      const items = row.original.invoice_work_orders || [];
+      const items = row.original.subcontractor_bill_work_orders || [];
       if (!items.length) return <span className="text-muted-foreground">—</span>;
       
       const count = items.length;
@@ -103,11 +103,11 @@ export const createInvoiceColumns = ({
                 {items.map((it) => (
                   <Link 
                     key={it.id} 
-                    to={`/admin/work-orders/${it.work_order.id}`} 
+                    to={`/admin/work-orders/${it.work_orders.id}`} 
                     onClick={(e) => e.stopPropagation()}
                     className="block font-mono text-xs hover:text-primary transition-colors"
                   >
-                    {it.work_order.work_order_number || 'N/A'}
+                    {it.work_orders.work_order_number || 'N/A'}
                   </Link>
                 ))}
               </div>
@@ -122,7 +122,7 @@ export const createInvoiceColumns = ({
     accessorKey: 'attachment_count',
     header: 'Attachments',
     cell: ({ row }) => {
-      const count = row.original.attachment_count || 0;
+      const count = row.original.subcontractor_bill_attachments?.length || 0;
       return count > 0 ? (
         <div className="flex items-center gap-1">
           <Paperclip className="h-4 w-4 text-muted-foreground" />
@@ -140,7 +140,7 @@ export const createInvoiceColumns = ({
     header: 'Partner',
     cell: ({ row }) => {
       const invoice = row.original;
-      const isAdminEntered = !!invoice.created_by_admin_id;
+      const isAdminEntered = !!(invoice as any).created_by_admin_id;
       
       return (
         <div className="flex items-center gap-2">
@@ -157,7 +157,7 @@ export const createInvoiceColumns = ({
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Entered by {invoice.created_by_admin?.first_name} {invoice.created_by_admin?.last_name}</p>
+                  <p>Entered by {(invoice as any).created_by_admin?.first_name} {(invoice as any).created_by_admin?.last_name}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -216,7 +216,7 @@ export const createInvoiceColumns = ({
   },
   {
     id: 'due_date',
-    accessorFn: (row) => (getDueDate?.(row as Invoice) ?? (row as any).due_date ?? null) as any,
+    accessorFn: (row) => (getDueDate?.(row as SubcontractorBill) ?? (row as any).due_date ?? null) as any,
     header: ({ column }) => <SortableHeader column={column} label="Due Date" />,
     cell: ({ row }) => {
       const invoice = row.original;

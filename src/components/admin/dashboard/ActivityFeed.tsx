@@ -17,7 +17,7 @@ const getActivityIcon = (type: ActivityItem['type']) => {
       return FileText;
     case 'report_new':
       return ClipboardList;
-    case 'invoice_status':
+    case 'subcontractor_bill_status':
       return DollarSign;
     default:
       return Activity;
@@ -25,10 +25,10 @@ const getActivityIcon = (type: ActivityItem['type']) => {
 };
 
 const filterTypeMap: Record<FilterType, string[]> = {
-  all: ['work_order_new', 'work_order_status', 'report_new', 'invoice_status'],
+  all: ['work_order_new', 'work_order_status', 'report_new', 'subcontractor_bill_status'],
   work_orders: ['work_order_new', 'work_order_status'],
   reports: ['report_new'],
-  invoices: ['invoice_status'],
+  invoices: ['subcontractor_bill_status'],
 };
 
 export const ActivityFeed: React.FC = () => {

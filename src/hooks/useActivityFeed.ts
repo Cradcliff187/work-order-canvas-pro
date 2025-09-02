@@ -5,11 +5,11 @@ import { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
 type WorkOrderReport = Database['public']['Tables']['work_order_reports']['Row'];
-type Invoice = Database['public']['Tables']['invoices']['Row'];
+type SubcontractorBill = Database['public']['Tables']['subcontractor_bills']['Row'];
 
 export interface ActivityItem {
   id: string;
-  type: 'work_order_new' | 'work_order_status' | 'report_new' | 'invoice_status';
+  type: 'work_order_new' | 'work_order_status' | 'report_new' | 'subcontractor_bill_status';
   title: string;
   description: string;
   timestamp: string;
@@ -84,9 +84,9 @@ const fetchActivityFeed = async (): Promise<ActivityItem[]> => {
     });
   }
 
-  // Fetch recent invoice status changes (last 24 hours)
-  const { data: invoices } = await supabase
-    .from('invoices')
+  // Fetch recent subcontractor bill status changes (last 24 hours)
+  const { data: subcontractorBills } = await supabase
+    .from('subcontractor_bills')
     .select(`
       id,
       internal_invoice_number,
@@ -100,15 +100,15 @@ const fetchActivityFeed = async (): Promise<ActivityItem[]> => {
     .order('updated_at', { ascending: false })
     .limit(10);
 
-  if (invoices) {
-    invoices.forEach((invoice) => {
+  if (subcontractorBills) {
+    subcontractorBills.forEach((bill) => {
       activities.push({
-        id: `invoice_status_${invoice.id}`,
-        type: 'invoice_status',
-        title: `Invoice ${invoice.internal_invoice_number}`,
-        description: `Status: ${invoice.status} - $${invoice.total_amount || 0} - ${invoice.subcontractor_organization?.name || 'Unknown Organization'}`,
-        timestamp: invoice.updated_at,
-        actionUrl: `/admin/invoices/${invoice.id}`,
+        id: `subcontractor_bill_status_${bill.id}`,
+        type: 'subcontractor_bill_status',
+        title: `Bill ${bill.internal_invoice_number}`,
+        description: `Status: ${bill.status} - $${bill.total_amount || 0} - ${bill.subcontractor_organization?.name || 'Unknown Organization'}`,
+        timestamp: bill.updated_at,
+        actionUrl: `/admin/invoices/${bill.id}`,
       });
     });
   }
@@ -161,7 +161,7 @@ export function useActivityFeed() {
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'invoices' },
+        { event: 'UPDATE', schema: 'public', table: 'subcontractor_bills' },
         () => debouncedInvalidate()
       )
       .subscribe((status) => {

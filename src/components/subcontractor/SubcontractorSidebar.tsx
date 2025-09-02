@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useInvoiceDrafts } from '@/hooks/useInvoiceDrafts';
+import { useSubcontractorBillDrafts } from '@/hooks/useSubcontractorBillDrafts';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useBranding } from '@/hooks/useBranding';
@@ -44,7 +44,7 @@ export function SubcontractorSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const { userOrganizations } = useAuth();
-  const { draftCount } = useInvoiceDrafts();
+  const { draftCount } = useSubcontractorBillDrafts();
   const { assets } = useBranding();
   const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';

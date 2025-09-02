@@ -13,7 +13,7 @@ export function useSubmittedCounts() {
 
       // Get submitted invoices count
       const { count: invoicesCount } = await supabase
-        .from('invoices')
+        .from('subcontractor_bills')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'submitted');
 

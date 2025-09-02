@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, TrendingUp, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatting';
-import { Invoice } from '@/hooks/useInvoices';
+import { SubcontractorBill } from '@/hooks/useSubcontractorBills';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { BillingPipelineTable } from '@/components/admin/billing/BillingPipelineTable';
 
@@ -31,7 +31,7 @@ interface PipelineFiltersValue {
 }
 
 export default function BillingDashboard() {
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<SubcontractorBill | null>(null);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();

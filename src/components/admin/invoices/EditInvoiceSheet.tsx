@@ -9,9 +9,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { Invoice } from '@/hooks/useInvoices';
+import type { SubcontractorBill } from '@/hooks/useSubcontractorBills';
 
-interface InvoiceWorkOrder {
+interface SubcontractorBillWorkOrder {
   id: string;
   work_order_id: string;
   amount: number;
@@ -25,7 +25,7 @@ interface InvoiceWorkOrder {
 interface EditInvoiceSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  invoice: Invoice | null;
+  invoice: SubcontractorBill | null;
   onSaved?: () => void;
 }
 
@@ -40,7 +40,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
   const [invoiceDate, setInvoiceDate] = useState<string>('');
   const [dueDate, setDueDate] = useState<string>('');
   const [paidAt, setPaidAt] = useState<string>('');
-  const [workOrderAmounts, setWorkOrderAmounts] = useState<InvoiceWorkOrder[]>([]);
+  const [workOrderAmounts, setWorkOrderAmounts] = useState<SubcontractorBillWorkOrder[]>([]);
   const [workOrdersOpen, setWorkOrdersOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -56,8 +56,8 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
     setDueDate((invoice as any).due_date ? new Date((invoice as any).due_date).toISOString().slice(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
     setPaidAt(invoice.paid_at ? new Date(invoice.paid_at).toISOString().slice(0, 10) : '');
     
-    // Use existing invoice work orders data instead of separate fetch
-    setWorkOrderAmounts(invoice.invoice_work_orders || []);
+    // Use existing subcontractor bill work orders data instead of separate fetch
+    setWorkOrderAmounts(invoice.subcontractor_bill_work_orders || []);
   }, [invoice]);
 
 
@@ -104,7 +104,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
       }
 
       const { error: invoiceError } = await supabase
-        .from('invoices')
+        .from('subcontractor_bills')
         .update(invoicePayload)
         .eq('id', invoice.id);
       if (invoiceError) throw invoiceError;
@@ -112,7 +112,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
       // Update work order amounts
       for (const workOrder of workOrderAmounts) {
         const { error: workOrderError } = await supabase
-          .from('invoice_work_orders')
+          .from('subcontractor_bill_work_orders')
           .update({ amount: workOrder.amount })
           .eq('id', workOrder.id);
         if (workOrderError) throw workOrderError;

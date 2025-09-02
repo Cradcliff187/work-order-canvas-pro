@@ -42,8 +42,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { format, isBefore } from 'date-fns';
-import { Invoice } from '@/hooks/useInvoices';
-import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
+import { SubcontractorBill } from '@/hooks/useSubcontractorBills';
+import { useSubcontractorBillMutations } from '@/hooks/useSubcontractorBillMutations';
 
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,7 +56,7 @@ import { isImageFile } from '@/utils/fileUtils';
 import { ImageLightbox } from '@/components/work-orders/shared/ImageLightbox';
 
 interface InvoiceDetailModalProps {
-  invoice: Invoice | null;
+  invoice: SubcontractorBill | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -90,17 +90,17 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
   const refreshAttachments = async () => {
     if (!invoice) return;
     const { data, error } = await supabase
-      .from('invoice_attachments')
+      .from('subcontractor_bill_attachments')
       .select('id, file_name, file_url, file_type, file_size, created_at, work_order_id')
-      .eq('invoice_id', invoice.id)
+      .eq('subcontractor_bill_id', invoice.id)
       .order('created_at', { ascending: false });
     if (!error) setAttachments(data || []);
   };
 
   useEffect(() => {
     if (!invoice) return;
-    setAttachments((invoice as any).invoice_attachments || []);
-    const def = invoice.invoice_work_orders?.[0]?.work_order_id || null;
+    setAttachments((invoice as any).subcontractor_bill_attachments || []);
+    const def = invoice.subcontractor_bill_work_orders?.[0]?.work_order_id || null;
     setSelectedWorkOrderId(def);
     // Refresh attachments to ensure we have full data
     refreshAttachments();
@@ -120,13 +120,13 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     await refreshAttachments();
   };
 
-  const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
+  const { approveSubcontractorBill, rejectSubcontractorBill, markAsPaid } = useSubcontractorBillMutations();
 
   if (!invoice) return null;
 
   const handleApprove = () => {
-    approveInvoice.mutate(
-      { invoiceId: invoice.id, notes: approvalNotes },
+    approveSubcontractorBill.mutate(
+      { billId: invoice.id, notes: approvalNotes },
       {
         onSuccess: () => {
           setApproveDialogOpen(false);
@@ -140,8 +140,8 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
   const handleReject = () => {
     if (!rejectionNotes.trim()) return;
     
-    rejectInvoice.mutate(
-      { invoiceId: invoice.id, notes: rejectionNotes },
+    rejectSubcontractorBill.mutate(
+      { billId: invoice.id, notes: rejectionNotes },
       {
         onSuccess: () => {
           setRejectDialogOpen(false);
@@ -156,7 +156,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     if (!paymentReference.trim()) return;
     
     markAsPaid.mutate(
-      { invoiceId: invoice.id, paymentReference, paymentDate },
+      { billId: invoice.id, paymentReference, paymentDate },
       {
         onSuccess: () => {
           setPaymentDialogOpen(false);
@@ -382,9 +382,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                         <div className="mt-1">
                           {format(new Date(invoice.approved_at), 'PPP')}
                         </div>
-                        {invoice.approved_by_user && (
+                        {(invoice as any).approved_by && (
                           <div className="text-sm text-muted-foreground">
-                            by {invoice.approved_by_user.first_name} {invoice.approved_by_user.last_name}
+                            by {(invoice as any).approved_by.first_name} {(invoice as any).approved_by.last_name}
                           </div>
                         )}
                       </div>
@@ -430,7 +430,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   <Badge variant="secondary" className="ml-2">{attachments.length}</Badge>
                 </h3>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  {invoice.invoice_work_orders.length > 0 ? (
+                  {invoice.subcontractor_bill_work_orders.length > 0 ? (
                     <>
                       <div className="flex items-center gap-2">
                         <Label className="text-sm text-muted-foreground">Link to</Label>
@@ -439,9 +439,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                             <SelectValue placeholder="Select work order" />
                           </SelectTrigger>
                           <SelectContent>
-                            {invoice.invoice_work_orders.map((iwo) => (
+                            {invoice.subcontractor_bill_work_orders.map((iwo) => (
                               <SelectItem key={iwo.work_order_id} value={iwo.work_order_id}>
-                                {iwo.work_order.work_order_number || iwo.work_order.title}
+                                {iwo.work_orders.work_order_number || iwo.work_orders.title}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -468,7 +468,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
 
               <div className="space-y-2">
                 {(() => {
-                  const workOrders = invoice.invoice_work_orders || [];
+                  const workOrders = invoice.subcontractor_bill_work_orders || [];
                   const mapToItems = (list: any[]): GridAttachmentItem[] =>
                     list.map((att: any) => ({
                       id: att.id,
@@ -486,7 +486,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     const items = mapToItems(attachments.filter((a) => a.work_order_id === iwo.work_order_id));
                     return {
                       key: iwo.work_order_id,
-                      label: iwo.work_order.work_order_number || 'WO',
+                      label: iwo.work_orders.work_order_number || 'WO',
                       count: items.length,
                       items,
                     };
@@ -546,17 +546,17 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoice.invoice_work_orders.map((item) => (
+                  {invoice.subcontractor_bill_work_orders.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-mono">
-                        {item.work_order.work_order_number || 'N/A'}
+                        {item.work_orders.work_order_number || 'N/A'}
                       </TableCell>
-                      <TableCell>{item.work_order.title}</TableCell>
+                      <TableCell>{item.work_orders.title}</TableCell>
                       <TableCell>
                         {formatCurrency(Number(item.amount), true)}
                       </TableCell>
                       <TableCell className="max-w-[480px] whitespace-pre-wrap break-words">
-                        {item.description?.trim() || (item.work_order as any)?.description || '—'}
+                        {item.description?.trim() || (item.work_orders as any)?.description || '—'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -588,8 +588,8 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleApprove} disabled={approveInvoice.isPending}>
-              {approveInvoice.isPending ? 'Approving...' : 'Approve Invoice'}
+            <AlertDialogAction onClick={handleApprove} disabled={approveSubcontractorBill.isPending}>
+              {approveSubcontractorBill.isPending ? 'Approving...' : 'Approve Invoice'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -619,9 +619,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleReject} 
-              disabled={rejectInvoice.isPending || !rejectionNotes.trim()}
+              disabled={rejectSubcontractorBill.isPending || !rejectionNotes.trim()}
             >
-              {rejectInvoice.isPending ? 'Rejecting...' : 'Reject Invoice'}
+              {rejectSubcontractorBill.isPending ? 'Rejecting...' : 'Reject Invoice'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

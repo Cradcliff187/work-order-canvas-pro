@@ -3,7 +3,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useInvoiceDrafts } from "@/hooks/useInvoiceDrafts";
+import { useSubcontractorBillDrafts } from "@/hooks/useSubcontractorBillDrafts";
 import { SubcontractorSidebar } from "@/components/subcontractor/SubcontractorSidebar";
 import { StandardHeader } from "@/components/layout/StandardHeader";
 import { Plus, Home, ClipboardList, Receipt, User, MessageSquare } from "lucide-react";
@@ -16,7 +16,7 @@ interface SubcontractorLayoutProps {
 export const SubcontractorLayout = React.memo(function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const { signOut } = useAuth();
   const isMobile = useIsMobile();
-  const { draftCount } = useInvoiceDrafts();
+  const { draftCount } = useSubcontractorBillDrafts();
   const organizationNavItems = useOrganizationNavigation();
 
   // Stable icon mapping
