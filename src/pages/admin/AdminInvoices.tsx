@@ -325,7 +325,7 @@ const table = useReactTable({
 
   const INVOICE_COLUMN_METADATA = {
     columns: [
-      { id: 'internal_bill_number', label: 'Invoice #', defaultVisible: true },
+      { id: 'internal_bill_number', label: 'Bill #', defaultVisible: true },
       { id: 'external_bill_number', label: 'Vendor Invoice #', defaultVisible: true },
       { id: 'subcontractor', label: 'Subcontractor', defaultVisible: true },
       { id: 'total_amount', label: 'Amount', defaultVisible: true },
@@ -337,7 +337,7 @@ const table = useReactTable({
   };
 
   const exportColumns: ExportColumn[] = [
-    { key: 'internal_bill_number', label: 'Invoice #', type: 'string' },
+    { key: 'internal_bill_number', label: 'Bill #', type: 'string' },
     { key: 'external_bill_number', label: 'Vendor Invoice #', type: 'string' },
     { key: 'subcontractor_name', label: 'Subcontractor', type: 'string' },
     { key: 'total_amount', label: 'Amount', type: 'currency' },
@@ -349,7 +349,7 @@ const table = useReactTable({
 
   const handleExport = (exportFormat: 'csv' | 'excel') => {
     const exportData = data?.data?.map(invoice => ({
-      'Invoice #': invoice.internal_bill_number,
+      'Bill #': invoice.internal_bill_number,
       'Vendor Invoice #': invoice.external_bill_number || '',
       'Subcontractor': invoice.subcontractor_organization?.name || '',
       'Amount': invoice.total_amount,
