@@ -256,7 +256,7 @@ export function exportSubcontractorPerformance(subcontractors: any[], filename?:
     { key: 'company', label: 'Company', type: 'string' },
     { key: 'totalJobs', label: 'Total Jobs', type: 'number' },
     { key: 'onTimeRate', label: 'On-Time Rate (%)', type: 'number' },
-    { key: 'avgInvoiceAmount', label: 'Average Invoice Amount', type: 'currency' },
+    { key: 'avgInvoiceAmount', label: 'Average Bill Amount', type: 'currency' },
     { key: 'qualityScore', label: 'Quality Score (%)', type: 'number' },
   ];
 

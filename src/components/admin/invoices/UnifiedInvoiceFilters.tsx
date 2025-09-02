@@ -137,7 +137,7 @@ export function UnifiedInvoiceFilters({
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Invoice Status</label>
+        <label className="text-sm font-medium">Bill Status</label>
         <select 
           className="w-full p-2 border rounded-md bg-background"
           value={filters.invoice_status?.[0] || ''}

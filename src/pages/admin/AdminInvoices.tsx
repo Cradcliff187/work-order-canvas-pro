@@ -735,7 +735,7 @@ const table = useReactTable({
                               key={row.id}
                               role="button"
                               tabIndex={0}
-                              aria-label={`View invoice ${row.original.internal_bill_number || row.original.id}`}
+                              aria-label={`View bill ${row.original.internal_bill_number || row.original.id}`}
                               data-state={row.getIsSelected() && 'selected'}
                               className="cursor-pointer hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
                               onClick={() => {

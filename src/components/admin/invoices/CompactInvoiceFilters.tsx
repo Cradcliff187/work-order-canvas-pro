@@ -88,9 +88,9 @@ export function CompactInvoiceFilters({
             </Button>
           </div>
 
-          {/* Invoice Status */}
+          {/* Bill Status */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Invoice Status</label>
+            <label className="text-sm font-medium mb-2 block">Bill Status</label>
             <MultiSelectFilter
               options={[
                 { value: 'submitted', label: 'Submitted' },
@@ -219,9 +219,9 @@ export function CompactInvoiceFilters({
             </Button>
           </div>
 
-          {/* Invoice Status */}
+          {/* Bill Status */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Invoice Status</label>
+            <label className="text-sm font-medium mb-2 block">Bill Status</label>
             <MultiSelectFilter
               options={[
                 { value: 'submitted', label: 'Submitted' },

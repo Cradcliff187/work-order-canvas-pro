@@ -41,8 +41,8 @@ export const WorkOrderAmountCard: React.FC<WorkOrderAmountCardProps> = ({
   showWorkSummary = true,
 }) => {
   const approvedReport = workOrder.work_order_reports?.find(report => report.status === 'approved');
-  // Suggested amount should come from actual invoice records, not reports
-  const suggestedAmount = 0; // TODO: Get from invoice system when available
+  // Suggested amount should come from actual bill records, not reports
+  const suggestedAmount = 0; // TODO: Get from bill system when available
   
   const handleUseSuggestedAmount = () => {
     onAmountChange(suggestedAmount);

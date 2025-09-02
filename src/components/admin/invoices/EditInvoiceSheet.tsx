@@ -148,7 +148,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="invoice_date">Invoice Date</Label>
+                <Label htmlFor="invoice_date">Bill Date</Label>
                 <Input id="invoice_date" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
               </div>
               <div className="space-y-2">
