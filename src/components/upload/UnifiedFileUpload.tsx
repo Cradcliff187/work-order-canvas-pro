@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { useDropzone } from 'react-dropzone';
 import { Upload, X, File, ImageIcon, AlertCircle, Loader2, Info, FileText, Image as ImageIconSolid, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UniversalUploadSheet } from './UniversalUploadSheet';
+import { FileDropzone } from './FileDropzone';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { isSupportedFileType, getSupportedFormatsText } from '@/utils/fileUtils';
@@ -441,13 +441,6 @@ export function UnifiedFileUpload({
     });
   }, [previews, maxFiles]);
 
-  // Desktop drag-and-drop setup
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: handleFilesSelected,
-    disabled: disabled || isMobile,
-    accept: acceptedTypes.length > 0 ? Object.fromEntries(acceptedTypes.map(type => [type, []])) : undefined,
-    multiple: maxFiles > 1
-  });
 
   // Calculate upload status for aria announcements
   const getUploadStatusAnnouncement = () => {
@@ -743,51 +736,15 @@ export function UnifiedFileUpload({
       </Card>
 
       {/* Drag and drop zone */}
-      <Card
-        {...getRootProps()}
-        className={cn(
-          "border-2 border-dashed transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25",
-          disabled && "opacity-50 cursor-not-allowed"
-        )}
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        aria-label={isDragActive ? "Drop files to upload" : `Click to upload files or drag and drop. Maximum ${maxFiles} files allowed, ${Math.round(maxSizeBytes / 1024 / 1024)}MB each.`}
-        aria-describedby="upload-zone-instructions"
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            const input = e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement;
-            input?.click();
-          }
-        }}
-      >
-        <CardContent className="p-8 text-center">
-          <input {...getInputProps()} aria-hidden="true" />
-          <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" aria-hidden="true" />
-          <h3 className="text-lg font-medium mb-2">
-            {isDragActive ? "Drop files here" : "Drag & drop files here"}
-          </h3>
-          <p id="upload-zone-instructions" className="text-muted-foreground mb-4">
-            or click to browse files
-          </p>
-          <Button 
-            variant="outline" 
-            type="button" 
-            disabled={disabled || isUploading}
-            aria-label={isUploading ? "Processing files, please wait" : "Browse and select files to upload"}
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
-                {getUploadStatusAnnouncement() || "Processing files..."}
-              </>
-            ) : (
-              "Browse Files"
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+      <FileDropzone
+        onFilesSelected={handleFilesSelected}
+        disabled={disabled}
+        acceptedTypes={acceptedTypes}
+        maxFiles={maxFiles}
+        maxSizeBytes={maxSizeBytes}
+        isUploading={isUploading}
+        uploadStatusText={getUploadStatusAnnouncement() || "Processing files..."}
+      />
 
       {/* Validation errors */}
       {validationErrors.length > 0 && (
