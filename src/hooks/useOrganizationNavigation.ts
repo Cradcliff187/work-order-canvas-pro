@@ -51,8 +51,8 @@ export const useOrganizationNavigation = () => {
       return [
         { label: 'Dashboard', path: '/subcontractor/dashboard', icon: LayoutDashboard, visible: true },
         { label: 'Work Orders', path: '/subcontractor/work-orders', icon: ClipboardList, visible: true },
-        { label: 'Submit Invoice', path: '/subcontractor/submit-invoice', icon: Receipt, visible: true },
-        { label: 'Subcontractor Invoices', path: '/subcontractor/invoices', icon: Receipt, visible: true },
+        { label: 'Submit Bill', path: '/subcontractor/submit-bill', icon: Receipt, visible: true },
+        { label: 'Subcontractor Bills', path: '/subcontractor/bills', icon: Receipt, visible: true },
         { label: 'Report History', path: '/subcontractor/reports', icon: FileChartLine, visible: true },
         { label: 'Profile', path: '/subcontractor/profile', icon: User, visible: true },
       ];

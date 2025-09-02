@@ -23,7 +23,7 @@ import { InvoiceDatesFields } from '@/components/invoices/InvoiceDatesFields';
 import { validateReportBeforeInvoice } from '@/lib/validations/estimate-validations';
 import { addDays, isBefore, format as formatDate } from 'date-fns';
 
-interface InvoiceFormData {
+interface BillFormData {
   externalInvoiceNumber: string;
   adminNotes: string;
   selectedWorkOrders: Record<string, number>; // workOrderId -> amount
@@ -37,14 +37,14 @@ interface InvoiceFormData {
   subcontractorNotes: string;
 }
 
-export default function SubmitInvoice() {
+export default function SubmitBill() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { userOrganizations } = useAuth();
   const { isAdmin, profile } = useUserProfile();
   const { submitSubcontractorBill, isSubmitting } = useSubcontractorBillSubmission();
 
-  const [formData, setFormData] = useState<InvoiceFormData>({
+  const [formData, setFormData] = useState<BillFormData>({
     externalInvoiceNumber: '',
     adminNotes: '',
     selectedWorkOrders: {},
@@ -68,9 +68,9 @@ export default function SubmitInvoice() {
     return userOrganizations?.map(org => org.organization_id) || [];
   }, [userOrganizations, isAdminMode, formData.selectedOrganizationId]);
 
-  // Fetch completed work orders for invoicing
-  const completedWorkOrdersForInvoicing = useQuery({
-    queryKey: ['completed-work-orders-for-invoicing', organizationIds],
+  // Fetch completed work orders for billing
+  const completedWorkOrdersForBilling = useQuery({
+    queryKey: ['completed-work-orders-for-billing', organizationIds],
     queryFn: async () => {
       if (organizationIds.length === 0) return [];
       
@@ -78,7 +78,7 @@ export default function SubmitInvoice() {
         .from('work_orders')
         .select(`
           *,
-          invoice_work_orders (id),
+          subcontractor_bill_work_orders (id),
           work_order_reports!inner (
             id,
             status
@@ -115,7 +115,7 @@ export default function SubmitInvoice() {
 
   // Load saved form data from localStorage
   useEffect(() => {
-    const savedData = localStorage.getItem('invoiceFormData');
+    const savedData = localStorage.getItem('billFormData');
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
@@ -137,12 +137,12 @@ export default function SubmitInvoice() {
       invoiceDate: formData.invoiceDate ? formatDate(formData.invoiceDate, 'yyyy-MM-dd') : null,
       dueDate: formData.dueDate ? formatDate(formData.dueDate, 'yyyy-MM-dd') : null,
     };
-    localStorage.setItem('invoiceFormData', JSON.stringify(toSave));
+    localStorage.setItem('billFormData', JSON.stringify(toSave));
   }, [formData]);
 
-  const workOrders = completedWorkOrdersForInvoicing?.data || [];
+  const workOrders = completedWorkOrdersForBilling?.data || [];
   const availableWorkOrders = workOrders.filter(wo => 
-    !wo.invoice_work_orders || wo.invoice_work_orders.length === 0
+    !wo.subcontractor_bill_work_orders || wo.subcontractor_bill_work_orders.length === 0
   );
 
   const selectedWorkOrderIds = Object.keys(formData.selectedWorkOrders);
@@ -198,7 +198,7 @@ export default function SubmitInvoice() {
     if (selectedWorkOrderIds.length === 0) {
       toast({
         title: "No work orders selected",
-        description: "Please select at least one work order to invoice.",
+        description: "Please select at least one work order to bill.",
         variant: "destructive",
       });
       return;
@@ -223,8 +223,8 @@ export default function SubmitInvoice() {
     if (problematicWorkOrders.length > 0) {
       const workOrderNumbers = problematicWorkOrders.map(wo => wo.work_order_number).join(', ');
       toast({
-        title: "Cannot submit invoice",
-        description: `The following work orders have missing or unapproved reports: ${workOrderNumbers}. All reports must be approved before invoicing.`,
+        title: "Cannot submit bill",
+        description: `The following work orders have missing or unapproved reports: ${workOrderNumbers}. All reports must be approved before billing.`,
         variant: "destructive",
       });
       return;
@@ -263,12 +263,12 @@ export default function SubmitInvoice() {
       });
       
       // Clear saved form data
-      localStorage.removeItem('invoiceFormData');
+      localStorage.removeItem('billFormData');
       
-      navigate(isAdminMode ? '/admin/invoices' : '/subcontractor/invoices');
+      navigate(isAdminMode ? '/admin/invoices' : '/subcontractor/bills');
     } catch (error: any) {
       toast({
-        title: "Error submitting invoice",
+        title: "Error submitting bill",
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
@@ -296,16 +296,16 @@ export default function SubmitInvoice() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to={isAdminMode ? "/admin/invoices" : "/subcontractor/invoices"}>
+          <Link to={isAdminMode ? "/admin/invoices" : "/subcontractor/bills"}>
             <Button variant="outline" size="sm" className="min-h-[44px] sm:min-h-auto">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Invoices
+              Back to Bills
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">Submit Invoice</h1>
+            <h1 className="text-2xl font-bold">Submit Bill</h1>
             <p className="text-muted-foreground">
-              {isAdminMode ? "Submit invoice on behalf of subcontractor" : "Submit your invoice for completed work"}
+              {isAdminMode ? "Submit bill on behalf of subcontractor" : "Submit your bill for completed work"}
             </p>
           </div>
         </div>
@@ -316,7 +316,7 @@ export default function SubmitInvoice() {
           {isAdminMode && (
             <StandardFormLayout.Section 
               title="Select Organization"
-              description="Choose the subcontractor organization for this invoice"
+              description="Choose the subcontractor organization for this bill"
             >
               <StandardFormLayout.FieldGroup>
                 <div className="space-y-2">
@@ -337,7 +337,7 @@ export default function SubmitInvoice() {
                     <Info className="h-4 w-4 text-primary" />
                     <AlertTitle className="text-primary">Admin Mode</AlertTitle>
                     <AlertDescription className="text-primary/80">
-                      Submitting invoice on behalf of: <strong className="text-primary">{selectedOrganization.name}</strong>
+                      Submitting bill on behalf of: <strong className="text-primary">{selectedOrganization.name}</strong>
                     </AlertDescription>
                   </Alert>
                 )}
@@ -346,21 +346,21 @@ export default function SubmitInvoice() {
           )}
 
           <StandardFormLayout.Section 
-            title="Invoice Details"
-            description="Enter your external invoice number and related identifiers (optional)"
+            title="Bill Details"
+            description="Enter your external bill number and related identifiers (optional)"
           >
             <StandardFormLayout.FieldGroup>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="externalInvoiceNumber">External Invoice Number</Label>
+                  <Label htmlFor="externalInvoiceNumber">External Bill Number</Label>
                   <Input
                     id="externalInvoiceNumber"
-                    placeholder="INV-2024-001"
+                    placeholder="BILL-2024-001"
                     value={formData.externalInvoiceNumber}
                     onChange={(e) => setFormData(prev => ({ ...prev, externalInvoiceNumber: e.target.value }))}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Optional: Your own invoice number for reference
+                    Optional: Your own bill number for reference
                   </p>
                 </div>
 
@@ -392,13 +392,13 @@ export default function SubmitInvoice() {
                   <Label htmlFor="adminNotes">Admin Notes</Label>
                   <Textarea
                     id="adminNotes"
-                    placeholder="Document why this invoice was entered manually by admin..."
+                    placeholder="Document why this bill was entered manually by admin..."
                     value={formData.adminNotes}
                     onChange={(e) => setFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
                     className="min-h-[100px] transition-all duration-200"
                   />
                   <p className="text-xs text-muted-foreground">
-                    These notes will help track why this invoice was entered manually and any special circumstances.
+                    These notes will help track why this bill was entered manually and any special circumstances.
                   </p>
                 </div>
               )}
@@ -437,7 +437,7 @@ export default function SubmitInvoice() {
 
           <StandardFormLayout.Section 
             title="Select Work Orders"
-            description="Choose completed work orders to include in this invoice"
+            description="Choose completed work orders to include in this bill"
           >
             <StandardFormLayout.FieldGroup>
               {isAdminMode && !formData.selectedOrganizationId ? (
@@ -445,14 +445,14 @@ export default function SubmitInvoice() {
                   <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Please select a subcontractor organization first</p>
                 </div>
-              ) : completedWorkOrdersForInvoicing?.isLoading ? (
+              ) : completedWorkOrdersForBilling?.isLoading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : availableWorkOrders.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No completed work orders available for invoicing</p>
+                  <p>No completed work orders available for billing</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -473,8 +473,8 @@ export default function SubmitInvoice() {
 
           {selectedWorkOrderIds.length > 0 && (
             <StandardFormLayout.Section 
-              title="Invoice Summary"
-              description="Review your invoice totals"
+              title="Bill Summary"
+              description="Review the selected work orders and total amount"
             >
               <StandardFormLayout.FieldGroup>
                 <InvoiceTotalSummary
@@ -487,7 +487,7 @@ export default function SubmitInvoice() {
 
           <StandardFormLayout.Section 
             title="Supporting Documents"
-            description="Upload invoice documents and supporting files (optional)"
+            description="Upload any relevant bills or documentation"
           >
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
@@ -551,12 +551,9 @@ export default function SubmitInvoice() {
                   Submitting...
                 </>
               ) : (
-                <>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Submit Invoice ({selectedWorkOrderIds.length} work order{selectedWorkOrderIds.length !== 1 ? 's' : ''})
-                </>
-              )}
-            </Button>
+                  'Submit Bill'
+                )}
+              </Button>
           </StandardFormLayout.Actions>
         </StandardFormLayout>
       </form>

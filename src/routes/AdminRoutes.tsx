@@ -29,7 +29,7 @@ import {
   SelectReports,
   PartnerInvoiceDetail,
   BillingDashboard,
-  SubmitInvoice,
+  SubmitBill,
   SecurityAudit,
   AdminReceipts,
   AdminProjects,
@@ -210,11 +210,11 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
-    <Route path="/admin/submit-invoice" element={
+    <Route path="/admin/submit-bill" element={
       <ProtectedRoute requiredUserType="admin">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
-            <SubmitInvoice />
+            <SubmitBill />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>

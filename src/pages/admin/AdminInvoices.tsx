@@ -461,11 +461,11 @@ const table = useReactTable({
           </Button>
           
           <Button 
-            onClick={() => navigate('/admin/submit-invoice')} 
+            onClick={() => navigate('/admin/submit-bill')} 
             className="flex-1 sm:flex-initial min-h-[44px]"
           >
             <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Create Invoice</span>
+            <span className="hidden sm:inline">Create Bill</span>
             <span className="sm:hidden">New</span>
           </Button>
         </div>
@@ -537,8 +537,8 @@ const table = useReactTable({
                     : "No subcontractor invoices have been submitted yet."
                 }
                 action={filterCount === 0 ? {
-                  label: "Create Invoice",
-                  onClick: () => navigate('/admin/submit-invoice'),
+                  label: "Create Bill",
+                  onClick: () => navigate('/admin/submit-bill'),
                   icon: Plus
                 } : undefined}
               />
@@ -700,8 +700,8 @@ const table = useReactTable({
                     : "No subcontractor invoices have been submitted yet."
                 }
                 action={filterCount === 0 ? {
-                  label: "Create Invoice",
-                  onClick: () => navigate('/admin/submit-invoice'),
+                  label: "Create Bill",
+                  onClick: () => navigate('/admin/submit-bill'),
                   icon: Plus
                 } : undefined}
                 colSpan={columns.length}

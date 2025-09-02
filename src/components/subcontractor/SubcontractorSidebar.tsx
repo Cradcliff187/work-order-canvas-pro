@@ -35,8 +35,8 @@ import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
 const sidebarItems = [
   { title: 'Dashboard', url: '/subcontractor/dashboard', icon: Home },
   { title: 'My Work Orders', url: '/subcontractor/work-orders', icon: ClipboardList, hasWorkOrderBadge: true },
-  { title: 'Subcontractor Invoices', url: '/subcontractor/invoices', icon: Receipt },
-  { title: 'Submit Invoice', url: '/subcontractor/submit-invoice', icon: FileText, hasBadge: true },
+  { title: 'Subcontractor Bills', url: '/subcontractor/bills', icon: Receipt },
+  { title: 'Submit Bill', url: '/subcontractor/submit-bill', icon: FileText, hasBadge: true },
   { title: 'Report History', url: '/subcontractor/reports', icon: History },
 ];
 
@@ -117,7 +117,7 @@ export function SubcontractorSidebar() {
                        {!collapsed && (
                          <>
                            <span className="flex-1">{item.label}</span>
-                           {item.label === 'Submit Invoice' && draftCount > 0 && (
+                           {item.label === 'Submit Bill' && draftCount > 0 && (
                              <Badge variant="secondary" className="ml-2 text-xs">
                                {draftCount}
                              </Badge>

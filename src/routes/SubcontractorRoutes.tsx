@@ -11,8 +11,8 @@ import {
   ReportHistory,
   ReportDetail,
   SubcontractorProfile,
-  SubmitInvoice,
-  SubcontractorInvoices,
+  SubmitBill,
+  SubcontractorBills,
 } from '@/pages/LazyPages';
 import SubcontractorSubmitReport from '@/pages/subcontractor/SubcontractorSubmitReport';
 import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
@@ -101,21 +101,21 @@ export const SubcontractorRoutes = () => (
       </ProtectedRoute>
     } />
     
-    <Route path="/subcontractor/submit-invoice" element={
+    <Route path="/subcontractor/submit-bill" element={
       <ProtectedRoute requiredUserType="subcontractor">
         <SubcontractorLayout>
           <Suspense fallback={<LoadingSpinner />}>
-            <SubmitInvoice />
+            <SubmitBill />
           </Suspense>
         </SubcontractorLayout>
       </ProtectedRoute>
     } />
 
-    <Route path="/subcontractor/invoices" element={
+    <Route path="/subcontractor/bills" element={
       <ProtectedRoute requiredUserType="subcontractor">
         <SubcontractorLayout>
           <Suspense fallback={<LoadingSpinner />}>
-            <SubcontractorInvoices />
+            <SubcontractorBills />
           </Suspense>
         </SubcontractorLayout>
       </ProtectedRoute>
