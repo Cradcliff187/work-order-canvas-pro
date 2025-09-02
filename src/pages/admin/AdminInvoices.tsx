@@ -199,18 +199,7 @@ export default function AdminInvoices() {
   };
 
 
-  // Stable debounced search to prevent new function creation
-  const [debouncedSearch, setDebouncedSearch] = useState(cleanFilters.search || '');
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(cleanFilters.search || '');
-    }, 300);
-    
-    return () => clearTimeout(timer);
-  }, [cleanFilters.search]);
-
-  const { data, isLoading, error, refetch } = useSubcontractorBills({ ...cleanFilters, search: debouncedSearch, page });
+  const { data, isLoading, error, refetch } = useSubcontractorBills({ ...cleanFilters, page });
 
   
   const handleViewBill = (invoice: SubcontractorBill) => {
