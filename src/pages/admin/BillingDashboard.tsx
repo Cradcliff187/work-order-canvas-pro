@@ -9,26 +9,25 @@ import { usePartnerBillingFilters, usePartnerBillingFilterCount } from '@/hooks/
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, TrendingUp, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/utils/formatting';
 import { Invoice } from '@/hooks/useInvoices';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { BillingPipelineTable } from '@/components/admin/billing/BillingPipelineTable';
 
-// Filter interface for Pipeline - simplified
+// Filter interface - match the actual PartnerBillingFiltersValue interface
 interface PipelineFiltersValue {
-  status?: string[];
-  trade_id?: string[];
-  partner_organization_ids?: string[];
-  completed_by?: string[];
   search?: string;
-  date_from?: string;
-  date_to?: string;
-  location_filter?: string[];
-  showOverdueOnly?: boolean;
-  financial_status?: string[];
-  partner_billing_status?: string[];
-  priority?: string[];
   report_status?: string[];
+  subcontractor_organization_id?: string;
+  amount_min?: string;
+  amount_max?: string;
+  date_from?: Date;
+  date_to?: Date;
+  location_filter?: string[];
+  variance?: string;
+  submitted_by?: string;
+  high_variance?: boolean;
+  recently_submitted?: boolean;
 }
 
 export default function BillingDashboard() {
@@ -43,13 +42,17 @@ export default function BillingDashboard() {
     isLoading: pipelineLoading, 
     error: pipelineError,
     refetch: refetchPipeline 
-  } = useWorkOrderLifecyclePipeline();
+  } = useWorkOrderLifecycle();
 
   // Billing-specific state
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<PipelineFiltersValue>({});
   const { viewMode, setViewMode } = useViewMode({
-    componentKey: 'billing-dashboard'
+    componentKey: 'billing-dashboard',
+    config: {
+      mobile: ['card', 'list'],
+      desktop: ['table', 'card']
+    }
   });
 
   // Data fetching
@@ -73,9 +76,30 @@ export default function BillingDashboard() {
     }
   });
 
-  // Filter pipeline data  
-  const filteredPipelineData = usePartnerBillingFilters(pipelineData || [], filters);
-  const filterCount = usePartnerBillingFilterCount(filters);
+  // Filter pipeline data - use simple client-side filtering
+  const filteredPipelineData = (pipelineData || []).filter(item => {
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        item.work_order_number?.toLowerCase().includes(searchLower) ||
+        item.description?.toLowerCase().includes(searchLower) ||
+        item.title?.toLowerCase().includes(searchLower) ||
+        item.partner_organization_name?.toLowerCase().includes(searchLower)
+      );
+    }
+    return true;
+  });
+
+  // Calculate stats from filtered data
+  const totalWorkOrders = filteredPipelineData.length;
+  const totalValue = filteredPipelineData.reduce((sum, item) => sum + (item.partner_billed_amount || 0), 0);
+  const readyToBill = filteredPipelineData.filter(item => item.status === 'completed').length;
+  const pendingReports = filteredPipelineData.filter(item => 
+    item.report_status === 'submitted' ||
+    item.report_status === 'reviewed'
+  ).length;
+
+  const filterCount = searchTerm ? 1 : 0;
 
   // Refresh handler
   const handleRefresh = async () => {
@@ -84,7 +108,6 @@ export default function BillingDashboard() {
 
   // Clear all filters
   const clearFilters = () => {
-    setFilters({});
     setSearchTerm('');
   };
 
@@ -103,12 +126,6 @@ export default function BillingDashboard() {
       description: "Partner invoice generated.",
     });
   };
-
-  // Calculate stats
-  const totalWorkOrders = filteredPipelineData.length;
-  const totalValue = filteredPipelineData.reduce((sum, item) => sum + (item.total_amount || 0), 0);
-  const readyToBill = filteredPipelineData.filter(item => item.status === 'completed').length;
-  const pendingReports = filteredPipelineData.filter(item => item.report_status === 'submitted' || item.report_status === 'under_review').length;
 
   if (pipelineError) {
     return (
@@ -204,8 +221,8 @@ export default function BillingDashboard() {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           allowedModes={['table', 'card']}
-          filters={filters}
-          onFiltersChange={setFilters}
+          filters={{}}
+          onFiltersChange={() => {}}
           onClearFilters={clearFilters}
           filterCount={filterCount}
           columnVisibilityColumns={getAllColumns()}
