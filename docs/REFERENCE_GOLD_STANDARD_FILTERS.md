@@ -14,7 +14,7 @@ Work Orders
 Invoices (Subcontractor)
 - Filters: search, status[], payment_status, subcontractor_organization_id, date range, due date range, amount range, has_attachments, overdue
 
-Partner Billing
+Partner Invoices
 - Required: partner organization selector
 
 Receipts (Admin Finance)

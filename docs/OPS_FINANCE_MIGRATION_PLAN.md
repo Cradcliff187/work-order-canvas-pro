@@ -18,7 +18,7 @@ Purpose: Track work to bring all Admin Operations & Finance pages to Gold Standa
 18:   B --> C[Phase 3 Reports & Invoices]
 19:   C --> D[Phase 4 Orgs & Partner Locations]
 20:   D --> E[Phase 5 Employees & Permissions]
-21:   E --> F[Phase 6 Partner Billing Polish]
+21:   F --> G[Phase 7 A11y/Perf/Regression]
 22:   F --> G[Phase 7 A11y/Perf/Regression]
 23: </lov-mermaid>
 24: 
@@ -49,7 +49,7 @@ Purpose: Track work to bring all Admin Operations & Finance pages to Gold Standa
 49: - Apply table standards; add column visibility where applicable
 50: - Acceptance: matches Gold Standard checklist; keyboard row activation implemented for Users and Employees
 51: 
-52: 6) Phase 6 – Partner Billing UX polish (COMPLETE)
+52: 6) Phase 6 – Partner Invoices UX polish (COMPLETE)
 53: - Implemented standardized skeletons, retryable error states, toasts, a11y tweaks
 54: - Acceptance: meets Gold Standard and QA protocol
 55: 

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { PartnerUnbilledReport } from '@/hooks/usePartnerUnbilledReports';
-import { PartnerInvoicingFiltersValue } from '@/components/admin/partner-billing/PartnerBillingFilters';
+import { PartnerInvoicingFiltersValue } from '@/components/admin/partner-billing/PartnerInvoicingFilters';
 import { subDays, isAfter } from 'date-fns';
 
 export function usePartnerInvoicingFilters(

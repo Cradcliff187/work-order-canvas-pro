@@ -1,7 +1,7 @@
 # Phase 3 – Ops/Finance Polish Completion Record
 
 Overview
-Phase 3 focused on stabilizing selection identity, standardizing column visibility persistence, and verifying export UX and dropdown layering across Reports and Invoices, plus a validation pass on Partner Billing → Select Reports.
+Phase 3 focused on stabilizing selection identity, standardizing column visibility persistence, and verifying export UX and dropdown layering across Reports and Invoices, plus a validation pass on Partner Invoices → Select Reports.
 
 Changes summarized
 - Tables now use getRowId: (row) => row.id for stable selection in Reports and Invoices
@@ -14,7 +14,7 @@ Affected areas
 - Admin Reports table
 - Admin Invoices table
 - Shared: useColumnVisibility hook (legacyKeys migration)
-- Partner Billing → Select Reports page: validation of disabled states, totals, and confirmation dialog
+- Partner Invoices → Select Reports page: validation of disabled states, totals, and confirmation dialog
 
 Acceptance verification
 - Selection remains stable across pagination and re-renders

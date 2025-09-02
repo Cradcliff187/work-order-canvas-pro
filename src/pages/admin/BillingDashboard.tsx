@@ -14,7 +14,7 @@ import { SubcontractorBill } from '@/hooks/useSubcontractorBills';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { BillingPipelineTable } from '@/components/admin/billing/BillingPipelineTable';
 
-// Filter interface - match the actual PartnerBillingFiltersValue interface
+// Filter interface - match the actual PartnerInvoicingFiltersValue interface
 interface PipelineFiltersValue {
   search?: string;
   report_status?: string[];

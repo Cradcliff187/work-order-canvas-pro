@@ -62,7 +62,7 @@ Checklists by page
 - Organizations: column visibility key standardized to admin-organizations-columns-v1 with legacyKeys; dropdowns opaque; export disabled states; keyboard-accessible rows; skeletons standardized. Status: COMPLETE.
 - Partner Locations: column visibility key standardized to admin-partner-locations-columns-v1 with legacyKeys; dropdowns opaque; export disabled states; action buttons labeled; skeletons standardized. Status: COMPLETE.
 - Employees: align selection, dropdowns, skeletons if applicable. Status: COMPLETE.
-- Partner Billing → Select Reports: selection, totals UX, confirmation dialog, disabled states when empty/loading. Status: COMPLETE (Phase 3 validation).
+- Partner Invoices → Select Reports: selection, totals UX, confirmation dialog, disabled states when empty/loading. Status: COMPLETE (Phase 3 validation).
 
 Validation/QA protocol (quick pass)
 - Verify selection across pagination retains IDs
