@@ -266,7 +266,7 @@ export default function AdminInvoices() {
     onDeleteInvoice: handleDeleteInvoice,
   });
 
-  // Column visibility setup for invoices
+  // Column visibility setup for bills
   const columnMetadata = {
     select: { label: 'Select', defaultVisible: true },
     internal_invoice_number: { label: 'Invoice #', defaultVisible: true },
@@ -359,7 +359,7 @@ const table = useReactTable({
       'Created': format(new Date(invoice.created_at), 'yyyy-MM-dd'),
     }));
     
-    const filename = `invoices-${exportFormat === 'csv' ? 'export' : 'report'}-${Date.now()}`;
+    const filename = `bills-${exportFormat === 'csv' ? 'export' : 'report'}-${Date.now()}`;
     if (exportFormat === 'csv') {
       exportToCSV(exportData || [], exportColumns, filename);
     } else {
@@ -368,7 +368,7 @@ const table = useReactTable({
     
     toast({
       title: "Export Complete",
-      description: `Exported ${exportData?.length || 0} invoices as ${exportFormat.toUpperCase()}`
+      description: `Exported ${exportData?.length || 0} bills as ${exportFormat.toUpperCase()}`
     });
   };
 
@@ -407,7 +407,7 @@ const table = useReactTable({
       <Card>
         <CardContent className="p-6">
           <div className="text-center space-y-4">
-            <p className="text-destructive">We couldn't load invoices. Please try again.</p>
+            <p className="text-destructive">We couldn't load bills. Please try again.</p>
             <Button onClick={() => refetch()} variant="outline">
               <RotateCcw className="w-4 h-4 mr-2" />
               Retry
@@ -428,7 +428,7 @@ const table = useReactTable({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Subcontractor Invoices</BreadcrumbPage>
+            <BreadcrumbPage>Subcontractor Bills</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -437,14 +437,14 @@ const table = useReactTable({
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">
-            Subcontractor Invoices
+            Subcontractor Bills
           </h1>
           <p className="text-muted-foreground">
-            {data?.count || 0} total invoices
+            {data?.count || 0} total bills
           </p>
           {bulkMode && (
             <p className="text-sm text-primary mt-1">
-              {selectedCount} invoice{selectedCount === 1 ? '' : 's'} selected
+              {selectedCount} bill{selectedCount === 1 ? '' : 's'} selected
             </p>
           )}
         </div>
@@ -480,7 +480,7 @@ const table = useReactTable({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <SmartSearchInput
-                placeholder="Search invoices..."
+                placeholder="Search bills..."
                 value={filters.search || ''}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                 storageKey="admin-invoices-search"
@@ -530,11 +530,11 @@ const table = useReactTable({
             ) : data?.data?.length === 0 ? (
               <EmptyState
                 icon={FileText}
-                title="No invoices found"
+                title="No bills found"
                 description={
                   filterCount > 0 
-                    ? "No invoices match your current filters."
-                    : "No subcontractor invoices have been submitted yet."
+                    ? "No bills match your current filters."
+                    : "No subcontractor bills have been submitted yet."
                 }
                 action={filterCount === 0 ? {
                   label: "Create Bill",
@@ -610,7 +610,7 @@ const table = useReactTable({
               <div className="flex items-center gap-4">
                 <div className="min-w-0">
                   <h2 className="text-lg font-semibold leading-none tracking-tight">
-                    Invoices
+                    Bills
                   </h2>
                 </div>
                 
@@ -647,7 +647,7 @@ const table = useReactTable({
                   <div className="relative flex-1 sm:flex-initial sm:w-80">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <SmartSearchInput
-                      placeholder="Search invoice #, vendor, amount..."
+                      placeholder="Search bill #, vendor, amount..."
                       value={filters.search || ''}
                       onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                       storageKey="admin-invoices-search"
@@ -693,11 +693,11 @@ const table = useReactTable({
             ) : data?.data?.length === 0 ? (
               <EmptyTableState
                 icon={FileText}
-                title="No invoices found"
+                title="No bills found"
                 description={
                   filterCount > 0 
-                    ? "No invoices match your current filters."
-                    : "No subcontractor invoices have been submitted yet."
+                    ? "No bills match your current filters."
+                    : "No subcontractor bills have been submitted yet."
                 }
                 action={filterCount === 0 ? {
                   label: "Create Bill",
@@ -902,7 +902,7 @@ const table = useReactTable({
         }}
         invoice={invoiceToEdit}
         onSaved={() => {
-          queryClient.invalidateQueries({ queryKey: ['invoices'] });
+          queryClient.invalidateQueries({ queryKey: ['subcontractor-bills'] });
           refetch();
         }}
       />
@@ -915,7 +915,7 @@ const table = useReactTable({
         }}
         onConfirm={confirmDelete}
         itemName={invoiceToDelete?.internal_invoice_number || ''}
-        itemType="invoice"
+        itemType="bill"
         isLoading={isDeleting}
       />
       </main>
