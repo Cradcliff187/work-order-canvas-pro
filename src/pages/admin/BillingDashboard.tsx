@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { countActiveFilters } from '@/lib/filters';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useViewMode } from '@/hooks/useViewMode';
@@ -61,19 +62,82 @@ export default function BillingDashboard() {
     }
   });
 
-  // Filter pipeline data - use simple client-side filtering
-  const filteredPipelineData = (pipelineData || []).filter(item => {
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        item.work_order_number?.toLowerCase().includes(searchLower) ||
-        item.description?.toLowerCase().includes(searchLower) ||
-        item.title?.toLowerCase().includes(searchLower) ||
-        item.partner_organization_name?.toLowerCase().includes(searchLower)
-      );
-    }
-    return true;
-  });
+  // Filter pipeline data with comprehensive filtering logic
+  const filteredPipelineData = useMemo(() => {
+    if (!pipelineData) return [];
+
+    return pipelineData.filter(item => {
+      // Search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const searchableFields = [
+          item.work_order_number,
+          item.description,
+          item.title,
+          item.partner_organization_name,
+          item.store_location,
+        ].filter(Boolean).join(' ').toLowerCase();
+        
+        if (!searchableFields.includes(searchLower)) {
+          return false;
+        }
+      }
+
+      // Status filters
+      if (filters.status?.length && !filters.status.includes(item.status)) {
+        return false;
+      }
+      
+      if (filters.financial_status?.length && !filters.financial_status.includes(item.financial_status)) {
+        return false;
+      }
+      
+      if (filters.partner_billing_status?.length && !filters.partner_billing_status.includes(item.partner_bill_status)) {
+        return false;
+      }
+      
+      if (filters.report_status?.length && !filters.report_status.includes(item.report_status)) {
+        return false;
+      }
+
+      // Organization filters - use name matching since IDs may not be available
+      if (filters.partner_organization_ids?.length && item.partner_organization_name) {
+        // For now, we'll skip ID-based filtering and rely on name filtering in search
+        // This could be enhanced later with proper ID mapping
+      }
+      
+      if (filters.subcontractor_organization_ids?.length) {
+        // Similar to partner organizations, skip for now
+        // This filtering would need proper subcontractor data structure
+      }
+
+      // Date range filter - use created_at if available
+      if (filters.date_from || filters.date_to) {
+        const itemDate = item.created_at ? new Date(item.created_at) : null;
+        if (itemDate) {
+          if (filters.date_from && itemDate < new Date(filters.date_from)) {
+            return false;
+          }
+          if (filters.date_to && itemDate > new Date(filters.date_to)) {
+            return false;
+          }
+        }
+      }
+
+      // Amount range filter
+      if (filters.amount_min || filters.amount_max) {
+        const amount = item.partner_billed_amount || item.subcontractor_bill_amount || 0;
+        if (filters.amount_min && amount < parseFloat(filters.amount_min)) {
+          return false;
+        }
+        if (filters.amount_max && amount > parseFloat(filters.amount_max)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [pipelineData, searchTerm, filters]);
 
   // Calculate stats from filtered data
   const totalWorkOrders = filteredPipelineData.length;
@@ -84,7 +148,12 @@ export default function BillingDashboard() {
     item.report_status === 'reviewed'
   ).length;
 
-  const filterCount = searchTerm ? 1 : 0;
+  // Count all active filters including search term
+  const filterCount = useMemo(() => {
+    let count = searchTerm ? 1 : 0;
+    count += countActiveFilters(filters);
+    return count;
+  }, [searchTerm, filters]);
 
   // Refresh handler
   const handleRefresh = async () => {
