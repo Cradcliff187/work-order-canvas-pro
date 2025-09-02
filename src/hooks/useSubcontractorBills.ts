@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface SubcontractorBillFilters {
   search?: string;
   status?: string;
+  subcontractor_organization_id?: string;
   dateFrom?: Date;
   dateTo?: Date;
   page?: number;
@@ -101,6 +102,7 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
   const {
     search = '',
     status = '',
+    subcontractor_organization_id,
     dateFrom,
     dateTo,
     page = 1,
@@ -108,7 +110,7 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
   } = filters;
 
   return useQuery({
-    queryKey: ['subcontractor-bills', { search, status, dateFrom, dateTo, page, pageSize }],
+    queryKey: ['subcontractor-bills', { search, status, subcontractor_organization_id, dateFrom, dateTo, page, pageSize }],
     queryFn: async () => {
       let query = supabase
         .from('subcontractor_bills')
@@ -181,6 +183,10 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
       // Apply server-side filters
       if (status && status !== 'all') {
         query = query.eq('status', status);
+      }
+
+      if (subcontractor_organization_id) {
+        query = query.eq('subcontractor_organization_id', subcontractor_organization_id);
       }
 
       if (dateFrom) {
