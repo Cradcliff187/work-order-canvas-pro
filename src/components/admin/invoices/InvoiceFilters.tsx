@@ -98,7 +98,7 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
     <SmartSearchInput
       value={value.search || ''}
       onChange={(e) => set('search', e.target.value)}
-      placeholder="Search invoices..."
+      placeholder="Search bills..."
       storageKey="admin-invoices-search"
       className="w-full"
     />

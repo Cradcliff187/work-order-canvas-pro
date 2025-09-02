@@ -589,7 +589,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleApprove} disabled={approveSubcontractorBill.isPending}>
-              {approveSubcontractorBill.isPending ? 'Approving...' : 'Approve Invoice'}
+              {approveSubcontractorBill.isPending ? 'Approving...' : 'Approve Bill'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -599,16 +599,16 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
       <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reject Invoice</AlertDialogTitle>
+            <AlertDialogTitle>Reject Bill</AlertDialogTitle>
             <AlertDialogDescription>
-              Please provide a reason for rejecting this invoice. This will be sent to the subcontractor.
+              Please provide a reason for rejecting this bill. This will be sent to the subcontractor.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <Label htmlFor="rejection-notes">Rejection Reason *</Label>
             <Textarea
               id="rejection-notes"
-              placeholder="Explain why this invoice is being rejected..."
+              placeholder="Explain why this bill is being rejected..."
               value={rejectionNotes}
               onChange={(e) => setRejectionNotes(e.target.value)}
               className="mt-2"
@@ -621,7 +621,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
               onClick={handleReject} 
               disabled={rejectSubcontractorBill.isPending || !rejectionNotes.trim()}
             >
-              {rejectSubcontractorBill.isPending ? 'Rejecting...' : 'Reject Invoice'}
+              {rejectSubcontractorBill.isPending ? 'Rejecting...' : 'Reject Bill'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

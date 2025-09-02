@@ -11,15 +11,15 @@ export function useSubmittedCounts() {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'submitted');
 
-      // Get submitted invoices count
-      const { count: invoicesCount } = await supabase
+      // Get submitted bills count
+      const { count: billsCount } = await supabase
         .from('subcontractor_bills')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'submitted');
 
       return {
         reportsCount: reportsCount || 0,
-        invoicesCount: invoicesCount || 0
+        billsCount: billsCount || 0
       };
     },
     staleTime: 30 * 1000, // 30 seconds
