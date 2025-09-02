@@ -190,7 +190,7 @@ export default function PartnerInvoiceDetail() {
         <EmptyState
           title="Invoice Not Found"
           description="The requested partner invoice could not be found."
-          action={{ label: 'Back to Billing', onClick: () => navigate('/admin/partner-billing/select-reports') }}
+          action={{ label: 'Back to Invoices', onClick: () => navigate('/admin/partner-billing/select-reports') }}
         />
       </div>
     );
@@ -206,7 +206,7 @@ export default function PartnerInvoiceDetail() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/admin/partner-billing/select-reports">Partner Billing</BreadcrumbLink>
+            <BreadcrumbLink href="/admin/partner-billing/select-reports">Partner Invoices</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -216,7 +216,7 @@ export default function PartnerInvoiceDetail() {
       </Breadcrumb>
 
       <div>
-        <h1 className="text-3xl font-bold mb-2">Partner Billing</h1>
+        <h1 className="text-3xl font-bold mb-2">Partner Invoices</h1>
         <p className="text-muted-foreground">Invoice {invoice.invoice_number} — View and export partner invoice information</p>
       </div>
 
@@ -228,7 +228,7 @@ export default function PartnerInvoiceDetail() {
           className="flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Billing
+          Back to Invoices
         </Button>
         
         <div className="flex gap-2">
