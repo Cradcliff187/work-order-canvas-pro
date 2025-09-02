@@ -32,17 +32,15 @@ export interface BillingFiltersProps {
 }
 
 const workOrderStatusOptions = [
-  { value: 'received', label: 'Received' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' }
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'pending', label: 'Pending' }
 ];
 
 const financialStatusOptions = [
-  { value: 'not_billed', label: 'Not Billed' },
-  { value: 'invoice_received', label: 'Invoice Received' },
-  { value: 'paid', label: 'Paid' }
+  { value: 'paid', label: 'Paid' },
+  { value: 'unpaid', label: 'Unpaid' },
+  { value: 'overdue', label: 'Overdue' }
 ];
 
 const partnerBillingStatusOptions = [
@@ -53,10 +51,9 @@ const partnerBillingStatusOptions = [
 ];
 
 const reportStatusOptions = [
-  { value: 'not_submitted', label: 'Not Submitted' },
   { value: 'submitted', label: 'Submitted' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' }
+  { value: 'reviewed', label: 'Reviewed' },
+  { value: 'approved', label: 'Approved' }
 ];
 
 export function BillingFilters({
