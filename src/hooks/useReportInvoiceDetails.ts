@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface InvoiceDetail {
   subcontractor_bill_id: string;
-  invoice_number: string;
+  bill_number: string;
   status: string;
   amount: number;
   approved_at: string | null;
@@ -53,7 +53,7 @@ export const useReportInvoiceDetails = (reportIds: string[]) => {
         if (invoice) {
           reportInvoiceMap.get(reportId)?.push({
             subcontractor_bill_id: invoice.id,
-            invoice_number: invoice.internal_bill_number,
+            bill_number: invoice.internal_bill_number,
             status: invoice.status,
             amount: item.amount,
             approved_at: invoice.approved_at
