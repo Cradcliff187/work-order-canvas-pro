@@ -269,11 +269,11 @@ export default function AdminInvoices() {
   // Column visibility setup for bills
   const columnMetadata = {
     select: { label: 'Select', defaultVisible: true },
-    internal_bill_number: { label: 'Invoice #', defaultVisible: true },
+    internal_bill_number: { label: 'Bill #', defaultVisible: true },
     external_bill_number: { label: 'Vendor Invoice #', defaultVisible: true },
     work_orders: { label: 'Work Orders', defaultVisible: true },
     attachment_count: { label: 'Attachments', defaultVisible: true },
-    'subcontractor_organization.name': { label: 'Partner', defaultVisible: true },
+    'subcontractor_organization.name': { label: 'Subcontractor', defaultVisible: true },
     total_amount: { label: 'Amount', defaultVisible: true },
     status: { label: 'Status', defaultVisible: true },
     date: { label: 'Date', defaultVisible: true },
