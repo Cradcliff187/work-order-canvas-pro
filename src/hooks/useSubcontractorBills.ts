@@ -40,6 +40,8 @@ export interface SubcontractorBill {
   subcontractor_notes?: string;
   payment_terms?: string;
   purchase_order_number?: string;
+  operational_status?: string;
+  partner_billing_status?: string;
   submitted_by_profile?: {
     id: string;
     first_name: string;
@@ -84,26 +86,6 @@ export interface SubcontractorBill {
   }>;
 }
 
-// Helper functions for status derivation
-const getOperationalStatus = (bill: SubcontractorBill) => {
-  if (bill.status === 'paid') return 'paid';
-  if (bill.status === 'approved') return 'approved';
-  if (bill.status === 'rejected') return 'rejected';
-  if (bill.status === 'submitted') return 'pending_approval';
-  if (bill.status === 'draft') return 'draft';
-  return 'unknown';
-};
-
-const getPartnerInvoicingStatus = (bill: SubcontractorBill) => {
-  const workOrders = bill.subcontractor_bill_work_orders || [];
-  if (workOrders.length === 0) return 'not_applicable';
-  
-  const allBilled = workOrders.every(wo => 
-    wo.work_orders?.organizations?.name // This would need to be enhanced with actual billing status
-  );
-  
-  return allBilled ? 'billed' : 'pending';
-};
 
 export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) => {
   const {
@@ -150,6 +132,8 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
           subcontractor_notes,
           payment_terms,
           purchase_order_number,
+          operational_status,
+          partner_billing_status,
           submitted_by_profile:profiles!submitted_by (
             id,
             first_name,
@@ -215,6 +199,14 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         query = query.lt('due_date', new Date().toISOString().split('T')[0]);
       }
 
+      if (operational_status && operational_status.length > 0) {
+        query = query.in('operational_status', operational_status);
+      }
+
+      if (partner_billing_status && partner_billing_status.length > 0) {
+        query = query.in('partner_billing_status', partner_billing_status);
+      }
+
       // Apply pagination
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
@@ -247,15 +239,8 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         });
       }
 
-      // Add derived status fields
-      const enrichedData = filteredData.map(bill => ({
-        ...bill,
-        operational_status: getOperationalStatus(bill),
-        partner_billing_status: getPartnerInvoicingStatus(bill)
-      }));
-
       return {
-        data: enrichedData,
+        data: filteredData,
         count: search ? filteredData.length : count,
         totalPages: Math.ceil((count || 0) / pageSize)
       };
@@ -292,6 +277,8 @@ export const useSubcontractorBill = (id: string) => {
           subcontractor_notes,
           payment_terms,
           purchase_order_number,
+          operational_status,
+          partner_billing_status,
           submitted_by_profile:profiles!submitted_by (
             id,
             first_name,
@@ -347,12 +334,7 @@ export const useSubcontractorBill = (id: string) => {
 
       if (error) throw error;
 
-      // Add derived status fields
-      return {
-        ...data,
-        operational_status: getOperationalStatus(data),
-        partner_billing_status: getPartnerInvoicingStatus(data)
-      };
+      return data;
     },
     enabled: !!id,
     staleTime: 30000,
