@@ -154,91 +154,131 @@ export function BillingFilters({
     onClear?.();
   };
 
-  const FilterContent = () => (
-    <div className="space-y-4">
-      {/* 2-Column Grid Layout */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Left Column */}
-        <div className="space-y-4">
+  const FilterContent = () => {
+    if (isMobile) {
+      // Mobile: Single column layout with touch-optimized spacing
+      return (
+        <div className="space-y-6">
+          {/* Search */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Search</Label>
+            <Input
+              type="text"
+              placeholder="Search work orders..."
+              value={localValue.search || ''}
+              onChange={(e) => handleStringFilterChange('search', e.target.value)}
+              className="w-full h-11"
+            />
+          </div>
+
           {/* Work Order Status */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">Work Order Status</Label>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Work Order Status</Label>
             <MultiSelectFilter
               options={workOrderStatusOptions}
               selectedValues={localValue.status || []}
               onSelectionChange={(values) => handleFilterChange('status', values)}
               placeholder="Select status..."
-              className="w-full"
+              className="w-full h-11"
             />
           </div>
-          
-          {/* Partner Organization */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">Partner Organization</Label>
-            <MultiSelectFilter
-              options={partnerOrganizationOptions}
-              selectedValues={localValue.partner_organization_ids || []}
-              onSelectionChange={(values) => handleFilterChange('partner_organization_ids', values)}
-              placeholder="Select partner organizations..."
-              className="w-full"
-            />
-          </div>
-          
-          {/* Report Status */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">Report Status</Label>
-            <MultiSelectFilter
-              options={reportStatusOptions}
-              selectedValues={localValue.report_status || []}
-              onSelectionChange={(values) => handleFilterChange('report_status', values)}
-              placeholder="Select report status..."
-              className="w-full"
-            />
-          </div>
-        </div>
 
-        {/* Right Column */}
-        <div className="space-y-4">
           {/* Financial Status */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">Financial Status</Label>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Financial Status</Label>
             <MultiSelectFilter
               options={financialStatusOptions}
               selectedValues={localValue.financial_status || []}
               onSelectionChange={(values) => handleFilterChange('financial_status', values)}
               placeholder="Select financial status..."
-              className="w-full"
+              className="w-full h-11"
             />
           </div>
-          
+
+          {/* Partner Billing Status */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Partner Billing Status</Label>
+            <MultiSelectFilter
+              options={partnerBillingStatusOptions}
+              selectedValues={localValue.partner_billing_status || []}
+              onSelectionChange={(values) => handleFilterChange('partner_billing_status', values)}
+              placeholder="Select partner billing status..."
+              className="w-full h-11"
+            />
+          </div>
+
+          {/* Report Status */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Report Status</Label>
+            <MultiSelectFilter
+              options={reportStatusOptions}
+              selectedValues={localValue.report_status || []}
+              onSelectionChange={(values) => handleFilterChange('report_status', values)}
+              placeholder="Select report status..."
+              className="w-full h-11"
+            />
+          </div>
+
+          {/* Partner Organization */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Partner Organization</Label>
+            <MultiSelectFilter
+              options={partnerOrganizationOptions}
+              selectedValues={localValue.partner_organization_ids || []}
+              onSelectionChange={(values) => handleFilterChange('partner_organization_ids', values)}
+              placeholder="Select partner organizations..."
+              className="w-full h-11"
+            />
+          </div>
+
           {/* Subcontractor */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">Subcontractor</Label>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Subcontractor</Label>
             <MultiSelectFilter
               options={subcontractorOrganizationOptions}
               selectedValues={localValue.subcontractor_organization_ids || []}
               onSelectionChange={(values) => handleFilterChange('subcontractor_organization_ids', values)}
               placeholder="Select subcontractor organizations..."
-              className="w-full"
+              className="w-full h-11"
             />
           </div>
-          
+
+          {/* Amount Range */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Amount Range</Label>
+            <div className="space-y-3">
+              <Input
+                type="number"
+                placeholder="Min amount"
+                value={localValue.amount_min || ''}
+                onChange={(e) => handleStringFilterChange('amount_min', e.target.value)}
+                className="w-full h-11"
+              />
+              <Input
+                type="number"
+                placeholder="Max amount"
+                value={localValue.amount_max || ''}
+                onChange={(e) => handleStringFilterChange('amount_max', e.target.value)}
+                className="w-full h-11"
+              />
+            </div>
+          </div>
+
           {/* Date Range */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-foreground">Date Range</Label>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Date Range</Label>
+            <div className="space-y-3">
               <Popover open={showDateFrom} onOpenChange={setShowDateFrom}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    size="sm"
                     className={cn(
-                      "w-full justify-start text-left font-normal h-9",
+                      "w-full h-11 justify-start text-left font-normal",
                       !localValue.date_from && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {localValue.date_from ? format(new Date(localValue.date_from), 'MMM d') : 'From'}
+                    {localValue.date_from ? format(new Date(localValue.date_from), 'MMM d, yyyy') : 'From date'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -256,14 +296,13 @@ export function BillingFilters({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    size="sm"
                     className={cn(
-                      "w-full justify-start text-left font-normal h-9",
+                      "w-full h-11 justify-start text-left font-normal",
                       !localValue.date_to && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {localValue.date_to ? format(new Date(localValue.date_to), 'MMM d') : 'To'}
+                    {localValue.date_to ? format(new Date(localValue.date_to), 'MMM d, yyyy') : 'To date'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -279,10 +318,183 @@ export function BillingFilters({
             </div>
           </div>
         </div>
-      </div>
+      );
+    }
 
-      {/* Apply and Clear buttons at bottom */}
-      {!isMobile && (
+    // Desktop: 2-column grid layout
+    return (
+      <div className="space-y-4">
+        {/* Search bar for desktop */}
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-foreground">Search</Label>
+          <Input
+            type="text"
+            placeholder="Search work orders..."
+            value={localValue.search || ''}
+            onChange={(e) => handleStringFilterChange('search', e.target.value)}
+            className="w-full"
+          />
+        </div>
+
+        {/* Amount Range for desktop */}
+        <div className="space-y-2">
+          <Label className="text-xs font-medium text-foreground">Amount Range</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              type="number"
+              placeholder="Min"
+              value={localValue.amount_min || ''}
+              onChange={(e) => handleStringFilterChange('amount_min', e.target.value)}
+              className="w-full"
+            />
+            <Input
+              type="number"
+              placeholder="Max"
+              value={localValue.amount_max || ''}
+              onChange={(e) => handleStringFilterChange('amount_max', e.target.value)}
+              className="w-full"
+            />
+          </div>
+        </div>
+
+        {/* 2-Column Grid Layout */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Left Column */}
+          <div className="space-y-4">
+            {/* Work Order Status */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-foreground">Work Order Status</Label>
+              <MultiSelectFilter
+                options={workOrderStatusOptions}
+                selectedValues={localValue.status || []}
+                onSelectionChange={(values) => handleFilterChange('status', values)}
+                placeholder="Select status..."
+                className="w-full"
+              />
+            </div>
+            
+            {/* Partner Organization */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-foreground">Partner Organization</Label>
+              <MultiSelectFilter
+                options={partnerOrganizationOptions}
+                selectedValues={localValue.partner_organization_ids || []}
+                onSelectionChange={(values) => handleFilterChange('partner_organization_ids', values)}
+                placeholder="Select partner organizations..."
+                className="w-full"
+              />
+            </div>
+            
+            {/* Report Status */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-foreground">Report Status</Label>
+              <MultiSelectFilter
+                options={reportStatusOptions}
+                selectedValues={localValue.report_status || []}
+                onSelectionChange={(values) => handleFilterChange('report_status', values)}
+                placeholder="Select report status..."
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-4">
+            {/* Financial Status */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-foreground">Financial Status</Label>
+              <MultiSelectFilter
+                options={financialStatusOptions}
+                selectedValues={localValue.financial_status || []}
+                onSelectionChange={(values) => handleFilterChange('financial_status', values)}
+                placeholder="Select financial status..."
+                className="w-full"
+              />
+            </div>
+
+            {/* Partner Billing Status */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-foreground">Partner Billing Status</Label>
+              <MultiSelectFilter
+                options={partnerBillingStatusOptions}
+                selectedValues={localValue.partner_billing_status || []}
+                onSelectionChange={(values) => handleFilterChange('partner_billing_status', values)}
+                placeholder="Select partner billing status..."
+                className="w-full"
+              />
+            </div>
+            
+            {/* Subcontractor */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-foreground">Subcontractor</Label>
+              <MultiSelectFilter
+                options={subcontractorOrganizationOptions}
+                selectedValues={localValue.subcontractor_organization_ids || []}
+                onSelectionChange={(values) => handleFilterChange('subcontractor_organization_ids', values)}
+                placeholder="Select subcontractor organizations..."
+                className="w-full"
+              />
+            </div>
+            
+            {/* Date Range */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-foreground">Date Range</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Popover open={showDateFrom} onOpenChange={setShowDateFrom}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "w-full justify-start text-left font-normal h-9",
+                        !localValue.date_from && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {localValue.date_from ? format(new Date(localValue.date_from), 'MMM d') : 'From'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={localValue.date_from ? new Date(localValue.date_from) : undefined}
+                      onSelect={handleDateFromChange}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <Popover open={showDateTo} onOpenChange={setShowDateTo}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "w-full justify-start text-left font-normal h-9",
+                        !localValue.date_to && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {localValue.date_to ? format(new Date(localValue.date_to), 'MMM d') : 'To'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={localValue.date_to ? new Date(localValue.date_to) : undefined}
+                      onSelect={handleDateToChange}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Apply and Clear buttons at bottom */}
         <div className="flex gap-2 pt-4 border-t">
           <Button
             variant="outline"
@@ -298,44 +510,44 @@ export function BillingFilters({
             Apply
           </Button>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   const MobileFilterOverlay = () => (
     <div className="fixed inset-0 z-[9999] bg-background">
       <div className="flex h-full flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b p-4">
-          <h2 className="text-lg font-semibold">Filters</h2>
+        {/* Enhanced Header */}
+        <div className="flex items-center justify-between border-b p-6 bg-background/95 backdrop-blur">
+          <h2 className="text-xl font-semibold text-foreground">Filters</h2>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsOpen(false)}
-            className="h-8 w-8 p-0"
+            className="h-11 w-11 p-0 rounded-full"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </Button>
         </div>
 
-        {/* Filter Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        {/* Scrollable Filter Content */}
+        <div className="flex-1 overflow-y-auto p-6">
           <FilterContent />
         </div>
 
-        {/* Footer Actions */}
-        <div className="border-t p-4">
-          <div className="flex gap-2">
+        {/* Sticky Footer with Touch-Optimized Buttons */}
+        <div className="border-t p-6 bg-background/95 backdrop-blur">
+          <div className="flex gap-3">
             <Button
               variant="outline"
               onClick={handleClearFilters}
-              className="flex-1"
+              className="flex-1 h-12 text-base font-medium"
             >
               Clear All
             </Button>
             <Button
               onClick={handleApplyFilters}
-              className="flex-1"
+              className="flex-1 h-12 text-base font-medium"
             >
               Apply Filters
             </Button>
