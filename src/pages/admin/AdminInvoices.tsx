@@ -119,6 +119,14 @@ export default function AdminInvoices() {
     partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
   }), [filters]);
 
+  useEffect(() => {
+    console.log('🔍 Bill Filters Changed:', {
+      subcontractors: cleanFilters.subcontractor_organization_ids,
+      operational: cleanFilters.operational_status,
+      billing: cleanFilters.partner_billing_status
+    });
+  }, [cleanFilters]);
+
   const handleFiltersChange = (newFilters: InvoiceFiltersValue) => {
     setFilters(newFilters);
   };
