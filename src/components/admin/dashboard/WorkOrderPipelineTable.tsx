@@ -65,7 +65,7 @@ export function WorkOrderPipelineTable({
 
   // Helper function to get partner billing status based on workflow
   const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
-    // Based on the 4-step workflow: Report Created → Subcontractor Invoice → Invoice Approved → Bill Partner
+    // Based on the 4-step workflow: Report Created → Subcontractor Bill → Bill Approved → Bill Partner
     if (item.status !== 'completed') {
       return 'report_pending'; // Work not completed yet
     }
@@ -75,7 +75,7 @@ export function WorkOrderPipelineTable({
     }
     
     if (item.invoice_status === 'submitted' || item.invoice_status === 'pending') {
-      return 'invoice_pending'; // Has pending subcontractor invoices
+      return 'invoice_pending'; // Has pending subcontractor bills
     }
     
     if (item.partner_bill_status === 'billed' || item.partner_billed_at) {
@@ -83,10 +83,10 @@ export function WorkOrderPipelineTable({
     }
     
     if (item.invoice_status === 'approved') {
-      return 'ready_to_bill'; // Has approved invoices, ready to bill partner
+      return 'ready_to_bill'; // Has approved bills, ready to bill partner
     }
     
-    return 'invoice_needed'; // Default - needs subcontractor invoice
+    return 'invoice_needed'; // Default - needs subcontractor bill
   };
 
   const tableColumns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
@@ -251,7 +251,7 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'subcontractor_invoice',
-      header: 'Subcontractor Invoice',
+      header: 'Subcontractor Bill',
       cell: ({ row }) => {
         const item = row.original;
         

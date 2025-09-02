@@ -139,7 +139,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
         <div className="flex-1 overflow-y-auto px-1 -mx-1">
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="external_bill_number">Vendor Invoice #</Label>
+              <Label htmlFor="external_bill_number">Vendor Bill #</Label>
               <Input id="external_bill_number" value={externalInvoiceNumber} onChange={(e) => setExternalInvoiceNumber(e.target.value)} />
             </div>
             <div className="space-y-2">

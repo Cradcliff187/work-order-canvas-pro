@@ -25,7 +25,7 @@ export const SubcontractorLayout = React.memo(function SubcontractorLayout({ chi
     'Work Orders': ClipboardList,
     'Reports': ClipboardList,
     'Submit Report': Plus,
-    'Subcontractor Invoices': Receipt,
+    'Subcontractor Bills': Receipt,
     'Profile': User,
   }), []);
 
@@ -38,7 +38,7 @@ export const SubcontractorLayout = React.memo(function SubcontractorLayout({ chi
         label: item.label === 'Submit Report' ? 'Submit' : item.label,
         icon: iconMap[item.label as keyof typeof iconMap] || ClipboardList,
         path: item.path,
-        badge: item.label === 'Subcontractor Invoices' ? draftCount : undefined
+        badge: item.label === 'Subcontractor Bills' ? draftCount : undefined
       }));
     return [
       ...base,

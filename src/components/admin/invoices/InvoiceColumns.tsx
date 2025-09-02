@@ -61,7 +61,7 @@ export const createInvoiceColumns = ({
   },
   {
     accessorKey: 'internal_bill_number',
-    header: ({ column }) => <SortableHeader column={column} label="Sub Invoice#" />,
+    header: ({ column }) => <SortableHeader column={column} label="Sub Bill#" />,
     cell: ({ row }) => (
       <div className="font-mono text-sm text-right">
         {row.getValue('internal_bill_number')}
@@ -70,7 +70,7 @@ export const createInvoiceColumns = ({
   },
   {
     accessorKey: 'external_bill_number',
-    header: ({ column }) => <SortableHeader column={column} label="Vendor Invoice #" />,
+    header: ({ column }) => <SortableHeader column={column} label="Vendor Bill #" />,
     cell: ({ row }) => {
       const external = row.getValue('external_bill_number') as string | null;
       return (

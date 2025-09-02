@@ -172,8 +172,8 @@ export function SimplePipelineFilters({
         >
           <option value="">All Billing Status</option>
           <option value="report_pending">Report Pending</option>
-          <option value="invoice_needed">Subcontractor Invoice Needed</option>
-          <option value="invoice_pending">Invoice Pending Approval</option>
+          <option value="invoice_needed">Subcontractor Bill Needed</option>
+          <option value="invoice_pending">Bill Pending Approval</option>
           <option value="ready_to_bill">Ready to Bill Partner</option>
           <option value="billed">Partner Billed</option>
         </select>
