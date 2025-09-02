@@ -16,10 +16,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useSubcontractorBillSubmission } from '@/hooks/useSubcontractorBillSubmission';
-import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
-import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
+import { WorkOrderAmountCard } from '@/components/subcontractor-bills/WorkOrderAmountCard';
+import { BillTotalSummary } from '@/components/subcontractor-bills/BillTotalSummary';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
-import { InvoiceDatesFields } from '@/components/invoices/InvoiceDatesFields';
+import { BillDatesFields } from '@/components/subcontractor-bills/BillDatesFields';
 import { validateReportBeforeInvoice } from '@/lib/validations/estimate-validations';
 import { addDays, isBefore, format as formatDate } from 'date-fns';
 
@@ -30,7 +30,7 @@ interface BillFormData {
   selectedOrganizationId?: string; // For admin submissions
 
   // New fields
-  invoiceDate: Date | null;
+  billDate: Date | null;
   dueDate: Date | null;
   paymentTerms: string;
   purchaseOrderNumber: string;
@@ -49,7 +49,7 @@ export default function SubmitBill() {
     adminNotes: '',
     selectedWorkOrders: {},
     selectedOrganizationId: undefined,
-    invoiceDate: new Date(),
+    billDate: new Date(),
     dueDate: addDays(new Date(), 30),
     paymentTerms: 'Net 30',
     purchaseOrderNumber: '',
@@ -121,7 +121,7 @@ export default function SubmitBill() {
         const parsed = JSON.parse(savedData);
         setFormData({
           ...parsed,
-          invoiceDate: parsed.invoiceDate ? new Date(parsed.invoiceDate) : new Date(),
+          billDate: parsed.billDate ? new Date(parsed.billDate) : new Date(),
           dueDate: parsed.dueDate ? new Date(parsed.dueDate) : addDays(new Date(), 30),
         });
       } catch (error) {
@@ -134,7 +134,7 @@ export default function SubmitBill() {
   useEffect(() => {
     const toSave = {
       ...formData,
-      invoiceDate: formData.invoiceDate ? formatDate(formData.invoiceDate, 'yyyy-MM-dd') : null,
+      billDate: formData.billDate ? formatDate(formData.billDate, 'yyyy-MM-dd') : null,
       dueDate: formData.dueDate ? formatDate(formData.dueDate, 'yyyy-MM-dd') : null,
     };
     localStorage.setItem('billFormData', JSON.stringify(toSave));
@@ -180,12 +180,12 @@ export default function SubmitBill() {
   };
 
   const validateDates = () => {
-    if (!formData.invoiceDate || !formData.dueDate) {
+    if (!formData.billDate || !formData.dueDate) {
       setDateError('Both dates are required.');
       return false;
     }
-    if (isBefore(formData.dueDate, formData.invoiceDate)) {
-      setDateError('Due date must be on or after the invoice date.');
+    if (isBefore(formData.dueDate, formData.billDate)) {
+      setDateError('Due date must be on or after the bill date.');
       return false;
     }
     setDateError(null);
@@ -255,7 +255,7 @@ export default function SubmitBill() {
         admin_notes: isAdminMode && formData.adminNotes ? formData.adminNotes : undefined,
 
         // New fields
-        invoice_date: formData.invoiceDate!,
+        invoice_date: formData.billDate!,
         due_date: formData.dueDate!,
         payment_terms: formData.paymentTerms || 'Net 30',
         purchase_order_number: formData.purchaseOrderNumber || undefined,
@@ -378,10 +378,10 @@ export default function SubmitBill() {
                 </div>
               </div>
 
-              <InvoiceDatesFields
-                invoiceDate={formData.invoiceDate}
+              <BillDatesFields
+                billDate={formData.billDate}
                 dueDate={formData.dueDate}
-                onChangeInvoiceDate={(d) => setFormData(prev => ({ ...prev, invoiceDate: d, dueDate: prev.dueDate && isBefore(prev.dueDate, d) ? addDays(d, 30) : prev.dueDate }))}
+                onChangeBillDate={(d) => setFormData(prev => ({ ...prev, billDate: d, dueDate: prev.dueDate && isBefore(prev.dueDate, d) ? addDays(d, 30) : prev.dueDate }))}
                 onChangeDueDate={(d) => setFormData(prev => ({ ...prev, dueDate: d }))}
                 error={dateError}
                 className="mt-2"
@@ -477,7 +477,7 @@ export default function SubmitBill() {
               description="Review the selected work orders and total amount"
             >
               <StandardFormLayout.FieldGroup>
-                <InvoiceTotalSummary
+                <BillTotalSummary
                   selectedWorkOrders={selectedWorkOrderSummary}
                   totalAmount={totalAmount}
                 />

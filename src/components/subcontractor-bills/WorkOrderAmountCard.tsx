@@ -122,7 +122,7 @@ export const WorkOrderAmountCard: React.FC<WorkOrderAmountCardProps> = ({
                 <Separator />
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Invoice Amount</Label>
+                    <Label className="text-sm font-medium">Bill Amount</Label>
                     {suggestedAmount > 0 && (
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="text-xs">

@@ -10,13 +10,13 @@ interface WorkOrderSummary {
   amount: number;
 }
 
-interface InvoiceTotalSummaryProps {
+interface BillTotalSummaryProps {
   selectedWorkOrders: WorkOrderSummary[];
   totalAmount: number;
   suggestedTotal?: number;
 }
 
-export const InvoiceTotalSummary: React.FC<InvoiceTotalSummaryProps> = ({
+export const BillTotalSummary: React.FC<BillTotalSummaryProps> = ({
   selectedWorkOrders,
   totalAmount,
   suggestedTotal = 0,
@@ -36,7 +36,7 @@ export const InvoiceTotalSummary: React.FC<InvoiceTotalSummaryProps> = ({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Calculator className="h-4 w-4" />
-          Invoice Summary
+          Bill Summary
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -110,7 +110,7 @@ export const InvoiceTotalSummary: React.FC<InvoiceTotalSummaryProps> = ({
           
           {selectedWorkOrders.length === 0 && (
             <div className="text-center p-2 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-xs">
-              Select work orders to include in this invoice
+              Select work orders to include in this bill
             </div>
           )}
         </div>
