@@ -1283,7 +1283,9 @@ export type Database = {
           external_bill_number: string | null
           id: string
           internal_bill_number: string
+          operational_status: string | null
           paid_at: string | null
+          partner_billing_status: string | null
           payment_reference: string | null
           payment_terms: string | null
           purchase_order_number: string | null
@@ -1307,7 +1309,9 @@ export type Database = {
           external_bill_number?: string | null
           id?: string
           internal_bill_number: string
+          operational_status?: string | null
           paid_at?: string | null
+          partner_billing_status?: string | null
           payment_reference?: string | null
           payment_terms?: string | null
           purchase_order_number?: string | null
@@ -1331,7 +1335,9 @@ export type Database = {
           external_bill_number?: string | null
           id?: string
           internal_bill_number?: string
+          operational_status?: string | null
           paid_at?: string | null
+          partner_billing_status?: string | null
           payment_reference?: string | null
           payment_terms?: string | null
           purchase_order_number?: string | null
