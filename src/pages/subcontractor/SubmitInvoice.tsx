@@ -42,7 +42,7 @@ export default function SubmitInvoice() {
   const { toast } = useToast();
   const { userOrganizations } = useAuth();
   const { isAdmin, profile } = useUserProfile();
-  const { submitInvoice, isSubmitting } = useInvoiceSubmission();
+  const { submitSubcontractorBill, isSubmitting } = useSubcontractorBillSubmission();
 
   const [formData, setFormData] = useState<InvoiceFormData>({
     externalInvoiceNumber: '',
@@ -241,25 +241,25 @@ export default function SubmitInvoice() {
 
     try {
       const workOrdersData = selectedWorkOrderIds.map(workOrderId => ({
-        workOrderId,
+        work_order_id: workOrderId,
         amount: formData.selectedWorkOrders[workOrderId],
       }));
 
-      await submitInvoice({
-        externalInvoiceNumber: formData.externalInvoiceNumber || undefined,
-        totalAmount,
-        workOrders: workOrdersData,
+      await submitSubcontractorBill({
+        external_invoice_number: formData.externalInvoiceNumber || undefined,
+        total_amount: totalAmount,
+        work_orders: workOrdersData,
         attachments: files.length > 0 ? files : undefined,
-        organizationId: isAdminMode ? formData.selectedOrganizationId : undefined,
-        createdByAdminId: isAdminMode ? profile?.id : undefined,
-        adminNotes: isAdminMode && formData.adminNotes ? formData.adminNotes : undefined,
+        subcontractor_organization_id: isAdminMode ? formData.selectedOrganizationId : undefined,
+        created_by_admin_id: isAdminMode ? profile?.id : undefined,
+        admin_notes: isAdminMode && formData.adminNotes ? formData.adminNotes : undefined,
 
         // New fields
-        invoiceDate: formData.invoiceDate!,
-        dueDate: formData.dueDate!,
-        paymentTerms: formData.paymentTerms || 'Net 30',
-        purchaseOrderNumber: formData.purchaseOrderNumber || undefined,
-        subcontractorNotes: formData.subcontractorNotes || undefined,
+        invoice_date: formData.invoiceDate!,
+        due_date: formData.dueDate!,
+        payment_terms: formData.paymentTerms || 'Net 30',
+        purchase_order_number: formData.purchaseOrderNumber || undefined,
+        subcontractor_notes: formData.subcontractorNotes || undefined,
       });
       
       // Clear saved form data

@@ -11,6 +11,9 @@ interface SubmitSubcontractorBillData {
   payment_terms?: string;
   purchase_order_number?: string;
   subcontractor_notes?: string;
+  subcontractor_organization_id?: string;
+  created_by_admin_id?: string;
+  admin_notes?: string;
   work_orders: Array<{
     work_order_id: string;
     amount: number;

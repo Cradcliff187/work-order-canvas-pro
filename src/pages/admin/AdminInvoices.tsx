@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { useInvoices, Invoice } from '@/hooks/useInvoices';
+import { useSubcontractorBills, SubcontractorBill } from '@/hooks/useSubcontractorBills';
 import { UnifiedInvoiceFilters } from '@/components/admin/invoices/UnifiedInvoiceFilters';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
@@ -50,7 +50,7 @@ import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useViewMode } from '@/hooks/useViewMode';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
-import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
+import { useSubcontractorBillMutations } from '@/hooks/useSubcontractorBillMutations';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { toast } from '@/hooks/use-toast';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
@@ -70,7 +70,7 @@ export default function AdminInvoices() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<SubcontractorBill | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -145,7 +145,7 @@ export default function AdminInvoices() {
       partner_billing_status: newFilters.partner_billing_status || [],
     });
   };
-  const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
+  const { approveSubcontractorBill, rejectSubcontractorBill, markAsPaid } = useSubcontractorBillMutations();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const { viewMode, setViewMode, allowedModes } = useViewMode({
@@ -158,16 +158,16 @@ export default function AdminInvoices() {
   });
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
-  const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
+  const [invoiceToEdit, setInvoiceToEdit] = useState<SubcontractorBill | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<SubcontractorBill | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleEditInvoice = (invoice: Invoice) => {
+  const handleEditInvoice = (invoice: SubcontractorBill) => {
     setInvoiceToEdit(invoice);
     setEditOpen(true);
   };
-  const handleDeleteInvoice = (invoice: Invoice) => {
+  const handleDeleteInvoice = (invoice: SubcontractorBill) => {
     setInvoiceToDelete(invoice);
     setDeleteOpen(true);
   };
@@ -175,9 +175,9 @@ export default function AdminInvoices() {
     if (!invoiceToDelete) return;
     setIsDeleting(true);
     try {
-      await supabase.from('invoice_work_orders').delete().eq('invoice_id', invoiceToDelete.id);
-      await supabase.from('invoice_attachments').delete().eq('invoice_id', invoiceToDelete.id);
-      const { error } = await supabase.from('invoices').delete().eq('id', invoiceToDelete.id);
+      await supabase.from('subcontractor_bill_work_orders').delete().eq('subcontractor_bill_id', invoiceToDelete.id);
+      await supabase.from('subcontractor_bill_attachments').delete().eq('subcontractor_bill_id', invoiceToDelete.id);
+      const { error } = await supabase.from('subcontractor_bills').delete().eq('id', invoiceToDelete.id);
       if (error) throw error;
     } catch (e) {
       console.error('Failed to delete invoice', e);
@@ -185,7 +185,7 @@ export default function AdminInvoices() {
       setIsDeleting(false);
       setDeleteOpen(false);
       setInvoiceToDelete(null);
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['subcontractor-bills'] });
     }
   };
 
@@ -201,7 +201,7 @@ export default function AdminInvoices() {
     return () => clearTimeout(timer);
   }, [filters.search]);
 
-  const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch, page, limit });
+  const { data, isLoading, error, refetch } = useSubcontractorBills({ ...filters, search: debouncedSearch, page });
 
   // Optimize dependencies with useMemo for stable references
   const stableFilterDeps = useMemo(() => ({
@@ -237,22 +237,22 @@ export default function AdminInvoices() {
     setPage(1);
   }, [stableFilterDeps]); // Use stable dependency object
   
-  const handleViewInvoice = (invoice: Invoice) => {
+  const handleViewInvoice = (invoice: SubcontractorBill) => {
     setSelectedInvoice(invoice);
     setModalOpen(true);
   };
 
-  const handleApproveInvoice = (invoice: Invoice) => {
+  const handleApproveInvoice = (invoice: SubcontractorBill) => {
     setSelectedInvoice(invoice);
     setModalOpen(true);
   };
 
-  const handleRejectInvoice = (invoice: Invoice) => {
+  const handleRejectInvoice = (invoice: SubcontractorBill) => {
     setSelectedInvoice(invoice);
     setModalOpen(true);
   };
 
-  const handleMarkAsPaid = (invoice: Invoice) => {
+  const handleMarkAsPaid = (invoice: SubcontractorBill) => {
     setSelectedInvoice(invoice);
     setModalOpen(true);
   };
@@ -300,7 +300,7 @@ export default function AdminInvoices() {
   }));
 
 const table = useReactTable({
-  data: (data?.data || []) as Invoice[],
+  data: (data?.data || []) as SubcontractorBill[],
   columns,
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
@@ -355,7 +355,7 @@ const table = useReactTable({
       'Amount': invoice.total_amount,
       'Status': invoice.status,
       'Due Date': invoice.due_date ? format(new Date(invoice.due_date), 'yyyy-MM-dd') : '',
-      'Work Orders': invoice.invoice_work_orders?.map(iwo => iwo.work_order?.work_order_number).filter(Boolean).join(', ') || '',
+      'Work Orders': invoice.subcontractor_bill_work_orders?.map(sbwo => sbwo.work_orders?.work_order_number).filter(Boolean).join(', ') || '',
       'Created': format(new Date(invoice.created_at), 'yyyy-MM-dd'),
     }));
     
@@ -375,14 +375,14 @@ const table = useReactTable({
 
   const handleBulkApprove = () => {
     const ids = table.getFilteredSelectedRowModel().rows.map(r => r.original.id);
-    ids.forEach(id => approveInvoice.mutate({ invoiceId: id }));
+    ids.forEach(id => approveSubcontractorBill.mutate({ billId: id }));
     setBulkOpen(false);
     setRowSelection({});
   };
 
   const handleBulkReject = () => {
     const ids = table.getFilteredSelectedRowModel().rows.map(r => r.original.id);
-    ids.forEach(id => rejectInvoice.mutate({ invoiceId: id, notes: 'Rejected via bulk action' }));
+    ids.forEach(id => rejectSubcontractorBill.mutate({ billId: id, notes: 'Rejected via bulk action' }));
     setBulkOpen(false);
     setRowSelection({});
   };
@@ -390,7 +390,7 @@ const table = useReactTable({
   const handleBulkMarkPaid = () => {
     const ids = table.getFilteredSelectedRowModel().rows.map(r => r.original.id);
     const now = new Date();
-    ids.forEach(id => markAsPaid.mutate({ invoiceId: id, paymentReference: 'BULK', paymentDate: now }));
+    ids.forEach(id => markAsPaid.mutate({ billId: id, paymentReference: 'BULK', paymentDate: now }));
     setBulkOpen(false);
     setRowSelection({});
   };
@@ -400,7 +400,7 @@ const table = useReactTable({
     setPage(newPage);
   };
 
-  const totalPages = Math.ceil((data?.totalCount || 0) / limit);
+  const totalPages = Math.ceil((data?.count || 0) / limit);
 
   return error ? (
     <div className="p-6">
@@ -440,7 +440,7 @@ const table = useReactTable({
             Subcontractor Invoices
           </h1>
           <p className="text-muted-foreground">
-            {data?.totalCount || 0} total invoices
+            {data?.count || 0} total invoices
           </p>
           {bulkMode && (
             <p className="text-sm text-primary mt-1">
@@ -562,7 +562,7 @@ const table = useReactTable({
                     data={{
                       'Amount': formatCurrency(invoice.total_amount),
                       'Due': format(new Date(invoice.due_date), 'MMM d, yyyy'),
-                      'Work Orders': String(invoice.invoice_work_orders?.length || 0)
+                      'Work Orders': String(invoice.subcontractor_bill_work_orders?.length || 0)
                     }}
                     actions={[
                       { label: 'View', icon: FileText, onClick: () => handleViewInvoice(invoice) },
@@ -586,12 +586,12 @@ const table = useReactTable({
                     leftAction={canApprove ? { icon: XCircle, label: 'Reject', color: 'destructive', confirmMessage: 'Reject this invoice?' } : undefined}
                     onSwipeRight={() => {
                       if (canApprove) {
-                        approveInvoice.mutate({ invoiceId: invoice.id });
+                        approveSubcontractorBill.mutate({ billId: invoice.id });
                       } else if (canMarkPaid) {
-                        markAsPaid.mutate({ invoiceId: invoice.id, paymentReference: 'MOBILE', paymentDate: new Date() });
+                        markAsPaid.mutate({ billId: invoice.id, paymentReference: 'MOBILE', paymentDate: new Date() });
                       }
                     }}
-                    onSwipeLeft={canApprove ? () => rejectInvoice.mutate({ invoiceId: invoice.id, notes: 'Rejected via swipe' }) : undefined}
+                    onSwipeLeft={canApprove ? () => rejectSubcontractorBill.mutate({ billId: invoice.id, notes: 'Rejected via swipe' }) : undefined}
                   >
                     {cardContent}
                   </SwipeableListItem>
@@ -800,7 +800,7 @@ const table = useReactTable({
                               data={{
                                 'Amount': formatCurrency(invoice.total_amount),
                                 'Submitted': invoice.submitted_at ? format(new Date(invoice.submitted_at), 'MMM d, yyyy') : 'N/A',
-                                'Work Orders': String(invoice.invoice_work_orders?.length || 0)
+                                'Work Orders': String(invoice.subcontractor_bill_work_orders?.length || 0)
                               }}
                               actions={[
                                 { label: 'View', icon: FileText, onClick: () => handleViewInvoice(invoice) },

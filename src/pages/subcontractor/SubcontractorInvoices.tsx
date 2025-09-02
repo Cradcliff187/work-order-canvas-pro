@@ -25,16 +25,16 @@ const SubcontractorInvoices = () => {
 
   // Memoize filters to prevent unnecessary re-fetches
   const filters = useMemo(() => ({
-    status: statusFilter && statusFilter !== "all" ? [statusFilter] : undefined,
+    status: statusFilter && statusFilter !== "all" ? statusFilter : undefined,
     paymentStatus: initialPayment as 'paid' | 'unpaid' | undefined,
     search: searchQuery || undefined,
     page,
     limit: 20,
   }), [statusFilter, initialPayment, searchQuery, page]);
 
-  const { data: invoicesData, isLoading, error, refetch } = useInvoices(filters);
+  const { data: invoicesData, isLoading, error, refetch } = useSubcontractorBills(filters);
   const invoices = invoicesData?.data || [];
-  const totalCount = invoicesData?.totalCount || 0;
+  const totalCount = invoicesData?.count || 0;
 
   const hasFilters = statusFilter !== "all" || searchQuery || initialPayment;
 
@@ -162,10 +162,10 @@ const SubcontractorInvoices = () => {
                           ({invoice.external_invoice_number})
                         </span>
                       )}
-                      {(invoice.attachment_count || 0) > 0 && (
+                      {(invoice.subcontractor_bill_attachments?.length || 0) > 0 && (
                         <div className="flex items-center gap-1 text-blue-600">
                           <Paperclip className="h-4 w-4" />
-                          <span className="text-xs">{invoice.attachment_count}</span>
+                          <span className="text-xs">{invoice.subcontractor_bill_attachments?.length}</span>
                         </div>
                       )}
                       <FinancialStatusBadge 
@@ -198,13 +198,13 @@ const SubcontractorInvoices = () => {
                     </div>
 
                     {/* Work Orders */}
-                    {invoice.invoice_work_orders && invoice.invoice_work_orders.length > 0 && (
+                    {invoice.subcontractor_bill_work_orders && invoice.subcontractor_bill_work_orders.length > 0 && (
                       <div className="text-sm">
                         <span className="text-muted-foreground">Work Orders: </span>
-                        {invoice.invoice_work_orders.map((iwo, index) => (
-                          <span key={iwo.id}>
-                            {iwo.work_order.work_order_number || `WO-${iwo.work_order.id.slice(0, 8)}`}
-                            {index < invoice.invoice_work_orders.length - 1 && ", "}
+                        {invoice.subcontractor_bill_work_orders.map((sbwo, index) => (
+                          <span key={sbwo.id}>
+                            {sbwo.work_orders?.work_order_number || `WO-${sbwo.work_order_id.slice(0, 8)}`}
+                            {index < invoice.subcontractor_bill_work_orders.length - 1 && ", "}
                           </span>
                         ))}
                       </div>

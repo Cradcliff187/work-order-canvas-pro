@@ -194,7 +194,7 @@ export function useWorkOrderLifecycle() {
               // Get latest report for this work order
               supabase
                 .from('work_order_reports')
-                .select('status, submitted_at, partner_billed_amount, partner_billed_at, approved_subcontractor_invoice_amount')
+                .select('status, submitted_at, partner_billed_amount, partner_billed_at')
                 .eq('work_order_id', workOrder.id)
                 .order('submitted_at', { ascending: false })
                 .limit(1)
@@ -202,10 +202,10 @@ export function useWorkOrderLifecycle() {
               
               // Get subcontractor invoices for this work order
               supabase
-                .from('invoice_work_orders')
+                .from('subcontractor_bill_work_orders')
                 .select(`
                   amount,
-                  invoices!inner(
+                  subcontractor_bills!inner(
                     id,
                     status,
                     total_amount,
@@ -221,7 +221,7 @@ export function useWorkOrderLifecycle() {
             // Safe data extraction with fallbacks
             const latestReport = reportsResult.data;
             const subcontractorInvoiceData = invoicesResult.data;
-            const subcontractorInvoice = subcontractorInvoiceData?.invoices;
+            const subcontractorInvoice = subcontractorInvoiceData?.subcontractor_bills;
 
             // Safe amount calculation
             const totalInvoiceAmount = subcontractorInvoice?.total_amount 

@@ -694,7 +694,7 @@ export default function SelectReports() {
                                           <TooltipContent>
                                             <div className="space-y-1">
                                               {reportInvoiceDetails.invoices.map((inv) => (
-                                                <div key={inv.invoice_id} className="text-xs">
+                                                <div key={inv.subcontractor_bill_id} className="text-xs">
                                                   {inv.invoice_number}: {formatCurrency(inv.amount)}
                                                 </div>
                                               ))}

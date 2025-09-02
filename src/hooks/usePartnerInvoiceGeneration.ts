@@ -66,7 +66,7 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       id,
       work_order_id,
       work_performed,
-      subcontractor_costs:invoice_work_orders!work_order_report_id(amount)
+      subcontractor_costs:subcontractor_bill_work_orders!work_order_report_id(amount)
     `)
     .in('id', data.selectedReportIds)
     .eq('status', 'approved');
