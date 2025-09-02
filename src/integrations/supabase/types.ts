@@ -503,220 +503,6 @@ export type Database = {
           },
         ]
       }
-      invoice_attachments: {
-        Row: {
-          created_at: string
-          file_name: string
-          file_size: number | null
-          file_type: Database["public"]["Enums"]["file_type"]
-          file_url: string
-          id: string
-          invoice_id: string
-          uploaded_by: string
-          work_order_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          file_name: string
-          file_size?: number | null
-          file_type?: Database["public"]["Enums"]["file_type"]
-          file_url: string
-          id?: string
-          invoice_id: string
-          uploaded_by: string
-          work_order_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          file_name?: string
-          file_size?: number | null
-          file_type?: Database["public"]["Enums"]["file_type"]
-          file_url?: string
-          id?: string
-          invoice_id?: string
-          uploaded_by?: string
-          work_order_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoice_attachments_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_attachments_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_attachments_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      invoice_work_orders: {
-        Row: {
-          amount: number
-          created_at: string
-          description: string | null
-          id: string
-          invoice_id: string
-          work_order_id: string
-          work_order_report_id: string | null
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          description?: string | null
-          id?: string
-          invoice_id: string
-          work_order_id: string
-          work_order_report_id?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          description?: string | null
-          id?: string
-          invoice_id?: string
-          work_order_id?: string
-          work_order_report_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoice_work_orders_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_work_orders_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_work_orders_work_order_report_id_fkey"
-            columns: ["work_order_report_id"]
-            isOneToOne: false
-            referencedRelation: "work_order_reports"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      invoices: {
-        Row: {
-          admin_notes: string | null
-          approval_notes: string | null
-          approved_at: string | null
-          approved_by: string | null
-          created_at: string
-          created_by_admin_id: string | null
-          due_date: string
-          external_invoice_number: string | null
-          id: string
-          internal_invoice_number: string
-          invoice_date: string
-          paid_at: string | null
-          payment_reference: string | null
-          payment_terms: string | null
-          purchase_order_number: string | null
-          status: string
-          subcontractor_notes: string | null
-          subcontractor_organization_id: string | null
-          submitted_at: string | null
-          submitted_by: string | null
-          total_amount: number | null
-          updated_at: string
-        }
-        Insert: {
-          admin_notes?: string | null
-          approval_notes?: string | null
-          approved_at?: string | null
-          approved_by?: string | null
-          created_at?: string
-          created_by_admin_id?: string | null
-          due_date?: string
-          external_invoice_number?: string | null
-          id?: string
-          internal_invoice_number: string
-          invoice_date?: string
-          paid_at?: string | null
-          payment_reference?: string | null
-          payment_terms?: string | null
-          purchase_order_number?: string | null
-          status?: string
-          subcontractor_notes?: string | null
-          subcontractor_organization_id?: string | null
-          submitted_at?: string | null
-          submitted_by?: string | null
-          total_amount?: number | null
-          updated_at?: string
-        }
-        Update: {
-          admin_notes?: string | null
-          approval_notes?: string | null
-          approved_at?: string | null
-          approved_by?: string | null
-          created_at?: string
-          created_by_admin_id?: string | null
-          due_date?: string
-          external_invoice_number?: string | null
-          id?: string
-          internal_invoice_number?: string
-          invoice_date?: string
-          paid_at?: string | null
-          payment_reference?: string | null
-          payment_terms?: string | null
-          purchase_order_number?: string | null
-          status?: string
-          subcontractor_notes?: string | null
-          subcontractor_organization_id?: string | null
-          submitted_at?: string | null
-          submitted_by?: string | null
-          total_amount?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_created_by_admin_id_fkey"
-            columns: ["created_by_admin_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_subcontractor_organization_id_fkey"
-            columns: ["subcontractor_organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_submitted_by_fkey"
-            columns: ["submitted_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       message_read_receipts: {
         Row: {
           message_id: string
@@ -1374,6 +1160,220 @@ export type Database = {
           },
         ]
       }
+      subcontractor_bill_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number | null
+          file_type: Database["public"]["Enums"]["file_type"]
+          file_url: string
+          id: string
+          subcontractor_bill_id: string
+          uploaded_by: string
+          work_order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          file_type?: Database["public"]["Enums"]["file_type"]
+          file_url: string
+          id?: string
+          subcontractor_bill_id: string
+          uploaded_by: string
+          work_order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: Database["public"]["Enums"]["file_type"]
+          file_url?: string
+          id?: string
+          subcontractor_bill_id?: string
+          uploaded_by?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_attachments_invoice_id_fkey"
+            columns: ["subcontractor_bill_id"]
+            isOneToOne: false
+            referencedRelation: "subcontractor_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_attachments_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subcontractor_bill_work_orders: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          subcontractor_bill_id: string
+          work_order_id: string
+          work_order_report_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          subcontractor_bill_id: string
+          work_order_id: string
+          work_order_report_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          subcontractor_bill_id?: string
+          work_order_id?: string
+          work_order_report_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_work_orders_invoice_id_fkey"
+            columns: ["subcontractor_bill_id"]
+            isOneToOne: false
+            referencedRelation: "subcontractor_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_work_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_work_orders_work_order_report_id_fkey"
+            columns: ["work_order_report_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subcontractor_bills: {
+        Row: {
+          admin_notes: string | null
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by_admin_id: string | null
+          due_date: string
+          external_invoice_number: string | null
+          id: string
+          internal_invoice_number: string
+          invoice_date: string
+          paid_at: string | null
+          payment_reference: string | null
+          payment_terms: string | null
+          purchase_order_number: string | null
+          status: string
+          subcontractor_notes: string | null
+          subcontractor_organization_id: string | null
+          submitted_at: string | null
+          submitted_by: string | null
+          total_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by_admin_id?: string | null
+          due_date?: string
+          external_invoice_number?: string | null
+          id?: string
+          internal_invoice_number: string
+          invoice_date?: string
+          paid_at?: string | null
+          payment_reference?: string | null
+          payment_terms?: string | null
+          purchase_order_number?: string | null
+          status?: string
+          subcontractor_notes?: string | null
+          subcontractor_organization_id?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by_admin_id?: string | null
+          due_date?: string
+          external_invoice_number?: string | null
+          id?: string
+          internal_invoice_number?: string
+          invoice_date?: string
+          paid_at?: string | null
+          payment_reference?: string | null
+          payment_terms?: string | null
+          purchase_order_number?: string | null
+          status?: string
+          subcontractor_notes?: string | null
+          subcontractor_organization_id?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_created_by_admin_id_fkey"
+            columns: ["created_by_admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_subcontractor_organization_id_fkey"
+            columns: ["subcontractor_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_alerts: {
         Row: {
           alert_type: string
@@ -1690,11 +1690,11 @@ export type Database = {
       }
       work_order_reports: {
         Row: {
-          approved_subcontractor_invoice_amount: number | null
+          approved_subcontractor_bill_amount: number | null
+          bill_amount: number | null
+          bill_number: string | null
           hours_worked: number | null
           id: string
-          invoice_amount: number | null
-          invoice_number: string | null
           materials_used: string | null
           notes: string | null
           partner_billed_amount: number | null
@@ -1715,11 +1715,11 @@ export type Database = {
           work_performed: string
         }
         Insert: {
-          approved_subcontractor_invoice_amount?: number | null
+          approved_subcontractor_bill_amount?: number | null
+          bill_amount?: number | null
+          bill_number?: string | null
           hours_worked?: number | null
           id?: string
-          invoice_amount?: number | null
-          invoice_number?: string | null
           materials_used?: string | null
           notes?: string | null
           partner_billed_amount?: number | null
@@ -1740,11 +1740,11 @@ export type Database = {
           work_performed: string
         }
         Update: {
-          approved_subcontractor_invoice_amount?: number | null
+          approved_subcontractor_bill_amount?: number | null
+          bill_amount?: number | null
+          bill_number?: string | null
           hours_worked?: number | null
           id?: string
-          invoice_amount?: number | null
-          invoice_number?: string | null
           materials_used?: string | null
           notes?: string | null
           partner_billed_amount?: number | null
@@ -2239,7 +2239,7 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
-      generate_internal_invoice_number: {
+      generate_internal_bill_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
