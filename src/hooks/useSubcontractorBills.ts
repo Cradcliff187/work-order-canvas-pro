@@ -4,7 +4,14 @@ import { supabase } from '@/integrations/supabase/client';
 export interface SubcontractorBillFilters {
   search?: string;
   status?: string;
-  subcontractor_organization_id?: string;
+  subcontractor_organization_ids?: string[];
+  partner_organization_ids?: string[];
+  location_filter?: string[];
+  operational_status?: string[];
+  report_status?: string[];
+  invoice_status?: string[];
+  partner_billing_status?: string[];
+  overdue?: boolean;
   dateFrom?: Date;
   dateTo?: Date;
   page?: number;
@@ -102,7 +109,14 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
   const {
     search = '',
     status = '',
-    subcontractor_organization_id,
+    subcontractor_organization_ids,
+    partner_organization_ids,
+    location_filter,
+    operational_status,
+    report_status,
+    invoice_status,
+    partner_billing_status,
+    overdue,
     dateFrom,
     dateTo,
     page = 1,
@@ -110,7 +124,7 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
   } = filters;
 
   return useQuery({
-    queryKey: ['subcontractor-bills', { search, status, subcontractor_organization_id, dateFrom, dateTo, page, pageSize }],
+    queryKey: ['subcontractor-bills', { search, status, subcontractor_organization_ids, partner_organization_ids, location_filter, operational_status, report_status, invoice_status, partner_billing_status, overdue, dateFrom, dateTo, page, pageSize }],
     queryFn: async () => {
       let query = supabase
         .from('subcontractor_bills')
@@ -185,8 +199,8 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         query = query.eq('status', status);
       }
 
-      if (subcontractor_organization_id) {
-        query = query.eq('subcontractor_organization_id', subcontractor_organization_id);
+      if (subcontractor_organization_ids && subcontractor_organization_ids.length > 0) {
+        query = query.in('subcontractor_organization_id', subcontractor_organization_ids);
       }
 
       if (dateFrom) {
@@ -195,6 +209,10 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
 
       if (dateTo) {
         query = query.lte('created_at', dateTo.toISOString());
+      }
+
+      if (overdue) {
+        query = query.lt('due_date', new Date().toISOString().split('T')[0]);
       }
 
       // Apply pagination

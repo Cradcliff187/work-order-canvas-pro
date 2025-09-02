@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
-import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { Filter, AlertTriangle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import type { InvoiceFiltersValue } from './InvoiceFilters';
 
 
@@ -32,9 +33,9 @@ export function CompactInvoiceFilters({
   const activeCount = useMemo(() => {
     return [
       value.overdue,
-      value.partner_organization_id,
+      value.partner_organization_ids?.length,
       value.location_filter?.length,
-      value.subcontractor_organization_id,
+      value.subcontractor_organization_ids?.length,
       value.invoice_status?.length,
       value.partner_billing_status?.length
     ].filter(Boolean).length;
@@ -59,9 +60,38 @@ export function CompactInvoiceFilters({
     setIsOpen(false);
   };
 
+  // Load organizations directly - efficient pattern from WorkOrders
+  const { data: subcontractorOrgs } = useQuery({
+    queryKey: ['subcontractor-organizations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .eq('organization_type', 'subcontractor')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: partnerOrgs } = useQuery({
+    queryKey: ['partner-organizations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .eq('organization_type', 'partner')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Filter content component
   const FilterContent = () => {
-    const { data: partnerLocations } = usePartnerLocations(value.partner_organization_id);
+    const { data: partnerLocations } = usePartnerLocations(value.partner_organization_ids?.[0]);
     
     const locationOptions = useMemo(() => {
       if (!partnerLocations) return [];
@@ -120,35 +150,36 @@ export function CompactInvoiceFilters({
           {/* Subcontractor Organization */}
           <div>
             <label className="text-sm font-medium mb-2 block">Subcontractor</label>
-            <OrganizationSelector
-              value={value.subcontractor_organization_id}
-              onChange={(orgId) => handleFilterChange('subcontractor_organization_id', orgId)}
-              organizationType="subcontractor"
-              placeholder="Select subcontractor..."
-              className="h-10"
+            <MultiSelectFilter
+              options={subcontractorOrgs?.map(org => ({ value: org.id, label: org.name })) || []}
+              selectedValues={value.subcontractor_organization_ids || []}
+              onSelectionChange={(orgIds) => handleFilterChange('subcontractor_organization_ids', orgIds)}
+              placeholder="Select subcontractors..."
+              className="w-full h-10"
             />
           </div>
 
           {/* Partner Organization */}
           <div>
             <label className="text-sm font-medium mb-2 block">Partner Organization</label>
-            <OrganizationSelector
-              value={value.partner_organization_id}
-              onChange={(orgId) => {
-                handleFilterChange('partner_organization_id', orgId);
+            <MultiSelectFilter
+              options={partnerOrgs?.map(org => ({ value: org.id, label: org.name })) || []}
+              selectedValues={value.partner_organization_ids || []}
+              onSelectionChange={(orgIds) => {
+                handleFilterChange('partner_organization_ids', orgIds);
                 // Clear locations when partner changes
-                if (orgId !== value.partner_organization_id) {
+                if (orgIds.length !== value.partner_organization_ids?.length || 
+                    !orgIds.every(id => value.partner_organization_ids?.includes(id))) {
                   handleFilterChange('location_filter', []);
                 }
               }}
-              organizationType="partner"
-              placeholder="Select partner..."
-              className="h-10"
+              placeholder="Select partners..."
+              className="w-full h-10"
             />
           </div>
 
           {/* Locations (only if partner selected) */}
-          {value.partner_organization_id && (
+          {value.partner_organization_ids?.length && (
             <div>
               <label className="text-sm font-medium mb-2 block">Locations</label>
               <MultiSelectFilter
@@ -177,7 +208,7 @@ export function CompactInvoiceFilters({
 
   // Mobile full-screen overlay component
   const MobileFilterOverlay = () => {
-    const { data: partnerLocations } = usePartnerLocations(value.partner_organization_id);
+    const { data: partnerLocations } = usePartnerLocations(value.partner_organization_ids?.[0]);
     
     const locationOptions = useMemo(() => {
       if (!partnerLocations) return [];
@@ -251,35 +282,36 @@ export function CompactInvoiceFilters({
           {/* Subcontractor Organization */}
           <div>
             <label className="text-sm font-medium mb-2 block">Subcontractor</label>
-            <OrganizationSelector
-              value={value.subcontractor_organization_id}
-              onChange={(orgId) => handleFilterChange('subcontractor_organization_id', orgId)}
-              organizationType="subcontractor"
-              placeholder="Select subcontractor..."
-              className="h-10"
+            <MultiSelectFilter
+              options={subcontractorOrgs?.map(org => ({ value: org.id, label: org.name })) || []}
+              selectedValues={value.subcontractor_organization_ids || []}
+              onSelectionChange={(orgIds) => handleFilterChange('subcontractor_organization_ids', orgIds)}
+              placeholder="Select subcontractors..."
+              className="w-full h-10"
             />
           </div>
 
           {/* Partner Organization */}
           <div>
             <label className="text-sm font-medium mb-2 block">Partner Organization</label>
-            <OrganizationSelector
-              value={value.partner_organization_id}
-              onChange={(orgId) => {
-                handleFilterChange('partner_organization_id', orgId);
+            <MultiSelectFilter
+              options={partnerOrgs?.map(org => ({ value: org.id, label: org.name })) || []}
+              selectedValues={value.partner_organization_ids || []}
+              onSelectionChange={(orgIds) => {
+                handleFilterChange('partner_organization_ids', orgIds);
                 // Clear locations when partner changes
-                if (orgId !== value.partner_organization_id) {
+                if (orgIds.length !== value.partner_organization_ids?.length || 
+                    !orgIds.every(id => value.partner_organization_ids?.includes(id))) {
                   handleFilterChange('location_filter', []);
                 }
               }}
-              organizationType="partner"
-              placeholder="Select partner..."
-              className="h-10"
+              placeholder="Select partners..."
+              className="w-full h-10"
             />
           </div>
 
           {/* Locations (only if partner selected) */}
-          {value.partner_organization_id && (
+          {value.partner_organization_ids?.length && (
             <div>
               <label className="text-sm font-medium mb-2 block">Locations</label>
               <MultiSelectFilter

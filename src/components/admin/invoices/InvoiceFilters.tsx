@@ -11,9 +11,9 @@ import { AlertTriangle } from 'lucide-react';
 export interface InvoiceFiltersValue {
   search?: string;
   overdue?: boolean;
-  partner_organization_id?: string;
+  partner_organization_ids?: string[];
   location_filter?: string[];
-  subcontractor_organization_id?: string;
+  subcontractor_organization_ids?: string[];
   operational_status?: string[];
   report_status?: string[];
   invoice_status?: string[];
@@ -61,8 +61,8 @@ const partnerInvoicingStatusOptions = [
 ];
 
 export function InvoiceFilters({ value, onChange, onClear, filterCount }: InvoiceFiltersProps) {
-  // Get partner locations for the selected partner organization
-  const { data: partnerLocations } = usePartnerLocations(value.partner_organization_id);
+  // Get partner locations for the selected partner organization  
+  const { data: partnerLocations } = usePartnerLocations(value.partner_organization_ids?.[0]);
 
   // Create location options from partner locations
   const locationOptions = useMemo(() => {
@@ -78,9 +78,9 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (value.overdue) count++;
-    if (value.partner_organization_id) count++;
+    if (value.partner_organization_ids?.length) count += value.partner_organization_ids.length;
     if (value.location_filter?.length) count += value.location_filter.length;
-    if (value.subcontractor_organization_id) count++;
+    if (value.subcontractor_organization_ids?.length) count += value.subcontractor_organization_ids.length;
     if (value.operational_status?.length) count += value.operational_status.length;
     if (value.report_status?.length) count += value.report_status.length;
     if (value.invoice_status?.length) count += value.invoice_status.length;
@@ -135,17 +135,18 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
   const renderPartnerOrganizationFilter = () => (
     <div className="space-y-2">
       <label className="text-sm font-medium text-muted-foreground">Partner Organization</label>
-      <OrganizationSelector
-        value={value.partner_organization_id || ''}
-        onChange={(partnerId) => {
-          set('partner_organization_id', partnerId);
+      <MultiSelectFilter
+        options={[]} // Will be populated by CompactInvoiceFilters
+        selectedValues={value.partner_organization_ids || []}
+        onSelectionChange={(partnerIds) => {
+          set('partner_organization_ids', partnerIds);
           // Clear location filter when partner changes
           if (value.location_filter?.length) {
             set('location_filter', []);
           }
         }}
-        organizationType="partner"
-        placeholder="Select Partner"
+        placeholder="Select Partners"
+        maxDisplayCount={2}
       />
     </div>
   );
@@ -158,7 +159,7 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
         selectedValues={value.location_filter || []}
         onSelectionChange={(locations) => set('location_filter', locations)}
         placeholder="Select Locations"
-        disabled={!value.partner_organization_id}
+        disabled={!value.partner_organization_ids?.length}
         maxDisplayCount={2}
       />
     </div>
@@ -167,11 +168,12 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
   const renderSubcontractorFilter = () => (
     <div className="space-y-2">
       <label className="text-sm font-medium text-muted-foreground">Subcontractor</label>
-      <OrganizationSelector
-        value={value.subcontractor_organization_id || ''}
-        onChange={(subcontractorId) => set('subcontractor_organization_id', subcontractorId)}
-        organizationType="subcontractor"
-        placeholder="Select Subcontractor"
+      <MultiSelectFilter
+        options={[]} // Will be populated by CompactInvoiceFilters
+        selectedValues={value.subcontractor_organization_ids || []}
+        onSelectionChange={(subcontractorIds) => set('subcontractor_organization_ids', subcontractorIds)}
+        placeholder="Select Subcontractors"
+        maxDisplayCount={2}
       />
     </div>
   );
@@ -227,7 +229,7 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
   const advancedFilters = (
     <div className="space-y-4">
       {renderPartnerOrganizationFilter()}
-      {value.partner_organization_id && renderLocationFilter()}
+      {value.partner_organization_ids?.length && renderLocationFilter()}
       {renderSubcontractorFilter()}
       {renderOperationalStatusFilter()}
       {renderReportStatusFilter()}

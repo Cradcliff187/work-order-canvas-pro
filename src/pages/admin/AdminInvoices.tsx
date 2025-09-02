@@ -89,9 +89,9 @@ export default function AdminInvoices() {
         return {
           search: '',
           overdue: false,
-          partner_organization_id: undefined as string | undefined,
+          partner_organization_ids: [] as string[],
           location_filter: [] as string[],
-          subcontractor_organization_id: undefined as string | undefined,
+          subcontractor_organization_ids: [] as string[],
           operational_status: [] as string[],
           report_status: [] as string[],
           invoice_status: [] as string[],
@@ -102,9 +102,9 @@ export default function AdminInvoices() {
         return {
           search: '',
           overdue: false,
-          partner_organization_id: undefined as string | undefined,
+          partner_organization_ids: [] as string[],
           location_filter: [] as string[],
-          subcontractor_organization_id: undefined as string | undefined,
+          subcontractor_organization_ids: [] as string[],
           operational_status: [] as string[],
           report_status: [] as string[],
           invoice_status: ['submitted'] as string[],
@@ -116,9 +116,9 @@ export default function AdminInvoices() {
       return {
         search: '',
         overdue: false,
-        partner_organization_id: undefined as string | undefined,
+        partner_organization_ids: [] as string[],
         location_filter: [] as string[],
-        subcontractor_organization_id: undefined as string | undefined,
+        subcontractor_organization_ids: [] as string[],
         operational_status: [] as string[],
         report_status: [] as string[],
         invoice_status: ['submitted'] as string[],
@@ -136,9 +136,9 @@ export default function AdminInvoices() {
     setFilters({
       search: newFilters.search || '',
       overdue: newFilters.overdue || false,
-      partner_organization_id: newFilters.partner_organization_id,
+      partner_organization_ids: newFilters.partner_organization_ids || [],
       location_filter: newFilters.location_filter || [],
-      subcontractor_organization_id: newFilters.subcontractor_organization_id,
+      subcontractor_organization_ids: newFilters.subcontractor_organization_ids || [],
       operational_status: newFilters.operational_status || [],
       report_status: newFilters.report_status || [],
       invoice_status: newFilters.invoice_status || [],
@@ -210,13 +210,15 @@ export default function AdminInvoices() {
     const reportStatus = filters.report_status || [];
     const invoiceStatus = filters.invoice_status || [];
     const partnerBillingStatus = filters.partner_billing_status || [];
+    const partnerOrganizationIds = filters.partner_organization_ids || [];
+    const subcontractorOrganizationIds = filters.subcontractor_organization_ids || [];
     
     return {
       debouncedSearch,
       overdue: filters.overdue,
-      partner_organization_id: filters.partner_organization_id,
+      partner_organization_ids: partnerOrganizationIds.slice().sort().join(','),
       location_filter: locationFilter.slice().sort().join(','),
-      subcontractor_organization_id: filters.subcontractor_organization_id,
+      subcontractor_organization_ids: subcontractorOrganizationIds.slice().sort().join(','),
       operational_status: operationalStatus.slice().sort().join(','),
       report_status: reportStatus.slice().sort().join(','),
       invoice_status: invoiceStatus.slice().sort().join(','),
@@ -225,9 +227,9 @@ export default function AdminInvoices() {
   }, [
     debouncedSearch,
     filters.overdue,
-    filters.partner_organization_id,
-    filters.subcontractor_organization_id,
     // Use JSON.stringify for array stability to avoid reference issues
+    JSON.stringify(filters.partner_organization_ids || []),
+    JSON.stringify(filters.subcontractor_organization_ids || []),
     JSON.stringify(filters.location_filter || []),
     JSON.stringify(filters.operational_status || []),
     JSON.stringify(filters.report_status || []),
