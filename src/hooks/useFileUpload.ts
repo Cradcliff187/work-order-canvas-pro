@@ -39,7 +39,7 @@ const uploadConfigs = {
     bucket: 'work-order-attachments' as const,
     maxSize: 10 * 1024 * 1024, // 10MB
     processing: { compress: false },
-    dbTable: 'invoice_attachments' as const,
+    dbTable: 'subcontractor_bill_attachments' as const,
     supportedTypes: [
       'application/pdf',
       'image/jpeg', 'image/jpg', 'image/png',
