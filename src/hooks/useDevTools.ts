@@ -10,9 +10,9 @@ interface TableCounts {
   work_order_reports: number;
   work_order_assignments: number;
   work_order_attachments: number;
-  invoices: number;
-  invoice_work_orders: number;
-  invoice_attachments: number;
+  subcontractor_bills: number;
+  subcontractor_bill_work_orders: number;
+  subcontractor_bill_attachments: number;
   receipts: number;
   receipt_work_orders: number;
   employee_reports: number;
@@ -115,9 +115,9 @@ export const useDevTools = () => {
         supabase.from('work_order_reports').select('*', { count: 'exact', head: true }),
         supabase.from('work_order_assignments').select('*', { count: 'exact', head: true }),
         supabase.from('work_order_attachments').select('*', { count: 'exact', head: true }),
-        supabase.from('invoices').select('*', { count: 'exact', head: true }),
-        supabase.from('invoice_work_orders').select('*', { count: 'exact', head: true }),
-        supabase.from('invoice_attachments').select('*', { count: 'exact', head: true }),
+        supabase.from('subcontractor_bills').select('*', { count: 'exact', head: true }),
+        supabase.from('subcontractor_bill_work_orders').select('*', { count: 'exact', head: true }),
+        supabase.from('subcontractor_bill_attachments').select('*', { count: 'exact', head: true }),
         supabase.from('receipts').select('*', { count: 'exact', head: true }),
         supabase.from('receipt_work_orders').select('*', { count: 'exact', head: true }),
         supabase.from('employee_reports').select('*', { count: 'exact', head: true }),
@@ -143,9 +143,9 @@ export const useDevTools = () => {
         work_order_reports: reports.count || 0,
         work_order_assignments: assignments.count || 0,
         work_order_attachments: attachments.count || 0,
-        invoices: invoices.count || 0,
-        invoice_work_orders: invoiceOrders.count || 0,
-        invoice_attachments: invoiceAttachments.count || 0,
+        subcontractor_bills: invoices.count || 0,
+        subcontractor_bill_work_orders: invoiceOrders.count || 0,
+        subcontractor_bill_attachments: invoiceAttachments.count || 0,
         receipts: receipts.count || 0,
         receipt_work_orders: receiptOrders.count || 0,
         employee_reports: employeeReports.count || 0,

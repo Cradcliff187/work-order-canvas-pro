@@ -42,7 +42,7 @@ export const useDatabasePerformance = () => {
         supabase.from('organizations').select('*', { count: 'exact', head: true }),
         supabase.from('work_order_reports').select('*', { count: 'exact', head: true }),
         supabase.from('work_order_assignments').select('*', { count: 'exact', head: true }),
-        supabase.from('invoices').select('*', { count: 'exact', head: true })
+        supabase.from('subcontractor_bills').select('*', { count: 'exact', head: true })
       ]);
 
       const tableCounts: TableCount[] = [
@@ -51,7 +51,7 @@ export const useDatabasePerformance = () => {
         { table_name: 'organizations', count: orgsResult.count || 0 },
         { table_name: 'work_order_reports', count: reportsResult.count || 0 },
         { table_name: 'work_order_assignments', count: assignmentsResult.count || 0 },
-        { table_name: 'invoices', count: invoicesResult.count || 0 }
+        { table_name: 'subcontractor_bills', count: invoicesResult.count || 0 }
       ].sort((a, b) => b.count - a.count);
 
       // Get growth metrics
@@ -61,7 +61,7 @@ export const useDatabasePerformance = () => {
         supabase.from('organizations').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgoIso),
         supabase.from('work_order_reports').select('*', { count: 'exact', head: true }).gte('submitted_at', sevenDaysAgoIso),
         supabase.from('work_order_assignments').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgoIso),
-        supabase.from('invoices').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgoIso)
+        supabase.from('subcontractor_bills').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgoIso)
       ]);
 
       const growthMetrics: GrowthMetric[] = [
@@ -101,7 +101,7 @@ export const useDatabasePerformance = () => {
           growth_color: 'green'
         },
         {
-          table_name: 'invoices',
+          table_name: 'subcontractor_bills',
           total_count: invoicesResult.count || 0,
           recent_count: recentInvoices.count || 0,
           growth_rate: invoicesResult.count ? ((recentInvoices.count || 0) / invoicesResult.count) * 100 : 0,

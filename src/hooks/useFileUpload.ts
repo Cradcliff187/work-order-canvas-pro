@@ -392,9 +392,9 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       const fileType = getFileTypeForStorage(file);
       
       const { data: attachment, error: attachmentError } = await supabase
-        .from("invoice_attachments")
+        .from("subcontractor_bill_attachments")
         .insert({
-          invoice_id: contextIds.invoiceId!,
+          subcontractor_bill_id: contextIds.invoiceId!,
           work_order_id: contextIds.workOrderId!,
           file_name: processedFile.name,
           file_url: uploadData.path,
@@ -709,16 +709,16 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       } else if (context === 'invoice') {
         // Get file URL before deletion for storage cleanup
         const { data: attachment } = await supabase
-          .from("invoice_attachments")
+          .from("subcontractor_bill_attachments")
           .select("file_url")
           .eq("id", fileId)
           .single();
         
         fileUrl = attachment?.file_url || null;
 
-        // Invoice: remove from invoice_attachments
+        // Invoice: remove from subcontractor_bill_attachments
         const { error: dbError } = await supabase
-          .from("invoice_attachments")
+          .from("subcontractor_bill_attachments")
           .delete()
           .eq("id", fileId);
 

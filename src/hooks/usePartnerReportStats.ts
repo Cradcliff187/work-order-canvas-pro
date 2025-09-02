@@ -58,12 +58,12 @@ export const usePartnerReportStats = (partnerOrgId?: string) => {
 
       // Get invoice IDs for different statuses
       const { data: pendingInvoices } = await supabase
-        .from('invoices')
+        .from('subcontractor_bills')
         .select('id')
         .in('status', ['submitted', 'under_review']);
 
       const { data: approvedInvoices } = await supabase
-        .from('invoices')
+        .from('subcontractor_bills')
         .select('id')
         .in('status', ['approved', 'paid']);
 
@@ -72,16 +72,16 @@ export const usePartnerReportStats = (partnerOrgId?: string) => {
 
       // Get report IDs that have pending subcontractor invoices
       const { data: reportsWithPendingInvoiceIds } = pendingInvoiceIds.length > 0 ? await supabase
-        .from('invoice_work_orders')
+        .from('subcontractor_bill_work_orders')
         .select('work_order_report_id')
-        .in('invoice_id', pendingInvoiceIds)
+        .in('subcontractor_bill_id', pendingInvoiceIds)
         .not('work_order_report_id', 'is', null) : { data: [] };
 
       // Get report IDs that have approved subcontractor invoices  
       const { data: reportsWithApprovedInvoiceIds } = approvedInvoiceIds.length > 0 ? await supabase
-        .from('invoice_work_orders')
+        .from('subcontractor_bill_work_orders')
         .select('work_order_report_id')
-        .in('invoice_id', approvedInvoiceIds)
+        .in('subcontractor_bill_id', approvedInvoiceIds)
         .not('work_order_report_id', 'is', null) : { data: [] };
 
       const pendingReportIds = reportsWithPendingInvoiceIds?.map(r => r.work_order_report_id).filter(Boolean) || [];

@@ -175,7 +175,7 @@ export const useCompanyAccessVerification = () => {
 
     // Get invoices for this organization
     const { data: invoices } = await supabase
-      .from('invoices')
+      .from('subcontractor_bills')
       .select('id, subcontractor_organization_id')
       .eq('subcontractor_organization_id', organization.id);
 
@@ -257,7 +257,7 @@ export const useCompanyAccessVerification = () => {
           
           // Verify subcontractor companies can't see each other's invoices
           const { data: companyAInvoices } = await supabase
-            .from('invoices')
+            .from('subcontractor_bills')
             .select('id')
             .eq('subcontractor_organization_id', subcontractorOrgs[i].id);
 
@@ -340,7 +340,7 @@ export const useCompanyAccessVerification = () => {
         // For subcontractors, count invoices
         if (org.organization_type === 'subcontractor') {
           const { count: invoiceCount } = await supabase
-            .from('invoices')
+            .from('subcontractor_bills')
             .select('*', { count: 'exact', head: true })
             .eq('subcontractor_organization_id', org.id);
 
@@ -387,7 +387,7 @@ export const useCompanyAccessVerification = () => {
         .limit(1);
 
       const { data: invoicesWithOrgs } = await supabase
-        .from('invoices')
+        .from('subcontractor_bills')
         .select('id, subcontractor_organization_id')
         .limit(1);
 

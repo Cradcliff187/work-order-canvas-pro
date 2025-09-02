@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface InvoiceDetail {
-  invoice_id: string;
+  subcontractor_bill_id: string;
   invoice_number: string;
   status: string;
   amount: number;
@@ -24,11 +24,11 @@ export const useReportInvoiceDetails = (reportIds: string[]) => {
       if (reportIds.length === 0) return [];
       
       const { data, error } = await supabase
-        .from('invoice_work_orders')
+        .from('subcontractor_bill_work_orders')
         .select(`
           work_order_report_id,
           amount,
-          invoices (
+          subcontractor_bills (
             id,
             internal_invoice_number,
             status,
@@ -44,7 +44,7 @@ export const useReportInvoiceDetails = (reportIds: string[]) => {
       
       (data || []).forEach((item: any) => {
         const reportId = item.work_order_report_id;
-        const invoice = item.invoices;
+        const invoice = item.subcontractor_bills;
         
         if (!reportInvoiceMap.has(reportId)) {
           reportInvoiceMap.set(reportId, []);
@@ -52,7 +52,7 @@ export const useReportInvoiceDetails = (reportIds: string[]) => {
         
         if (invoice) {
           reportInvoiceMap.get(reportId)?.push({
-            invoice_id: invoice.id,
+            subcontractor_bill_id: invoice.id,
             invoice_number: invoice.internal_invoice_number,
             status: invoice.status,
             amount: item.amount,

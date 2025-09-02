@@ -125,16 +125,16 @@ export const useSubcontractorBillSubmission = () => {
         try {
           const firstWorkOrderId = data.work_orders[0]?.work_order_id;
           if (firstWorkOrderId) {
-            const uploadedFiles = await uploadFiles(data.attachments, firstWorkOrderId);
+            const uploadedFiles = await uploadFiles(data.attachments, firstWorkOrderId, false);
             
             // Create bill attachment records
             const attachmentRecords = uploadedFiles.map(file => ({
               subcontractor_bill_id: bill.id,
               work_order_id: firstWorkOrderId,
-              file_name: file.name,
-              file_url: file.url,
-              file_type: file.type.startsWith('image/') ? 'image' : 'document',
-              file_size: file.size,
+              file_name: file.fileName || 'attachment.file',
+              file_url: file.fileUrl || '',
+              file_type: 'document' as const,
+              file_size: file.fileSize || 0,
               uploaded_by: profile.id,
             }));
 

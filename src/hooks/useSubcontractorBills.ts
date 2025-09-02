@@ -162,7 +162,7 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
               work_order_number,
               title,
               organization_id,
-              organizations (
+              organizations!organization_id (
                 name
               )
             )
@@ -299,7 +299,7 @@ export const useSubcontractorBill = (id: string) => {
               organization_id,
               status,
               created_at,
-              organizations (
+              organizations!organization_id (
                 name
               )
             )
