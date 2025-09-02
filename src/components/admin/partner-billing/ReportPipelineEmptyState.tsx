@@ -37,12 +37,12 @@ export const ReportPipelineEmptyState: React.FC<ReportPipelineEmptyStateProps> =
         "font-semibold mb-2",
         isMobile ? "text-xl" : "text-lg"
       )}>
-        No Reports Ready for Partner Billing
+        No Reports Ready for Partner Invoicing
       </h3>
       
       <div className="space-y-3 max-w-md">
         <p className="text-muted-foreground text-sm">
-          To bill partners, work orders must have: (1) Approved reports, and (2) Approved subcontractor invoices.
+          To invoice partners, work orders must have: (1) Approved reports, and (2) Approved subcontractor invoices.
         </p>
         
         {reportStats && reportStats.totalApprovedReports > 0 && (
@@ -62,11 +62,11 @@ export const ReportPipelineEmptyState: React.FC<ReportPipelineEmptyStateProps> =
                 <span className="font-medium">{reportStats.reportsWithPendingInvoices}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">• Reports ready for billing:</span>
+                <span className="text-muted-foreground">• Reports ready for invoicing:</span>
                 <span className="font-medium">{reportStats.reportsReadyForBilling}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">• Reports already billed:</span>
+                <span className="text-muted-foreground">• Reports already invoiced:</span>
                 <span className="font-medium">{reportStats.reportsAlreadyBilled}</span>
               </div>
             </div>

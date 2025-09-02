@@ -157,10 +157,10 @@ export function SimplePipelineFilters({
         </select>
       </div>
 
-      {/* Partner Billing Status */}
+      {/* Partner Invoicing Status */}
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">
-          Partner Billing Status
+          Partner Invoicing Status
         </label>
         <select 
           className="w-full p-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -174,8 +174,8 @@ export function SimplePipelineFilters({
           <option value="report_pending">Report Pending</option>
           <option value="invoice_needed">Subcontractor Bill Needed</option>
           <option value="invoice_pending">Bill Pending Approval</option>
-          <option value="ready_to_bill">Ready to Bill Partner</option>
-          <option value="billed">Partner Billed</option>
+          <option value="ready_to_bill">Ready to Invoice Partner</option>
+          <option value="billed">Partner Invoiced</option>
         </select>
       </div>
 

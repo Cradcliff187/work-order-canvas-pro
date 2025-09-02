@@ -466,7 +466,7 @@ export default function PipelineDashboard() {
                     <TableHead>Operational Status</TableHead>
                     <TableHead>Report</TableHead>
                     <TableHead>SC Invoice</TableHead>
-                    <TableHead>Partner Billing</TableHead>
+                    <TableHead>Partner Invoicing</TableHead>
                     <TableHead>Age</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>

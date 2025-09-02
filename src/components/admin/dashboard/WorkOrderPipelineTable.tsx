@@ -63,9 +63,9 @@ export function WorkOrderPipelineTable({
   const navigate = useNavigate();
   const isMobileDevice = useIsMobile();
 
-  // Helper function to get partner billing status based on workflow
-  const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
-    // Based on the 4-step workflow: Report Created → Subcontractor Bill → Bill Approved → Bill Partner
+  // Helper function to get partner invoicing status based on workflow
+  const getPartnerInvoicingStatus = (item: WorkOrderPipelineItem): string => {
+    // Based on the 4-step workflow: Report Created → Subcontractor Bill → Bill Approved → Invoice Partner
     if (item.status !== 'completed') {
       return 'report_pending'; // Work not completed yet
     }
@@ -79,11 +79,11 @@ export function WorkOrderPipelineTable({
     }
     
     if (item.partner_bill_status === 'billed' || item.partner_billed_at) {
-      return 'billed'; // Already billed to partner
+      return 'billed'; // Already invoiced to partner
     }
     
     if (item.invoice_status === 'approved') {
-      return 'ready_to_bill'; // Has approved bills, ready to bill partner
+      return 'ready_to_bill'; // Has approved bills, ready to invoice partner
     }
     
     return 'invoice_needed'; // Default - needs subcontractor bill
@@ -280,9 +280,9 @@ export function WorkOrderPipelineTable({
       },
     },
     {
-      id: 'partner_billing',
-      header: 'Partner Billing Status',
-      cell: ({ row }) => <StatusBadge type="partnerBilling" status={getPartnerBillingStatus(row.original)} size="sm" showIcon />,
+      id: 'partner_invoicing',
+      header: 'Partner Invoicing Status',
+      cell: ({ row }) => <StatusBadge type="partnerBilling" status={getPartnerInvoicingStatus(row.original)} size="sm" showIcon />,
     },
     {
       id: 'amount',

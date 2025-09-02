@@ -47,8 +47,8 @@ const partnerBillingStatusOptions = [
   { value: 'report_pending', label: 'Report Pending' },
   { value: 'invoice_needed', label: 'Subcontractor Bill Needed' },
   { value: 'invoice_pending', label: 'Bill Pending Approval' },
-  { value: 'ready_to_bill', label: 'Ready to Bill Partner' },
-  { value: 'billed', label: 'Partner Billed' }
+  { value: 'ready_to_bill', label: 'Ready to Invoice Partner' },
+  { value: 'billed', label: 'Partner Invoiced' }
 ];
 
 const priorityOptions = [
@@ -168,9 +168,9 @@ export function CompactBillingPipelineFilters({
           />
         </div>
 
-        {/* Partner Billing Status */}
+        {/* Partner Invoicing Status */}
         <div>
-          <label className="text-sm font-medium mb-2 block">Partner Billing Status</label>
+          <label className="text-sm font-medium mb-2 block">Partner Invoicing Status</label>
           <MultiSelectFilter
             options={partnerBillingStatusOptions}
             selectedValues={localValue.partner_billing_status || []}

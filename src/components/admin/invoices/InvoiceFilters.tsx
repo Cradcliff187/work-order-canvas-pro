@@ -56,8 +56,8 @@ const partnerBillingStatusOptions = [
   { value: 'report_pending', label: 'Report Pending' },
   { value: 'invoice_needed', label: 'Subcontractor Bill Needed' },
   { value: 'invoice_pending', label: 'Bill Pending Approval' },
-  { value: 'ready_to_bill', label: 'Ready to Bill Partner' },
-  { value: 'billed', label: 'Partner Billed' },
+  { value: 'ready_to_bill', label: 'Ready to Invoice Partner' },
+  { value: 'billed', label: 'Partner Invoiced' },
 ];
 
 export function InvoiceFilters({ value, onChange, onClear, filterCount }: InvoiceFiltersProps) {
@@ -202,14 +202,14 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
     </div>
   );
 
-  const renderPartnerBillingStatusFilter = () => (
+  const renderPartnerInvoicingStatusFilter = () => (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Partner Billing Status</label>
+      <label className="text-sm font-medium text-muted-foreground">Partner Invoicing Status</label>
       <MultiSelectFilter
         options={partnerBillingStatusOptions}
         selectedValues={value.partner_billing_status || []}
         onSelectionChange={(statuses) => set('partner_billing_status', statuses)}
-        placeholder="Partner Billing Status"
+        placeholder="Partner Invoicing Status"
         maxDisplayCount={2}
       />
     </div>
@@ -231,7 +231,7 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
       {renderSubcontractorFilter()}
       {renderOperationalStatusFilter()}
       {renderReportStatusFilter()}
-      {renderPartnerBillingStatusFilter()}
+      {renderPartnerInvoicingStatusFilter()}
     </div>
   );
 

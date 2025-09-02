@@ -13,7 +13,7 @@ const paymentStatusOptions = [
   { value: 'pending', label: 'Pending Payment' },
   { value: 'paid', label: 'Paid' },
   { value: 'ready_to_bill', label: 'Ready to Bill' },
-  { value: 'billed', label: 'Partner Billed' }
+  { value: 'billed', label: 'Partner Invoiced' }
 ];
 
 export function CompactInvoiceFilters({

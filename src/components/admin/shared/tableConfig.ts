@@ -130,7 +130,7 @@ export const statusConfig = {
     },
     fully_billed: {
       label: "Ready to Bill",
-      description: "Invoice approved and ready for partner billing",
+      description: "Invoice approved and ready for partner invoicing",
       className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     paid: {
