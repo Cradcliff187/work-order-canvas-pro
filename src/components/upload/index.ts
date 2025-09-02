@@ -2,6 +2,7 @@
 export { UniversalUploadSheet } from './UniversalUploadSheet';
 export { UnifiedFileUpload } from './UnifiedFileUpload';
 export { FileDropzone } from './FileDropzone';
+export { FilePreviewList } from './FilePreviewList';
 export { 
   useFileValidation, 
   getFileType, 
