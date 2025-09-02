@@ -118,12 +118,12 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
         if (workOrderError) throw workOrderError;
       }
 
-      toast({ title: 'Invoice updated' });
+      toast({ title: 'Bill updated' });
       onSaved?.();
       onOpenChange(false);
     } catch (e: any) {
       console.error('Failed to update invoice', e);
-      toast({ title: 'Failed to update invoice', description: e?.message || 'Please try again', variant: 'destructive' });
+      toast({ title: 'Failed to update bill', description: e?.message || 'Please try again', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }

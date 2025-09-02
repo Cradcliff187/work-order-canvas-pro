@@ -21,6 +21,10 @@ export const SubcontractorRoutes = () => (
   <>
     <Route path="/subcontractor" element={<Navigate to="/subcontractor/dashboard" replace />} />
     
+    {/* Legacy route redirects */}
+    <Route path="/subcontractor/invoices" element={<Navigate to="/subcontractor/bills" replace />} />
+    <Route path="/subcontractor/submit-invoice" element={<Navigate to="/subcontractor/submit-bill" replace />} />
+    
     <Route path="/subcontractor/dashboard" element={
       <ProtectedRoute requiredUserType="subcontractor">
         <SubcontractorLayout>
