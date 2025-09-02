@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CompactBillingPipelineFilters } from '@/components/admin/billing/CompactBillingPipelineFilters';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { TableToolbar } from '@/components/admin/shared/TableToolbar';
 
 // Filter interface for Pipeline - simplified
 interface PipelineFiltersValue {
@@ -454,41 +455,27 @@ export function BillingDashboard() {
         ) : (
           /* Desktop Pipeline Table Card */
           <Card className="overflow-hidden">
-            {/* Desktop toolbar */}
-            <div className="border-b">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-lg font-semibold">Pipeline Items</h2>
-                  <ViewModeSwitcher
-                    value={viewMode}
-                    onValueChange={setViewMode}
-                    allowedModes={allowedModes}
-                  />
-                </div>
-                
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <SmartSearchInput
-                    placeholder="Search WO#, partner..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    storageKey="billing-pipeline-search"
-                    className="max-w-xs"
-                  />
-                  
-                  <CompactBillingPipelineFilters
-                    value={filters}
-                    onChange={setFilters}
-                    onClear={clearFilters}
-                  />
-                  
-                  <ColumnVisibilityDropdown
-                    columns={getAllColumns()}
-                    onToggleColumn={toggleColumn}
-                    onResetToDefaults={resetToDefaults}
-                  />
-                  <ExportDropdown onExport={handleExport} />
-                </div>
-              </div>
+            <TableToolbar
+              title="Pipeline Items"
+              searchPlaceholder="Search WO#, partner..."
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              allowedViewModes={allowedModes}
+              columnVisibilityColumns={getAllColumns()}
+              onToggleColumn={toggleColumn}
+              onResetColumns={resetToDefaults}
+              onExport={handleExport}
+            />
+            
+            {/* Custom filters row */}
+            <div className="border-b px-6 py-3">
+              <CompactBillingPipelineFilters
+                value={filters}
+                onChange={setFilters}
+                onClear={clearFilters}
+              />
             </div>
             
             {/* Table content */}
