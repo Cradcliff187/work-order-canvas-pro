@@ -169,22 +169,22 @@ export function BillingFilters({
     }
   };
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = useCallback(() => {
     onChange(localValue);
     setIsOpen(false);
-  };
+  }, [localValue, onChange]);
 
-  const handleClearFilters = () => {
-    const clearedFilters: BillingFiltersValue = {};
-    setLocalValue(clearedFilters);
-    if (isMobile) {
-      onChange(clearedFilters);
-      setIsOpen(false);
-    } else {
-      onChange(clearedFilters);
+  const handleClearFilters = useCallback(() => {
+    const cleared = {};
+    setLocalValue(cleared);
+    if (!isMobile) {
+      onChange(cleared);
     }
-    onClear?.();
-  };
+    if (onClear) {
+      onClear();
+    }
+    setIsOpen(false);
+  }, [onChange, onClear, isMobile]);
 
   const FilterContent = () => {
     if (isMobile) {
