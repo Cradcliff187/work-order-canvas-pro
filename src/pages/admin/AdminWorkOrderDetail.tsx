@@ -197,6 +197,21 @@ export default function AdminWorkOrderDetail() {
 
       if (error) throw error;
 
+      // Auto-transition to estimate_pending_approval if currently estimate_needed
+      if (workOrder.status === 'estimate_needed') {
+        const { error: statusError } = await supabase
+          .rpc('transition_work_order_status', {
+            work_order_id: workOrder.id,
+            new_status: 'estimate_pending_approval',
+            reason: 'Internal estimate submitted - automatically moved to pending approval'
+          });
+
+        if (statusError) {
+          console.error('Error transitioning status:', statusError);
+          // Don't throw - estimate was saved successfully
+        }
+      }
+
       toast({
         title: 'Success',
         description: 'Internal estimate submitted successfully',
@@ -228,6 +243,21 @@ export default function AdminWorkOrderDetail() {
         .eq('id', workOrder.id);
 
       if (error) throw error;
+
+      // Auto-transition to estimate_pending_approval if currently estimate_needed
+      if (workOrder.status === 'estimate_needed') {
+        const { error: statusError } = await supabase
+          .rpc('transition_work_order_status', {
+            work_order_id: workOrder.id,
+            new_status: 'estimate_pending_approval',
+            reason: 'Proxy estimate submitted - automatically moved to pending approval'
+          });
+
+        if (statusError) {
+          console.error('Error transitioning status:', statusError);
+          // Don't throw - estimate was saved successfully
+        }
+      }
 
       toast({
         title: 'Success',

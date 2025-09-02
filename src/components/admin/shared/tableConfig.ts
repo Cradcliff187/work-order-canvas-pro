@@ -17,6 +17,10 @@ export const statusConfig = {
       label: "Estimate Needed",
       className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
+    estimate_pending_approval: {
+      label: "Estimate Pending Approval",
+      className: "bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700"
+    },
     estimate_approved: {
       label: "Estimate Approved",
       className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"

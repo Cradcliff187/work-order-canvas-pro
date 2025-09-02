@@ -48,6 +48,7 @@ const statusSteps: StatusStep[] = [
 
 const specialStatuses: Partial<Record<WorkOrderStatus, { useProgressFlow: boolean }>> = {
   'estimate_needed': { useProgressFlow: false },
+  'estimate_pending_approval': { useProgressFlow: false },
   'estimate_approved': { useProgressFlow: false },
   'cancelled': { useProgressFlow: false }
 };

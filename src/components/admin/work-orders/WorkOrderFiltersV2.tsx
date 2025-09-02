@@ -54,6 +54,7 @@ const defaultWorkOrderStatusOptions = [
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'estimate_needed', label: 'Estimate Needed' },
+  { value: 'estimate_pending_approval', label: 'Estimate Pending Approval' },
   { value: 'estimate_approved', label: 'Estimate Approved' },
 ];
 

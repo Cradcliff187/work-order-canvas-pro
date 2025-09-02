@@ -24,7 +24,7 @@ type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
 };
 
 const bulkEditSchema = z.object({
-  status: z.enum(['received', 'assigned', 'in_progress', 'completed', 'cancelled', 'estimate_needed', 'estimate_approved']).optional(),
+  status: z.enum(['received', 'assigned', 'in_progress', 'completed', 'cancelled', 'estimate_needed', 'estimate_pending_approval', 'estimate_approved']).optional(),
   priority: z.enum(['standard', 'urgent']).optional(),
   due_date: z.string().optional(),
   partner_location_number: z.string().optional(),
@@ -183,6 +183,7 @@ export function BulkEditModal({ isOpen, onClose, workOrders, onSave }: BulkEditM
                         <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                         <SelectItem value="estimate_needed">Estimate Needed</SelectItem>
+                        <SelectItem value="estimate_pending_approval">Estimate Pending Approval</SelectItem>
                         <SelectItem value="estimate_approved">Estimate Approved</SelectItem>
                       </SelectContent>
                     </Select>

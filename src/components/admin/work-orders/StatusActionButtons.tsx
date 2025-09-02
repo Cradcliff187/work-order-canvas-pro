@@ -137,10 +137,28 @@ export function StatusActionButtons({
             variant: 'outline'
           },
           {
+            status: 'cancelled',
+            label: 'Cancel',
+            icon: <XCircle className="h-4 w-4" />,
+            variant: 'destructive',
+            requiresConfirmation: true,
+            confirmationMessage: 'This will cancel the work order and it cannot be undone.'
+          }
+        ];
+
+      case 'estimate_pending_approval':
+        return [
+          {
             status: 'estimate_approved',
             label: 'Approve Estimate',
             icon: <CheckCircle className="h-4 w-4" />,
             variant: 'default'
+          },
+          {
+            status: 'estimate_needed',
+            label: 'Revise Estimate',
+            icon: <FileText className="h-4 w-4" />,
+            variant: 'outline'
           },
           {
             status: 'cancelled',

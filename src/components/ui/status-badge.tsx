@@ -29,6 +29,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   received: Circle,
   assigned: Users,
   estimate_needed: FileText,
+  estimate_pending_approval: Clock,
   estimate_approved: CheckCircle,
   in_progress: Clock,
   work_completed: CheckCircle,
