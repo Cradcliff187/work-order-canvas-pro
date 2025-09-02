@@ -92,20 +92,24 @@ export function BillingFilters({
     return count;
   }, [value]);
 
-  // Prepare organization options
-  const partnerOrganizationOptions = organizations
-    .filter(org => org.organization_type === 'partner')
-    .map(org => ({
-      value: org.id,
-      label: org.name
-    }));
+  // Memoize organization options to prevent re-renders
+  const partnerOrganizationOptions = useMemo(() => 
+    organizations
+      ?.filter(org => org.organization_type === 'partner')
+      ?.map(org => ({
+        value: org.id,
+        label: org.name
+      })) || []
+  , [organizations]);
 
-  const subcontractorOrganizationOptions = organizations
-    .filter(org => org.organization_type === 'subcontractor')
-    .map(org => ({
-      value: org.id,
-      label: org.name
-    }));
+  const subcontractorOrganizationOptions = useMemo(() => 
+    organizations
+      ?.filter(org => org.organization_type === 'subcontractor')
+      ?.map(org => ({
+        value: org.id,
+        label: org.name
+      })) || []
+  , [organizations]);
 
   const handleFilterChange = (field: keyof BillingFiltersValue, newValue: string[]) => {
     const updated = { ...localValue, [field]: newValue };
