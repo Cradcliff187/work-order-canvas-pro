@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
@@ -65,6 +65,12 @@ export function BillingFilters({
   const [showDateFrom, setShowDateFrom] = useState(false);
   const [showDateTo, setShowDateTo] = useState(false);
   const [localValue, setLocalValue] = useState<BillingFiltersValue>(value);
+  
+  // Sync localValue with parent value when it changes
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+  
   const isMobile = useIsMobile();
   
   const { data: organizations = [] } = useOrganizations();
