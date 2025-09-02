@@ -70,7 +70,7 @@ export const usePartnerUnbilledReports = (partnerOrgId?: string) => {
       if (!partnerOrgId) return [];
       
       const { data, error } = await supabase
-        .rpc('get_partner_unbilled_reports_with_approved_invoices', {
+        .rpc('get_partner_unbilled_reports_with_approved_bills', {
           partner_org_id: partnerOrgId
         });
 

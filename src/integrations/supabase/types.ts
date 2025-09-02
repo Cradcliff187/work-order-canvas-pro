@@ -2240,7 +2240,7 @@ export type Database = {
         Returns: Json
       }
       generate_internal_bill_number: {
-        Args: Record<PropertyKey, never>
+        Args: Record<PropertyKey, never> | { org_id: string }
         Returns: string
       }
       generate_next_location_number: {
@@ -2318,42 +2318,17 @@ export type Database = {
           work_order_count: number
         }[]
       }
-      get_partner_unbilled_reports_with_approved_invoices: {
+      get_partner_unbilled_reports_with_approved_bills: {
         Args: { partner_org_id: string }
         Returns: {
-          city: string
-          description: string
-          hours_worked: number
-          id: string
-          materials_used: string
-          notes: string
-          org_id: string
-          org_initials: string
-          org_name: string
-          partner_billed_amount: number
-          partner_billed_at: string
-          partner_invoice_id: string
-          reviewed_at: string
-          reviewed_by_user_id: string
-          state: string
-          status: Database["public"]["Enums"]["report_status"]
-          store_location: string
-          street_address: string
-          subcontractor_costs: number
-          subcontractor_email: string
-          subcontractor_first_name: string
-          subcontractor_last_name: string
-          subcontractor_organization_id: string
-          submitted_at: string
-          submitted_by_email: string
-          submitted_by_first_name: string
-          submitted_by_last_name: string
-          submitted_by_user_id: string
-          title: string
+          approved_subcontractor_bill_amount: number
+          location_name: string
+          report_date: string
+          status: string
+          total_cost: number
           work_order_id: string
           work_order_number: string
-          work_performed: string
-          zip_code: string
+          work_order_report_id: string
         }[]
       }
       get_profile_id_direct: {
