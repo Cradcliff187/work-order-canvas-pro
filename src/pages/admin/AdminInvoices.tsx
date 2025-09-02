@@ -93,36 +93,15 @@ export default function AdminInvoices() {
 
   // Get initial filters with default "submitted" status for first-time users
   const getInitialFilters = (): InvoiceFiltersValue => {
-    try {
-      const stored = localStorage.getItem('admin-invoices-filters-v2');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Ensure all arrays are properly initialized
-        return {
-          search: parsed.search || '',
-          overdue: Boolean(parsed.overdue),
-          partner_organization_ids: Array.isArray(parsed.partner_organization_ids) ? parsed.partner_organization_ids : [],
-          location_filter: Array.isArray(parsed.location_filter) ? parsed.location_filter : [],
-          subcontractor_organization_ids: Array.isArray(parsed.subcontractor_organization_ids) ? parsed.subcontractor_organization_ids : [],
-          operational_status: Array.isArray(parsed.operational_status) ? parsed.operational_status : [],
-          report_status: Array.isArray(parsed.report_status) ? parsed.report_status : [],
-          invoice_status: Array.isArray(parsed.invoice_status) ? parsed.invoice_status : [],
-          partner_billing_status: Array.isArray(parsed.partner_billing_status) ? parsed.partner_billing_status : [],
-        };
-      } else {
-        // First time user, apply "submitted" as default
-        return {
-          ...initialFilters,
-          invoice_status: ['submitted'],
-        };
+    const stored = localStorage.getItem('admin-invoices-filters-v2');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return { ...initialFilters, invoice_status: ['submitted'] };
       }
-    } catch (error) {
-      console.warn('Failed to parse stored filters, using defaults:', error);
-      return {
-        ...initialFilters,
-        invoice_status: ['submitted'],
-      };
     }
+    return { ...initialFilters, invoice_status: ['submitted'] };
   };
 
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
