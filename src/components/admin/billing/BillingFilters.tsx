@@ -137,6 +137,28 @@ export function BillingFilters({
     setShowDateTo(false);
   };
 
+  const handleAmountMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '' || (!isNaN(Number(value)) && Number(value) >= 0)) {
+      const updated = { ...localValue, amount_min: value };
+      setLocalValue(updated);
+      if (!isMobile) {
+        onChange(updated);
+      }
+    }
+  };
+
+  const handleAmountMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '' || (!isNaN(Number(value)) && Number(value) >= 0)) {
+      const updated = { ...localValue, amount_max: value };
+      setLocalValue(updated);
+      if (!isMobile) {
+        onChange(updated);
+      }
+    }
+  };
+
   const handleApplyFilters = () => {
     onChange(localValue);
     setIsOpen(false);
@@ -243,27 +265,6 @@ export function BillingFilters({
             />
           </div>
 
-          {/* Amount Range */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-foreground">Amount Range</Label>
-            <div className="space-y-3">
-              <Input
-                type="number"
-                placeholder="Min amount"
-                value={localValue.amount_min || ''}
-                onChange={(e) => handleStringFilterChange('amount_min', e.target.value)}
-                className="w-full h-11"
-              />
-              <Input
-                type="number"
-                placeholder="Max amount"
-                value={localValue.amount_max || ''}
-                onChange={(e) => handleStringFilterChange('amount_max', e.target.value)}
-                className="w-full h-11"
-              />
-            </div>
-          </div>
-
           {/* Date Range */}
           <div className="space-y-3">
             <Label className="text-sm font-medium text-foreground">Date Range</Label>
@@ -317,6 +318,31 @@ export function BillingFilters({
               </Popover>
             </div>
           </div>
+
+          {/* Amount Range */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-foreground">Amount Range</Label>
+            <div className="space-y-3">
+              <Input
+                type="number"
+                placeholder="Min amount ($)"
+                value={localValue.amount_min || ''}
+                onChange={handleAmountMinChange}
+                min="0"
+                step="0.01"
+                className="w-full h-11"
+              />
+              <Input
+                type="number"
+                placeholder="Max amount ($)"
+                value={localValue.amount_max || ''}
+                onChange={handleAmountMaxChange}
+                min="0"
+                step="0.01"
+                className="w-full h-11"
+              />
+            </div>
+          </div>
         </div>
       );
     }
@@ -342,16 +368,20 @@ export function BillingFilters({
           <div className="grid grid-cols-2 gap-2">
             <Input
               type="number"
-              placeholder="Min"
+              placeholder="Min ($)"
               value={localValue.amount_min || ''}
-              onChange={(e) => handleStringFilterChange('amount_min', e.target.value)}
+              onChange={handleAmountMinChange}
+              min="0"
+              step="0.01"
               className="w-full"
             />
             <Input
               type="number"
-              placeholder="Max"
+              placeholder="Max ($)"
               value={localValue.amount_max || ''}
-              onChange={(e) => handleStringFilterChange('amount_max', e.target.value)}
+              onChange={handleAmountMaxChange}
+              min="0"
+              step="0.01"
               className="w-full"
             />
           </div>
