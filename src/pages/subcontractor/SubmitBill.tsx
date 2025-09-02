@@ -246,7 +246,7 @@ export default function SubmitBill() {
       }));
 
       await submitSubcontractorBill({
-        external_invoice_number: formData.externalInvoiceNumber || undefined,
+        external_bill_number: formData.externalInvoiceNumber || undefined,
         total_amount: totalAmount,
         work_orders: workOrdersData,
         attachments: files.length > 0 ? files : undefined,
@@ -255,7 +255,7 @@ export default function SubmitBill() {
         admin_notes: isAdminMode && formData.adminNotes ? formData.adminNotes : undefined,
 
         // New fields
-        invoice_date: formData.billDate!,
+        bill_date: formData.billDate!,
         due_date: formData.dueDate!,
         payment_terms: formData.paymentTerms || 'Net 30',
         purchase_order_number: formData.purchaseOrderNumber || undefined,

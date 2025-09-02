@@ -4,9 +4,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useFileUpload } from '@/hooks/useFileUpload';
 
 interface SubmitSubcontractorBillData {
-  external_invoice_number?: string;
+  external_bill_number?: string;
   total_amount: number;
-  invoice_date?: Date;
+  bill_date?: Date;
   due_date?: Date;
   payment_terms?: string;
   purchase_order_number?: string;
@@ -66,9 +66,9 @@ export const useSubcontractorBillSubmission = () => {
 
       // Prepare bill data
       const billData = {
-        external_invoice_number: data.external_invoice_number || null,
+        external_bill_number: data.external_bill_number || null,
         total_amount: data.total_amount,
-        invoice_date: toDateOnlyString(data.invoice_date) || new Date().toISOString().split('T')[0],
+        bill_date: toDateOnlyString(data.bill_date) || new Date().toISOString().split('T')[0],
         due_date: toDateOnlyString(data.due_date) || null,
         payment_terms: data.payment_terms || 'Net 30',
         purchase_order_number: data.purchase_order_number || null,
@@ -77,14 +77,14 @@ export const useSubcontractorBillSubmission = () => {
         submitted_at: new Date().toISOString(),
         submitted_by: profile.id,
         subcontractor_organization_id: userOrg.organization_id,
-        internal_invoice_number: '', // Will be set by trigger
+        internal_bill_number: '', // Will be set by trigger
       };
 
       // Insert bill
       const { data: bill, error: billError } = await supabase
         .from('subcontractor_bills')
         .insert(billData)
-        .select('id, internal_invoice_number')
+        .select('id, internal_bill_number')
         .single();
 
       if (billError) {
@@ -162,7 +162,7 @@ export const useSubcontractorBillSubmission = () => {
       queryClient.invalidateQueries({ queryKey: ['subcontractor-bills'] });
       toast({
         title: 'Bill Submitted Successfully',
-        description: `Bill ${bill.internal_invoice_number} has been submitted for approval.`,
+        description: `Bill ${bill.internal_bill_number} has been submitted for approval.`,
       });
     },
     onError: (error) => {

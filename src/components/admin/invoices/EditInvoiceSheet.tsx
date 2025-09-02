@@ -46,7 +46,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
 
   useEffect(() => {
     if (!invoice) return;
-    setExternalInvoiceNumber(invoice.external_invoice_number || '');
+    setExternalInvoiceNumber(invoice.external_bill_number || '');
     setPurchaseOrderNumber((invoice as any).purchase_order_number || '');
     setPaymentTerms((invoice as any).payment_terms || 'Net 30');
     setSubcontractorNotes((invoice as any).subcontractor_notes || '');
@@ -87,7 +87,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
       
       // Update invoice metadata
       const invoicePayload: any = {
-        external_invoice_number: externalInvoiceNumber || null,
+        external_bill_number: externalInvoiceNumber || null,
         purchase_order_number: purchaseOrderNumber || null,
         payment_terms: paymentTerms || 'Net 30',
         subcontractor_notes: subcontractorNotes || null,

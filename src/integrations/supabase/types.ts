@@ -1276,13 +1276,13 @@ export type Database = {
           approval_notes: string | null
           approved_at: string | null
           approved_by: string | null
+          bill_date: string
           created_at: string
           created_by_admin_id: string | null
           due_date: string
           external_bill_number: string | null
           id: string
           internal_bill_number: string
-          invoice_date: string
           paid_at: string | null
           payment_reference: string | null
           payment_terms: string | null
@@ -1300,13 +1300,13 @@ export type Database = {
           approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          bill_date?: string
           created_at?: string
           created_by_admin_id?: string | null
           due_date?: string
           external_bill_number?: string | null
           id?: string
           internal_bill_number: string
-          invoice_date?: string
           paid_at?: string | null
           payment_reference?: string | null
           payment_terms?: string | null
@@ -1324,13 +1324,13 @@ export type Database = {
           approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          bill_date?: string
           created_at?: string
           created_by_admin_id?: string | null
           due_date?: string
           external_bill_number?: string | null
           id?: string
           internal_bill_number?: string
-          invoice_date?: string
           paid_at?: string | null
           payment_reference?: string | null
           payment_terms?: string | null

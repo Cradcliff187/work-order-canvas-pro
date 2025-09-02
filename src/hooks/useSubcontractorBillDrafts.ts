@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCallback, useEffect, useRef } from 'react';
 
 export interface SubcontractorBillDraftData {
-  external_invoice_number?: string;
+  external_bill_number?: string;
   total_amount?: number;
   work_orders: Array<{
     work_order_id: string;
@@ -23,7 +23,7 @@ interface NavigationItem {
 
 export interface SubcontractorBillDraft {
   id: string;
-  external_invoice_number?: string;
+  external_bill_number?: string;
   total_amount?: number;
   notes?: string;
   created_at: string;
@@ -59,7 +59,7 @@ export const useSubcontractorBillDrafts = () => {
         .from('subcontractor_bills')
         .select(`
           id,
-          external_invoice_number,
+          external_bill_number,
           total_amount,
           created_at,
           updated_at,
@@ -77,7 +77,7 @@ export const useSubcontractorBillDrafts = () => {
       
       return (data || []).map(bill => ({
         id: bill.id,
-        external_invoice_number: bill.external_invoice_number,
+        external_bill_number: bill.external_bill_number,
         total_amount: bill.total_amount,
         created_at: bill.created_at,
         updated_at: bill.updated_at,
@@ -108,11 +108,11 @@ export const useSubcontractorBillDrafts = () => {
       const { data: bill, error: billError } = await supabase
         .from('subcontractor_bills')
         .insert({
-          external_invoice_number: draftData.external_invoice_number || null,
+          external_bill_number: draftData.external_bill_number || null,
           total_amount: draftData.total_amount || null,
           status: 'draft',
           submitted_by: profile.id,
-          internal_invoice_number: '', // Empty for drafts
+          internal_bill_number: '', // Empty for drafts
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -171,7 +171,7 @@ export const useSubcontractorBillDrafts = () => {
       const { error: billError } = await supabase
         .from('subcontractor_bills')
         .update({
-          external_invoice_number: draftData.external_invoice_number || null,
+          external_bill_number: draftData.external_bill_number || null,
           total_amount: draftData.total_amount || null,
           updated_at: new Date().toISOString(),
         })
@@ -287,7 +287,7 @@ export const useSubcontractorBillDrafts = () => {
         })
         .eq('id', draftId)
         .eq('status', 'draft')
-        .select('id, internal_invoice_number')
+        .select('id, internal_bill_number')
         .single();
 
       if (updateError) throw updateError;
@@ -299,7 +299,7 @@ export const useSubcontractorBillDrafts = () => {
       queryClient.invalidateQueries({ queryKey: ['subcontractor-bills'] });
       toast({
         title: 'Bill Submitted',
-        description: `Bill ${data.internal_invoice_number} has been submitted successfully.`,
+        description: `Bill ${data.internal_bill_number} has been submitted successfully.`,
       });
     },
     onError: (error) => {
@@ -323,7 +323,7 @@ export const useSubcontractorBillDrafts = () => {
         updateDraftMutation.mutate({ draftId, draftData, isManual: false });
       } else {
         // Only auto-save if there's meaningful data
-        const hasData = draftData.external_invoice_number || 
+        const hasData = draftData.external_bill_number || 
                        draftData.work_orders.some(wo => wo.selected) || 
                        draftData.notes;
         

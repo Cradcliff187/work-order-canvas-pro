@@ -30,7 +30,7 @@ export const useReportInvoiceDetails = (reportIds: string[]) => {
           amount,
           subcontractor_bills (
             id,
-            internal_invoice_number,
+            internal_bill_number,
             status,
             approved_at
           )
@@ -53,7 +53,7 @@ export const useReportInvoiceDetails = (reportIds: string[]) => {
         if (invoice) {
           reportInvoiceMap.get(reportId)?.push({
             subcontractor_bill_id: invoice.id,
-            invoice_number: invoice.internal_invoice_number,
+            invoice_number: invoice.internal_bill_number,
             status: invoice.status,
             amount: item.amount,
             approved_at: invoice.approved_at

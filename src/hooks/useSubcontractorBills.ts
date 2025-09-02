@@ -12,8 +12,8 @@ export interface SubcontractorBillFilters {
 
 export interface SubcontractorBill {
   id: string;
-  internal_invoice_number: string;
-  external_invoice_number?: string;
+  internal_bill_number: string;
+  external_bill_number?: string;
   status: string;
   total_amount?: number;
   submitted_at?: string;
@@ -26,7 +26,7 @@ export interface SubcontractorBill {
   subcontractor_organization_id?: string;
   approval_notes?: string;
   payment_reference?: string;
-  invoice_date: string;
+  bill_date: string;
   due_date: string;
   admin_notes?: string;
   subcontractor_notes?: string;
@@ -114,11 +114,11 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         .from('subcontractor_bills')
         .select(`
           id,
-          internal_invoice_number,
-          external_invoice_number,
+          internal_bill_number,
+          external_bill_number,
           status,
           total_amount,
-          invoice_date,
+          bill_date,
           due_date,
           submitted_at,
           approved_at,
@@ -209,8 +209,8 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         const searchLower = search.toLowerCase();
         filteredData = filteredData.filter(bill => {
           return (
-            bill.internal_invoice_number?.toLowerCase().includes(searchLower) ||
-            bill.external_invoice_number?.toLowerCase().includes(searchLower) ||
+            bill.internal_bill_number?.toLowerCase().includes(searchLower) ||
+            bill.external_bill_number?.toLowerCase().includes(searchLower) ||
             bill.subcontractor_organization?.name?.toLowerCase().includes(searchLower) ||
             bill.submitted_by_profile?.first_name?.toLowerCase().includes(searchLower) ||
             bill.submitted_by_profile?.last_name?.toLowerCase().includes(searchLower) ||
@@ -248,11 +248,11 @@ export const useSubcontractorBill = (id: string) => {
         .from('subcontractor_bills')
         .select(`
           id,
-          internal_invoice_number,
-          external_invoice_number,
+          internal_bill_number,
+          external_bill_number,
           status,
           total_amount,
-          invoice_date,
+          bill_date,
           due_date,
           submitted_at,
           approved_at,

@@ -156,10 +156,10 @@ const SubcontractorBills = () => {
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-medium">{bill.internal_invoice_number}</h4>
-                      {bill.external_invoice_number && (
+                      <h4 className="font-medium">{bill.internal_bill_number}</h4>
+                      {bill.external_bill_number && (
                         <span className="text-sm text-muted-foreground">
-                          ({bill.external_invoice_number})
+                          ({bill.external_bill_number})
                         </span>
                       )}
                       {(bill.subcontractor_bill_attachments?.length || 0) > 0 && (

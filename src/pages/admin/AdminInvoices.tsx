@@ -269,8 +269,8 @@ export default function AdminInvoices() {
   // Column visibility setup for bills
   const columnMetadata = {
     select: { label: 'Select', defaultVisible: true },
-    internal_invoice_number: { label: 'Invoice #', defaultVisible: true },
-    external_invoice_number: { label: 'Vendor Invoice #', defaultVisible: true },
+    internal_bill_number: { label: 'Invoice #', defaultVisible: true },
+    external_bill_number: { label: 'Vendor Invoice #', defaultVisible: true },
     work_orders: { label: 'Work Orders', defaultVisible: true },
     attachment_count: { label: 'Attachments', defaultVisible: true },
     'subcontractor_organization.name': { label: 'Partner', defaultVisible: true },
@@ -325,8 +325,8 @@ const table = useReactTable({
 
   const INVOICE_COLUMN_METADATA = {
     columns: [
-      { id: 'internal_invoice_number', label: 'Invoice #', defaultVisible: true },
-      { id: 'external_invoice_number', label: 'Vendor Invoice #', defaultVisible: true },
+      { id: 'internal_bill_number', label: 'Invoice #', defaultVisible: true },
+      { id: 'external_bill_number', label: 'Vendor Invoice #', defaultVisible: true },
       { id: 'subcontractor', label: 'Subcontractor', defaultVisible: true },
       { id: 'total_amount', label: 'Amount', defaultVisible: true },
       { id: 'status', label: 'Status', defaultVisible: true },
@@ -337,8 +337,8 @@ const table = useReactTable({
   };
 
   const exportColumns: ExportColumn[] = [
-    { key: 'internal_invoice_number', label: 'Invoice #', type: 'string' },
-    { key: 'external_invoice_number', label: 'Vendor Invoice #', type: 'string' },
+    { key: 'internal_bill_number', label: 'Invoice #', type: 'string' },
+    { key: 'external_bill_number', label: 'Vendor Invoice #', type: 'string' },
     { key: 'subcontractor_name', label: 'Subcontractor', type: 'string' },
     { key: 'total_amount', label: 'Amount', type: 'currency' },
     { key: 'status', label: 'Status', type: 'string' },
@@ -349,8 +349,8 @@ const table = useReactTable({
 
   const handleExport = (exportFormat: 'csv' | 'excel') => {
     const exportData = data?.data?.map(invoice => ({
-      'Invoice #': invoice.internal_invoice_number,
-      'Vendor Invoice #': invoice.external_invoice_number || '',
+      'Invoice #': invoice.internal_bill_number,
+      'Vendor Invoice #': invoice.external_bill_number || '',
       'Subcontractor': invoice.subcontractor_organization?.name || '',
       'Amount': invoice.total_amount,
       'Status': invoice.status,
@@ -550,7 +550,7 @@ const table = useReactTable({
                 const cardContent = (
                   <MobileTableCard
                     key={invoice.id}
-                    title={invoice.internal_invoice_number || 'N/A'}
+                     title={invoice.internal_bill_number || 'N/A'}
                     subtitle={`${invoice.subcontractor_organization?.name || 'Unknown'}`}
                     badge={
                       <FinancialStatusBadge 
@@ -735,7 +735,7 @@ const table = useReactTable({
                               key={row.id}
                               role="button"
                               tabIndex={0}
-                              aria-label={`View invoice ${row.original.internal_invoice_number || row.original.id}`}
+                              aria-label={`View invoice ${row.original.internal_bill_number || row.original.id}`}
                               data-state={row.getIsSelected() && 'selected'}
                               className="cursor-pointer hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
                               onClick={() => {
@@ -788,7 +788,7 @@ const table = useReactTable({
                         return (
                           <div key={row.id} className="relative">
                             <MobileTableCard
-                              title={invoice.internal_invoice_number || 'N/A'}
+                              title={invoice.internal_bill_number || 'N/A'}
                               subtitle={`${invoice.subcontractor_organization?.name || 'Unknown'}`}
                               badge={
                                 <FinancialStatusBadge 
@@ -822,7 +822,7 @@ const table = useReactTable({
                                   onChange={row.getToggleSelectedHandler()}
                                   onClick={(e) => e.stopPropagation()}
                                   className="rounded border-gray-300 scale-125 min-w-[44px] min-h-[44px]"
-                                  aria-label={`Select invoice ${invoice.internal_invoice_number}`}
+                                  aria-label={`Select invoice ${invoice.internal_bill_number}`}
                                 />
                               </div>
                             )}
@@ -914,7 +914,7 @@ const table = useReactTable({
           if (!open) setInvoiceToDelete(null);
         }}
         onConfirm={confirmDelete}
-        itemName={invoiceToDelete?.internal_invoice_number || ''}
+        itemName={invoiceToDelete?.internal_bill_number || ''}
         itemType="bill"
         isLoading={isDeleting}
       />

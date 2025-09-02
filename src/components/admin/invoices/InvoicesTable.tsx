@@ -144,7 +144,7 @@ export function InvoicesTable<TData = any>({
           return (
             <div key={idx} className="rounded-md border p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-medium truncate">{(row as any)?.internal_invoice_number}</div>
+                <div className="text-sm font-medium truncate">{(row as any)?.internal_bill_number}</div>
                 <div className={`text-base font-semibold ${overdue ? 'text-destructive' : ''}`}>
                   {amount.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
                 </div>
