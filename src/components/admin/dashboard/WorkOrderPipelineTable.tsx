@@ -292,9 +292,9 @@ export function WorkOrderPipelineTable({
         
         return (
           <div className="text-right">
-            {item.subcontractor_invoice_amount ? (
+            {item.subcontractor_bill_amount ? (
               <span className="font-medium">
-                ${item.subcontractor_invoice_amount.toLocaleString()}
+                ${item.subcontractor_bill_amount.toLocaleString()}
               </span>
             ) : (
               <span className="text-muted-foreground text-sm">—</span>
@@ -382,7 +382,7 @@ export function WorkOrderPipelineTable({
                   { label: 'Invoice', value: item.invoice_status || 'None' },
                   { 
                     label: 'Amount', 
-                    value: item.subcontractor_invoice_amount ? `$${item.subcontractor_invoice_amount.toLocaleString()}` : '—'
+                    value: item.subcontractor_bill_amount ? `$${item.subcontractor_bill_amount.toLocaleString()}` : '—'
                   }
                 ]}
                 onClick={() => handleRowClick(item)}
@@ -470,7 +470,7 @@ export function WorkOrderPipelineTable({
                         { label: 'Invoice', value: item.invoice_status || 'None' },
                         { 
                           label: 'Amount', 
-                          value: item.subcontractor_invoice_amount ? `$${item.subcontractor_invoice_amount.toLocaleString()}` : '—'
+                          value: item.subcontractor_bill_amount ? `$${item.subcontractor_bill_amount.toLocaleString()}` : '—'
                         }
                       ]}
                       onClick={() => handleRowClick(item)}

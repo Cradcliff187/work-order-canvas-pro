@@ -41,7 +41,7 @@ interface WorkOrder {
   date_submitted: string;
   attachment_count?: number;
   trades?: { name: string };
-  subcontractor_invoice_amount?: number;
+  subcontractor_bill_amount?: number;
   work_order_assignments?: Array<{
     assigned_to: string;
     assignment_type: string;
@@ -381,10 +381,10 @@ export function MobileWorkOrderCard({
             </div>
           )}
 
-          {shouldShowField('invoice') && workOrder.subcontractor_invoice_amount && (
+          {shouldShowField('invoice') && workOrder.subcontractor_bill_amount && (
             <div className="flex items-center gap-2 text-sm min-w-0">
               <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span>${workOrder.subcontractor_invoice_amount.toFixed(2)}</span>
+              <span>${workOrder.subcontractor_bill_amount.toFixed(2)}</span>
             </div>
           )}
         </div>

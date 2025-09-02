@@ -76,7 +76,7 @@ export interface WorkOrder {
   completion_checked_at: string | null;
   completion_method: string | null;
   location_address: string | null;
-  subcontractor_invoice_amount: number | null;
+  subcontractor_bill_amount: number | null;
   
   // Estimate tracking fields
   internal_estimate_amount: number | null;
@@ -370,6 +370,8 @@ export function useWorkOrders(
         const transformedData = (data || []).map((wo: any) => ({
           ...wo,
           attachment_count: wo.work_order_attachments?.[0]?.count || 0,
+          // Ensure all fields are properly typed (set null if undefined)
+          subcontractor_bill_amount: wo.subcontractor_bill_amount ?? null,
           // Ensure all estimate fields are properly typed (set null if undefined)
           internal_estimate_amount: wo.internal_estimate_amount ?? null,
           internal_estimate_description: wo.internal_estimate_description ?? null,
@@ -528,6 +530,8 @@ export function useWorkOrder(id: string) {
       // Transform the data to ensure type safety with estimate fields
       const transformedData = {
         ...data,
+        // Ensure all fields are properly typed (set null if undefined)
+        subcontractor_bill_amount: (data as any).subcontractor_bill_amount ?? null,
         // Ensure all estimate fields are properly typed (set null if undefined)
         internal_estimate_amount: (data as any).internal_estimate_amount ?? null,
         internal_estimate_description: (data as any).internal_estimate_description ?? null,

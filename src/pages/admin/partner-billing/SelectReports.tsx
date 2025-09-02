@@ -184,8 +184,8 @@ export default function SelectReports() {
           bVal = new Date(b.submitted_at);
           break;
         case 'amount':
-          aVal = a.approved_subcontractor_invoice_amount || 0;
-          bVal = b.approved_subcontractor_invoice_amount || 0;
+          aVal = a.approved_subcontractor_bill_amount || 0;
+          bVal = b.approved_subcontractor_bill_amount || 0;
           break;
         default:
           return 0;
@@ -227,7 +227,7 @@ export default function SelectReports() {
     if (!filteredAndSortedReports) return { subtotal: 0, markupAmount: 0, total: 0, selectedReports: [] };
     
     const selectedReports = filteredAndSortedReports.filter(report => selectedReportIds.has(report.id));
-    const subtotal = selectedReports.reduce((sum, report) => sum + (report.approved_subcontractor_invoice_amount || 0), 0);
+    const subtotal = selectedReports.reduce((sum, report) => sum + (report.approved_subcontractor_bill_amount || 0), 0);
     const markupAmount = subtotal * (markupPercentage / 100);
     const total = subtotal + markupAmount;
     
@@ -292,7 +292,7 @@ export default function SelectReports() {
           return 'N/A';
         })(),
         submitted_date: format(new Date(report.submitted_at), 'yyyy-MM-dd'),
-        amount: report.approved_subcontractor_invoice_amount || 0,
+        amount: report.approved_subcontractor_bill_amount || 0,
         status: 'Approved'
       }));
 
@@ -359,7 +359,7 @@ export default function SelectReports() {
     });
   };
 
-  const totalApprovedInvoiceAmount = reports?.reduce((sum, report) => sum + (report.approved_subcontractor_invoice_amount || 0), 0) || 0;
+  const totalApprovedInvoiceAmount = reports?.reduce((sum, report) => sum + (report.approved_subcontractor_bill_amount || 0), 0) || 0;
 
   return (
     <TooltipProvider>
@@ -710,7 +710,7 @@ export default function SelectReports() {
                                     <TableCell className="text-right">
                                       <div className="space-y-1">
                                         <div className="font-semibold">
-                                          {formatCurrency(report.approved_subcontractor_invoice_amount || 0)}
+                                          {formatCurrency(report.approved_subcontractor_bill_amount || 0)}
                                         </div>
                                         {report.work_orders?.internal_estimate_amount && (
                                           <div className="text-xs text-muted-foreground">
@@ -724,7 +724,7 @@ export default function SelectReports() {
                                     <TableCell className="text-right">
                                       {(() => {
                                         const estimateAmount = report.work_orders?.internal_estimate_amount || 0;
-                                        const actualAmount = report.approved_subcontractor_invoice_amount || 0;
+                                        const actualAmount = report.approved_subcontractor_bill_amount || 0;
                                         
                                         if (estimateAmount === 0) {
                                           return <span className="text-xs text-muted-foreground">No estimate</span>;
@@ -771,7 +771,7 @@ export default function SelectReports() {
                               'Subcontractor': report.subcontractor_organization?.name || 
                                 (report.subcontractor ? `${report.subcontractor.first_name} ${report.subcontractor.last_name}` : 'N/A'),
                               'Submitted': format(new Date(report.submitted_at), 'MMM dd, yyyy'),
-                              'Amount': formatCurrency(report.approved_subcontractor_invoice_amount || 0),
+                              'Amount': formatCurrency(report.approved_subcontractor_bill_amount || 0),
                               'Status': 'Approved'
                             }}
                             onClick={() => handleReportToggle(report.id, !isSelected)}

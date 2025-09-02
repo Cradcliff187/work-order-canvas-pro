@@ -68,7 +68,7 @@ const createMockWorkOrder = (overrides?: Partial<WorkOrder>): WorkOrder => ({
   subcontractor_estimate_description: null,
   subcontractor_estimate_submitted_at: null,
   subcontractor_estimate_submitted_by: null,
-  subcontractor_invoice_amount: null,
+  subcontractor_bill_amount: null,
   subcontractor_report_submitted: null,
   zip_code: null,
   ...overrides,

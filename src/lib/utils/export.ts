@@ -208,7 +208,7 @@ export function exportWorkOrders(workOrders: any[], format: 'csv' | 'excel' = 'c
     { key: 'due_date', label: 'Due Date', type: 'date' },
     { key: 'estimated_hours', label: 'Estimated Hours', type: 'number' },
     { key: 'actual_hours', label: 'Actual Hours', type: 'number' },
-    { key: 'subcontractor_invoice_amount', label: 'Invoice Amount', type: 'currency' },
+    { key: 'subcontractor_bill_amount', label: 'Bill Amount', type: 'currency' },
     { key: 'street_address', label: 'Street Address', type: 'string' },
     { key: 'city', label: 'City', type: 'string' },
     { key: 'state', label: 'State', type: 'string' },

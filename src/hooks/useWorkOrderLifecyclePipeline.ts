@@ -29,7 +29,7 @@ export interface WorkOrderPipelineItem {
   actual_hours: number | null;
   materials_cost: number | null;
   labor_cost: number | null;
-  subcontractor_invoice_amount: number | null;
+  subcontractor_bill_amount: number | null;
   
   // Timeline tracking
   date_assigned: string | null;
@@ -267,7 +267,7 @@ export function useWorkOrderLifecycle() {
               actual_hours: workOrder.actual_hours || null,
               materials_cost: workOrder.materials_cost || null,
               labor_cost: workOrder.labor_cost || null,
-              subcontractor_invoice_amount: totalInvoiceAmount,
+              subcontractor_bill_amount: totalInvoiceAmount,
               
               // Timeline tracking
               date_assigned: workOrder.date_assigned || null,

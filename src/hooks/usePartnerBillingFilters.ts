@@ -43,7 +43,7 @@ export function usePartnerBillingFilters(
       }
 
       // Amount range filter
-      const amount = report.approved_subcontractor_invoice_amount || 0;
+      const amount = report.approved_subcontractor_bill_amount || 0;
       if (filters.amount_min && amount < parseFloat(filters.amount_min)) {
         return false;
       }
@@ -73,7 +73,7 @@ export function usePartnerBillingFilters(
       // Variance filter
       if (filters.variance_filter?.length) {
         const estimate = report.work_orders?.internal_estimate_amount;
-        const actual = report.approved_subcontractor_invoice_amount || 0;
+        const actual = report.approved_subcontractor_bill_amount || 0;
         
         let varianceCategory = 'no_estimate';
         if (estimate && estimate > 0) {
@@ -98,7 +98,7 @@ export function usePartnerBillingFilters(
       // Quick filters
       if (filters.high_variance) {
         const estimate = report.work_orders?.internal_estimate_amount;
-        const actual = report.approved_subcontractor_invoice_amount || 0;
+        const actual = report.approved_subcontractor_bill_amount || 0;
         if (!estimate || estimate <= 0) return false;
         const variance = Math.abs(((actual - estimate) / estimate) * 100);
         if (variance <= 20) return false;

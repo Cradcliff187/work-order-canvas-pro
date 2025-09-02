@@ -159,11 +159,11 @@ export default function PipelineDashboard() {
       readyToBill: data.filter(d => d.invoice_status === 'approved' && !d.partner_billed_at).length,
       
       // Totals with proper markup calculation
-      totalPending: data.filter(d => d.invoice_status === 'submitted').reduce((sum, d) => sum + (d.subcontractor_invoice_amount || 0), 0),
+      totalPending: data.filter(d => d.invoice_status === 'submitted').reduce((sum, d) => sum + (d.subcontractor_bill_amount || 0), 0),
       totalReadyToBill: (() => {
         const readyToBillItems = data.filter(d => d.invoice_status === 'approved' && !d.partner_billed_at);
         return readyToBillItems.reduce((sum, wo) => {
-          const cost = wo.subcontractor_invoice_amount || 0;
+          const cost = wo.subcontractor_bill_amount || 0;
           const markupPercent = wo.internal_markup_percentage || 30;
           const revenue = cost * (1 + markupPercent / 100);
           return sum + revenue;

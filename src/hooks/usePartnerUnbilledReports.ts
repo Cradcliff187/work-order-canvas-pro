@@ -17,7 +17,7 @@ export interface PartnerUnbilledReport {
   subcontractor_organization_id: string | null;
   submitted_by_user_id: string | null;
   reviewed_by_user_id: string | null;
-  approved_subcontractor_invoice_amount: number | null;
+  approved_subcontractor_bill_amount: number | null;
   work_orders: {
     work_order_number: string | null;
     title: string;
@@ -93,7 +93,7 @@ export const usePartnerUnbilledReports = (partnerOrgId?: string) => {
         subcontractor_organization_id: row.subcontractor_organization_id,
         submitted_by_user_id: row.submitted_by_user_id,
         reviewed_by_user_id: row.reviewed_by_user_id,
-        approved_subcontractor_invoice_amount: row.subcontractor_costs,
+        approved_subcontractor_bill_amount: row.subcontractor_costs,
         work_orders: {
           work_order_number: row.work_order_number,
           title: row.title,
