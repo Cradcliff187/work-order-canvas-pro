@@ -14,20 +14,19 @@ import { SubcontractorBill } from '@/hooks/useSubcontractorBills';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { BillingPipelineTable } from '@/components/admin/billing/BillingPipelineTable';
 
-// Filter interface - match the actual PartnerInvoicingFiltersValue interface
+// Filter interface - match BillingFiltersValue interface
 interface PipelineFiltersValue {
   search?: string;
+  status?: string[];
+  financial_status?: string[];
+  partner_billing_status?: string[];
   report_status?: string[];
-  subcontractor_organization_id?: string;
+  partner_organization_ids?: string[];
+  subcontractor_organization_ids?: string[];
+  date_from?: string;
+  date_to?: string;
   amount_min?: string;
   amount_max?: string;
-  date_from?: Date;
-  date_to?: Date;
-  location_filter?: string[];
-  variance?: string;
-  submitted_by?: string;
-  high_variance?: boolean;
-  recently_submitted?: boolean;
 }
 
 export default function BillingDashboard() {
@@ -109,6 +108,7 @@ export default function BillingDashboard() {
   // Clear all filters
   const clearFilters = () => {
     setSearchTerm('');
+    setFilters({});
   };
 
   // Export handlers
@@ -221,8 +221,8 @@ export default function BillingDashboard() {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           allowedModes={['table', 'card']}
-          filters={{}}
-          onFiltersChange={() => {}}
+          filters={filters}
+          onFiltersChange={setFilters}
           onClearFilters={clearFilters}
           filterCount={filterCount}
           columnVisibilityColumns={getAllColumns()}

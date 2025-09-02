@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
-import { CompactBillingPipelineFilters } from '@/components/admin/billing/CompactBillingPipelineFilters';
+import { BillingFilters } from '@/components/admin/billing/BillingFilters';
 import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
@@ -14,19 +14,17 @@ import { EmptyState } from '@/components/ui/empty-state';
 import type { ViewMode } from '@/hooks/useViewMode';
 
 interface PipelineFiltersValue {
-  status?: string[];
-  trade_id?: string[];
-  partner_organization_ids?: string[];
-  completed_by?: string[];
   search?: string;
-  date_from?: string;
-  date_to?: string;
-  location_filter?: string[];
-  showOverdueOnly?: boolean;
+  status?: string[];
   financial_status?: string[];
   partner_billing_status?: string[];
-  priority?: string[];
   report_status?: string[];
+  partner_organization_ids?: string[];
+  subcontractor_organization_ids?: string[];
+  date_from?: string;
+  date_to?: string;
+  amount_min?: string;
+  amount_max?: string;
 }
 
 interface BillingPipelineTableProps {
@@ -103,7 +101,7 @@ export function BillingPipelineTable({
 
             {/* Filters */}
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <CompactBillingPipelineFilters
+              <BillingFilters
                 value={filters}
                 onChange={onFiltersChange}
                 onClear={onClearFilters}
@@ -170,7 +168,7 @@ export function BillingPipelineTable({
           <div className="flex items-center gap-2 w-full sm:w-auto">
             {/* Filters and Search */}
             <div className="flex items-center gap-2">
-              <CompactBillingPipelineFilters
+              <BillingFilters
                 value={filters}
                 onChange={onFiltersChange}
                 onClear={onClearFilters}
