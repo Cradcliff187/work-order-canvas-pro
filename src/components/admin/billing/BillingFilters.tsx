@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
@@ -111,21 +111,21 @@ export function BillingFilters({
       })) || []
   , [organizations]);
 
-  const handleFilterChange = (field: keyof BillingFiltersValue, newValue: string[]) => {
-    const updated = { ...localValue, [field]: newValue };
-    setLocalValue(updated);
-    if (!isMobile) {
-      onChange(updated);
+  const handleFilterChange = useCallback((field: keyof BillingFiltersValue, newValue: string[]) => {
+    if (isMobile) {
+      setLocalValue(prev => ({ ...prev, [field]: newValue }));
+    } else {
+      onChange({ ...value, [field]: newValue });
     }
-  };
+  }, [value, onChange, isMobile]);
 
-  const handleStringFilterChange = (field: keyof BillingFiltersValue, newValue: string) => {
-    const updated = { ...localValue, [field]: newValue };
-    setLocalValue(updated);
-    if (!isMobile) {
-      onChange(updated);
+  const handleStringFilterChange = useCallback((field: keyof BillingFiltersValue, newValue: string) => {
+    if (isMobile) {
+      setLocalValue(prev => ({ ...prev, [field]: newValue }));
+    } else {
+      onChange({ ...value, [field]: newValue });
     }
-  };
+  }, [value, onChange, isMobile]);
 
   const handleDateFromChange = (date: Date | undefined) => {
     const dateString = date ? format(date, 'yyyy-MM-dd') : '';
