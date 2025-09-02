@@ -80,69 +80,82 @@ export default function AdminInvoices() {
   // Initialize isInitialMount ref at component level
   const isInitialMount = useRef(true);
   
-  // Get initial filters with new filter structure  
-  const getInitialFilters = () => {
+  // Define clean initial filters structure
+  const initialFilters: InvoiceFiltersValue = {
+    search: '',
+    overdue: false,
+    partner_organization_ids: [],
+    location_filter: [],
+    subcontractor_organization_ids: [],
+    operational_status: [],
+    report_status: [],
+    invoice_status: [],
+    partner_billing_status: [],
+  };
+
+  // Get initial filters with default "submitted" status for first-time users
+  const getInitialFilters = (): InvoiceFiltersValue => {
     try {
       const stored = localStorage.getItem('admin-invoices-filters-v2');
       if (stored) {
-        // User has used filters before, don't apply default
+        const parsed = JSON.parse(stored);
+        // Ensure all arrays are properly initialized
         return {
-          search: '',
-          overdue: false,
-          partner_organization_ids: [] as string[],
-          location_filter: [] as string[],
-          subcontractor_organization_ids: [] as string[],
-          operational_status: [] as string[],
-          report_status: [] as string[],
-          invoice_status: [] as string[],
-          partner_billing_status: [] as string[],
+          search: parsed.search || '',
+          overdue: Boolean(parsed.overdue),
+          partner_organization_ids: Array.isArray(parsed.partner_organization_ids) ? parsed.partner_organization_ids : [],
+          location_filter: Array.isArray(parsed.location_filter) ? parsed.location_filter : [],
+          subcontractor_organization_ids: Array.isArray(parsed.subcontractor_organization_ids) ? parsed.subcontractor_organization_ids : [],
+          operational_status: Array.isArray(parsed.operational_status) ? parsed.operational_status : [],
+          report_status: Array.isArray(parsed.report_status) ? parsed.report_status : [],
+          invoice_status: Array.isArray(parsed.invoice_status) ? parsed.invoice_status : [],
+          partner_billing_status: Array.isArray(parsed.partner_billing_status) ? parsed.partner_billing_status : [],
         };
       } else {
-        // First time user, apply "submitted" as default for invoice_status
+        // First time user, apply "submitted" as default
         return {
-          search: '',
-          overdue: false,
-          partner_organization_ids: [] as string[],
-          location_filter: [] as string[],
-          subcontractor_organization_ids: [] as string[],
-          operational_status: [] as string[],
-          report_status: [] as string[],
-          invoice_status: ['submitted'] as string[],
-          partner_billing_status: [] as string[],
+          ...initialFilters,
+          invoice_status: ['submitted'],
         };
       }
     } catch (error) {
-      // If localStorage access fails, use default with submitted filter
+      console.warn('Failed to parse stored filters, using defaults:', error);
       return {
-        search: '',
-        overdue: false,
-        partner_organization_ids: [] as string[],
-        location_filter: [] as string[],
-        subcontractor_organization_ids: [] as string[],
-        operational_status: [] as string[],
-        report_status: [] as string[],
-        invoice_status: ['submitted'] as string[],
-        partner_billing_status: [] as string[],
+        ...initialFilters,
+        invoice_status: ['submitted'],
       };
     }
   };
 
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
 
-  // Filter sheet state - removed unused state variables
+  // Clean filters to ensure array fields are always arrays
+  const cleanFilters = useMemo(() => {
+    return {
+      search: filters.search || '',
+      overdue: Boolean(filters.overdue),
+      partner_organization_ids: Array.isArray(filters.partner_organization_ids) ? filters.partner_organization_ids : [],
+      location_filter: Array.isArray(filters.location_filter) ? filters.location_filter : [],
+      subcontractor_organization_ids: Array.isArray(filters.subcontractor_organization_ids) ? filters.subcontractor_organization_ids : [],
+      operational_status: Array.isArray(filters.operational_status) ? filters.operational_status : [],
+      report_status: Array.isArray(filters.report_status) ? filters.report_status : [],
+      invoice_status: Array.isArray(filters.invoice_status) ? filters.invoice_status : [],
+      partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
+    };
+  }, [filters]);
 
   // Wrapper function to handle CompactInvoiceFilters type compatibility
   const handleFiltersChange = (newFilters: InvoiceFiltersValue) => {
     setFilters({
       search: newFilters.search || '',
       overdue: newFilters.overdue || false,
-      partner_organization_ids: newFilters.partner_organization_ids || [],
-      location_filter: newFilters.location_filter || [],
-      subcontractor_organization_ids: newFilters.subcontractor_organization_ids || [],
-      operational_status: newFilters.operational_status || [],
-      report_status: newFilters.report_status || [],
-      invoice_status: newFilters.invoice_status || [],
-      partner_billing_status: newFilters.partner_billing_status || [],
+      partner_organization_ids: Array.isArray(newFilters.partner_organization_ids) ? newFilters.partner_organization_ids : [],
+      location_filter: Array.isArray(newFilters.location_filter) ? newFilters.location_filter : [],
+      subcontractor_organization_ids: Array.isArray(newFilters.subcontractor_organization_ids) ? newFilters.subcontractor_organization_ids : [],
+      operational_status: Array.isArray(newFilters.operational_status) ? newFilters.operational_status : [],
+      report_status: Array.isArray(newFilters.report_status) ? newFilters.report_status : [],
+      invoice_status: Array.isArray(newFilters.invoice_status) ? newFilters.invoice_status : [],
+      partner_billing_status: Array.isArray(newFilters.partner_billing_status) ? newFilters.partner_billing_status : [],
     });
   };
   const { approveSubcontractorBill, rejectSubcontractorBill, markAsPaid } = useSubcontractorBillMutations();
@@ -191,50 +204,42 @@ export default function AdminInvoices() {
 
 
   // Stable debounced search to prevent new function creation
-  const [debouncedSearch, setDebouncedSearch] = useState(filters.search || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(cleanFilters.search || '');
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(filters.search || '');
+      setDebouncedSearch(cleanFilters.search || '');
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [filters.search]);
+  }, [cleanFilters.search]);
 
-  const { data, isLoading, error, refetch } = useSubcontractorBills({ ...filters, search: debouncedSearch, page });
+  const { data, isLoading, error, refetch } = useSubcontractorBills({ ...cleanFilters, search: debouncedSearch, page });
 
   // Stable filter dependencies to prevent infinite loops
   const stableFilterDeps = useMemo(() => {
-    const locationFilter = filters.location_filter || [];
-    const operationalStatus = filters.operational_status || [];
-    const reportStatus = filters.report_status || [];
-    const invoiceStatus = filters.invoice_status || [];
-    const partnerBillingStatus = filters.partner_billing_status || [];
-    const partnerOrganizationIds = filters.partner_organization_ids || [];
-    const subcontractorOrganizationIds = filters.subcontractor_organization_ids || [];
-    
     return {
       debouncedSearch,
-      overdue: filters.overdue,
-      partner_organization_ids: partnerOrganizationIds.slice().sort().join(','),
-      location_filter: locationFilter.slice().sort().join(','),
-      subcontractor_organization_ids: subcontractorOrganizationIds.slice().sort().join(','),
-      operational_status: operationalStatus.slice().sort().join(','),
-      report_status: reportStatus.slice().sort().join(','),
-      invoice_status: invoiceStatus.slice().sort().join(','),
-      partner_billing_status: partnerBillingStatus.slice().sort().join(','),
+      overdue: cleanFilters.overdue,
+      partner_organization_ids: cleanFilters.partner_organization_ids.slice().sort().join(','),
+      location_filter: cleanFilters.location_filter.slice().sort().join(','),
+      subcontractor_organization_ids: cleanFilters.subcontractor_organization_ids.slice().sort().join(','),
+      operational_status: cleanFilters.operational_status.slice().sort().join(','),
+      report_status: cleanFilters.report_status.slice().sort().join(','),
+      invoice_status: cleanFilters.invoice_status.slice().sort().join(','),
+      partner_billing_status: cleanFilters.partner_billing_status.slice().sort().join(','),
     };
   }, [
     debouncedSearch,
-    filters.overdue,
-    // Use JSON.stringify for array stability to avoid reference issues
-    JSON.stringify(filters.partner_organization_ids || []),
-    JSON.stringify(filters.subcontractor_organization_ids || []),
-    JSON.stringify(filters.location_filter || []),
-    JSON.stringify(filters.operational_status || []),
-    JSON.stringify(filters.report_status || []),
-    JSON.stringify(filters.invoice_status || []),
-    JSON.stringify(filters.partner_billing_status || []),
+    cleanFilters.overdue,
+    // Use stable array strings for dependencies
+    cleanFilters.partner_organization_ids.slice().sort().join(','),
+    cleanFilters.subcontractor_organization_ids.slice().sort().join(','),
+    cleanFilters.location_filter.slice().sort().join(','),
+    cleanFilters.operational_status.slice().sort().join(','),
+    cleanFilters.report_status.slice().sort().join(','),
+    cleanFilters.invoice_status.slice().sort().join(','),
+    cleanFilters.partner_billing_status.slice().sort().join(','),
   ]);
 
   // Reset page when filters change (but not on initial mount)
