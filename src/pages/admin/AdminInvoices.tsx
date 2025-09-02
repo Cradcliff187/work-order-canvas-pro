@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,8 +77,6 @@ export default function AdminInvoices() {
   const [page, setPage] = useState(1);
   const limit = 10;
   
-  // Initialize isInitialMount ref at component level
-  const isInitialMount = useRef(true);
   
   // Define clean initial filters structure
   const initialFilters: InvoiceFiltersValue = {
@@ -130,19 +128,17 @@ export default function AdminInvoices() {
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
 
   // Clean filters to ensure array fields are always arrays
-  const cleanFilters = useMemo(() => {
-    return {
-      search: filters.search || '',
-      overdue: Boolean(filters.overdue),
-      partner_organization_ids: Array.isArray(filters.partner_organization_ids) ? filters.partner_organization_ids : [],
-      location_filter: Array.isArray(filters.location_filter) ? filters.location_filter : [],
-      subcontractor_organization_ids: Array.isArray(filters.subcontractor_organization_ids) ? filters.subcontractor_organization_ids : [],
-      operational_status: Array.isArray(filters.operational_status) ? filters.operational_status : [],
-      report_status: Array.isArray(filters.report_status) ? filters.report_status : [],
-      invoice_status: Array.isArray(filters.invoice_status) ? filters.invoice_status : [],
-      partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
-    };
-  }, [filters]);
+  const cleanFilters = {
+    search: filters.search || '',
+    overdue: Boolean(filters.overdue),
+    partner_organization_ids: Array.isArray(filters.partner_organization_ids) ? filters.partner_organization_ids : [],
+    location_filter: Array.isArray(filters.location_filter) ? filters.location_filter : [],
+    subcontractor_organization_ids: Array.isArray(filters.subcontractor_organization_ids) ? filters.subcontractor_organization_ids : [],
+    operational_status: Array.isArray(filters.operational_status) ? filters.operational_status : [],
+    report_status: Array.isArray(filters.report_status) ? filters.report_status : [],
+    invoice_status: Array.isArray(filters.invoice_status) ? filters.invoice_status : [],
+    partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
+  };
 
   // Wrapper function to handle CompactInvoiceFilters type compatibility
   const handleFiltersChange = (newFilters: InvoiceFiltersValue) => {
@@ -216,42 +212,6 @@ export default function AdminInvoices() {
 
   const { data, isLoading, error, refetch } = useSubcontractorBills({ ...cleanFilters, search: debouncedSearch, page });
 
-  // Stable filter dependencies to prevent infinite loops
-  const stableFilterDeps = useMemo(() => {
-    return {
-      debouncedSearch,
-      overdue: cleanFilters.overdue,
-      partner_organization_ids: cleanFilters.partner_organization_ids.slice().sort().join(','),
-      location_filter: cleanFilters.location_filter.slice().sort().join(','),
-      subcontractor_organization_ids: cleanFilters.subcontractor_organization_ids.slice().sort().join(','),
-      operational_status: cleanFilters.operational_status.slice().sort().join(','),
-      report_status: cleanFilters.report_status.slice().sort().join(','),
-      invoice_status: cleanFilters.invoice_status.slice().sort().join(','),
-      partner_billing_status: cleanFilters.partner_billing_status.slice().sort().join(','),
-    };
-  }, [
-    debouncedSearch,
-    cleanFilters.overdue,
-    // Use stable array strings for dependencies
-    cleanFilters.partner_organization_ids.slice().sort().join(','),
-    cleanFilters.subcontractor_organization_ids.slice().sort().join(','),
-    cleanFilters.location_filter.slice().sort().join(','),
-    cleanFilters.operational_status.slice().sort().join(','),
-    cleanFilters.report_status.slice().sort().join(','),
-    cleanFilters.invoice_status.slice().sort().join(','),
-    cleanFilters.partner_billing_status.slice().sort().join(','),
-  ]);
-
-  // Reset page when filters change (but not on initial mount)
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    
-    console.log('📄 Resetting to page 1 due to filter change');
-    setPage(1);
-  }, [stableFilterDeps]); // Use stable dependency object
   
   const handleViewBill = (invoice: SubcontractorBill) => {
     setSelectedBill(invoice);
