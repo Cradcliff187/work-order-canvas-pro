@@ -237,17 +237,17 @@ export default function AdminInvoices() {
     setPage(1);
   }, [stableFilterDeps]); // Use stable dependency object
   
-  const handleViewInvoice = (invoice: SubcontractorBill) => {
+  const handleViewBill = (invoice: SubcontractorBill) => {
     setSelectedInvoice(invoice);
     setModalOpen(true);
   };
 
-  const handleApproveInvoice = (invoice: SubcontractorBill) => {
+  const handleApproveBill = (invoice: SubcontractorBill) => {
     setSelectedInvoice(invoice);
     setModalOpen(true);
   };
 
-  const handleRejectInvoice = (invoice: SubcontractorBill) => {
+  const handleRejectBill = (invoice: SubcontractorBill) => {
     setSelectedInvoice(invoice);
     setModalOpen(true);
   };
@@ -258,9 +258,9 @@ export default function AdminInvoices() {
   };
 
   const columns = createBillColumns({
-    onViewBill: handleViewInvoice,
-    onApproveBill: handleApproveInvoice,
-    onRejectBill: handleRejectInvoice,
+    onViewBill: handleViewBill,
+    onApproveBill: handleApproveBill,
+    onRejectBill: handleRejectBill,
     onMarkAsPaid: handleMarkAsPaid,
     onEditBill: handleEditInvoice,
     onDeleteBill: handleDeleteInvoice,
@@ -565,15 +565,15 @@ const table = useReactTable({
                       'Work Orders': String(invoice.subcontractor_bill_work_orders?.length || 0)
                     }}
                     actions={[
-                      { label: 'View', icon: FileText, onClick: () => handleViewInvoice(invoice) },
+                      { label: 'View', icon: FileText, onClick: () => handleViewBill(invoice) },
                       { 
                         label: 'Approve', 
                         icon: CheckCircle, 
-                        onClick: () => handleApproveInvoice(invoice),
+                        onClick: () => handleApproveBill(invoice),
                         show: canApprove
                       }
                     ]}
-                    onClick={() => handleViewInvoice(invoice)}
+                    onClick={() => handleViewBill(invoice)}
                     className="min-h-[44px]"
                   />
                 );
@@ -740,13 +740,13 @@ const table = useReactTable({
                               className="cursor-pointer hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
                               onClick={() => {
                                 const invoice = row.original;
-                                handleViewInvoice(invoice);
+                                handleViewBill(invoice);
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
                                   e.preventDefault();
                                   const invoice = row.original;
-                                  handleViewInvoice(invoice);
+                                  handleViewBill(invoice);
                                 }
                               }}
                             >
@@ -803,15 +803,15 @@ const table = useReactTable({
                                 'Work Orders': String(invoice.subcontractor_bill_work_orders?.length || 0)
                               }}
                               actions={[
-                                { label: 'View', icon: FileText, onClick: () => handleViewInvoice(invoice) },
+                                { label: 'View', icon: FileText, onClick: () => handleViewBill(invoice) },
                                 { 
                                   label: 'Approve', 
                                   icon: CheckCircle, 
-                                  onClick: () => handleApproveInvoice(invoice),
+                                  onClick: () => handleApproveBill(invoice),
                                   show: invoice.status === 'submitted'
                                 }
                               ]}
-                              onClick={() => handleViewInvoice(invoice)}
+                              onClick={() => handleViewBill(invoice)}
                               className="min-h-[44px]"
                             />
                             {bulkMode && (
