@@ -137,7 +137,7 @@ export const createBillColumns = ({
   },
   {
     accessorKey: 'subcontractor_organization.name',
-    header: 'Partner',
+    header: 'Subcontractor',
     cell: ({ row }) => {
       const bill = row.original;
       const isAdminEntered = !!(bill as any).created_by_admin_id;
