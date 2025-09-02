@@ -128,7 +128,7 @@ export const useSubcontractorBillSubmission = () => {
         try {
           const firstWorkOrderId = data.work_orders[0]?.work_order_id;
           if (firstWorkOrderId) {
-            const uploadedFiles = await uploadFiles(data.attachments, firstWorkOrderId, false);
+            const uploadedFiles = await uploadFiles(data.attachments, false, firstWorkOrderId);
             
             // Create bill attachment records
             const attachmentRecords = uploadedFiles.map(file => ({
