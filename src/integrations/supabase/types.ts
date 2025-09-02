@@ -1196,21 +1196,21 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "invoice_attachments_invoice_id_fkey"
+            foreignKeyName: "subcontractor_bill_attachments_bill_id_fkey"
             columns: ["subcontractor_bill_id"]
             isOneToOne: false
             referencedRelation: "subcontractor_bills"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoice_attachments_uploaded_by_fkey"
+            foreignKeyName: "subcontractor_bill_attachments_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoice_attachments_work_order_id_fkey"
+            foreignKeyName: "subcontractor_bill_attachments_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
@@ -1248,21 +1248,21 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "invoice_work_orders_invoice_id_fkey"
+            foreignKeyName: "subcontractor_bill_work_orders_bill_id_fkey"
             columns: ["subcontractor_bill_id"]
             isOneToOne: false
             referencedRelation: "subcontractor_bills"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoice_work_orders_work_order_id_fkey"
+            foreignKeyName: "subcontractor_bill_work_orders_work_order_id_fkey"
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoice_work_orders_work_order_report_id_fkey"
+            foreignKeyName: "subcontractor_bill_work_orders_work_order_report_id_fkey"
             columns: ["work_order_report_id"]
             isOneToOne: false
             referencedRelation: "work_order_reports"

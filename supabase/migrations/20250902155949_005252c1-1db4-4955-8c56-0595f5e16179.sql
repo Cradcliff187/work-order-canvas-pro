@@ -1,0 +1,25 @@
+-- Rename foreign key constraints for subcontractor_bill_work_orders table
+ALTER TABLE public.subcontractor_bill_work_orders 
+RENAME CONSTRAINT invoice_work_orders_invoice_id_fkey 
+TO subcontractor_bill_work_orders_bill_id_fkey;
+
+ALTER TABLE public.subcontractor_bill_work_orders 
+RENAME CONSTRAINT invoice_work_orders_work_order_id_fkey 
+TO subcontractor_bill_work_orders_work_order_id_fkey;
+
+ALTER TABLE public.subcontractor_bill_work_orders 
+RENAME CONSTRAINT invoice_work_orders_work_order_report_id_fkey 
+TO subcontractor_bill_work_orders_work_order_report_id_fkey;
+
+-- Rename foreign key constraints for subcontractor_bill_attachments table
+ALTER TABLE public.subcontractor_bill_attachments 
+RENAME CONSTRAINT invoice_attachments_invoice_id_fkey 
+TO subcontractor_bill_attachments_bill_id_fkey;
+
+ALTER TABLE public.subcontractor_bill_attachments 
+RENAME CONSTRAINT invoice_attachments_uploaded_by_fkey 
+TO subcontractor_bill_attachments_uploaded_by_fkey;
+
+ALTER TABLE public.subcontractor_bill_attachments 
+RENAME CONSTRAINT invoice_attachments_work_order_id_fkey 
+TO subcontractor_bill_attachments_work_order_id_fkey;
