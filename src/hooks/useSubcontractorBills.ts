@@ -207,6 +207,12 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         query = query.in('partner_billing_status', partner_billing_status);
       }
 
+      // Apply database-level search
+      if (search && search.trim()) {
+        const searchTerm = `%${search.trim()}%`;
+        query = query.or(`internal_bill_number.ilike.${searchTerm},external_bill_number.ilike.${searchTerm},subcontractor_organization.name.ilike.${searchTerm}`);
+      }
+
       // Apply pagination
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
@@ -219,29 +225,9 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
 
       if (error) throw error;
 
-      // Apply client-side search filter (for complex searches across related data)
-      let filteredData = data || [];
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredData = filteredData.filter(bill => {
-          return (
-            bill.internal_bill_number?.toLowerCase().includes(searchLower) ||
-            bill.external_bill_number?.toLowerCase().includes(searchLower) ||
-            bill.subcontractor_organization?.name?.toLowerCase().includes(searchLower) ||
-            bill.submitted_by_profile?.first_name?.toLowerCase().includes(searchLower) ||
-            bill.submitted_by_profile?.last_name?.toLowerCase().includes(searchLower) ||
-            bill.subcontractor_bill_work_orders?.some(wo => 
-              wo.work_orders?.work_order_number?.toLowerCase().includes(searchLower) ||
-              wo.work_orders?.title?.toLowerCase().includes(searchLower) ||
-              wo.work_orders?.organizations?.name?.toLowerCase().includes(searchLower)
-            )
-          );
-        });
-      }
-
       return {
-        data: filteredData,
-        count: search ? filteredData.length : count,
+        data: data || [],
+        count: count || 0,
         totalPages: Math.ceil((count || 0) / pageSize)
       };
     },
