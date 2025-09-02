@@ -2605,6 +2605,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "estimate_needed"
+        | "estimate_pending_approval"
         | "estimate_approved"
     }
     CompositeTypes: {
@@ -2748,6 +2749,7 @@ export const Constants = {
         "completed",
         "cancelled",
         "estimate_needed",
+        "estimate_pending_approval",
         "estimate_approved",
       ],
     },
