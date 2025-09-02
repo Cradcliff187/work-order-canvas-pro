@@ -6,9 +6,10 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UniversalUploadSheet } from './UniversalUploadSheet';
 import { FileDropzone } from './FileDropzone';
+import { useFileValidation, getFileType, type ValidationError } from './FileValidation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { isSupportedFileType, getSupportedFormatsText } from '@/utils/fileUtils';
+import { getSupportedFormatsText } from '@/utils/fileUtils';
 
 // ============= FILE STATE MANAGEMENT =============
 // Clear state ownership model:
@@ -36,14 +37,7 @@ interface FilePreview {
   fileType: 'image' | 'document';
 }
 
-interface ValidationError {
-  id: string;
-  type: 'fileSize' | 'fileType' | 'duplicate' | 'maxFiles';
-  fileName?: string;
-  message: string;
-  guidance: string;
-  isDismissible: boolean;
-}
+// ValidationError now imported from FileValidation
 
 interface UploadProgress {
   [fileName: string]: {
@@ -131,100 +125,14 @@ export function UnifiedFileUpload({
     }));
   }, [stagedFiles]);
 
-  const getFileType = (file: File): 'image' | 'document' => {
-    return file.type.startsWith('image/') ? 'image' : 'document';
-  };
-
-  const isValidFileType = (file: File): boolean => {
-    if (acceptedTypes.length > 0) {
-      return acceptedTypes.includes(file.type);
-    }
-    return isSupportedFileType(file);
-  };
-
-  const validateFiles = useCallback((files: File[], existingFiles: File[] = []): { valid: File[]; errors: ValidationError[] } => {
-    const errors: ValidationError[] = [];
-    const valid: File[] = [];
-    
-    // For validation, consider the total that would exist after this selection
-    const totalAfterSelection = selectionMode === 'accumulate' ? existingFiles.length + files.length : files.length;
-
-    // Check file count against total after selection
-    if (totalAfterSelection > maxFiles) {
-      const remaining = selectionMode === 'accumulate' ? maxFiles - existingFiles.length : maxFiles;
-      if (remaining <= 0) {
-        errors.push({
-          id: `maxFiles_${Date.now()}`,
-          type: 'maxFiles',
-          message: `Maximum ${maxFiles} files reached`,
-          guidance: `Remove some files before adding more.`,
-          isDismissible: true
-        });
-      } else {
-        errors.push({
-          id: `maxFiles_${Date.now()}`,
-          type: 'maxFiles',
-          message: `You can only add ${remaining} more file${remaining === 1 ? '' : 's'}`,
-          guidance: `You currently have ${existingFiles.length} files selected out of ${maxFiles} maximum.`,
-          isDismissible: true
-        });
-      }
-      return { valid: [], errors };
-    }
-
-    files.forEach(file => {
-      // Check file type
-      if (!isValidFileType(file)) {
-        const allowedFormats = acceptedTypes.length > 0 
-          ? acceptedTypes.map(type => type.split('/')[1]?.toUpperCase()).join(', ')
-          : 'JPEG, PNG, PDF, Word documents';
-        errors.push({
-          id: `fileType_${file.name}_${Date.now()}`,
-          type: 'fileType',
-          fileName: file.name,
-          message: `${file.name} isn't supported`,
-          guidance: `Try uploading ${allowedFormats} files instead.`,
-          isDismissible: true
-        });
-        return;
-      }
-
-      // Check file size
-      if (file.size > maxSizeBytes) {
-        const maxMB = Math.round(maxSizeBytes / 1024 / 1024);
-        const fileMB = (file.size / 1024 / 1024).toFixed(1);
-        errors.push({
-          id: `fileSize_${file.name}_${Date.now()}`,
-          type: 'fileSize',
-          fileName: file.name,
-          message: `${file.name} (${fileMB}MB) exceeds the ${maxMB}MB limit`,
-          guidance: 'Please compress the file and try again.',
-          isDismissible: true
-        });
-        return;
-      }
-
-      // Check for duplicates against existing files
-      const isDuplicate = existingFiles.some(existingFile => 
-        existingFile.name === file.name && existingFile.size === file.size
-      );
-      if (isDuplicate) {
-        errors.push({
-          id: `duplicate_${file.name}_${Date.now()}`,
-          type: 'duplicate',
-          fileName: file.name,
-          message: `${file.name} is already selected`,
-          guidance: 'Choose a different file or rename it.',
-          isDismissible: true
-        });
-        return;
-      }
-
-      valid.push(file);
-    });
-
-    return { valid, errors };
-  }, [maxFiles, maxSizeBytes, acceptedTypes, selectionMode]);
+  // Use validation hook for file validation
+  const fileValidation = useFileValidation({
+    maxFiles,
+    maxSizeBytes,
+    acceptedTypes,
+    selectionMode,
+    files: stagedFiles.map(sf => sf.file)
+  });
 
   // ============= DUAL MODE FILE MANAGEMENT =============
   // Support both immediate and staged modes for backward compatibility
@@ -233,7 +141,7 @@ export function UnifiedFileUpload({
     
     // Get existing files for validation and accumulation logic
     const existingFiles = mode === 'staged' ? stagedFiles.map(sf => sf.file) : [];
-    const { valid, errors } = validateFiles(newFiles, existingFiles);
+    const { valid, errors } = fileValidation.validateFiles(newFiles, existingFiles);
     
     // Update validation errors
     setValidationErrors(errors);
@@ -291,7 +199,7 @@ export function UnifiedFileUpload({
         });
       }
     }
-  }, [mode, selectionMode, validateFiles, stagedFiles, onFilesSelected, onFilesStaged]);
+  }, [mode, selectionMode, fileValidation.validateFiles, stagedFiles, onFilesSelected, onFilesStaged]);
 
   const removeFile = useCallback((id: string) => {
     console.log(`[UnifiedFileUpload] Removing staged file with id: ${id}`);
@@ -357,25 +265,6 @@ export function UnifiedFileUpload({
     setValidationErrors(prev => prev.filter(error => error.id !== errorId));
   }, []);
 
-  const getFileRestrictions = () => {
-    const maxMB = Math.round(maxSizeBytes / 1024 / 1024);
-    const supportedTypes = acceptedTypes.length > 0 
-      ? acceptedTypes.map(type => {
-          if (type.includes('image')) return 'Images';
-          if (type.includes('pdf')) return 'PDFs'; 
-          if (type.includes('word') || type.includes('document')) return 'Word docs';
-          if (type.includes('sheet') || type.includes('excel')) return 'Excel files';
-          return type.split('/')[1]?.toUpperCase();
-        }).filter(Boolean).join(', ')
-      : 'Images, PDFs, Word docs, Excel files';
-    
-    return {
-      types: supportedTypes,
-      size: `${maxMB}MB`,
-      count: maxFiles
-    };
-  };
-
   const getFileProgress = (fileName: string) => {
     return uploadProgress[fileName] || { progress: 0, status: 'pending' as const };
   };
@@ -420,26 +309,7 @@ export function UnifiedFileUpload({
     };
   }, []);
 
-  // Auto-clear validation errors when the underlying issue is resolved
-  useEffect(() => {
-    setValidationErrors(currentErrors => {
-      return currentErrors.filter(error => {
-        // Keep max files error if we're still over the limit
-        if (error.type === 'maxFiles' && previews.length >= maxFiles) {
-          return true;
-        }
-        
-        // Keep file-specific errors if the file still exists
-        if (error.fileName) {
-          const fileStillExists = previews.some(p => p.file.name === error.fileName);
-          return fileStillExists;
-        }
-        
-        // Keep other errors
-        return true;
-      });
-    });
-  }, [previews, maxFiles]);
+  // Auto-clearing is now handled by the fileValidation hook
 
 
   // Calculate upload status for aria announcements
@@ -471,12 +341,12 @@ export function UnifiedFileUpload({
 
         {/* File restrictions and selection mode */}
         <div className="text-sm text-muted-foreground bg-muted/30 rounded-xl p-4 border">
-          <div className="space-y-2">
-            <p className="font-medium text-foreground">Upload Requirements</p>
-            <div className="grid grid-cols-1 gap-2">
-              <span>Formats: {getFileRestrictions().types}</span>
-              <span>Max size: {getFileRestrictions().size} per file</span>
-              <span>Max files: {getFileRestrictions().count}</span>
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">Upload Requirements</p>
+              <div className="grid grid-cols-1 gap-2">
+                <span>Formats: {fileValidation.getFileRestrictions().types}</span>
+                <span>Max size: {fileValidation.getFileRestrictions().size} per file</span>
+                <span>Max files: {fileValidation.getFileRestrictions().count}</span>
               {mode === 'staged' && previews.length > 0 && (
                 <span className="text-primary font-medium">
                   {selectionMode === 'accumulate' 
@@ -719,15 +589,15 @@ export function UnifiedFileUpload({
               <div className="grid grid-cols-3 gap-4 text-muted-foreground">
                 <div className="flex items-center space-x-2">
                   <FileText className="w-4 h-4" aria-hidden="true" />
-                  <span>Formats: {getFileRestrictions().types}</span>
+                  <span>Formats: {fileValidation.getFileRestrictions().types}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <ImageIconSolid className="w-4 h-4" aria-hidden="true" />
-                  <span>Max size: {getFileRestrictions().size} per file</span>
+                  <span>Max size: {fileValidation.getFileRestrictions().size} per file</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Upload className="w-4 h-4" aria-hidden="true" />
-                  <span>Max files: {getFileRestrictions().count}</span>
+                  <span>Max files: {fileValidation.getFileRestrictions().count}</span>
                 </div>
               </div>
             </div>
