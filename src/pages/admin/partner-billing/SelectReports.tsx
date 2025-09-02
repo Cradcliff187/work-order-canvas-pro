@@ -25,7 +25,7 @@ import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration
 import { usePartnerReportStats } from '@/hooks/usePartnerReportStats';
 import { useReportInvoiceDetails } from '@/hooks/useReportInvoiceDetails';
 import { ReportPipelineEmptyState } from '@/components/admin/partner-billing/ReportPipelineEmptyState';
-import { CompactBillingPipelineFilters } from '@/components/admin/billing/CompactBillingPipelineFilters';
+import { BillingFilters } from '@/components/admin/billing/BillingFilters';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useViewMode } from '@/hooks/useViewMode';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
@@ -66,21 +66,19 @@ export default function SelectReports() {
   // Filter states with standardized persistence
   const [isMarkupCollapsed, setIsMarkupCollapsed] = useState(true);
   
-  // Use interface compatible with CompactBillingPipelineFilters
+  // Use interface compatible with BillingFilters
   interface FilterValue {
     search?: string;
     status?: string[];
-    trade_id?: string[];
-    partner_organization_ids?: string[];
-    completed_by?: string[];
-    date_from?: string;
-    date_to?: string;
-    location_filter?: string[];
-    showOverdueOnly?: boolean;
     financial_status?: string[];
     partner_billing_status?: string[];
-    priority?: string[];
     report_status?: string[];
+    partner_organization_ids?: string[];
+    subcontractor_organization_ids?: string[];
+    date_from?: string;
+    date_to?: string;
+    amount_min?: string;
+    amount_max?: string;
   }
   
   const initialFilters: FilterValue = {};
@@ -162,7 +160,7 @@ export default function SelectReports() {
         if (!matches) return false;
       }
       
-      // Add other filter logic as needed based on CompactBillingPipelineFilters structure
+      // Add other filter logic as needed based on BillingFilters structure
       return true;
     });
   }, [reports, filters]);
@@ -484,7 +482,7 @@ export default function SelectReports() {
                 
                 {/* Integrated Control Bar */}
                 <div className="flex items-center gap-2">
-                  <CompactBillingPipelineFilters
+                  <BillingFilters
                     value={filters}
                     onChange={setFilters}
                     onClear={clearFilters}
