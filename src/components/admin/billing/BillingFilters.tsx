@@ -549,7 +549,9 @@ export function BillingFilters({
       <div className="flex h-full flex-col">
         {/* Enhanced Header */}
         <div className="flex items-center justify-between border-b p-6 bg-background/95 backdrop-blur">
-          <h2 className="text-xl font-semibold text-foreground">Filters</h2>
+          <h2 className="text-xl font-semibold text-foreground">
+            Filters{activeCount > 0 ? ` (${activeCount})` : ''}
+          </h2>
           <Button
             variant="ghost"
             size="sm"
@@ -597,7 +599,7 @@ export function BillingFilters({
           className="relative"
         >
           <Filter className="h-4 w-4 mr-2" />
-          Filters
+          Filters{activeCount > 0 ? ` (${activeCount})` : ''}
           {activeCount > 0 && (
             <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-xs text-primary-foreground flex items-center justify-center">
               {activeCount}
@@ -618,7 +620,7 @@ export function BillingFilters({
           className="relative"
         >
           <Filter className="h-4 w-4 mr-2" />
-          Filters
+          Filters{activeCount > 0 ? ` (${activeCount})` : ''}
           {activeCount > 0 && (
             <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-xs text-primary-foreground flex items-center justify-center">
               {activeCount}
