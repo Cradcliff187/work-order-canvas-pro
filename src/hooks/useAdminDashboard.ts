@@ -22,7 +22,7 @@ interface DashboardMetrics {
   estimatesAwaitingApproval: number;
   recentPayments: Array<{
     id: string;
-    internal_invoice_number: string;
+    internal_bill_number: string;
     total_amount: number;
     paid_at: string;
     payment_reference: string | null;
@@ -152,7 +152,7 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     .from('subcontractor_bills')
     .select(`
       id,
-      internal_invoice_number,
+      internal_bill_number,
       total_amount,
       paid_at,
       payment_reference,
@@ -165,7 +165,7 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
 
   const recentPayments = (recentPaymentsData || []).map(payment => ({
     id: payment.id,
-    internal_invoice_number: payment.internal_invoice_number,
+    internal_bill_number: payment.internal_bill_number,
     total_amount: payment.total_amount,
     paid_at: payment.paid_at!,
     payment_reference: payment.payment_reference,

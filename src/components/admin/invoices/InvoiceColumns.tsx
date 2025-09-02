@@ -60,19 +60,19 @@ export const createInvoiceColumns = ({
     enableHiding: false,
   },
   {
-    accessorKey: 'internal_invoice_number',
+    accessorKey: 'internal_bill_number',
     header: ({ column }) => <SortableHeader column={column} label="Sub Invoice#" />,
     cell: ({ row }) => (
       <div className="font-mono text-sm text-right">
-        {row.getValue('internal_invoice_number')}
+        {row.getValue('internal_bill_number')}
       </div>
     ),
   },
   {
-    accessorKey: 'external_invoice_number',
+    accessorKey: 'external_bill_number',
     header: ({ column }) => <SortableHeader column={column} label="Vendor Invoice #" />,
     cell: ({ row }) => {
-      const external = row.getValue('external_invoice_number') as string | null;
+      const external = row.getValue('external_bill_number') as string | null;
       return (
         <div className="font-mono text-sm text-right">
           {external || <span className="text-muted-foreground">—</span>}
@@ -255,7 +255,7 @@ export const createInvoiceColumns = ({
       const canSend = !!onSendInvoice && !invoice.paid_at;
       const canDownload = !!onDownloadPdf;
 
-      const invoiceName = `${invoice.internal_invoice_number}`;
+      const invoiceName = `${invoice.internal_bill_number}`;
       
       const actions = [
         {

@@ -240,7 +240,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     Internal Invoice #
                   </Label>
                   <div className="mt-1 font-mono text-lg font-semibold">
-                    {invoice.internal_invoice_number}
+                    {invoice.internal_bill_number}
                   </div>
                 </div>
                 
@@ -249,7 +249,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     Vendor Invoice #
                   </Label>
                   <div className="mt-1 font-mono text-lg">
-                    {invoice.external_invoice_number || 'Not provided'}
+                    {invoice.external_bill_number || 'Not provided'}
                   </div>
                 </div>
 

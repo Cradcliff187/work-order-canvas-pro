@@ -1279,9 +1279,9 @@ export type Database = {
           created_at: string
           created_by_admin_id: string | null
           due_date: string
-          external_invoice_number: string | null
+          external_bill_number: string | null
           id: string
-          internal_invoice_number: string
+          internal_bill_number: string
           invoice_date: string
           paid_at: string | null
           payment_reference: string | null
@@ -1303,9 +1303,9 @@ export type Database = {
           created_at?: string
           created_by_admin_id?: string | null
           due_date?: string
-          external_invoice_number?: string | null
+          external_bill_number?: string | null
           id?: string
-          internal_invoice_number: string
+          internal_bill_number: string
           invoice_date?: string
           paid_at?: string | null
           payment_reference?: string | null
@@ -1327,9 +1327,9 @@ export type Database = {
           created_at?: string
           created_by_admin_id?: string | null
           due_date?: string
-          external_invoice_number?: string | null
+          external_bill_number?: string | null
           id?: string
-          internal_invoice_number?: string
+          internal_bill_number?: string
           invoice_date?: string
           paid_at?: string | null
           payment_reference?: string | null
@@ -1859,11 +1859,11 @@ export type Database = {
           status: Database["public"]["Enums"]["work_order_status"]
           store_location: string | null
           street_address: string | null
+          subcontractor_bill_amount: number | null
           subcontractor_estimate_amount: number | null
           subcontractor_estimate_description: string | null
           subcontractor_estimate_submitted_at: string | null
           subcontractor_estimate_submitted_by: string | null
-          subcontractor_invoice_amount: number | null
           subcontractor_report_submitted: boolean | null
           title: string
           trade_id: string | null
@@ -1920,11 +1920,11 @@ export type Database = {
           status?: Database["public"]["Enums"]["work_order_status"]
           store_location?: string | null
           street_address?: string | null
+          subcontractor_bill_amount?: number | null
           subcontractor_estimate_amount?: number | null
           subcontractor_estimate_description?: string | null
           subcontractor_estimate_submitted_at?: string | null
           subcontractor_estimate_submitted_by?: string | null
-          subcontractor_invoice_amount?: number | null
           subcontractor_report_submitted?: boolean | null
           title: string
           trade_id?: string | null
@@ -1981,11 +1981,11 @@ export type Database = {
           status?: Database["public"]["Enums"]["work_order_status"]
           store_location?: string | null
           street_address?: string | null
+          subcontractor_bill_amount?: number | null
           subcontractor_estimate_amount?: number | null
           subcontractor_estimate_description?: string | null
           subcontractor_estimate_submitted_at?: string | null
           subcontractor_estimate_submitted_by?: string | null
-          subcontractor_invoice_amount?: number | null
           subcontractor_report_submitted?: boolean | null
           title?: string
           trade_id?: string | null

@@ -89,8 +89,8 @@ const fetchActivityFeed = async (): Promise<ActivityItem[]> => {
     .from('subcontractor_bills')
     .select(`
       id,
-      internal_invoice_number,
-      external_invoice_number,
+      internal_bill_number,
+      external_bill_number,
       status,
       total_amount,
       updated_at,
@@ -105,7 +105,7 @@ const fetchActivityFeed = async (): Promise<ActivityItem[]> => {
       activities.push({
         id: `subcontractor_bill_status_${bill.id}`,
         type: 'subcontractor_bill_status',
-        title: `Bill ${bill.internal_invoice_number}`,
+        title: `Bill ${bill.internal_bill_number}`,
         description: `Status: ${bill.status} - $${bill.total_amount || 0} - ${bill.subcontractor_organization?.name || 'Unknown Organization'}`,
         timestamp: bill.updated_at,
         actionUrl: `/admin/invoices/${bill.id}`,
