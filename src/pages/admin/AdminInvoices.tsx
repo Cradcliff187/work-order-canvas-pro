@@ -163,11 +163,11 @@ export default function AdminInvoices() {
   const [billToDelete, setBillToDelete] = useState<SubcontractorBill | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleEditInvoice = (invoice: SubcontractorBill) => {
+  const handleEditBill = (invoice: SubcontractorBill) => {
     setInvoiceToEdit(invoice);
     setEditOpen(true);
   };
-  const handleDeleteInvoice = (invoice: SubcontractorBill) => {
+  const handleDeleteBill = (invoice: SubcontractorBill) => {
     setBillToDelete(invoice);
     setDeleteOpen(true);
   };
@@ -262,8 +262,8 @@ export default function AdminInvoices() {
     onApproveBill: handleApproveBill,
     onRejectBill: handleRejectBill,
     onMarkAsPaid: handleMarkAsPaid,
-    onEditBill: handleEditInvoice,
-    onDeleteBill: handleDeleteInvoice,
+    onEditBill: handleEditBill,
+    onDeleteBill: handleDeleteBill,
   });
 
   // Column visibility setup for bills
