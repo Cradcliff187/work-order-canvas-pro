@@ -70,7 +70,7 @@ export default function AdminInvoices() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [selectedInvoice, setSelectedInvoice] = useState<SubcontractorBill | null>(null);
+  const [selectedBill, setSelectedBill] = useState<SubcontractorBill | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -160,7 +160,7 @@ export default function AdminInvoices() {
   const [editOpen, setEditOpen] = useState(false);
   const [invoiceToEdit, setInvoiceToEdit] = useState<SubcontractorBill | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [invoiceToDelete, setInvoiceToDelete] = useState<SubcontractorBill | null>(null);
+  const [billToDelete, setBillToDelete] = useState<SubcontractorBill | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleEditInvoice = (invoice: SubcontractorBill) => {
@@ -168,23 +168,23 @@ export default function AdminInvoices() {
     setEditOpen(true);
   };
   const handleDeleteInvoice = (invoice: SubcontractorBill) => {
-    setInvoiceToDelete(invoice);
+    setBillToDelete(invoice);
     setDeleteOpen(true);
   };
   const confirmDelete = async () => {
-    if (!invoiceToDelete) return;
+    if (!billToDelete) return;
     setIsDeleting(true);
     try {
-      await supabase.from('subcontractor_bill_work_orders').delete().eq('subcontractor_bill_id', invoiceToDelete.id);
-      await supabase.from('subcontractor_bill_attachments').delete().eq('subcontractor_bill_id', invoiceToDelete.id);
-      const { error } = await supabase.from('subcontractor_bills').delete().eq('id', invoiceToDelete.id);
+      await supabase.from('subcontractor_bill_work_orders').delete().eq('subcontractor_bill_id', billToDelete.id);
+      await supabase.from('subcontractor_bill_attachments').delete().eq('subcontractor_bill_id', billToDelete.id);
+      const { error } = await supabase.from('subcontractor_bills').delete().eq('id', billToDelete.id);
       if (error) throw error;
     } catch (e) {
       console.error('Failed to delete invoice', e);
     } finally {
       setIsDeleting(false);
       setDeleteOpen(false);
-      setInvoiceToDelete(null);
+      setBillToDelete(null);
       queryClient.invalidateQueries({ queryKey: ['subcontractor-bills'] });
     }
   };
@@ -238,22 +238,22 @@ export default function AdminInvoices() {
   }, [stableFilterDeps]); // Use stable dependency object
   
   const handleViewBill = (invoice: SubcontractorBill) => {
-    setSelectedInvoice(invoice);
+    setSelectedBill(invoice);
     setModalOpen(true);
   };
 
   const handleApproveBill = (invoice: SubcontractorBill) => {
-    setSelectedInvoice(invoice);
+    setSelectedBill(invoice);
     setModalOpen(true);
   };
 
   const handleRejectBill = (invoice: SubcontractorBill) => {
-    setSelectedInvoice(invoice);
+    setSelectedBill(invoice);
     setModalOpen(true);
   };
 
   const handleMarkAsPaid = (invoice: SubcontractorBill) => {
-    setSelectedInvoice(invoice);
+    setSelectedBill(invoice);
     setModalOpen(true);
   };
 
@@ -877,11 +877,11 @@ const table = useReactTable({
 
       {/* Detail Modal */}
       <InvoiceDetailModal
-        invoice={selectedInvoice}
+        invoice={selectedBill}
         isOpen={modalOpen}
         onClose={() => {
           setModalOpen(false);
-          setSelectedInvoice(null);
+          setSelectedBill(null);
         }}
       />
 
@@ -911,10 +911,10 @@ const table = useReactTable({
         open={deleteOpen}
         onOpenChange={(open) => {
           setDeleteOpen(open);
-          if (!open) setInvoiceToDelete(null);
+          if (!open) setBillToDelete(null);
         }}
         onConfirm={confirmDelete}
-        itemName={invoiceToDelete?.internal_bill_number || ''}
+        itemName={billToDelete?.internal_bill_number || ''}
         itemType="bill"
         isLoading={isDeleting}
       />
