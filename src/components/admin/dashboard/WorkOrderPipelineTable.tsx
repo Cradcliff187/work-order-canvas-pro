@@ -398,27 +398,7 @@ export function WorkOrderPipelineTable({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Work Order Pipeline</CardTitle>
-          <div className="flex gap-2">
-            {onExport && (
-              <ExportDropdown 
-                onExport={onExport} 
-                variant="outline" 
-                size="sm"
-                disabled={isLoading || data.length === 0} 
-              />
-            )}
-            {onToggleColumn && onResetColumns && (
-              <ColumnVisibilityDropdown
-                columns={columnOptions}
-                onToggleColumn={onToggleColumn}
-                onResetToDefaults={onResetColumns}
-                variant="outline"
-              />
-            )}
-          </div>
-        </div>
+        <CardTitle>Work Order Pipeline</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
