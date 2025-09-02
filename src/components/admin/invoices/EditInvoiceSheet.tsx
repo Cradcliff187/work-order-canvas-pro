@@ -31,7 +31,7 @@ interface EditInvoiceSheetProps {
 
 export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpenChange, invoice, onSaved }) => {
   const { toast } = useToast();
-  const [externalInvoiceNumber, setExternalInvoiceNumber] = useState('');
+  const [externalBillNumber, setExternalBillNumber] = useState('');
   const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('Net 30');
   const [subcontractorNotes, setSubcontractorNotes] = useState('');
@@ -46,7 +46,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
 
   useEffect(() => {
     if (!invoice) return;
-    setExternalInvoiceNumber(invoice.external_bill_number || '');
+    setExternalBillNumber(invoice.external_bill_number || '');
     setPurchaseOrderNumber((invoice as any).purchase_order_number || '');
     setPaymentTerms((invoice as any).payment_terms || 'Net 30');
     setSubcontractorNotes((invoice as any).subcontractor_notes || '');
@@ -87,7 +87,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
       
       // Update invoice metadata
       const invoicePayload: any = {
-        external_bill_number: externalInvoiceNumber || null,
+        external_bill_number: externalBillNumber || null,
         purchase_order_number: purchaseOrderNumber || null,
         payment_terms: paymentTerms || 'Net 30',
         subcontractor_notes: subcontractorNotes || null,
@@ -140,7 +140,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="external_bill_number">Vendor Bill #</Label>
-              <Input id="external_bill_number" value={externalInvoiceNumber} onChange={(e) => setExternalInvoiceNumber(e.target.value)} />
+              <Input id="external_bill_number" value={externalBillNumber} onChange={(e) => setExternalBillNumber(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="purchase_order_number">Purchase Order #</Label>
