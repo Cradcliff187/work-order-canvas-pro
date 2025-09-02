@@ -69,11 +69,11 @@ export const useWorkOrderStatusTransitions = () => {
       if (fetchError) throw fetchError;
 
       // Validate estimate requirements based on current and target status
-      if (workOrder.status === 'estimate_needed' && newStatus !== 'cancelled') {
+      if (workOrder.status === 'estimate_needed' && newStatus !== 'cancelled' && newStatus !== 'estimate_pending_approval') {
         throw new Error("Estimate must be submitted first");
       }
 
-      if (workOrder.status === 'estimate_approved' && newStatus === 'in_progress') {
+      if ((workOrder.status === 'estimate_pending_approval' || workOrder.status === 'estimate_approved') && newStatus === 'in_progress') {
         if (!workOrder.partner_estimate_approved) {
           throw new Error("Estimate must be approved by partner before work can begin");
         }
@@ -191,6 +191,12 @@ export const useWorkOrderStatusDisplay = () => {
           color: 'bg-orange-100 text-orange-800 border-orange-200',
           label: 'Estimate Needed',
           description: 'Contractor needs to provide estimate before starting'
+        };
+      case 'estimate_pending_approval':
+        return {
+          color: 'bg-amber-100 text-amber-800 border-amber-200',
+          label: 'Pending Approval',
+          description: 'Estimate submitted and awaiting partner approval'
         };
       case 'estimate_approved':
         return {

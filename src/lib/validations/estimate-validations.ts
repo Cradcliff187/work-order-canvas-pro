@@ -23,7 +23,7 @@ export interface VarianceInfo {
  */
 export function validateEstimateBeforeWork(workOrder: WorkOrder): EstimateValidationResult {
   // If work order doesn't require an estimate, allow transition
-  if (workOrder.status !== 'estimate_needed') {
+  if (workOrder.status !== 'estimate_needed' && workOrder.status !== 'estimate_pending_approval') {
     return { isValid: true };
   }
 

@@ -46,13 +46,11 @@ export function getPartnerFriendlyStatus(
 ): string {
   // Special handling for estimate-related statuses when viewed by partners
   if (status === 'estimate_needed') {
-    // Use our own check for internal estimate to avoid type issues
-    if (workOrder.internal_estimate_amount && workOrder.internal_estimate_amount > 0) {
-      // Partner needs to approve the estimate we've prepared
-      return 'Pending Your Approval';
-    }
-    // We're still preparing the estimate
     return 'Preparing Estimate';
+  }
+  
+  if (status === 'estimate_pending_approval') {
+    return 'Pending Your Approval';
   }
   
   if (status === 'estimate_approved') {
@@ -67,6 +65,7 @@ export function getPartnerFriendlyStatus(
     'completed': 'Completed',
     'cancelled': 'Cancelled',
     'estimate_needed': 'Estimate Needed',
+    'estimate_pending_approval': 'Pending Approval',
     'estimate_approved': 'Estimate Approved'
   };
   
