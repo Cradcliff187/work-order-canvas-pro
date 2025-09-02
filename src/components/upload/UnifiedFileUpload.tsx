@@ -1,16 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Upload, X, File, ImageIcon, AlertCircle, Loader2, Info, FileText, Image as ImageIconSolid, Trash2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Upload, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UniversalUploadSheet } from './UniversalUploadSheet';
 import { FileDropzone } from './FileDropzone';
 import { useFileValidation, getFileType, type ValidationError } from './FileValidation';
 import { FilePreviewList } from './FilePreviewList';
+import { FileRequirements } from './FileRequirements';
+import { ValidationErrorList } from './ValidationErrorList';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { getSupportedFormatsText } from '@/utils/fileUtils';
 
 // ============= FILE STATE MANAGEMENT =============
 // Clear state ownership model:
@@ -314,53 +312,35 @@ export function UnifiedFileUpload({
 
 
   // Calculate upload status for aria announcements
-  const getUploadStatusAnnouncement = () => {
-    const uploadingFiles = previews.filter(p => getFileProgress(p.file.name).status === 'uploading');
-    const completedFiles = previews.filter(p => getFileProgress(p.file.name).status === 'completed');
-    const errorFiles = previews.filter(p => getFileProgress(p.file.name).status === 'error');
+  const uploadStatusAnnouncement = useMemo(() => {
+    const uploadingCount = previews.filter(p => getFileProgress(p.file.name).status === 'uploading').length;
+    const errorCount = previews.filter(p => getFileProgress(p.file.name).status === 'error').length;
+    const completedCount = previews.filter(p => getFileProgress(p.file.name).status === 'completed').length;
     
-    if (uploadingFiles.length > 0) {
-      return `Uploading ${uploadingFiles.length} of ${previews.length} files`;
-    }
-    if (errorFiles.length > 0) {
-      return `${errorFiles.length} files failed to upload`;
-    }
-    if (completedFiles.length === previews.length && previews.length > 0) {
-      return `All ${completedFiles.length} files uploaded successfully`;
-    }
+    if (uploadingCount > 0) return `Uploading ${uploadingCount} of ${previews.length} files`;
+    if (errorCount > 0) return `${errorCount} files failed to upload`;
+    if (completedCount === previews.length && previews.length > 0) return `All ${completedCount} files uploaded successfully`;
     return '';
-  };
+  }, [previews, uploadProgress]);
+
+  const fileRestrictions = fileValidation.getFileRestrictions();
 
   // Mobile UI
   if (isMobile) {
     return (
       <div className={cn("space-y-4", className)} role="region" aria-label="File upload">
-        {/* Live region for status announcements */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">
-          {getUploadStatusAnnouncement()}
+          {uploadStatusAnnouncement}
         </div>
 
-        {/* File restrictions and selection mode */}
-        <div className="text-sm text-muted-foreground bg-muted/30 rounded-xl p-4 border">
-            <div className="space-y-2">
-              <p className="font-medium text-foreground">Upload Requirements</p>
-              <div className="grid grid-cols-1 gap-2">
-                <span>Formats: {fileValidation.getFileRestrictions().types}</span>
-                <span>Max size: {fileValidation.getFileRestrictions().size} per file</span>
-                <span>Max files: {fileValidation.getFileRestrictions().count}</span>
-              {mode === 'staged' && previews.length > 0 && (
-                <span className="text-primary font-medium">
-                  {selectionMode === 'accumulate' 
-                    ? `Adding to ${previews.length} existing files` 
-                    : 'New selection will replace existing files'
-                  }
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+        <FileRequirements
+          {...fileRestrictions}
+          mode={mode}
+          selectionMode={selectionMode}
+          currentFileCount={previews.length}
+          layout="mobile"
+        />
 
-        {/* Upload trigger */}
         <UniversalUploadSheet
           trigger={
             <Button
@@ -368,7 +348,6 @@ export function UnifiedFileUpload({
               className="w-full h-20 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-all duration-200"
               disabled={disabled || isUploading}
               aria-label={isUploading ? "Processing files, please wait" : `Upload files. Maximum ${maxFiles} files allowed.`}
-              aria-describedby="upload-instructions"
             >
               <div className="text-center space-y-2">
                 {isUploading ? (
@@ -380,7 +359,7 @@ export function UnifiedFileUpload({
                   <p className="text-sm font-medium">
                     {isUploading ? "Processing Files..." : "Choose Files"}
                   </p>
-                  <p id="upload-instructions" className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {isUploading ? "Please wait..." : "Tap to browse"}
                   </p>
                 </div>
@@ -394,35 +373,8 @@ export function UnifiedFileUpload({
           isProcessing={isUploading}
         />
 
-        {/* Validation errors */}
-        {validationErrors.length > 0 && (
-          <div className="space-y-2" role="region" aria-live="assertive" aria-label="Upload errors">
-            {validationErrors.map((error) => (
-              <Alert key={error.id} variant="destructive" role="alert">
-                <AlertCircle className="h-4 w-4" aria-hidden="true" />
-                <AlertDescription className="flex items-start justify-between space-x-2">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{error.message}</p>
-                    <p className="text-xs opacity-90">{error.guidance}</p>
-                  </div>
-                  {error.isDismissible && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => dismissError(error.id)}
-                      className="h-6 w-6 p-0 text-destructive-foreground hover:bg-destructive/20"
-                      aria-label={`Dismiss error for ${error.fileName || 'upload'}`}
-                    >
-                      <X className="h-3 w-3" aria-hidden="true" />
-                    </Button>
-                  )}
-                </AlertDescription>
-              </Alert>
-            ))}
-          </div>
-        )}
+        <ValidationErrorList errors={validationErrors} onDismissError={dismissError} />
 
-        {/* File previews */}
         <FilePreviewList
           files={stagedFiles}
           onRemove={removeFile}
@@ -441,38 +393,18 @@ export function UnifiedFileUpload({
   // Desktop UI with drag-and-drop
   return (
     <div className={cn("space-y-4", className)} role="region" aria-label="File upload">
-      {/* Live region for status announcements */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {getUploadStatusAnnouncement()}
+        {uploadStatusAnnouncement}
       </div>
 
-      {/* File restrictions */}
-      <Card className="bg-muted/30 border-muted">
-        <CardContent className="p-4">
-          <div className="flex items-start space-x-3">
-            <Info className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" aria-hidden="true" />
-            <div className="space-y-2 text-sm">
-              <p className="font-medium text-foreground">Upload Requirements</p>
-              <div className="grid grid-cols-3 gap-4 text-muted-foreground">
-                <div className="flex items-center space-x-2">
-                  <FileText className="w-4 h-4" aria-hidden="true" />
-                  <span>Formats: {fileValidation.getFileRestrictions().types}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <ImageIconSolid className="w-4 h-4" aria-hidden="true" />
-                  <span>Max size: {fileValidation.getFileRestrictions().size} per file</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Upload className="w-4 h-4" aria-hidden="true" />
-                  <span>Max files: {fileValidation.getFileRestrictions().count}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <FileRequirements
+        {...fileRestrictions}
+        mode={mode}
+        selectionMode={selectionMode}
+        currentFileCount={previews.length}
+        layout="desktop"
+      />
 
-      {/* Drag and drop zone */}
       <FileDropzone
         onFilesSelected={handleFilesSelected}
         disabled={disabled}
@@ -480,38 +412,11 @@ export function UnifiedFileUpload({
         maxFiles={maxFiles}
         maxSizeBytes={maxSizeBytes}
         isUploading={isUploading}
-        uploadStatusText={getUploadStatusAnnouncement() || "Processing files..."}
+        uploadStatusText={uploadStatusAnnouncement || "Processing files..."}
       />
 
-      {/* Validation errors */}
-      {validationErrors.length > 0 && (
-        <div className="space-y-2" role="region" aria-live="assertive" aria-label="Upload errors">
-          {validationErrors.map((error) => (
-            <Alert key={error.id} variant="destructive" role="alert">
-              <AlertCircle className="h-4 w-4" aria-hidden="true" />
-              <AlertDescription className="flex items-start justify-between space-x-2">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">{error.message}</p>
-                  <p className="text-xs opacity-90">{error.guidance}</p>
-                </div>
-                {error.isDismissible && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => dismissError(error.id)}
-                    className="h-6 w-6 p-0 text-destructive-foreground hover:bg-destructive/20"
-                    aria-label={`Dismiss error for ${error.fileName || 'upload'}`}
-                  >
-                    <X className="h-3 w-3" aria-hidden="true" />
-                  </Button>
-                )}
-              </AlertDescription>
-            </Alert>
-          ))}
-        </div>
-      )}
+      <ValidationErrorList errors={validationErrors} onDismissError={dismissError} />
 
-      {/* File previews */}
       <FilePreviewList
         files={stagedFiles}
         onRemove={removeFile}

@@ -1,8 +1,9 @@
-// Export all upload components from a single entry point
 export { UniversalUploadSheet } from './UniversalUploadSheet';
 export { UnifiedFileUpload } from './UnifiedFileUpload';
 export { FileDropzone } from './FileDropzone';
 export { FilePreviewList } from './FilePreviewList';
+export { FileRequirements } from './FileRequirements';
+export { ValidationErrorList } from './ValidationErrorList';
 export { 
   useFileValidation, 
   getFileType, 
