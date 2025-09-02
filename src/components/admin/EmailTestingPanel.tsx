@@ -95,7 +95,7 @@ export function EmailTestingPanel() {
           work_performed: 'Completed test maintenance tasks',
           materials_used: 'Test materials and supplies',
           hours_worked: '4.5',
-          invoice_amount: '350.00',
+          bill_amount: '350.00',
           status: 'approved',
           review_notes: 'Work completed satisfactorily',
           subcontractor_name: 'Test Contractor',

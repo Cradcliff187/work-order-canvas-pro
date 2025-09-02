@@ -168,7 +168,7 @@ export function ReportsTable<TData = any>({
                 ) : (
                   (() => {
                     const data: any = row.original;
-                    const number = data?.report_number || data?.invoice_number || data?.work_orders?.work_order_number || (row.id as string) || 'Item';
+                    const number = data?.report_number || data?.bill_number || data?.work_orders?.work_order_number || (row.id as string) || 'Item';
                     const status = data?.status as string | undefined;
                     
                     const submittedAt = data?.submitted_at;

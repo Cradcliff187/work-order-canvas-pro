@@ -190,8 +190,8 @@ export function useWorkOrderLifecycleTesting() {
           work_performed: 'Test work performed for lifecycle testing',
           materials_used: 'Test materials',
           hours_worked: 2.5,
-          invoice_amount: 150.00,
-          invoice_number: 'TEST-INV-001',
+          bill_amount: 150.00,
+          bill_number: 'TEST-INV-001',
           notes: 'Test report notes',
           status: 'submitted'
         })

@@ -66,7 +66,7 @@ export const TEMPLATE_VARIABLES = {
     'work_performed': 'Replaced faulty compressor and recharged HVAC system',
     'hours_worked': '4.5',
     'materials_used': 'Compressor unit, refrigerant, gaskets',
-    'invoice_amount': '$1,250.00',
+    'bill_amount': '$1,250.00',
     'status': 'approved',
     'review_notes': 'Work completed satisfactorily. Quality meets standards.',
   },

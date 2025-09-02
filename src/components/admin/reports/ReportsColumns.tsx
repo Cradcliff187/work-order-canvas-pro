@@ -20,7 +20,7 @@ export interface ReportColumnsProps<T = any> {
 
 // Safe access helpers
 const getReportNumber = (r: any): string =>
-  r?.report_number || r?.invoice_number || r?.id?.slice?.(0, 8) || 'N/A';
+  r?.report_number || r?.bill_number || r?.id?.slice?.(0, 8) || 'N/A';
 
 const getWorkOrderNumber = (r: any): string =>
   r?.work_orders?.work_order_number || 'N/A';
