@@ -6,26 +6,12 @@ import { Button } from '@/components/ui/button';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
-import { BillingFilters } from '@/components/admin/billing/BillingFilters';
+import { BillingFilters, BillingFiltersValue } from '@/components/admin/billing/BillingFilters';
 import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { ViewMode } from '@/hooks/useViewMode';
-
-interface PipelineFiltersValue {
-  search?: string;
-  status?: string[];
-  financial_status?: string[];
-  partner_billing_status?: string[];
-  report_status?: string[];
-  partner_organization_ids?: string[];
-  subcontractor_organization_ids?: string[];
-  date_from?: string;
-  date_to?: string;
-  amount_min?: string;
-  amount_max?: string;
-}
 
 interface BillingPipelineTableProps {
   data: any[];
@@ -36,8 +22,8 @@ interface BillingPipelineTableProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   allowedModes: ViewMode[];
-  filters: PipelineFiltersValue;
-  onFiltersChange: (filters: PipelineFiltersValue) => void;
+  filters: BillingFiltersValue;
+  onFiltersChange: (filters: BillingFiltersValue) => void;
   onClearFilters: () => void;
   filterCount: number;
   columnVisibilityColumns: any[];

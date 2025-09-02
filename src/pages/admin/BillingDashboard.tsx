@@ -13,21 +13,7 @@ import { formatCurrency } from '@/utils/formatting';
 import { SubcontractorBill } from '@/hooks/useSubcontractorBills';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { BillingPipelineTable } from '@/components/admin/billing/BillingPipelineTable';
-
-// Filter interface - match BillingFiltersValue interface
-interface PipelineFiltersValue {
-  search?: string;
-  status?: string[];
-  financial_status?: string[];
-  partner_billing_status?: string[];
-  report_status?: string[];
-  partner_organization_ids?: string[];
-  subcontractor_organization_ids?: string[];
-  date_from?: string;
-  date_to?: string;
-  amount_min?: string;
-  amount_max?: string;
-}
+import { BillingFiltersValue } from '@/components/admin/billing/BillingFilters';
 
 export default function BillingDashboard() {
   const [selectedInvoice, setSelectedInvoice] = useState<SubcontractorBill | null>(null);
@@ -45,7 +31,7 @@ export default function BillingDashboard() {
 
   // Billing-specific state
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<PipelineFiltersValue>({});
+  const [filters, setFilters] = useState<BillingFiltersValue>({});
   const { viewMode, setViewMode } = useViewMode({
     componentKey: 'billing-dashboard',
     config: {
