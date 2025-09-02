@@ -203,27 +203,36 @@ export default function AdminInvoices() {
 
   const { data, isLoading, error, refetch } = useSubcontractorBills({ ...filters, search: debouncedSearch, page });
 
-  // Optimize dependencies with useMemo for stable references
-  const stableFilterDeps = useMemo(() => ({
-    debouncedSearch,
-    overdue: filters.overdue,
-    partner_organization_id: filters.partner_organization_id,
-    location_filter: filters.location_filter?.sort().join(','),
-    subcontractor_organization_id: filters.subcontractor_organization_id,
-    operational_status: filters.operational_status?.sort().join(','),
-    report_status: filters.report_status?.sort().join(','),
-    invoice_status: filters.invoice_status?.sort().join(','),
-    partner_billing_status: filters.partner_billing_status?.sort().join(','),
-  }), [
+  // Stable filter dependencies to prevent infinite loops
+  const stableFilterDeps = useMemo(() => {
+    const locationFilter = filters.location_filter || [];
+    const operationalStatus = filters.operational_status || [];
+    const reportStatus = filters.report_status || [];
+    const invoiceStatus = filters.invoice_status || [];
+    const partnerBillingStatus = filters.partner_billing_status || [];
+    
+    return {
+      debouncedSearch,
+      overdue: filters.overdue,
+      partner_organization_id: filters.partner_organization_id,
+      location_filter: locationFilter.slice().sort().join(','),
+      subcontractor_organization_id: filters.subcontractor_organization_id,
+      operational_status: operationalStatus.slice().sort().join(','),
+      report_status: reportStatus.slice().sort().join(','),
+      invoice_status: invoiceStatus.slice().sort().join(','),
+      partner_billing_status: partnerBillingStatus.slice().sort().join(','),
+    };
+  }, [
     debouncedSearch,
     filters.overdue,
     filters.partner_organization_id,
-    filters.location_filter?.sort().join(','),
     filters.subcontractor_organization_id,
-    filters.operational_status?.sort().join(','),
-    filters.report_status?.sort().join(','),
-    filters.invoice_status?.sort().join(','),
-    filters.partner_billing_status?.sort().join(','),
+    // Use JSON.stringify for array stability to avoid reference issues
+    JSON.stringify(filters.location_filter || []),
+    JSON.stringify(filters.operational_status || []),
+    JSON.stringify(filters.report_status || []),
+    JSON.stringify(filters.invoice_status || []),
+    JSON.stringify(filters.partner_billing_status || []),
   ]);
 
   // Reset page when filters change (but not on initial mount)
