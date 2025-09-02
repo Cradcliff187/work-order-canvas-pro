@@ -68,6 +68,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 
 export default function AdminInvoices() {
   const isMobile = useIsMobile();
+  console.log('📱 Device Detection:', { 
+    isMobile, 
+    windowWidth: window.innerWidth,
+    userAgent: navigator.userAgent.substring(0, 50)
+  });
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedBill, setSelectedBill] = useState<SubcontractorBill | null>(null);
@@ -140,6 +145,11 @@ export default function AdminInvoices() {
       desktop: ['table', 'card']
     },
     defaultMode: 'table'
+  });
+  console.log('👁️ View Mode:', { 
+    viewMode, 
+    allowedModes,
+    isMobile 
   });
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
