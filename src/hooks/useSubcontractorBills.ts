@@ -86,7 +86,7 @@ const getOperationalStatus = (bill: SubcontractorBill) => {
   return 'unknown';
 };
 
-const getPartnerBillingStatus = (bill: SubcontractorBill) => {
+const getPartnerInvoicingStatus = (bill: SubcontractorBill) => {
   const workOrders = bill.subcontractor_bill_work_orders || [];
   if (workOrders.length === 0) return 'not_applicable';
   
@@ -227,7 +227,7 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
       const enrichedData = filteredData.map(bill => ({
         ...bill,
         operational_status: getOperationalStatus(bill),
-        partner_billing_status: getPartnerBillingStatus(bill)
+        partner_billing_status: getPartnerInvoicingStatus(bill)
       }));
 
       return {
@@ -327,7 +327,7 @@ export const useSubcontractorBill = (id: string) => {
       return {
         ...data,
         operational_status: getOperationalStatus(data),
-        partner_billing_status: getPartnerBillingStatus(data)
+        partner_billing_status: getPartnerInvoicingStatus(data)
       };
     },
     enabled: !!id,

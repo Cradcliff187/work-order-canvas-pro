@@ -253,7 +253,7 @@ export default function PipelineDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Ready to Bill</p>
+                <p className="text-sm text-muted-foreground">Ready to Invoice</p>
                 <p className="text-2xl font-bold">{metrics?.readyToBill || 0}</p>
               </div>
               <CreditCard className="h-8 w-8 text-green-500" />

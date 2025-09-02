@@ -12,7 +12,7 @@ import type { InvoiceFiltersValue } from './InvoiceFilters';
 const paymentStatusOptions = [
   { value: 'pending', label: 'Pending Payment' },
   { value: 'paid', label: 'Paid' },
-  { value: 'ready_to_bill', label: 'Ready to Bill' },
+  { value: 'ready_to_bill', label: 'Ready to Invoice' },
   { value: 'billed', label: 'Partner Invoiced' }
 ];
 

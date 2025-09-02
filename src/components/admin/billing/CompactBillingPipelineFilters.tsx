@@ -43,7 +43,7 @@ const financialStatusOptions = [
   { value: 'paid', label: 'Paid' }
 ];
 
-const partnerBillingStatusOptions = [
+const partnerInvoicingStatusOptions = [
   { value: 'report_pending', label: 'Report Pending' },
   { value: 'invoice_needed', label: 'Subcontractor Bill Needed' },
   { value: 'invoice_pending', label: 'Bill Pending Approval' },
@@ -172,7 +172,7 @@ export function CompactBillingPipelineFilters({
         <div>
           <label className="text-sm font-medium mb-2 block">Partner Invoicing Status</label>
           <MultiSelectFilter
-            options={partnerBillingStatusOptions}
+            options={partnerInvoicingStatusOptions}
             selectedValues={localValue.partner_billing_status || []}
             onSelectionChange={(vals) => handleFilterChange('partner_billing_status', vals)}
             placeholder="Filter by billing..."

@@ -282,7 +282,7 @@ export function WorkOrderPipelineTable({
     {
       id: 'partner_invoicing',
       header: 'Partner Invoicing Status',
-      cell: ({ row }) => <StatusBadge type="partnerBilling" status={getPartnerInvoicingStatus(row.original)} size="sm" showIcon />,
+      cell: ({ row }) => <StatusBadge type="partnerInvoicing" status={getPartnerInvoicingStatus(row.original)} size="sm" showIcon />,
     },
     {
       id: 'amount',

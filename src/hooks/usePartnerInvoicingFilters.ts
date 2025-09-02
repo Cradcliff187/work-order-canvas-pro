@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { PartnerUnbilledReport } from '@/hooks/usePartnerUnbilledReports';
-import { PartnerBillingFiltersValue } from '@/components/admin/partner-billing/PartnerBillingFilters';
+import { PartnerInvoicingFiltersValue } from '@/components/admin/partner-billing/PartnerBillingFilters';
 import { subDays, isAfter } from 'date-fns';
 
-export function usePartnerBillingFilters(
+export function usePartnerInvoicingFilters(
   reports: PartnerUnbilledReport[] | undefined,
-  filters: PartnerBillingFiltersValue
+  filters: PartnerInvoicingFiltersValue
 ) {
   return useMemo(() => {
     if (!reports) return [];
@@ -120,7 +120,7 @@ export function usePartnerBillingFilters(
   }, [reports, filters]);
 }
 
-export function usePartnerBillingFilterCount(filters: PartnerBillingFiltersValue) {
+export function usePartnerInvoicingFilterCount(filters: PartnerInvoicingFiltersValue) {
   return useMemo(() => {
     let count = 0;
     if (filters.search?.trim()) count++;

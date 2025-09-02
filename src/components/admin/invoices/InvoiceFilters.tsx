@@ -52,7 +52,7 @@ const invoiceStatusOptions = [
   { value: 'rejected', label: 'Rejected' }
 ];
 
-const partnerBillingStatusOptions = [
+const partnerInvoicingStatusOptions = [
   { value: 'report_pending', label: 'Report Pending' },
   { value: 'invoice_needed', label: 'Subcontractor Bill Needed' },
   { value: 'invoice_pending', label: 'Bill Pending Approval' },
@@ -206,7 +206,7 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
     <div className="space-y-2">
       <label className="text-sm font-medium text-muted-foreground">Partner Invoicing Status</label>
       <MultiSelectFilter
-        options={partnerBillingStatusOptions}
+        options={partnerInvoicingStatusOptions}
         selectedValues={value.partner_billing_status || []}
         onSelectionChange={(statuses) => set('partner_billing_status', statuses)}
         placeholder="Partner Invoicing Status"

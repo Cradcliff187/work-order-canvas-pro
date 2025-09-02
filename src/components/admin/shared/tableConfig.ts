@@ -90,7 +90,7 @@ export const statusConfig = {
       className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     }
   },
-  partnerBilling: {
+  partnerInvoicing: {
     billed: {
       label: "Billed",
       className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
@@ -108,7 +108,7 @@ export const statusConfig = {
       className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     },
     ready_to_bill: {
-      label: "Ready to Bill",
+      label: "Ready to Invoice",
       className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     report_pending: {
@@ -129,7 +129,7 @@ export const statusConfig = {
       className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
     fully_billed: {
-      label: "Ready to Bill",
+      label: "Ready to Invoice",
       description: "Invoice approved and ready for partner invoicing",
       className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
@@ -282,7 +282,7 @@ export type EntityType = keyof typeof statusConfig;
 export type WorkOrderStatus = keyof typeof statusConfig.workOrder;
 export type FinancialStatus = keyof typeof statusConfig.financialStatus;
 export type OperationalStatus = keyof typeof statusConfig.operationalStatus;
-export type PartnerBillingStatus = keyof typeof statusConfig.partnerBilling;
+export type PartnerInvoicingStatus = keyof typeof statusConfig.partnerInvoicing;
 export type ComputedFinancialStatus = keyof typeof statusConfig.computedFinancialStatus;
 export type Priority = keyof typeof statusConfig.priority;
 export type RoleType = keyof typeof statusConfig.user;

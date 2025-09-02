@@ -43,7 +43,7 @@ export interface WorkOrderPipelineItem {
   invoice_status: string | null;
   invoice_submitted_at: string | null;
   
-  // Partner billing status
+  // Partner invoicing status
   partner_bill_status: string | null;
   partner_billed_at: string | null;
   partner_billed_amount: number | null;
@@ -281,7 +281,7 @@ export function useWorkOrderLifecycle() {
               invoice_status: subcontractorInvoice?.status || null,
               invoice_submitted_at: subcontractorInvoice?.submitted_at || null,
               
-              // Partner billing status with safe defaults
+              // Partner invoicing status with safe defaults
               internal_markup_percentage: workOrder.internal_markup_percentage || 30,
               partner_billed_amount: latestReport?.partner_billed_amount || null,
               partner_bill_status: latestReport?.partner_billed_at ? 'billed' : null,

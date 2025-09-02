@@ -17,7 +17,7 @@ import { Filter, ChevronDown, X, Calendar as CalendarIcon, TrendingUp, Clock, Al
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-export interface PartnerBillingFiltersValue {
+export interface PartnerInvoicingFiltersValue {
   search?: string;
   report_status?: string[];
   subcontractor_organization_id?: string;
@@ -33,9 +33,9 @@ export interface PartnerBillingFiltersValue {
   recently_submitted?: boolean;
 }
 
-interface PartnerBillingFiltersProps {
-  value: PartnerBillingFiltersValue;
-  onChange: (value: PartnerBillingFiltersValue) => void;
+interface PartnerInvoicingFiltersProps {
+  value: PartnerInvoicingFiltersValue;
+  onChange: (value: PartnerInvoicingFiltersValue) => void;
   onClear: () => void;
   filterCount: number;
   partnerOrgId?: string;
@@ -56,13 +56,13 @@ const varianceFilterOptions = [
   { value: 'no_estimate', label: 'No Estimate Available' }
 ];
 
-export function PartnerBillingFilters({ 
+export function PartnerInvoicingFilters({ 
   value, 
   onChange, 
   onClear, 
   filterCount, 
   partnerOrgId 
-}: PartnerBillingFiltersProps) {
+}: PartnerInvoicingFiltersProps) {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isDesktopSheetOpen, setIsDesktopSheetOpen] = useState(false);
@@ -171,7 +171,7 @@ export function PartnerBillingFilters({
   }, [value]);
 
   // Helper function to update filter values
-  const set = (key: keyof PartnerBillingFiltersValue, newValue: any) => {
+  const set = (key: keyof PartnerInvoicingFiltersValue, newValue: any) => {
     onChange({ ...value, [key]: newValue });
   };
 

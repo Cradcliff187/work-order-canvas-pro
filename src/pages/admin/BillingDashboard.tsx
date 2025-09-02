@@ -5,7 +5,7 @@ import { useOrganizations } from '@/hooks/useOrganizations';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useViewMode } from '@/hooks/useViewMode';
-import { usePartnerBillingFilters, usePartnerBillingFilterCount } from '@/hooks/usePartnerBillingFilters';
+import { usePartnerInvoicingFilters, usePartnerInvoicingFilterCount } from '@/hooks/usePartnerInvoicingFilters';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, TrendingUp, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
@@ -180,7 +180,7 @@ export default function BillingDashboard() {
                 <CheckCircle className="h-5 w-5 text-green-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Ready to Bill</p>
+                <p className="text-sm text-muted-foreground">Ready to Invoice</p>
                 <p className="text-2xl font-bold">{readyToBill}</p>
               </div>
             </div>
