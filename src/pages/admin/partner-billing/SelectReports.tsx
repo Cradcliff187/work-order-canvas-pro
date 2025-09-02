@@ -373,7 +373,7 @@ export default function SelectReports() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Partner Billing</BreadcrumbPage>
+              <BreadcrumbPage>Partner Invoices</BreadcrumbPage>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
@@ -385,9 +385,9 @@ export default function SelectReports() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Partner Billing</h1>
+            <h1 className="text-3xl font-bold">Partner Invoices</h1>
             <p className="text-muted-foreground">
-              Select reports with approved subcontractor invoices to bill partners
+              Select reports with approved subcontractor invoices to generate partner invoices
             </p>
           </div>
           <Button 
@@ -419,7 +419,7 @@ export default function SelectReports() {
               />
               {selectedPartnerId && (
                 <p className="text-sm text-muted-foreground">
-                  Partner selected. Showing reports with approved subcontractor invoices ready for billing.
+                  Partner selected. Showing reports with approved subcontractor invoices ready for invoicing.
                 </p>
               )}
             </div>
