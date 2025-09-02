@@ -16,7 +16,7 @@ import { useSubcontractorBills, SubcontractorBill } from '@/hooks/useSubcontract
 import { UnifiedInvoiceFilters } from '@/components/admin/invoices/UnifiedInvoiceFilters';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
-import { createInvoiceColumns } from '@/components/admin/invoices/InvoiceColumns';
+import { createBillColumns } from '@/components/admin/invoices/InvoiceColumns';
 import { EditInvoiceSheet } from '@/components/admin/invoices/EditInvoiceSheet';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { BulkEditSheet } from '@/components/admin/invoices/BulkEditSheet';
@@ -257,13 +257,13 @@ export default function AdminInvoices() {
     setModalOpen(true);
   };
 
-  const columns = createInvoiceColumns({
-    onViewInvoice: handleViewInvoice,
-    onApproveInvoice: handleApproveInvoice,
-    onRejectInvoice: handleRejectInvoice,
+  const columns = createBillColumns({
+    onViewBill: handleViewInvoice,
+    onApproveBill: handleApproveInvoice,
+    onRejectBill: handleRejectInvoice,
     onMarkAsPaid: handleMarkAsPaid,
-    onEditInvoice: handleEditInvoice,
-    onDeleteInvoice: handleDeleteInvoice,
+    onEditBill: handleEditInvoice,
+    onDeleteBill: handleDeleteInvoice,
   });
 
   // Column visibility setup for bills

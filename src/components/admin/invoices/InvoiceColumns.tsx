@@ -11,32 +11,32 @@ import { formatCurrency } from '@/utils/formatting';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
 
-interface InvoiceColumnsProps {
-  onViewInvoice: (invoice: SubcontractorBill) => void;
-  onApproveInvoice: (invoice: SubcontractorBill) => void;
-  onRejectInvoice: (invoice: SubcontractorBill) => void;
-  onMarkAsPaid: (invoice: SubcontractorBill) => void;
+interface BillColumnsProps {
+  onViewBill: (bill: SubcontractorBill) => void;
+  onApproveBill: (bill: SubcontractorBill) => void;
+  onRejectBill: (bill: SubcontractorBill) => void;
+  onMarkAsPaid: (bill: SubcontractorBill) => void;
   // Optional billing actions
-  onSendInvoice?: (invoice: SubcontractorBill) => void;
-  onDownloadPdf?: (invoice: SubcontractorBill) => void;
+  onSendBill?: (bill: SubcontractorBill) => void;
+  onDownloadPdf?: (bill: SubcontractorBill) => void;
   // Optional due date resolver for overdue highlighting
-  getDueDate?: (invoice: SubcontractorBill) => string | null;
+  getDueDate?: (bill: SubcontractorBill) => string | null;
   // Admin CRUD
-  onEditInvoice?: (invoice: SubcontractorBill) => void;
-  onDeleteInvoice?: (invoice: SubcontractorBill) => void;
+  onEditBill?: (bill: SubcontractorBill) => void;
+  onDeleteBill?: (bill: SubcontractorBill) => void;
 }
 
-export const createInvoiceColumns = ({
-  onViewInvoice,
-  onApproveInvoice,
-  onRejectInvoice,
+export const createBillColumns = ({
+  onViewBill,
+  onApproveBill,
+  onRejectBill,
   onMarkAsPaid,
-  onSendInvoice,
+  onSendBill,
   onDownloadPdf,
   getDueDate,
-  onEditInvoice,
-  onDeleteInvoice,
-}: InvoiceColumnsProps): ColumnDef<SubcontractorBill>[] => [
+  onEditBill,
+  onDeleteBill,
+}: BillColumnsProps): ColumnDef<SubcontractorBill>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -61,7 +61,7 @@ export const createInvoiceColumns = ({
   },
   {
     accessorKey: 'internal_bill_number',
-    header: ({ column }) => <SortableHeader column={column} label="Sub Bill#" />,
+    header: ({ column }) => <SortableHeader column={column} label="Bill #" />,
     cell: ({ row }) => (
       <div className="font-mono text-sm text-right">
         {row.getValue('internal_bill_number')}
@@ -139,13 +139,13 @@ export const createInvoiceColumns = ({
     accessorKey: 'subcontractor_organization.name',
     header: 'Partner',
     cell: ({ row }) => {
-      const invoice = row.original;
-      const isAdminEntered = !!(invoice as any).created_by_admin_id;
+      const bill = row.original;
+      const isAdminEntered = !!(bill as any).created_by_admin_id;
       
       return (
         <div className="flex items-center gap-2">
           <div className="max-w-[180px] truncate">
-            {invoice.subcontractor_organization.name}
+            {bill.subcontractor_organization.name}
           </div>
           {isAdminEntered && (
             <TooltipProvider>
@@ -157,7 +157,7 @@ export const createInvoiceColumns = ({
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Entered by {(invoice as any).created_by_admin?.first_name} {(invoice as any).created_by_admin?.last_name}</p>
+                  <p>Entered by {(bill as any).created_by_admin?.first_name} {(bill as any).created_by_admin?.last_name}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -183,10 +183,10 @@ export const createInvoiceColumns = ({
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => {
-      const invoice = row.original;
+      const bill = row.original;
       const baseStatus = (row.getValue('status') as string) || 'pending';
-      const dueDate = getDueDate?.(invoice) ?? (invoice as any).due_date ?? null;
-      const isPaid = !!invoice.paid_at;
+      const dueDate = getDueDate?.(bill) ?? (bill as any).due_date ?? null;
+      const isPaid = !!bill.paid_at;
       const isOverdue = dueDate ? (new Date(dueDate) < new Date() && !isPaid) : false;
       const badgeStatus = isOverdue ? 'overdue' : (baseStatus === 'submitted' ? 'pending' : baseStatus);
       return (
@@ -203,8 +203,8 @@ export const createInvoiceColumns = ({
     accessorFn: (row) => (row.submitted_at || row.created_at || null) as any,
     header: ({ column }) => <SortableHeader column={column} label="Date" />,
     cell: ({ row }) => {
-      const invoice = row.original;
-      const date = invoice.submitted_at || invoice.created_at || null;
+      const bill = row.original;
+      const date = bill.submitted_at || bill.created_at || null;
       return date ? (
         <div className="text-sm">
           {format(new Date(date), 'MMM dd, yyyy')}
@@ -219,12 +219,12 @@ export const createInvoiceColumns = ({
     accessorFn: (row) => (getDueDate?.(row as SubcontractorBill) ?? (row as any).due_date ?? null) as any,
     header: ({ column }) => <SortableHeader column={column} label="Due Date" />,
     cell: ({ row }) => {
-      const invoice = row.original;
-      const dueDate = getDueDate?.(invoice) ?? (invoice as any).due_date ?? null;
+      const bill = row.original;
+      const dueDate = getDueDate?.(bill) ?? (bill as any).due_date ?? null;
       if (!dueDate) {
         return <span className="text-muted-foreground">—</span>;
       }
-      const isPaid = !!invoice.paid_at;
+      const isPaid = !!bill.paid_at;
       const isOverdue = new Date(dueDate) < new Date() && !isPaid;
       return (
         <div className={`text-sm ${isOverdue ? 'text-destructive font-medium' : ''}`}>
@@ -248,57 +248,57 @@ export const createInvoiceColumns = ({
     id: 'actions',
     header: 'Actions',
     cell: ({ row }) => {
-      const invoice = row.original;
-      const canApprove = invoice.status === 'submitted';
-      const canReject = invoice.status === 'submitted';
-      const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
-      const canSend = !!onSendInvoice && !invoice.paid_at;
+      const bill = row.original;
+      const canApprove = bill.status === 'submitted';
+      const canReject = bill.status === 'submitted';
+      const canMarkPaid = bill.status === 'approved' && !bill.paid_at;
+      const canSend = !!onSendBill && !bill.paid_at;
       const canDownload = !!onDownloadPdf;
 
-      const invoiceName = `${invoice.internal_bill_number}`;
+      const billName = `${bill.internal_bill_number}`;
       
       const actions = [
         {
           label: 'View Details',
           icon: Eye,
-          onClick: () => onViewInvoice(invoice)
+          onClick: () => onViewBill(bill)
         },
         {
-          label: 'Send Invoice',
+          label: 'Send Bill',
           icon: CheckCircle,
-          onClick: () => onSendInvoice?.(invoice),
+          onClick: () => onSendBill?.(bill),
           show: canSend
         },
         {
           label: 'Approve',
           icon: CheckCircle,
-          onClick: () => onApproveInvoice(invoice),
+          onClick: () => onApproveBill(bill),
           show: canApprove
         },
         {
           label: 'Reject',
           icon: XCircle,
-          onClick: () => onRejectInvoice(invoice),
+          onClick: () => onRejectBill(bill),
           show: canReject,
           variant: 'destructive' as 'destructive'
         },
         {
           label: 'Mark as Paid',
           icon: DollarSign,
-          onClick: () => onMarkAsPaid(invoice),
+          onClick: () => onMarkAsPaid(bill),
           show: canMarkPaid
         },
         {
           label: 'Edit',
           icon: Pencil,
-          onClick: () => onEditInvoice?.(invoice),
-          show: !!onEditInvoice
+          onClick: () => onEditBill?.(bill),
+          show: !!onEditBill
         },
         {
           label: 'Delete',
           icon: Trash2,
-          onClick: () => onDeleteInvoice?.(invoice),
-          show: !!onDeleteInvoice,
+          onClick: () => onDeleteBill?.(bill),
+          show: !!onDeleteBill,
           variant: 'destructive' as 'destructive'
         }
       ];
@@ -306,7 +306,7 @@ export const createInvoiceColumns = ({
       return (
         <TableActionsDropdown 
           actions={actions} 
-          itemName={invoiceName}
+          itemName={billName}
           align="end"
         />
       );
