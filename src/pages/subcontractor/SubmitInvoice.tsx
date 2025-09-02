@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { useInvoiceSubmission } from '@/hooks/useInvoiceSubmission';
+import { useSubcontractorBillSubmission } from '@/hooks/useSubcontractorBillSubmission';
 import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
 import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
