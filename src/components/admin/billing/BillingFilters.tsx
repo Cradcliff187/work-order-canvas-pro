@@ -156,182 +156,146 @@ export function BillingFilters({
 
   const FilterContent = () => (
     <div className="space-y-4">
-      {/* Status Filters */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-medium text-foreground">Status Filters</h4>
-        
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Work Order Status</Label>
-          <MultiSelectFilter
-            options={workOrderStatusOptions}
-            selectedValues={localValue.status || []}
-            onSelectionChange={(values) => handleFilterChange('status', values)}
-            placeholder="Select status..."
-            className="w-full"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Financial Status</Label>
-          <MultiSelectFilter
-            options={financialStatusOptions}
-            selectedValues={localValue.financial_status || []}
-            onSelectionChange={(values) => handleFilterChange('financial_status', values)}
-            placeholder="Select financial status..."
-            className="w-full"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Partner Billing Status</Label>
-          <MultiSelectFilter
-            options={partnerBillingStatusOptions}
-            selectedValues={localValue.partner_billing_status || []}
-            onSelectionChange={(values) => handleFilterChange('partner_billing_status', values)}
-            placeholder="Select partner billing status..."
-            className="w-full"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Report Status</Label>
-          <MultiSelectFilter
-            options={reportStatusOptions}
-            selectedValues={localValue.report_status || []}
-            onSelectionChange={(values) => handleFilterChange('report_status', values)}
-            placeholder="Select report status..."
-            className="w-full"
-          />
-        </div>
-      </div>
-
-      {/* Organization Filters */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-medium text-foreground">Organizations</h4>
-        
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Partner Organizations</Label>
-          <MultiSelectFilter
-            options={partnerOrganizationOptions}
-            selectedValues={localValue.partner_organization_ids || []}
-            onSelectionChange={(values) => handleFilterChange('partner_organization_ids', values)}
-            placeholder="Select partner organizations..."
-            className="w-full"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Subcontractor Organizations</Label>
-          <MultiSelectFilter
-            options={subcontractorOrganizationOptions}
-            selectedValues={localValue.subcontractor_organization_ids || []}
-            onSelectionChange={(values) => handleFilterChange('subcontractor_organization_ids', values)}
-            placeholder="Select subcontractor organizations..."
-            className="w-full"
-          />
-        </div>
-      </div>
-
-      {/* Date Range */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-medium text-foreground">Date Range</h4>
-        
-        <div className="grid grid-cols-2 gap-2">
+      {/* 2-Column Grid Layout */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Left Column */}
+        <div className="space-y-4">
+          {/* Work Order Status */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">From</Label>
-            <Popover open={showDateFrom} onOpenChange={setShowDateFrom}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "w-full justify-start text-left font-normal h-9",
-                    !localValue.date_from && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {localValue.date_from ? format(new Date(localValue.date_from), 'MMM d') : 'From'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={localValue.date_from ? new Date(localValue.date_from) : undefined}
-                  onSelect={handleDateFromChange}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">To</Label>
-            <Popover open={showDateTo} onOpenChange={setShowDateTo}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "w-full justify-start text-left font-normal h-9",
-                    !localValue.date_to && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {localValue.date_to ? format(new Date(localValue.date_to), 'MMM d') : 'To'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={localValue.date_to ? new Date(localValue.date_to) : undefined}
-                  onSelect={handleDateToChange}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-      </div>
-
-      {/* Amount Range */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-medium text-foreground">Amount Range</h4>
-        
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Min Amount</Label>
-            <Input
-              type="number"
-              placeholder="0"
-              value={localValue.amount_min || ''}
-              onChange={(e) => handleStringFilterChange('amount_min', e.target.value)}
-              className="h-9"
+            <Label className="text-xs font-medium text-foreground">Work Order Status</Label>
+            <MultiSelectFilter
+              options={workOrderStatusOptions}
+              selectedValues={localValue.status || []}
+              onSelectionChange={(values) => handleFilterChange('status', values)}
+              placeholder="Select status..."
+              className="w-full"
             />
           </div>
+          
+          {/* Partner Organization */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Max Amount</Label>
-            <Input
-              type="number"
-              placeholder="0"
-              value={localValue.amount_max || ''}
-              onChange={(e) => handleStringFilterChange('amount_max', e.target.value)}
-              className="h-9"
+            <Label className="text-xs font-medium text-foreground">Partner Organization</Label>
+            <MultiSelectFilter
+              options={partnerOrganizationOptions}
+              selectedValues={localValue.partner_organization_ids || []}
+              onSelectionChange={(values) => handleFilterChange('partner_organization_ids', values)}
+              placeholder="Select partner organizations..."
+              className="w-full"
+            />
+          </div>
+          
+          {/* Report Status */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-foreground">Report Status</Label>
+            <MultiSelectFilter
+              options={reportStatusOptions}
+              selectedValues={localValue.report_status || []}
+              onSelectionChange={(values) => handleFilterChange('report_status', values)}
+              placeholder="Select report status..."
+              className="w-full"
             />
           </div>
         </div>
+
+        {/* Right Column */}
+        <div className="space-y-4">
+          {/* Financial Status */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-foreground">Financial Status</Label>
+            <MultiSelectFilter
+              options={financialStatusOptions}
+              selectedValues={localValue.financial_status || []}
+              onSelectionChange={(values) => handleFilterChange('financial_status', values)}
+              placeholder="Select financial status..."
+              className="w-full"
+            />
+          </div>
+          
+          {/* Subcontractor */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-foreground">Subcontractor</Label>
+            <MultiSelectFilter
+              options={subcontractorOrganizationOptions}
+              selectedValues={localValue.subcontractor_organization_ids || []}
+              onSelectionChange={(values) => handleFilterChange('subcontractor_organization_ids', values)}
+              placeholder="Select subcontractor organizations..."
+              className="w-full"
+            />
+          </div>
+          
+          {/* Date Range */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-foreground">Date Range</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Popover open={showDateFrom} onOpenChange={setShowDateFrom}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-9",
+                      !localValue.date_from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {localValue.date_from ? format(new Date(localValue.date_from), 'MMM d') : 'From'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={localValue.date_from ? new Date(localValue.date_from) : undefined}
+                    onSelect={handleDateFromChange}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover open={showDateTo} onOpenChange={setShowDateTo}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-9",
+                      !localValue.date_to && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {localValue.date_to ? format(new Date(localValue.date_to), 'MMM d') : 'To'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={localValue.date_to ? new Date(localValue.date_to) : undefined}
+                    onSelect={handleDateToChange}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Apply and Clear buttons at bottom */}
       {!isMobile && (
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-2 pt-4 border-t">
           <Button
             variant="outline"
-            size="sm"
             onClick={handleClearFilters}
             className="flex-1"
           >
             Clear
+          </Button>
+          <Button
+            onClick={handleApplyFilters}
+            className="flex-1"
+          >
+            Apply
           </Button>
         </div>
       )}
@@ -421,7 +385,7 @@ export function BillingFilters({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[320px] p-4 z-[9999] max-h-[80vh] overflow-y-auto" 
+        className="w-[640px] p-4 z-[9999] max-h-[80vh] overflow-y-auto" 
         align="start"
         sideOffset={5}
       >
