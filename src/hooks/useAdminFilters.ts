@@ -128,7 +128,7 @@ export function useAdminFilters<T extends Record<string, any>>(
       if (process.env.NODE_ENV === 'development') {
         console.log(`💾 ${storageKey}: Saved sanitized filters to storage`, cleanFilters);
       }
-    }, 500); // Debounce 500ms
+    }, 100); // Debounce 100ms
 
     return () => clearTimeout(timeoutId);
   }, [storageKey, filters]);
