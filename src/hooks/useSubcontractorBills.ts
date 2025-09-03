@@ -206,6 +206,8 @@ export const useSubcontractorBill = (id: string) => {
   return useQuery({
     queryKey: ['subcontractor-bill', id],
     queryFn: async () => {
+      console.log('🔍 Fetching subcontractor bill:', id);
+      
       const { data, error } = await supabase
         .from('subcontractor_bills')
         .select(`
@@ -253,7 +255,7 @@ export const useSubcontractorBill = (id: string) => {
             work_order_id,
             amount,
             description,
-            work_orders!work_order_id (
+            work_orders (
               id,
               work_order_number,
               title,
@@ -280,7 +282,16 @@ export const useSubcontractorBill = (id: string) => {
         .eq('id', id)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase query error:', error);
+        throw error;
+      }
+
+      console.log('✅ Subcontractor bill data received:', {
+        billId: data?.id,
+        workOrdersCount: data?.subcontractor_bill_work_orders?.length || 0,
+        workOrdersData: data?.subcontractor_bill_work_orders
+      });
 
       return data;
     },
