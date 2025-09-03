@@ -101,14 +101,14 @@ export default function AdminInvoices() {
           partner_organization_ids: Array.isArray(parsed.partner_organization_ids) ? parsed.partner_organization_ids : [],
           location_filter: Array.isArray(parsed.location_filter) ? parsed.location_filter : [],
           subcontractor_organization_ids: Array.isArray(parsed.subcontractor_organization_ids) ? parsed.subcontractor_organization_ids : [],
-          invoice_status: Array.isArray(parsed.invoice_status) ? parsed.invoice_status : ['submitted'],
+          invoice_status: Array.isArray(parsed.invoice_status) ? parsed.invoice_status : [],
           partner_billing_status: Array.isArray(parsed.partner_billing_status) ? parsed.partner_billing_status : [],
         };
       } catch {
-        return { ...initialFilters, invoice_status: ['submitted'] };
+        return { ...initialFilters };
       }
     }
-    return { ...initialFilters, invoice_status: ['submitted'] };
+    return { ...initialFilters };
   }, []);
 
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
