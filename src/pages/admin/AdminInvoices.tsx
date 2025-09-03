@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useSubcontractorBills, SubcontractorBill } from '@/hooks/useSubcontractorBills';
-import { UnifiedInvoiceFilters } from '@/components/admin/invoices/UnifiedInvoiceFilters';
+import { SimpleSubcontractorBillFilters } from "@/components/admin/invoices/SimpleSubcontractorBillFilters";
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createBillColumns } from '@/components/admin/invoices/InvoiceColumns';
@@ -57,7 +57,6 @@ import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { StatusBadge, FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { CompactInvoiceFilters } from '@/components/admin/invoices/CompactInvoiceFilters';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { ResponsiveTableContainer } from '@/components/ui/responsive-table-container';
 import { cn } from '@/lib/utils';
@@ -86,13 +85,8 @@ export default function AdminInvoices() {
   // Define clean initial filters structure
   const initialFilters: InvoiceFiltersValue = {
     search: '',
-    overdue: false,
-    partner_organization_ids: [],
-    location_filter: [],
-    subcontractor_organization_ids: [],
-    operational_status: [],
-    report_status: [],
     invoice_status: [],
+    operational_status: [],
     partner_billing_status: [],
   };
 
@@ -114,26 +108,20 @@ export default function AdminInvoices() {
   // Clean filters to ensure array fields are always arrays
   const cleanFilters = useMemo(() => ({
     search: filters.search || '',
-    overdue: Boolean(filters.overdue),
-    partner_organization_ids: Array.isArray(filters.partner_organization_ids) ? filters.partner_organization_ids : [],
-    location_filter: Array.isArray(filters.location_filter) ? filters.location_filter : [],
-    subcontractor_organization_ids: Array.isArray(filters.subcontractor_organization_ids) ? filters.subcontractor_organization_ids : [],
-    operational_status: Array.isArray(filters.operational_status) ? filters.operational_status : [],
-    report_status: Array.isArray(filters.report_status) ? filters.report_status : [],
     invoice_status: Array.isArray(filters.invoice_status) ? filters.invoice_status : [],
+    operational_status: Array.isArray(filters.operational_status) ? filters.operational_status : [],
     partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
   }), [
     filters.search,
-    filters.overdue,
-    filters.partner_organization_ids,
-    filters.location_filter,
-    filters.subcontractor_organization_ids,
-    filters.operational_status,
-    filters.report_status,
     filters.invoice_status,
+    filters.operational_status,
     filters.partner_billing_status
   ]);
 
+  const handleClearFilters = () => {
+    clearFilters();
+  };
+  
   const handleFiltersChange = (newFilters: InvoiceFiltersValue) => {
     setFilters(newFilters);
   };
@@ -455,10 +443,10 @@ const table = useReactTable({
             <div className="flex items-center gap-2 overflow-x-auto">
               {/* Filters - Make filter button full width on mobile */}
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <CompactInvoiceFilters
-                  value={filters}
-                  onChange={handleFiltersChange}
-                  onClear={clearFilters}
+                <SimpleSubcontractorBillFilters
+                  filters={filters}
+                  onFiltersChange={handleFiltersChange}
+                  onClear={handleClearFilters}
                 />
               </div>
 
@@ -592,10 +580,10 @@ const table = useReactTable({
 
                 {/* Filters and Search */}
                 <div className="flex items-center gap-2">
-                  <CompactInvoiceFilters
-                    value={filters}
-                    onChange={handleFiltersChange}
-                    onClear={clearFilters}
+                  <SimpleSubcontractorBillFilters
+                    filters={filters}
+                    onFiltersChange={handleFiltersChange}
+                    onClear={handleClearFilters}
                   />
                   <div className="relative flex-1 sm:flex-initial sm:w-80">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
