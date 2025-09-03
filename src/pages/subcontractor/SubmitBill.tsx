@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Upload, ArrowLeft, FileText, Loader2, Save, Building2, Info, DollarSign, Paperclip, Package } from 'lucide-react';
@@ -393,10 +394,12 @@ export default function SubmitBill() {
                    </div>
                  )}
                </StandardFormLayout.FieldGroup>
-             </StandardFormLayout.Section>
-           )}
+              </StandardFormLayout.Section>
+            )}
 
-           <StandardFormLayout.Section>
+            <Separator className="my-6" />
+
+            <StandardFormLayout.Section>
             <div className="space-y-2 mb-4">
               <h3 className="text-lg font-semibold text-foreground flex items-center">
                 <FileText className="h-4 w-4 mr-2 inline" />
@@ -566,6 +569,8 @@ export default function SubmitBill() {
               </StandardFormLayout.FieldGroup>
             </StandardFormLayout.Section>
           )}
+
+          <Separator className="my-6" />
 
           <StandardFormLayout.Section>
             <div className="space-y-2 mb-4">
