@@ -184,7 +184,14 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         totalPages: Math.ceil((count || 0) / pageSize)
       };
     },
-    staleTime: 30000, // 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes (was 30 seconds)
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    placeholderData: (previousData) => previousData, // Replaces keepPreviousData in v5
+    retry: 1, // Only retry once, not 3 times
+    retryDelay: 1000,
+    enabled: true, // Ensure it's enabled
   });
 };
 
