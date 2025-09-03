@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
-import { Upload, ArrowLeft, FileText, Loader2, Save, Building2, Info } from 'lucide-react';
+import { Upload, ArrowLeft, FileText, Loader2, Save, Building2, Info, DollarSign, Paperclip } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
@@ -341,10 +341,16 @@ export default function SubmitBill() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <StandardFormLayout>
           {isAdminMode && (
-            <StandardFormLayout.Section 
-              title="Select Organization"
-              description="Choose the subcontractor organization for this bill"
-            >
+            <StandardFormLayout.Section>
+              <div className="space-y-2 mb-4">
+                <h3 className="text-lg font-semibold text-foreground flex items-center">
+                  <Building2 className="h-4 w-4 mr-2 inline" />
+                  Select Organization
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Choose the subcontractor organization for this bill
+                </p>
+              </div>
               <StandardFormLayout.FieldGroup>
                 <div className="space-y-2">
                   <Label>Subcontractor Organization</Label>
@@ -388,10 +394,16 @@ export default function SubmitBill() {
              </StandardFormLayout.Section>
            )}
 
-           <StandardFormLayout.Section
-            title="Bill Details"
-            description="Enter your external bill number and related identifiers (optional)"
-          >
+           <StandardFormLayout.Section>
+            <div className="space-y-2 mb-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center">
+                <FileText className="h-4 w-4 mr-2 inline" />
+                Bill Details
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Enter your external bill number and related identifiers (optional)
+              </p>
+            </div>
             <StandardFormLayout.FieldGroup>
               <Card>
                 <CardContent className="pt-6">
@@ -462,7 +474,10 @@ export default function SubmitBill() {
           <StandardFormLayout.Section>
             <div className="space-y-2 mb-4">
               <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold text-foreground">Select Work Orders</h3>
+                <h3 className="text-lg font-semibold text-foreground flex items-center">
+                  <DollarSign className="h-4 w-4 mr-2 inline" />
+                  Select Work Orders
+                </h3>
                 {selectedWorkOrderIds.length > 0 && (
                   <>
                     <Badge variant="secondary" className="h-5 text-[10px] px-1.5">
@@ -544,10 +559,16 @@ export default function SubmitBill() {
             </StandardFormLayout.Section>
           )}
 
-          <StandardFormLayout.Section 
-            title="Supporting Documents"
-            description="Upload any relevant bills or documentation"
-          >
+          <StandardFormLayout.Section>
+            <div className="space-y-2 mb-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center">
+                <Paperclip className="h-4 w-4 mr-2 inline" />
+                Supporting Documents
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Upload any relevant bills or documentation
+              </p>
+            </div>
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
                 <Label>Upload Documents</Label>
