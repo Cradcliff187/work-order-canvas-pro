@@ -376,42 +376,49 @@ export default function SubmitBill() {
             description="Enter your external bill number and related identifiers (optional)"
           >
             <StandardFormLayout.FieldGroup>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="externalInvoiceNumber">External Bill Number</Label>
-                  <Input
-                    id="externalInvoiceNumber"
-                    placeholder="BILL-2024-001"
-                    value={formData.externalInvoiceNumber}
-                    onChange={(e) => setFormData(prev => ({ ...prev, externalInvoiceNumber: e.target.value }))}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Optional: Your own bill number for reference
-                  </p>
-                </div>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="externalInvoiceNumber">External Bill Number</Label>
+                      <Input
+                        id="externalInvoiceNumber"
+                        placeholder="BILL-2024-001"
+                        value={formData.externalInvoiceNumber}
+                        onChange={(e) => setFormData(prev => ({ ...prev, externalInvoiceNumber: e.target.value }))}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Optional: Your own bill number for reference
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="purchaseOrderNumber">Purchase Order Number</Label>
-                  <Input
-                    id="purchaseOrderNumber"
-                    placeholder="PO-123456"
-                    value={formData.purchaseOrderNumber}
-                    onChange={(e) => setFormData(prev => ({ ...prev, purchaseOrderNumber: e.target.value }))}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Optional: Provide a PO number if applicable
-                  </p>
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="purchaseOrderNumber">Purchase Order Number</Label>
+                      <Input
+                        id="purchaseOrderNumber"
+                        placeholder="PO-123456"
+                        value={formData.purchaseOrderNumber}
+                        onChange={(e) => setFormData(prev => ({ ...prev, purchaseOrderNumber: e.target.value }))}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Optional: Provide a PO number if applicable
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <BillDatesFields
-                billDate={formData.billDate}
-                dueDate={formData.dueDate}
-                onChangeBillDate={(d) => setFormData(prev => ({ ...prev, billDate: d, dueDate: prev.dueDate && isBefore(prev.dueDate, d) ? addDays(d, 30) : prev.dueDate }))}
-                onChangeDueDate={(d) => setFormData(prev => ({ ...prev, dueDate: d }))}
-                error={dateError}
-                className="mt-2"
-              />
+              <Card className="mt-4">
+                <CardContent className="pt-6">
+                  <BillDatesFields
+                    billDate={formData.billDate}
+                    dueDate={formData.dueDate}
+                    onChangeBillDate={(d) => setFormData(prev => ({ ...prev, billDate: d, dueDate: prev.dueDate && isBefore(prev.dueDate, d) ? addDays(d, 30) : prev.dueDate }))}
+                    onChangeDueDate={(d) => setFormData(prev => ({ ...prev, dueDate: d }))}
+                    error={dateError}
+                  />
+                </CardContent>
+              </Card>
 
               {isAdminMode && (
                 <div className="space-y-2">
