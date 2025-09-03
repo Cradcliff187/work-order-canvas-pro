@@ -42,7 +42,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { format, isBefore } from 'date-fns';
-import { SubcontractorBill } from '@/hooks/useSubcontractorBills';
+import { SubcontractorBill, useSubcontractorBill } from '@/hooks/useSubcontractorBills';
 import { useSubcontractorBillMutations } from '@/hooks/useSubcontractorBillMutations';
 
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
@@ -62,6 +62,9 @@ interface InvoiceDetailModalProps {
 }
 
 export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailModalProps) {
+  const { data: fullInvoice } = useSubcontractorBill(invoice?.id || '');
+  const invoiceData = fullInvoice || invoice;
+
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -88,30 +91,30 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
   });
 
   const refreshAttachments = async () => {
-    if (!invoice) return;
+    if (!invoiceData) return;
     const { data, error } = await supabase
       .from('subcontractor_bill_attachments')
       .select('id, file_name, file_url, file_type, file_size, created_at, work_order_id')
-      .eq('subcontractor_bill_id', invoice.id)
+      .eq('subcontractor_bill_id', invoiceData.id)
       .order('created_at', { ascending: false });
     if (!error) setAttachments(data || []);
   };
 
   useEffect(() => {
-    if (!invoice) return;
-    setAttachments((invoice as any).subcontractor_bill_attachments || []);
-    const def = invoice.subcontractor_bill_work_orders?.[0]?.work_order_id || null;
+    if (!invoiceData) return;
+    setAttachments((invoiceData as any).subcontractor_bill_attachments || []);
+    const def = invoiceData.subcontractor_bill_work_orders?.[0]?.work_order_id || null;
     setSelectedWorkOrderId(def);
     // Refresh attachments to ensure we have full data
     refreshAttachments();
-  }, [invoice]);
+  }, [invoiceData]);
 
   const handleFilesSelected = async (files: File[]) => {
     if (!selectedWorkOrderId) {
       toast({ title: 'Select a work order', description: 'Link uploads to a work order first.' });
       return;
     }
-    await uploadFiles(files, false, selectedWorkOrderId, undefined, invoice?.id);
+    await uploadFiles(files, false, selectedWorkOrderId, undefined, invoiceData?.id);
     await refreshAttachments();
   };
 
@@ -122,11 +125,11 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
 
   const { approveSubcontractorBill, rejectSubcontractorBill, markAsPaid } = useSubcontractorBillMutations();
 
-  if (!invoice) return null;
+  if (!invoiceData) return null;
 
   const handleApprove = () => {
     approveSubcontractorBill.mutate(
-      { billId: invoice.id, notes: approvalNotes },
+      { billId: invoiceData.id, notes: approvalNotes },
       {
         onSuccess: () => {
           setApproveDialogOpen(false);
@@ -141,7 +144,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     if (!rejectionNotes.trim()) return;
     
     rejectSubcontractorBill.mutate(
-      { billId: invoice.id, notes: rejectionNotes },
+      { billId: invoiceData.id, notes: rejectionNotes },
       {
         onSuccess: () => {
           setRejectDialogOpen(false);
@@ -156,7 +159,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     if (!paymentReference.trim()) return;
     
     markAsPaid.mutate(
-      { billId: invoice.id, paymentReference, paymentDate },
+      { billId: invoiceData.id, paymentReference, paymentDate },
       {
         onSuccess: () => {
           setPaymentDialogOpen(false);
@@ -168,9 +171,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     );
   };
 
-  const canApprove = invoice.status === 'submitted';
-  const canReject = invoice.status === 'submitted';
-  const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
+  const canApprove = invoiceData.status === 'submitted';
+  const canReject = invoiceData.status === 'submitted';
+  const canMarkPaid = invoiceData.status === 'approved' && !invoiceData.paid_at;
 
   const getFileIcon = (fileType: string, fileName: string) => {
     const lowerType = fileType.toLowerCase();
@@ -216,9 +219,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
       handleDownload(a.file_url);
     }
   };
-  const invDate = (invoice as any).invoice_date ? new Date((invoice as any).invoice_date) : null;
-  const dueDate = (invoice as any).due_date ? new Date((invoice as any).due_date) : null;
-  const isOverdue = !!dueDate && isBefore(dueDate, new Date()) && !invoice.paid_at;
+  const invDate = (invoiceData as any).invoice_date ? new Date((invoiceData as any).invoice_date) : null;
+  const dueDate = (invoiceData as any).due_date ? new Date((invoiceData as any).due_date) : null;
+  const isOverdue = !!dueDate && isBefore(dueDate, new Date()) && !invoiceData.paid_at;
 
   return (
     <>
@@ -240,7 +243,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     Internal Invoice #
                   </Label>
                   <div className="mt-1 font-mono text-lg font-semibold">
-                    {invoice.internal_bill_number}
+                    {invoiceData.internal_bill_number}
                   </div>
                 </div>
                 
@@ -249,7 +252,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     Vendor Invoice #
                   </Label>
                   <div className="mt-1 font-mono text-lg">
-                    {invoice.external_bill_number || 'Not provided'}
+                    {invoiceData.external_bill_number || 'Not provided'}
                   </div>
                 </div>
 
@@ -258,7 +261,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     Purchase Order #
                   </Label>
                   <div className="mt-1">
-                    {(invoice as any).purchase_order_number || '—'}
+                    {(invoiceData as any).purchase_order_number || '—'}
                   </div>
                 </div>
 
@@ -267,7 +270,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     Subcontractor
                   </Label>
                   <div className="mt-1 text-lg font-medium">
-                    {invoice.subcontractor_organization.name}
+                    {invoiceData.subcontractor_organization.name}
                   </div>
                 </div>
               </div>
@@ -277,7 +280,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   <Label className="text-sm font-semibold text-muted-foreground">
                     Total Amount
                   </Label>
-                  <div className="mt-1 text-2xl font-bold">{formatCurrency(Number(invoice.total_amount), true)}</div>
+                  <div className="mt-1 text-2xl font-bold">{formatCurrency(Number(invoiceData.total_amount), true)}</div>
                 </div>
 
                 <div>
@@ -285,7 +288,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     Status
                   </Label>
                   <div className="mt-1 flex items-center gap-2">
-                    <FinancialStatusBadge status={invoice.status} size="sm" showIcon />
+                    <FinancialStatusBadge status={invoiceData.status} size="sm" showIcon />
                     {isOverdue && (
                       <Badge variant="destructive" className="gap-1">
                         <AlertTriangle className="h-3 w-3" />
@@ -319,8 +322,8 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     Submitted Date
                   </Label>
                   <div className="mt-1">
-                    {invoice.submitted_at
-                      ? format(new Date(invoice.submitted_at), 'MMM d, yyyy')
+                    {invoiceData.submitted_at
+                      ? format(new Date(invoiceData.submitted_at), 'MMM d, yyyy')
                       : 'Not submitted'
                     }
                   </div>
@@ -335,13 +338,13 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Subcontractor Notes</Label>
                 <div className="mt-1 p-3 bg-muted rounded-md min-h-[48px]">
-                  {(invoice as any).subcontractor_notes || '—'}
+                  {(invoiceData as any).subcontractor_notes || '—'}
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Payment Terms</Label>
                 <div className="mt-1">
-                  {(invoice as any).payment_terms || 'Net 30'}
+                  {(invoiceData as any).payment_terms || 'Net 30'}
                 </div>
               </div>
             </div>
@@ -368,52 +371,52 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
             </div>
 
             {/* Payment Information */}
-            {(invoice.approved_at || invoice.paid_at) && (
+            {(invoiceData.approved_at || invoiceData.paid_at) && (
               <>
                 <Separator />
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Payment Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {invoice.approved_at && (
+                    {invoiceData.approved_at && (
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">
                           Approved Date
                         </Label>
                         <div className="mt-1">
-                          {format(new Date(invoice.approved_at), 'PPP')}
+                          {format(new Date(invoiceData.approved_at), 'PPP')}
                         </div>
-                        {(invoice as any).approved_by && (
+                        {(invoiceData as any).approved_by && (
                           <div className="text-sm text-muted-foreground">
-                            by {(invoice as any).approved_by.first_name} {(invoice as any).approved_by.last_name}
+                            by {(invoiceData as any).approved_by.first_name} {(invoiceData as any).approved_by.last_name}
                           </div>
                         )}
                       </div>
                     )}
                     
-                    {invoice.paid_at && (
+                    {invoiceData.paid_at && (
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">
                           Paid Date
                         </Label>
                         <div className="mt-1">
-                          {format(new Date(invoice.paid_at), 'PPP')}
+                          {format(new Date(invoiceData.paid_at), 'PPP')}
                         </div>
-                        {invoice.payment_reference && (
+                        {invoiceData.payment_reference && (
                           <div className="text-sm text-muted-foreground">
-                            Reference: {invoice.payment_reference}
+                            Reference: {invoiceData.payment_reference}
                           </div>
                         )}
                       </div>
                     )}
                   </div>
                   
-                  {invoice.approval_notes && (
+                  {invoiceData.approval_notes && (
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">
                         Notes
                       </Label>
                       <div className="mt-1 p-3 bg-muted rounded-md">
-                        {invoice.approval_notes}
+                        {invoiceData.approval_notes}
                       </div>
                     </div>
                   )}
@@ -430,7 +433,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   <Badge variant="secondary" className="ml-2">{attachments.length}</Badge>
                 </h3>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  {(invoice.subcontractor_bill_work_orders?.length ?? 0) > 0 ? (
+                  {(invoiceData.subcontractor_bill_work_orders?.length ?? 0) > 0 ? (
                     <>
                       <div className="flex items-center gap-2">
                         <Label className="text-sm text-muted-foreground">Link to</Label>
@@ -439,7 +442,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                             <SelectValue placeholder="Select work order" />
                           </SelectTrigger>
                           <SelectContent>
-                           {(invoice.subcontractor_bill_work_orders ?? []).map((iwo) => (
+                           {(invoiceData.subcontractor_bill_work_orders ?? []).map((iwo) => (
                               <SelectItem key={iwo.work_order_id} value={iwo.work_order_id}>
                                 {iwo.work_orders?.work_order_number 
                                   ? `${iwo.work_orders.work_order_number} - ${iwo.work_orders.title}`
@@ -471,7 +474,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
 
               <div className="space-y-2">
                 {(() => {
-                  const workOrders = invoice.subcontractor_bill_work_orders || [];
+                  const workOrders = invoiceData.subcontractor_bill_work_orders || [];
                   const mapToItems = (list: any[]): GridAttachmentItem[] =>
                     list.map((att: any) => ({
                       id: att.id,
@@ -541,7 +544,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
               <h3 className="text-lg font-semibold">
                 Linked Work Orders
                 <Badge variant="secondary" className="ml-2">
-                  {invoice.subcontractor_bill_work_orders?.length || 0}
+                  {invoiceData.subcontractor_bill_work_orders?.length || 0}
                 </Badge>
               </h3>
               
@@ -549,8 +552,8 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
               {process.env.NODE_ENV === 'development' && (
                 <div className="p-4 bg-yellow-100 rounded text-sm">
                   <p><strong>Debug Info:</strong></p>
-                  <p>Work orders count: {invoice.subcontractor_bill_work_orders?.length || 0}</p>
-                  <p>First work order data: {JSON.stringify(invoice.subcontractor_bill_work_orders?.[0], null, 2)}</p>
+                  <p>Work orders count: {invoiceData.subcontractor_bill_work_orders?.length || 0}</p>
+                  <p>First work order data: {JSON.stringify(invoiceData.subcontractor_bill_work_orders?.[0], null, 2)}</p>
                 </div>
               )}
               <Table>
@@ -564,7 +567,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(invoice.subcontractor_bill_work_orders ?? []).map((item) => (
+                  {(invoiceData.subcontractor_bill_work_orders ?? []).map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-mono">
                         <Button
