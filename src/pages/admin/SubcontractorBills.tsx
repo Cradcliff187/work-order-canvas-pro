@@ -74,35 +74,6 @@ const initialFilters: SubcontractorBillFiltersValue = {
   subcontractor_organization_ids: [],
   status: [],
   payment_status: [],
-  // Keep for backward compatibility
-  invoice_status: [],
-  partner_billing_status: [],
-};
-
-// Get initial filters with localStorage logic
-const getInitialFilters = (): SubcontractorBillFiltersValue => {
-  const stored = localStorage.getItem('admin-invoices-filters-v2');
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      return {
-        ...initialFilters,
-        ...parsed,
-        // Ensure arrays are properly initialized
-        partner_organization_ids: Array.isArray(parsed.partner_organization_ids) ? parsed.partner_organization_ids : [],
-        location_filter: Array.isArray(parsed.location_filter) ? parsed.location_filter : [],
-        subcontractor_organization_ids: Array.isArray(parsed.subcontractor_organization_ids) ? parsed.subcontractor_organization_ids : [],
-        status: Array.isArray(parsed.status) ? parsed.status : [],
-        payment_status: Array.isArray(parsed.payment_status) ? parsed.payment_status : [],
-        // Keep for backward compatibility
-        invoice_status: Array.isArray(parsed.invoice_status) ? parsed.invoice_status : [],
-        partner_billing_status: Array.isArray(parsed.partner_billing_status) ? parsed.partner_billing_status : [],
-      };
-    } catch {
-      return { ...initialFilters };
-    }
-  }
-  return { ...initialFilters };
 };
 
 export default function SubcontractorBills() {
@@ -117,7 +88,7 @@ export default function SubcontractorBills() {
   const limit = 10;
   
   
-  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-subcontractor-bills-filters-v1', initialFilters);
 
 
   const handleClearFilters = () => {
@@ -451,11 +422,6 @@ const table = useReactTable({
             <div className="flex items-center gap-2 overflow-x-auto">
               {/* Filters - Make filter button full width on mobile */}
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                {/* <CompactInvoiceFilters
-                  value={filters}
-                  onChange={handleFiltersChange}
-                  onClear={handleClearFilters}
-                /> */}
                 <CompactSubcontractorBillFilters
                   value={filters}
                   onChange={handleFiltersChange}
