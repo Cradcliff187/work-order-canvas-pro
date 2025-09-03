@@ -9,7 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
-import { Upload, ArrowLeft, FileText, Loader2, Save, Building2, Info, DollarSign, Paperclip } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Upload, ArrowLeft, FileText, Loader2, Save, Building2, Info, DollarSign, Paperclip, Package } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
@@ -506,10 +507,12 @@ export default function SubmitBill() {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : availableWorkOrders.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No completed work orders available for billing</p>
-                </div>
+                <EmptyState
+                  icon={Package}
+                  title="No billable work orders"
+                  description="Complete work orders will appear here for billing"
+                  variant="card"
+                />
               ) : (
                 <div className={availableWorkOrders.length > 4 
                   ? "grid grid-cols-1 lg:grid-cols-2 gap-4" 
