@@ -430,7 +430,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   <Badge variant="secondary" className="ml-2">{attachments.length}</Badge>
                 </h3>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  {invoice.subcontractor_bill_work_orders.length > 0 ? (
+                  {(invoice.subcontractor_bill_work_orders?.length ?? 0) > 0 ? (
                     <>
                       <div className="flex items-center gap-2">
                         <Label className="text-sm text-muted-foreground">Link to</Label>
@@ -439,7 +439,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                             <SelectValue placeholder="Select work order" />
                           </SelectTrigger>
                           <SelectContent>
-                            {invoice.subcontractor_bill_work_orders.map((iwo) => (
+                            {(invoice.subcontractor_bill_work_orders ?? []).map((iwo) => (
                               <SelectItem key={iwo.work_order_id} value={iwo.work_order_id}>
                                 {`WO-${iwo.work_order_id.slice(0, 8)}`}
                               </SelectItem>
@@ -546,7 +546,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoice.subcontractor_bill_work_orders.map((item) => (
+                  {(invoice.subcontractor_bill_work_orders ?? []).map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-mono">
                         {`WO-${item.work_order_id.slice(0, 8)}`}
