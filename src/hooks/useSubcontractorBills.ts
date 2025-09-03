@@ -255,14 +255,25 @@ export const useSubcontractorBill = (id: string) => {
             work_order_id,
             amount,
             description,
-            work_orders (
+            work_orders!work_order_id (
               id,
               work_order_number,
               title,
+              status,
+              date_submitted,
               store_location,
               street_address,
               city,
-              state
+              state,
+              zip_code,
+              organization:organizations!organization_id (
+                id,
+                name
+              ),
+              trade:trades!trade_id (
+                id,
+                name
+              )
             )
           ),
           subcontractor_bill_attachments (

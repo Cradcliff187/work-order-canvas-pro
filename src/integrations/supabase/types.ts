@@ -1248,6 +1248,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_subcontractor_bill_work_orders_work_order_id"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "subcontractor_bill_work_orders_bill_id_fkey"
             columns: ["subcontractor_bill_id"]
             isOneToOne: false
