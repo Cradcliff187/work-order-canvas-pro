@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useSubcontractorBillSubmission } from '@/hooks/useSubcontractorBillSubmission';
 import { WorkOrderAmountCard } from '@/components/subcontractor-bills/WorkOrderAmountCard';
+import { WorkOrderCardSkeleton } from '@/components/subcontractor-bills/WorkOrderCardSkeleton';
 import { BillTotalSummary } from '@/components/subcontractor-bills/BillTotalSummary';
 import { PreSubmissionSummaryCard } from '@/components/subcontractor-bills/PreSubmissionSummaryCard';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
@@ -503,8 +504,10 @@ export default function SubmitBill() {
                   <p>Please select a subcontractor organization first</p>
                 </div>
               ) : completedWorkOrdersForBilling?.isLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <WorkOrderCardSkeleton key={index} compact={false} />
+                  ))}
                 </div>
               ) : availableWorkOrders.length === 0 ? (
                 <EmptyState
