@@ -522,12 +522,12 @@ export default function SubmitBill() {
                   variant="card"
                 />
               ) : (
-                <div className={availableWorkOrders.length > 4 
+                <div className={availableWorkOrders.length >= 3 
                   ? "grid grid-cols-1 lg:grid-cols-2 gap-4" 
                   : "space-y-4"
                 }>
                   {availableWorkOrders.map((workOrder) => {
-                    const isCompactMode = availableWorkOrders.length > 4;
+                    const isCompactMode = availableWorkOrders.length >= 3;
                     return (
                       <WorkOrderAmountCard
                         key={workOrder.id}
