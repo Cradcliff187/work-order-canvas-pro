@@ -11,7 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Upload, ArrowLeft, FileText, Loader2, Save, Building2, Info, DollarSign, Paperclip, Package } from 'lucide-react';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Upload, ArrowLeft, FileText, Loader2, Save, Building2, Info, DollarSign, Paperclip, Package, Plus, X, Check } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
@@ -63,8 +65,11 @@ export default function SubmitBill() {
   });
 
   const [dateError, setDateError] = useState<string | null>(null);
+  const [showAdminNotes, setShowAdminNotes] = useState<boolean>(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ id: string; name: string; url: string }>>([]);
 
   const isAdminMode = isAdmin();
+  const isMobile = useIsMobile();
   
   // Get organization IDs for the query - either selected org (admin) or user's orgs (subcontractor)
   const organizationIds = React.useMemo(() => {
@@ -355,47 +360,122 @@ export default function SubmitBill() {
                 </p>
               </div>
               <StandardFormLayout.FieldGroup>
-                <div className="space-y-2">
-                  <Label>Subcontractor Organization</Label>
-                  <OrganizationSelector
-                    value={formData.selectedOrganizationId}
-                    onChange={(orgId) => setFormData(prev => ({ 
-                      ...prev, 
-                      selectedOrganizationId: orgId,
-                      selectedWorkOrders: {} // Reset work orders when org changes
-                    }))}
-                    organizationType="subcontractor"
-                    placeholder="Select subcontractor organization..."
-                  />
-                </div>
-                {selectedOrganization && (
-                  <Alert className="border-l-4 border-l-primary bg-primary/5 transition-all duration-200">
-                    <Info className="h-4 w-4 text-primary" />
-                    <AlertTitle className="text-primary">Admin Mode</AlertTitle>
-                    <AlertDescription className="text-primary/80">
-                      Submitting bill on behalf of: <strong className="text-primary">{selectedOrganization.name}</strong>
-                    </AlertDescription>
-                  </Alert>
-                 )}
-                 
-                 {isAdminMode && (
-                   <div className="space-y-2">
-                     <Label htmlFor="adminNotes">Admin Notes</Label>
-                      <Textarea
-                        id="adminNotes"
-                        placeholder="Document why this bill was entered manually by admin..."
-                        value={formData.adminNotes}
-                        onChange={(e) => setFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
-                        className="min-h-[100px] min-h-[44px] px-4 py-3 transition-all duration-200"
+                {/* Step 1: Empty State or Organization Selector */}
+                {!formData.selectedOrganizationId ? (
+                  <div className="space-y-4">
+                    <Card className="border-dashed border-2 border-muted-foreground/25">
+                      <CardContent className="pt-8 pb-8">
+                        <EmptyState
+                          icon={Building2}
+                          title="Select a subcontractor organization to begin"
+                          description="Choose which subcontractor you're submitting this bill for"
+                          variant="card"
+                        />
+                      </CardContent>
+                    </Card>
+                    <div className="space-y-2">
+                      <Label>Subcontractor Organization</Label>
+                      <OrganizationSelector
+                        value={formData.selectedOrganizationId}
+                        onChange={(orgId) => setFormData(prev => ({ 
+                          ...prev, 
+                          selectedOrganizationId: orgId,
+                          selectedWorkOrders: {} // Reset work orders when org changes
+                        }))}
+                        organizationType="subcontractor"
+                        placeholder="Select subcontractor organization..."
+                        className={cn(
+                          isMobile && "w-full min-h-[48px]"
+                        )}
                       />
-                     <p className="text-xs text-muted-foreground">
-                       These notes will help track why this bill was entered manually and any special circumstances.
-                     </p>
-                   </div>
-                 )}
-               </StandardFormLayout.FieldGroup>
-              </StandardFormLayout.Section>
-            )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Step 2: Selected Organization Success Card */}
+                    <Card className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800/50">
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="success" className="px-3 py-1 font-medium">
+                              {selectedOrganization?.name}
+                            </Badge>
+                            <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                              Admin Submission Mode
+                            </span>
+                            <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setFormData(prev => ({ 
+                              ...prev, 
+                              selectedOrganizationId: undefined,
+                              selectedWorkOrders: {},
+                              adminNotes: ''
+                            }))}
+                            className="text-green-700 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                          >
+                            Change
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Step 3: Collapsible Admin Notes */}
+                    <div className="space-y-3">
+                      {!showAdminNotes ? (
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          onClick={() => setShowAdminNotes(true)}
+                          className={cn(
+                            "w-full justify-start text-muted-foreground border-dashed",
+                            isMobile && "min-h-[48px]"
+                          )}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add admin notes (optional)
+                        </Button>
+                      ) : (
+                        <Card className="bg-muted/30 border-muted dark:bg-muted/10">
+                          <CardContent className="pt-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <Label className="text-sm font-medium">Admin Notes</Label>
+                              <Button 
+                                type="button"
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => {
+                                  setShowAdminNotes(false);
+                                  setFormData(prev => ({ ...prev, adminNotes: '' }));
+                                }}
+                                className="h-6 w-6 p-0"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <Textarea
+                              placeholder="Document why this bill was entered manually..."
+                              value={formData.adminNotes}
+                              onChange={(e) => setFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
+                              className={cn(
+                                "min-h-[60px] resize-none",
+                                isMobile && "min-h-[80px]"
+                              )}
+                            />
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Internal notes (not visible to subcontractor)
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </StandardFormLayout.FieldGroup>
+            </StandardFormLayout.Section>
+          )}
 
             <Separator className="my-6" />
 
