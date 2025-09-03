@@ -63,6 +63,7 @@ export interface SubcontractorBill {
       id: string;
       work_order_number: string;
       title: string;
+      description?: string;
       store_location?: string;
       street_address?: string;
       city?: string;
@@ -259,6 +260,7 @@ export const useSubcontractorBill = (id: string) => {
               id,
               work_order_number,
               title,
+              description,
               status,
               date_submitted,
               store_location,

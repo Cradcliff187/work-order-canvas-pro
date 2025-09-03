@@ -618,7 +618,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                         {formatCurrency(Number(item.amount), true)}
                       </TableCell>
                       <TableCell className="max-w-[300px] whitespace-pre-wrap break-words">
-                        {item.work_orders?.title?.trim() || '—'}
+                        {item.work_orders?.description?.trim() || '—'}
                       </TableCell>
                     </TableRow>
                   ))}
