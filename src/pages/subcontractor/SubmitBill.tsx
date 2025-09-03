@@ -366,12 +366,28 @@ export default function SubmitBill() {
                       Submitting bill on behalf of: <strong className="text-primary">{selectedOrganization.name}</strong>
                     </AlertDescription>
                   </Alert>
-                )}
-              </StandardFormLayout.FieldGroup>
-            </StandardFormLayout.Section>
-          )}
+                 )}
+                 
+                 {isAdminMode && (
+                   <div className="space-y-2">
+                     <Label htmlFor="adminNotes">Admin Notes</Label>
+                     <Textarea
+                       id="adminNotes"
+                       placeholder="Document why this bill was entered manually by admin..."
+                       value={formData.adminNotes}
+                       onChange={(e) => setFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
+                       className="min-h-[100px] transition-all duration-200"
+                     />
+                     <p className="text-xs text-muted-foreground">
+                       These notes will help track why this bill was entered manually and any special circumstances.
+                     </p>
+                   </div>
+                 )}
+               </StandardFormLayout.FieldGroup>
+             </StandardFormLayout.Section>
+           )}
 
-          <StandardFormLayout.Section 
+           <StandardFormLayout.Section
             title="Bill Details"
             description="Enter your external bill number and related identifiers (optional)"
           >
@@ -420,24 +436,8 @@ export default function SubmitBill() {
                     error={dateError}
                   />
                 </CardContent>
-              </Card>
-
-              {isAdminMode && (
-                <div className="space-y-2">
-                  <Label htmlFor="adminNotes">Admin Notes</Label>
-                  <Textarea
-                    id="adminNotes"
-                    placeholder="Document why this bill was entered manually by admin..."
-                    value={formData.adminNotes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
-                    className="min-h-[100px] transition-all duration-200"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    These notes will help track why this bill was entered manually and any special circumstances.
-                  </p>
-                </div>
-              )}
-            </StandardFormLayout.FieldGroup>
+               </Card>
+             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
           <StandardFormLayout.Section 
