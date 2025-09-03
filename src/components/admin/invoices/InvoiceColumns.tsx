@@ -81,40 +81,11 @@ export const createBillColumns = ({
     },
   },
   {
-    id: 'work_orders',
+    id: 'work_order_count',
     header: 'Work Orders',
     cell: ({ row }) => {
-      const items = row.original.subcontractor_bill_work_orders || [];
-      if (!items.length) return <span className="text-muted-foreground">—</span>;
-      
-      const count = items.length;
-      const displayText = count === 1 ? '1 Work Order' : `${count} Work Orders`;
-      
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-sm cursor-pointer hover:text-primary transition-colors">
-                {displayText}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="space-y-1">
-                {items.map((it) => (
-                  <Link 
-                    key={it.id} 
-                    to={`/admin/work-orders/${it.work_order_id}`} 
-                    onClick={(e) => e.stopPropagation()}
-                    className="block font-mono text-xs hover:text-primary transition-colors"
-                  >
-                    {`WO-${it.work_order_id.slice(0, 8)}`}
-                  </Link>
-                ))}
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
+      const count = row.original.workOrderCount || 0;
+      return <span className="text-sm">{count} {count === 1 ? 'order' : 'orders'}</span>;
     },
     enableHiding: false,
   },
