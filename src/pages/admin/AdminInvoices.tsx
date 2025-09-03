@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useSubcontractorBills, SubcontractorBill } from '@/hooks/useSubcontractorBills';
-import { SimpleSubcontractorBillFilters } from "@/components/admin/invoices/SimpleSubcontractorBillFilters";
+import { CompactInvoiceFilters } from "@/components/admin/invoices/CompactInvoiceFilters";
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createBillColumns } from '@/components/admin/invoices/InvoiceColumns';
@@ -85,8 +85,13 @@ export default function AdminInvoices() {
   // Define clean initial filters structure
   const initialFilters: InvoiceFiltersValue = {
     search: '',
-    invoice_status: [],
+    overdue: false,
+    partner_organization_ids: [],
+    location_filter: [],
+    subcontractor_organization_ids: [],
     operational_status: [],
+    report_status: [],
+    invoice_status: [],
     partner_billing_status: [],
   };
 
@@ -95,7 +100,19 @@ export default function AdminInvoices() {
     const stored = localStorage.getItem('admin-invoices-filters-v2');
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        return {
+          ...initialFilters,
+          ...parsed,
+          // Ensure arrays are properly initialized
+          partner_organization_ids: Array.isArray(parsed.partner_organization_ids) ? parsed.partner_organization_ids : [],
+          location_filter: Array.isArray(parsed.location_filter) ? parsed.location_filter : [],
+          subcontractor_organization_ids: Array.isArray(parsed.subcontractor_organization_ids) ? parsed.subcontractor_organization_ids : [],
+          operational_status: Array.isArray(parsed.operational_status) ? parsed.operational_status : [],
+          report_status: Array.isArray(parsed.report_status) ? parsed.report_status : [],
+          invoice_status: Array.isArray(parsed.invoice_status) ? parsed.invoice_status : ['submitted'],
+          partner_billing_status: Array.isArray(parsed.partner_billing_status) ? parsed.partner_billing_status : [],
+        };
       } catch {
         return { ...initialFilters, invoice_status: ['submitted'] };
       }
@@ -108,13 +125,23 @@ export default function AdminInvoices() {
   // Clean filters to ensure array fields are always arrays
   const cleanFilters = useMemo(() => ({
     search: filters.search || '',
-    invoice_status: Array.isArray(filters.invoice_status) ? filters.invoice_status : [],
+    overdue: filters.overdue || false,
+    partner_organization_ids: Array.isArray(filters.partner_organization_ids) ? filters.partner_organization_ids : [],
+    location_filter: Array.isArray(filters.location_filter) ? filters.location_filter : [],
+    subcontractor_organization_ids: Array.isArray(filters.subcontractor_organization_ids) ? filters.subcontractor_organization_ids : [],
     operational_status: Array.isArray(filters.operational_status) ? filters.operational_status : [],
+    report_status: Array.isArray(filters.report_status) ? filters.report_status : [],
+    invoice_status: Array.isArray(filters.invoice_status) ? filters.invoice_status : [],
     partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
   }), [
     filters.search,
-    filters.invoice_status,
+    filters.overdue,
+    filters.partner_organization_ids,
+    filters.location_filter,
+    filters.subcontractor_organization_ids,
     filters.operational_status,
+    filters.report_status,
+    filters.invoice_status,
     filters.partner_billing_status
   ]);
 
@@ -443,9 +470,9 @@ const table = useReactTable({
             <div className="flex items-center gap-2 overflow-x-auto">
               {/* Filters - Make filter button full width on mobile */}
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <SimpleSubcontractorBillFilters
-                  filters={filters}
-                  onFiltersChange={handleFiltersChange}
+                <CompactInvoiceFilters
+                  value={filters}
+                  onChange={handleFiltersChange}
                   onClear={handleClearFilters}
                 />
               </div>
@@ -580,9 +607,9 @@ const table = useReactTable({
 
                 {/* Filters and Search */}
                 <div className="flex items-center gap-2">
-                  <SimpleSubcontractorBillFilters
-                    filters={filters}
-                    onFiltersChange={handleFiltersChange}
+                  <CompactInvoiceFilters
+                    value={filters}
+                    onChange={handleFiltersChange}
                     onClear={handleClearFilters}
                   />
                   <div className="relative flex-1 sm:flex-initial sm:w-80">
