@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,16 +77,6 @@ const initialFilters: SubcontractorBillFiltersValue = {
 };
 
 export default function SubcontractorBills() {
-  // DIAGNOSTIC - Add temporarily at top of component
-  const renderCount = useRef(0);
-  useEffect(() => {
-    renderCount.current++;
-    console.log(`🔥 Render #${renderCount.current}`);
-    if (renderCount.current > 10) {
-      console.error('🚨 RE-RENDER LOOP DETECTED!');
-    }
-  }, []);
-
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

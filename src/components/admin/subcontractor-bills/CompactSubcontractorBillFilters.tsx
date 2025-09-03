@@ -41,11 +41,14 @@ const paymentStatusOptions = [
   { value: 'overdue', label: 'Overdue' },
 ];
 
+// Default config constant to prevent re-render loops
+const DEFAULT_CONFIG: FilterConfig = {};
+
 export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillFiltersProps> = ({
   value,
   onChange,
   onClear,
-  config = {}
+  config = DEFAULT_CONFIG
 }) => {
   const {
     statusOptions = defaultBillStatusOptions,
