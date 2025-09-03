@@ -255,7 +255,7 @@ export const useSubcontractorBill = (id: string) => {
             work_order_id,
             amount,
             description,
-            work_orders!work_order_id (
+            work_orders!subcontractor_bill_work_orders_work_order_id_fkey (
               id,
               work_order_number,
               title,
