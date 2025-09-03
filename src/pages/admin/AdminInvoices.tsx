@@ -389,9 +389,11 @@ const table = useReactTable({
           <h1 className="text-2xl font-bold tracking-tight">
             Subcontractor Bills
           </h1>
-          <p className="text-muted-foreground">
-            {data?.count || 0} total bills
-          </p>
+          {data?.count ? (
+            <p className="text-muted-foreground">
+              {data.count} total bills
+            </p>
+          ) : null}
           {bulkMode && (
             <p className="text-sm text-primary mt-1">
               {selectedCount} bill{selectedCount === 1 ? '' : 's'} selected
