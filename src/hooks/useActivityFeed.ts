@@ -108,7 +108,7 @@ const fetchActivityFeed = async (): Promise<ActivityItem[]> => {
         title: `Bill ${bill.internal_bill_number}`,
         description: `Status: ${bill.status} - $${bill.total_amount || 0} - ${bill.subcontractor_organization?.name || 'Unknown Organization'}`,
         timestamp: bill.updated_at,
-        actionUrl: `/admin/invoices/${bill.id}`,
+        actionUrl: `/admin/subcontractor-bills/${bill.id}`,
       });
     });
   }

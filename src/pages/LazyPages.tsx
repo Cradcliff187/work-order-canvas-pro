@@ -19,7 +19,7 @@ export const AdminAnalytics = lazy(() => import('@/pages/admin/AdminAnalytics'))
 export const AdminEmailTemplates = lazy(() => import('@/pages/admin/AdminEmailTemplates'));
 export const AdminProfile = lazy(() => import('@/pages/admin/AdminProfile'));
 export const AdminEmployees = lazy(() => import('@/pages/admin/AdminEmployees'));
-export const AdminInvoices = lazy(() => import('@/pages/admin/AdminInvoices'));
+export const AdminSubcontractorBills = lazy(() => import('@/pages/admin/SubcontractorBills'));
 export const ReceiptHistory = lazy(() => import('@/pages/admin/ReceiptHistory'));
 export const AdminReceipts = lazy(() => import('@/pages/admin/AdminReceipts'));
 export const AdminUtilities = lazy(() => import('@/pages/admin/AdminUtilities'));

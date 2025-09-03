@@ -99,7 +99,7 @@ const getInitialFilters = (): InvoiceFiltersValue => {
   return { ...initialFilters };
 };
 
-export default function AdminInvoices() {
+export default function SubcontractorBills() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

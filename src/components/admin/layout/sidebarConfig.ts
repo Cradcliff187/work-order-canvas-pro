@@ -39,7 +39,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Time Reports', url: '/employee/time-reports', icon: Timer },
   { title: 'Receipts', url: '/employee/receipts', icon: Receipt },
   { title: 'Finance Receipts', url: '/admin/finance/receipts', icon: Wallet },
-  { title: 'Subcontractor Bills', url: '/admin/invoices', icon: FileText },
+  { title: 'Subcontractor Bills', url: '/admin/subcontractor-bills', icon: FileText },
   { title: 'Partner Invoices', url: '/admin/partner-billing/select-reports', icon: CreditCard },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Organizations', url: '/admin/organizations', icon: Building2 },

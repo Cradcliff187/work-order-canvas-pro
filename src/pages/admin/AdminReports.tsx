@@ -445,7 +445,7 @@ const table = useReactTable({
           </Button>
           
           <Button 
-            onClick={() => navigate('/admin/invoices/create')}
+            onClick={() => navigate('/admin/subcontractor-bills/create')}
             className="h-9 whitespace-nowrap"
           >
             <Plus className="h-4 w-4 mr-2" />

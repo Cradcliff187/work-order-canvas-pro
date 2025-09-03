@@ -265,7 +265,7 @@ export default function SubmitBill() {
       // Clear saved form data
       localStorage.removeItem('billFormData');
       
-      navigate(isAdminMode ? '/admin/invoices' : '/subcontractor/bills');
+      navigate(isAdminMode ? '/admin/subcontractor-bills' : '/subcontractor/bills');
     } catch (error: any) {
       toast({
         title: "Error submitting bill",
@@ -296,7 +296,7 @@ export default function SubmitBill() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to={isAdminMode ? "/admin/invoices" : "/subcontractor/bills"}>
+          <Link to={isAdminMode ? "/admin/subcontractor-bills" : "/subcontractor/bills"}>
             <Button variant="outline" size="sm" className="min-h-[44px] sm:min-h-auto">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Bills

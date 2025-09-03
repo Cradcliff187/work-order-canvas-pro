@@ -21,7 +21,7 @@ import {
   AdminReportDetail,
   AdminProfile,
   AdminEmployees,
-  AdminInvoices,
+  AdminSubcontractorBills,
   ReceiptHistory,
   SystemHealthCheck,
   TestEmailPage,
@@ -200,15 +200,18 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
-    <Route path="/admin/invoices" element={
+    <Route path="/admin/subcontractor-bills" element={
       <ProtectedRoute requiredUserType="admin">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
-            <AdminInvoices />
+            <AdminSubcontractorBills />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
     } />
+    
+    {/* Redirect old invoices URL to new subcontractor-bills URL */}
+    <Route path="/admin/invoices" element={<Navigate to="/admin/subcontractor-bills" replace />} />
     
     <Route path="/admin/submit-bill" element={
       <ProtectedRoute requiredUserType="admin">

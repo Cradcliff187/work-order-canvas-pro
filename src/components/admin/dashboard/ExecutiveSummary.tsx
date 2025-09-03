@@ -38,7 +38,7 @@ export const ExecutiveSummary = () => {
   const handlePendingInvoicesClick = () => {
     const params = new URLSearchParams();
     params.set('status', 'submitted');
-    navigate(`/admin/invoices?${params.toString()}`);
+    navigate(`/admin/subcontractor-bills?${params.toString()}`);
   };
 
   const handleTeamStatusClick = () => {

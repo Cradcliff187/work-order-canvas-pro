@@ -59,7 +59,7 @@ const AdminDashboard = () => {
     } else if (filter === 'paid') {
       params.set('paymentStatus', 'paid');
     }
-    navigate(`/admin/invoices?${params.toString()}`);
+    navigate(`/admin/subcontractor-bills?${params.toString()}`);
   };
 
   return isError ? (
