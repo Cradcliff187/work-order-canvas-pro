@@ -407,44 +407,24 @@ export default function PipelineDashboard() {
               })}
               collapsible={false}
             >
-              <Input
-                placeholder="Search work orders..."
-                value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                className="w-full"
-              />
+              <div className="space-y-4">
+                <Input
+                  placeholder="Search work orders..."
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  className="w-full"
+                />
 
-              <MultiSelectFilter
-                options={locationOptions}
-                selectedValues={filters.location}
-                onSelectionChange={(values) => setFilters(prev => ({ ...prev, location: values }))}
-                placeholder="All locations"
-                maxDisplayCount={2}
-              />
-              
-              <MultiSelectFilter
-                options={[
-                  { value: 'received', label: 'New' },
-                  { value: 'assigned', label: 'Assigned' },
-                  { value: 'estimate_needed', label: 'Estimate Needed' },
-                  { value: 'estimate_approved', label: 'Estimate Approved' },
-                  { value: 'in_progress', label: 'In Progress' },
-                  { value: 'completed', label: 'Completed' }
-                ]}
-                selectedValues={filters.operationalStatus}
-                onSelectionChange={(values) => setFilters(prev => ({ ...prev, operationalStatus: values }))}
-                placeholder="All statuses"
-              />
-              
-              <Button
-                variant={filters.showOnlyActionable ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilters(prev => ({ ...prev, showOnlyActionable: !prev.showOnlyActionable }))}
-                className="w-full justify-start"
-              >
-                <AlertCircle className="h-4 w-4 mr-2" />
-                Action Required
-              </Button>
+                <Button
+                  variant={filters.showOnlyActionable ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilters(prev => ({ ...prev, showOnlyActionable: !prev.showOnlyActionable }))}
+                  className="w-full justify-start"
+                >
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Action Required
+                </Button>
+              </div>
             </AdminFilterBar>
           </div>
         </SheetContent>
