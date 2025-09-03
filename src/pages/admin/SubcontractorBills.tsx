@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useSubcontractorBills, SubcontractorBill } from '@/hooks/useSubcontractorBills';
-import { CompactInvoiceFilters } from "@/components/admin/invoices/CompactInvoiceFilters";
+import { CompactSubcontractorBillFilters } from "@/components/admin/subcontractor-bills/CompactSubcontractorBillFilters";
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createBillColumns } from '@/components/admin/invoices/InvoiceColumns';
@@ -60,24 +60,27 @@ import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { ResponsiveTableContainer } from '@/components/ui/responsive-table-container';
 import { cn } from '@/lib/utils';
-import { type InvoiceFiltersValue } from '@/components/admin/invoices/InvoiceFilters';
+import { type SubcontractorBillFiltersValue } from '@/types/subcontractor-bills';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { LoadingCard } from '@/components/ui/loading-states';
 import { EmptyState } from '@/components/ui/empty-state';
 
 // Define clean initial filters structure outside component
-const initialFilters: InvoiceFiltersValue = {
+const initialFilters: SubcontractorBillFiltersValue = {
   search: '',
   overdue: false,
   partner_organization_ids: [],
   location_filter: [],
   subcontractor_organization_ids: [],
+  status: [],
+  payment_status: [],
+  // Keep for backward compatibility
   invoice_status: [],
   partner_billing_status: [],
 };
 
 // Get initial filters with localStorage logic
-const getInitialFilters = (): InvoiceFiltersValue => {
+const getInitialFilters = (): SubcontractorBillFiltersValue => {
   const stored = localStorage.getItem('admin-invoices-filters-v2');
   if (stored) {
     try {
@@ -89,6 +92,9 @@ const getInitialFilters = (): InvoiceFiltersValue => {
         partner_organization_ids: Array.isArray(parsed.partner_organization_ids) ? parsed.partner_organization_ids : [],
         location_filter: Array.isArray(parsed.location_filter) ? parsed.location_filter : [],
         subcontractor_organization_ids: Array.isArray(parsed.subcontractor_organization_ids) ? parsed.subcontractor_organization_ids : [],
+        status: Array.isArray(parsed.status) ? parsed.status : [],
+        payment_status: Array.isArray(parsed.payment_status) ? parsed.payment_status : [],
+        // Keep for backward compatibility
         invoice_status: Array.isArray(parsed.invoice_status) ? parsed.invoice_status : [],
         partner_billing_status: Array.isArray(parsed.partner_billing_status) ? parsed.partner_billing_status : [],
       };
@@ -118,7 +124,7 @@ export default function SubcontractorBills() {
     clearFilters();
   };
   
-  const handleFiltersChange = (newFilters: InvoiceFiltersValue) => {
+  const handleFiltersChange = (newFilters: SubcontractorBillFiltersValue) => {
     setFilters(newFilters);
   };
   const { approveSubcontractorBill, rejectSubcontractorBill, markAsPaid } = useSubcontractorBillMutations();
@@ -166,7 +172,16 @@ export default function SubcontractorBills() {
   };
 
 
-  const { data, isLoading, error, refetch } = useSubcontractorBills({ ...filters, page });
+  // Transform filters to match hook expectations
+  const transformedFilters = useMemo(() => {
+    return {
+      ...filters,
+      status: filters.status?.[0], // Convert array to single value
+      page
+    };
+  }, [filters, page]);
+
+  const { data, isLoading, error, refetch } = useSubcontractorBills(transformedFilters);
 
   
   const handleViewBill = (invoice: SubcontractorBill) => {
@@ -436,7 +451,12 @@ const table = useReactTable({
             <div className="flex items-center gap-2 overflow-x-auto">
               {/* Filters - Make filter button full width on mobile */}
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <CompactInvoiceFilters
+                {/* <CompactInvoiceFilters
+                  value={filters}
+                  onChange={handleFiltersChange}
+                  onClear={handleClearFilters}
+                /> */}
+                <CompactSubcontractorBillFilters
                   value={filters}
                   onChange={handleFiltersChange}
                   onClear={handleClearFilters}
@@ -573,7 +593,7 @@ const table = useReactTable({
 
                 {/* Filters and Search */}
                 <div className="flex items-center gap-2">
-                  <CompactInvoiceFilters
+                  <CompactSubcontractorBillFilters
                     value={filters}
                     onChange={handleFiltersChange}
                     onClear={handleClearFilters}
