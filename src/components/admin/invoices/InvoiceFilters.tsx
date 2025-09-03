@@ -14,8 +14,6 @@ export interface InvoiceFiltersValue {
   partner_organization_ids?: string[];
   location_filter?: string[];
   subcontractor_organization_ids?: string[];
-  operational_status?: string[];
-  report_status?: string[];
   invoice_status?: string[];
   partner_billing_status?: string[];
 }
@@ -27,22 +25,7 @@ interface InvoiceFiltersProps {
   filterCount: number;
 }
 
-// Status options matching WorkOrderPipelineTable exactly
-const operationalStatusOptions = [
-  { value: 'new', label: 'New Orders' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'reports_pending', label: 'Reports Pending Review' },
-  { value: 'complete', label: 'Completed' }
-];
-
-const reportStatusOptions = [
-  { value: 'not_submitted', label: 'Not Submitted' },
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'reviewed', label: 'Under Review' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Needs Revision' }
-];
+// Status options for invoice filtering
 
 const invoiceStatusOptions = [
   { value: 'draft', label: 'Draft' },
@@ -81,8 +64,6 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
     if (value.partner_organization_ids?.length) count += value.partner_organization_ids.length;
     if (value.location_filter?.length) count += value.location_filter.length;
     if (value.subcontractor_organization_ids?.length) count += value.subcontractor_organization_ids.length;
-    if (value.operational_status?.length) count += value.operational_status.length;
-    if (value.report_status?.length) count += value.report_status.length;
     if (value.invoice_status?.length) count += value.invoice_status.length;
     if (value.partner_billing_status?.length) count += value.partner_billing_status.length;
     return count;
@@ -178,31 +159,6 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
     </div>
   );
 
-  const renderOperationalStatusFilter = () => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Work Status</label>
-      <MultiSelectFilter
-        options={operationalStatusOptions}
-        selectedValues={value.operational_status || []}
-        onSelectionChange={(statuses) => set('operational_status', statuses)}
-        placeholder="Work Status"
-        maxDisplayCount={2}
-      />
-    </div>
-  );
-
-  const renderReportStatusFilter = () => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">Report Status</label>
-      <MultiSelectFilter
-        options={reportStatusOptions}
-        selectedValues={value.report_status || []}
-        onSelectionChange={(statuses) => set('report_status', statuses)}
-        placeholder="Report Status"
-        maxDisplayCount={2}
-      />
-    </div>
-  );
 
   const renderPartnerInvoicingStatusFilter = () => (
     <div className="space-y-2">
@@ -231,8 +187,6 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount }: Invoic
       {renderPartnerOrganizationFilter()}
       {value.partner_organization_ids?.length && renderLocationFilter()}
       {renderSubcontractorFilter()}
-      {renderOperationalStatusFilter()}
-      {renderReportStatusFilter()}
       {renderPartnerInvoicingStatusFilter()}
     </div>
   );
