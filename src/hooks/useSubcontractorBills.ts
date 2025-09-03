@@ -67,9 +67,20 @@ export interface SubcontractorBill {
       work_order_number: string;
       title: string;
       organization_id: string;
+      date_completed?: string;
+      store_location?: string;
+      city?: string;
+      state?: string;
       organizations?: {
         name: string;
       };
+      work_order_assignments?: Array<{
+        assigned_organization_id: string;
+        assigned_organization?: {
+          id: string;
+          name: string;
+        };
+      }>;
     };
   }>;
   subcontractor_bill_attachments?: Array<{
@@ -156,8 +167,19 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
               work_order_number,
               title,
               organization_id,
+              date_completed,
+              store_location,
+              city,
+              state,
               organizations!organization_id (
                 name
+              ),
+              work_order_assignments (
+                assigned_organization_id,
+                assigned_organization:organizations!assigned_organization_id (
+                  id,
+                  name
+                )
               )
             )
           ),
@@ -178,15 +200,31 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
       }
 
       if (subcontractor_organization_ids && subcontractor_organization_ids.length > 0) {
-        query = query.in('subcontractor_organization_id', subcontractor_organization_ids);
+        // Filter by work performers (assigned organizations) through work orders
+        query = query.in('subcontractor_bill_work_orders.work_orders.work_order_assignments.assigned_organization_id', subcontractor_organization_ids);
+      }
+
+      if (partner_organization_ids && partner_organization_ids.length > 0) {
+        // Filter by partner organizations where work was performed
+        query = query.in('subcontractor_bill_work_orders.work_orders.organization_id', partner_organization_ids);
+      }
+
+      if (location_filter && location_filter.length > 0) {
+        // Filter by work order locations
+        const locationQueries = location_filter.map(location => 
+          `subcontractor_bill_work_orders.work_orders.store_location.ilike.%${location}%,subcontractor_bill_work_orders.work_orders.city.ilike.%${location}%`
+        ).join(',');
+        query = query.or(locationQueries);
       }
 
       if (dateFrom) {
-        query = query.gte('created_at', dateFrom.toISOString());
+        // Filter by work completion dates instead of bill creation dates
+        query = query.gte('subcontractor_bill_work_orders.work_orders.date_completed', dateFrom.toISOString());
       }
 
       if (dateTo) {
-        query = query.lte('created_at', dateTo.toISOString());
+        // Filter by work completion dates instead of bill creation dates  
+        query = query.lte('subcontractor_bill_work_orders.work_orders.date_completed', dateTo.toISOString());
       }
 
       if (overdue) {
@@ -197,10 +235,10 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         query = query.in('partner_billing_status', partner_billing_status);
       }
 
-      // Apply database-level search
+      // Apply database-level search - include work order numbers
       if (search && search.trim()) {
         const searchTerm = `%${search.trim()}%`;
-        query = query.or(`internal_bill_number.ilike.${searchTerm},external_bill_number.ilike.${searchTerm},subcontractor_organization.name.ilike.${searchTerm}`);
+        query = query.or(`internal_bill_number.ilike.${searchTerm},external_bill_number.ilike.${searchTerm},subcontractor_organization.name.ilike.${searchTerm},subcontractor_bill_work_orders.work_orders.work_order_number.ilike.${searchTerm}`);
       }
 
       // Apply pagination
