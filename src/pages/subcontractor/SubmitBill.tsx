@@ -629,7 +629,25 @@ export default function SubmitBill() {
               </Button>
               <Button 
                 type="submit" 
-                disabled={isSubmitting || selectedWorkOrderIds.length === 0 || (isAdminMode && !formData.selectedOrganizationId)}
+                disabled={isSubmitting || (() => {
+                  // Admin mode validation first
+                  if (isAdminMode && !formData.selectedOrganizationId) {
+                    return true;
+                  }
+                  
+                  // No work orders selected
+                  if (selectedWorkOrderIds.length === 0) {
+                    return true;
+                  }
+                  
+                  // Check if any amounts are missing or invalid
+                  const hasInvalidAmounts = Object.values(formData.selectedWorkOrders).some(amount => amount <= 0);
+                  if (hasInvalidAmounts) {
+                    return true;
+                  }
+                  
+                  return false;
+                })()}
                 className="min-h-[44px]"
               >
                 {isSubmitting ? (
@@ -637,9 +655,31 @@ export default function SubmitBill() {
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Submitting...
                   </>
-                ) : (
-                  'Submit Bill'
-                )}
+                ) : (() => {
+                  // Admin mode validation first
+                  if (isAdminMode && !formData.selectedOrganizationId) {
+                    return "Select Organization to Continue";
+                  }
+                  
+                  // No work orders selected
+                  if (selectedWorkOrderIds.length === 0) {
+                    return "Select Work Orders to Continue";
+                  }
+                  
+                  // Check if any amounts are missing or invalid
+                  const hasInvalidAmounts = Object.values(formData.selectedWorkOrders).some(amount => amount <= 0);
+                  if (hasInvalidAmounts) {
+                    return "Enter Amounts to Continue";
+                  }
+                  
+                  // Ready to submit
+                  const formattedTotal = totalAmount.toLocaleString('en-US', { 
+                    style: 'currency', 
+                    currency: 'USD' 
+                  });
+                  
+                  return `Submit Bill (${formattedTotal})`;
+                })()}
               </Button>
             </StandardFormLayout.Actions>
           </div>
