@@ -84,10 +84,10 @@ export function MultiSelectFilter({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[300px] p-0 z-[9999] bg-background border shadow-lg" 
+        className="w-[300px] p-0 z-50 bg-background border shadow-lg" 
         align="start"
         sideOffset={5}
-        disablePortal={isMobile}
+        disablePortal={false}
       >
           <div className="p-3 space-y-3">
             {/* Search input */}
@@ -123,7 +123,7 @@ export function MultiSelectFilter({
                   >
                     <Checkbox
                       checked={selectedValues.includes(option.value)}
-                      onChange={() => handleToggleOption(option.value)}
+                      onCheckedChange={() => handleToggleOption(option.value)}
                     />
                     <span className="text-sm">{option.label}</span>
                   </div>
