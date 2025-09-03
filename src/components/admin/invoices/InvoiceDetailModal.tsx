@@ -512,7 +512,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     const items = mapToItems(attachments.filter((a) => a.work_order_id === iwo.work_order_id));
                     return {
                       key: iwo.work_order_id,
-                      label: `WO-${iwo.work_order_id.slice(0, 8)}`,
+                      label: (iwo.work_orders?.work_order_number && iwo.work_orders.work_order_number.trim()) 
+                        ? iwo.work_orders.work_order_number 
+                        : `WO-${iwo.work_order_id.slice(0, 8)}`,
                       count: items.length,
                       items,
                     };
