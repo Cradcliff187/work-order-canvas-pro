@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,6 +86,9 @@ export default function SubcontractorBills() {
   
   
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-subcontractor-bills-filters-v1', initialFilters);
+  
+  // Defer search input to reduce API calls while typing
+  const deferredSearch = useDeferredValue(filters.search || '');
 
   // 🧪 Debug Code - Add this to see the cascade happening
   const renderCount = useRef(0);
@@ -152,7 +155,7 @@ export default function SubcontractorBills() {
 
   // Add page to filters for hook
   const queryFilters = useMemo(() => ({
-    search: filters.search || '',
+    search: deferredSearch,
     status: filters.status || [],
     subcontractor_organization_ids: filters.subcontractor_organization_ids || [],
     overdue: filters.overdue || false,
@@ -161,7 +164,7 @@ export default function SubcontractorBills() {
     page,
     pageSize: 10
   }), [
-    filters.search,
+    deferredSearch,
     filters.status,
     filters.subcontractor_organization_ids,
     filters.overdue,
