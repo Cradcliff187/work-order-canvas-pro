@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -90,6 +90,16 @@ export default function SubcontractorBills() {
   
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-subcontractor-bills-filters-v1', initialFilters);
 
+  // 🧪 Debug Code - Add this to see the cascade happening
+  const renderCount = useRef(0);
+
+  useEffect(() => {
+    renderCount.current++;
+    if (renderCount.current > 5) {
+      console.error(`🚨 EXCESSIVE RENDERS: #${renderCount.current}`);
+      console.trace('Render cause');
+    }
+  }, []);
 
   const handleClearFilters = () => {
     clearFilters();
@@ -143,14 +153,35 @@ export default function SubcontractorBills() {
   };
 
 
-  // Transform filters to match hook expectations
+  // Transform filters to match hook expectations with stable dependencies
   const transformedFilters = useMemo(() => {
     return {
-      ...filters,
+      search: filters.search,
+      overdue: filters.overdue,
+      partner_organization_ids: filters.partner_organization_ids,
+      location_filter: filters.location_filter,
+      subcontractor_organization_ids: filters.subcontractor_organization_ids,
       status: filters.status?.[0], // Convert array to single value
+      payment_status: filters.payment_status,
+      date_range: filters.date_range,
       page
     };
-  }, [filters, page]);
+  }, [
+    filters.search,
+    filters.overdue,
+    filters.partner_organization_ids,
+    filters.location_filter,
+    filters.subcontractor_organization_ids,
+    filters.status,
+    filters.payment_status,
+    filters.date_range,
+    page
+  ]);
+
+  // 🔧 Debug transformedFilters changes
+  useEffect(() => {
+    console.log('🎯 transformedFilters changed:', transformedFilters);
+  }, [transformedFilters]);
 
   const { data, isLoading, error, refetch } = useSubcontractorBills(transformedFilters);
 
