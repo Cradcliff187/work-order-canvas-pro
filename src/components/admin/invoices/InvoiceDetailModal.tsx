@@ -587,7 +587,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                           className="p-0 h-auto font-mono text-primary"
                           onClick={() => window.open(`/admin/work-orders/${item.work_order_id}`, '_blank')}
                         >
-                          {item.work_orders?.work_order_number || `WO-${item.work_order_id.slice(0, 8)}`}
+                          {(item.work_orders?.work_order_number && item.work_orders.work_order_number.trim()) 
+                            ? item.work_orders.work_order_number 
+                            : item.work_order_id}
                           <ExternalLink className="ml-1 h-3 w-3" />
                         </Button>
                       </TableCell>
