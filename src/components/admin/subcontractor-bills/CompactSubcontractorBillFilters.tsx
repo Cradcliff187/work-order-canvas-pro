@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { Calendar } from '@/components/ui/calendar';
-import { Filter, CalendarIcon } from 'lucide-react';
+import { Filter, CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -109,14 +109,14 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
   }, [locations]);
 
   // Handle filter changes
-  const handleFilterChange = (key: string, filterValue: string[]) => {
+  const handleFilterChange = useCallback((key: string, filterValue: string[]) => {
     onChange({
       ...value,
       [key]: filterValue
     });
-  };
+  }, [value, onChange]);
 
-  const handleDateFromChange = (date: Date | undefined) => {
+  const handleDateFromChange = useCallback((date: Date | undefined) => {
     onChange({
       ...value,
       date_range: {
@@ -125,9 +125,9 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
       }
     });
     setShowDateFrom(false);
-  };
+  }, [value, onChange]);
 
-  const handleDateToChange = (date: Date | undefined) => {
+  const handleDateToChange = useCallback((date: Date | undefined) => {
     onChange({
       ...value,
       date_range: {
@@ -136,86 +136,118 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
       }
     });
     setShowDateTo(false);
-  };
+  }, [value, onChange]);
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = useCallback(() => {
     setIsOpen(false);
-  };
+  }, []);
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     if (onClear) {
       onClear();
     }
     setIsOpen(false);
-  };
+  }, [onClear]);
 
-  // Filter content component
-  const FilterContent = () => {
+  // Focus management for mobile overlay
+  useEffect(() => {
+    if (isMobile && isOpen) {
+      // Prevent body scroll when overlay is open
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }
+  }, [isMobile, isOpen]);
+
+  // Shared filter content component with performance optimization
+  const FilterContent = React.memo(({ isMobileVersion = false }: { isMobileVersion?: boolean }) => {
+    const containerClass = isMobileVersion 
+      ? "space-y-6 max-h-none" // More space on mobile
+      : "space-y-4 max-h-[500px] overflow-y-auto";
+
+    const filterItemClass = isMobileVersion 
+      ? "space-y-3" // More space between items on mobile
+      : "";
+
+    const inputClass = isMobileVersion
+      ? "w-full min-h-[44px]" // Ensure 44px touch targets on mobile
+      : "w-full h-10";
+
     return (
       <>
-        <div className="space-y-4 max-h-[500px] overflow-y-auto">
+        <div className={containerClass}>
           {/* Bill Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Bill Status</label>
+          <div className={filterItemClass}>
+            <label className="text-sm font-medium mb-2 block text-foreground">Bill Status</label>
             <MultiSelectFilter
               options={statusOptions}
               selectedValues={value.status || []}
               onSelectionChange={(filterValue) => handleFilterChange('status', filterValue)}
               placeholder="Filter by status..."
-              className="w-full h-10"
+              className={inputClass}
             />
           </div>
 
+          {isMobileVersion && <div className="border-t border-border/50" />}
+
           {/* Payment Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Payment Status</label>
+          <div className={filterItemClass}>
+            <label className="text-sm font-medium mb-2 block text-foreground">Payment Status</label>
             <MultiSelectFilter
               options={paymentStatusOptions}
               selectedValues={value.payment_status || []}
               onSelectionChange={(filterValue) => handleFilterChange('payment_status', filterValue)}
               placeholder="Filter by payment status..."
-              className="w-full h-10"
+              className={inputClass}
             />
           </div>
 
+          {isMobileVersion && showPartner && <div className="border-t border-border/50" />}
+
           {/* Partner Filter */}
           {showPartner && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Partner</label>
+            <div className={filterItemClass}>
+              <label className="text-sm font-medium mb-2 block text-foreground">Partner</label>
               <MultiSelectFilter
                 options={partnerOptions}
                 selectedValues={value.partner_organization_ids || []}
                 onSelectionChange={(filterValue) => handleFilterChange('partner_organization_ids', filterValue)}
                 placeholder="Filter by partner..."
-                className="w-full h-10"
+                className={inputClass}
               />
             </div>
           )}
 
+          {isMobileVersion && showSubcontractor && <div className="border-t border-border/50" />}
+
           {/* Subcontractor Filter */}
           {showSubcontractor && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Subcontractor</label>
+            <div className={filterItemClass}>
+              <label className="text-sm font-medium mb-2 block text-foreground">Subcontractor</label>
               <MultiSelectFilter
                 options={subcontractorOptions}
                 selectedValues={value.subcontractor_organization_ids || []}
                 onSelectionChange={(filterValue) => handleFilterChange('subcontractor_organization_ids', filterValue)}
                 placeholder="Filter by subcontractor..."
-                className="w-full h-10"
+                className={inputClass}
               />
             </div>
           )}
 
+          {isMobileVersion && <div className="border-t border-border/50" />}
+
           {/* Date Range */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Date Range</label>
-            <div className="grid grid-cols-2 gap-2">
+          <div className={filterItemClass}>
+            <label className="text-sm font-medium mb-2 block text-foreground">Date Range</label>
+            <div className={cn("grid gap-2", isMobileVersion ? "grid-cols-1 space-y-2" : "grid-cols-2")}>
               <Popover open={showDateFrom} onOpenChange={setShowDateFrom}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full h-10 justify-start text-left font-normal flex-1",
+                      "justify-start text-left font-normal",
+                      isMobileVersion ? "w-full min-h-[44px]" : "w-full h-10 flex-1",
                       !value.date_range?.from && "text-muted-foreground"
                     )}
                   >
@@ -239,7 +271,8 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full h-10 justify-start text-left font-normal flex-1",
+                      "justify-start text-left font-normal",
+                      isMobileVersion ? "w-full min-h-[44px]" : "w-full h-10 flex-1",
                       !value.date_range?.to && "text-muted-foreground"
                     )}
                   >
@@ -260,189 +293,79 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
             </div>
           </div>
 
+          {isMobileVersion && showLocations && <div className="border-t border-border/50" />}
+
           {/* Locations Filter */}
           {showLocations && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Locations</label>
+            <div className={filterItemClass}>
+              <label className="text-sm font-medium mb-2 block text-foreground">Locations</label>
               <MultiSelectFilter
                 options={locationOptions}
                 selectedValues={value.location_filter || []}
                 onSelectionChange={(filterValue) => handleFilterChange('location_filter', filterValue)}
                 placeholder="Select locations..."
-                className="w-full h-10"
+                className={inputClass}
               />
             </div>
           )}
         </div>
         
         {/* Action buttons */}
-        <div className="flex justify-between pt-4 border-t">
-          <Button variant="outline" onClick={handleClearFilters}>
+        <div className={cn("flex pt-4 border-t border-border/50", isMobileVersion ? "gap-3" : "justify-between")}>
+          <Button 
+            variant="outline" 
+            onClick={handleClearFilters}
+            className={cn(isMobileVersion && "flex-1 min-h-[44px]")}
+          >
             Clear
           </Button>
-          <Button onClick={handleApplyFilters}>
+          <Button 
+            onClick={handleApplyFilters}
+            className={cn(isMobileVersion && "flex-1 min-h-[44px]")}
+          >
             Apply
           </Button>
         </div>
       </>
     );
-  };
+  });
 
-  // Mobile full-screen overlay component
-  const MobileFilterOverlay = () => {
+  // Enhanced mobile full-screen overlay component
+  const MobileFilterOverlay = React.memo(() => {
     if (!isOpen) return null;
 
     return (
-      <div className="fixed inset-0 z-50 bg-background">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Filters</h2>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setIsOpen(false)}
-          >
-            ✕
-          </Button>
-        </div>
-        
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Bill Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Bill Status</label>
-            <MultiSelectFilter
-              options={statusOptions}
-              selectedValues={value.status || []}
-              onSelectionChange={(filterValue) => handleFilterChange('status', filterValue)}
-              placeholder="Filter by status..."
-              className="w-full h-10"
-            />
-          </div>
-
-          {/* Payment Status Filter */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Payment Status</label>
-            <MultiSelectFilter
-              options={paymentStatusOptions}
-              selectedValues={value.payment_status || []}
-              onSelectionChange={(filterValue) => handleFilterChange('payment_status', filterValue)}
-              placeholder="Filter by payment status..."
-              className="w-full h-10"
-            />
-          </div>
-
-          {/* Partner Filter */}
-          {showPartner && (
+      <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-fade-in">
+        <div className="flex flex-col h-full safe-area-inset">
+          {/* Enhanced Header with better styling */}
+          <div className="flex items-center justify-between p-4 pb-3 border-b border-border/50 bg-background/80 backdrop-blur-sm">
             <div>
-              <label className="text-sm font-medium mb-2 block">Partner</label>
-              <MultiSelectFilter
-                options={partnerOptions}
-                selectedValues={value.partner_organization_ids || []}
-                onSelectionChange={(filterValue) => handleFilterChange('partner_organization_ids', filterValue)}
-                placeholder="Filter by partner..."
-                className="w-full h-10"
-              />
+              <h2 className="text-lg font-semibold text-foreground">Filters</h2>
+              {activeCount > 0 && (
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {activeCount} filter{activeCount !== 1 ? 's' : ''} applied
+                </p>
+              )}
             </div>
-          )}
-
-          {/* Subcontractor Filter */}
-          {showSubcontractor && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Subcontractor</label>
-              <MultiSelectFilter
-                options={subcontractorOptions}
-                selectedValues={value.subcontractor_organization_ids || []}
-                onSelectionChange={(filterValue) => handleFilterChange('subcontractor_organization_ids', filterValue)}
-                placeholder="Filter by subcontractor..."
-                className="w-full h-10"
-              />
-            </div>
-          )}
-
-          {/* Date Range */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Date Range</label>
-            <div className="grid grid-cols-2 gap-2">
-              <Popover open={showDateFrom} onOpenChange={setShowDateFrom}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full h-10 justify-start text-left font-normal flex-1",
-                      !value.date_range?.from && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {value.date_range?.from ? format(new Date(value.date_range.from), "PP") : "From date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start" disablePortal={true}>
-                  <Calendar
-                    mode="single"
-                    selected={value.date_range?.from ? new Date(value.date_range.from) : undefined}
-                    onSelect={handleDateFromChange}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <Popover open={showDateTo} onOpenChange={setShowDateTo}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full h-10 justify-start text-left font-normal flex-1",
-                      !value.date_range?.to && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {value.date_range?.to ? format(new Date(value.date_range.to), "PP") : "To date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start" disablePortal={true}>
-                  <Calendar
-                    mode="single"
-                    selected={value.date_range?.to ? new Date(value.date_range.to) : undefined}
-                    onSelect={handleDateToChange}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          {/* Locations Filter */}
-          {showLocations && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Locations</label>
-              <MultiSelectFilter
-                options={locationOptions}
-                selectedValues={value.location_filter || []}
-                onSelectionChange={(filterValue) => handleFilterChange('location_filter', filterValue)}
-                placeholder="Select locations..."
-                className="w-full h-10"
-              />
-            </div>
-          )}
-        </div>
-        
-        {/* Bottom action buttons */}
-        <div className="p-4 border-t bg-background">
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClearFilters} className="flex-1">
-              Clear
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setIsOpen(false)}
+              className="h-9 w-9 p-0 hover:bg-muted rounded-full"
+              aria-label="Close filters"
+            >
+              <X className="h-4 w-4" />
             </Button>
-            <Button onClick={handleApplyFilters} className="flex-1">
-              Apply
-            </Button>
+          </div>
+          
+          {/* Scrollable content with safe area padding */}
+          <div className="flex-1 overflow-y-auto px-4 py-6 pb-safe-offset-4">
+            <FilterContent isMobileVersion={true} />
           </div>
         </div>
       </div>
     );
-  };
+  });
 
   return (
     <>
@@ -451,12 +374,13 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
           <Button
             variant="outline"
             onClick={() => setIsOpen(!isOpen)}
-            className="relative"
+            className="relative min-h-[44px] px-4 transition-all duration-200 hover:scale-[1.02]"
+            aria-label={`Open filters${activeCount > 0 ? `, ${activeCount} applied` : ''}`}
           >
             <Filter className="mr-2 h-4 w-4" />
             Filters
             {activeCount > 0 && (
-              <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
+              <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2.5 py-1 text-xs min-w-[1.5rem] h-6 flex items-center justify-center font-medium animate-scale-in">
                 {activeCount}
               </span>
             )}
@@ -468,19 +392,20 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              className="relative"
+              className="relative transition-all duration-200 hover:scale-[1.02]"
+              aria-label={`Open filters${activeCount > 0 ? `, ${activeCount} applied` : ''}`}
             >
               <Filter className="mr-2 h-4 w-4" />
               Filters
               {activeCount > 0 && (
-                <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
+                <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2.5 py-1 text-xs min-w-[1.5rem] h-6 flex items-center justify-center font-medium animate-scale-in">
                   {activeCount}
                 </span>
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-4" align="end">
-            <FilterContent />
+          <PopoverContent className="w-80 p-4 z-50 bg-popover border border-border shadow-lg" align="end">
+            <FilterContent isMobileVersion={false} />
           </PopoverContent>
         </Popover>
       )}
