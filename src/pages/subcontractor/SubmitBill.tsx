@@ -541,20 +541,28 @@ export default function SubmitBill() {
           </StandardFormLayout.Section>
 
           <StandardFormLayout.Section 
-            title="Notes & Terms"
-            description="Optional notes and payment terms"
+            title="Additional Notes"
+            description="Optional information for this bill"
           >
             <StandardFormLayout.FieldGroup>
-              <div className="space-y-2">
-                <Label htmlFor="subcontractorNotes">Notes</Label>
-                <Textarea
-                  id="subcontractorNotes"
-                  placeholder="Add any relevant notes for the admin to review..."
-                  value={formData.subcontractorNotes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, subcontractorNotes: e.target.value }))}
-                  className="min-h-[80px] min-h-[44px] px-4 py-3"
-                />
-              </div>
+              <Card className={cn("bg-muted/30", isMobile && "p-4")}>
+                <CardContent className="pt-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="subcontractorNotes">Notes</Label>
+                    <Textarea
+                      id="subcontractorNotes"
+                      placeholder="Enter any notes about this bill"
+                      value={formData.subcontractorNotes}
+                      onChange={(e) => setFormData(prev => ({ ...prev, subcontractorNotes: e.target.value }))}
+                      className="border-2 border-input bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[80px]"
+                      maxLength={500}
+                    />
+                    <p className="text-xs text-muted-foreground text-right">
+                      {formData.subcontractorNotes.length}/500 characters
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
