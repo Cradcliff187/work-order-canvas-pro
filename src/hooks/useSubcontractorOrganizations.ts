@@ -6,14 +6,15 @@ interface SubcontractorOrganization {
   name: string;
   contact_email: string | null;
   contact_phone: string | null;
+  // Backward compatibility properties (with default values for performance)
   active_user_count: number;
-  active_users: number; // For backward compatibility
+  active_users: number;
   first_active_user: {
     id: string;
     full_name: string;
   } | null;
-  first_active_user_id?: string; // Added for modal compatibility
-  first_active_user_name?: string; // Added for modal compatibility
+  first_active_user_id?: string;
+  first_active_user_name?: string;
 }
 
 export function useSubcontractorOrganizations() {
@@ -22,63 +23,22 @@ export function useSubcontractorOrganizations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('organizations')
-        .select(`
-          id,
-          name,
-          contact_email,
-          contact_phone,
-          is_active,
-          organization_members!left(
-            user_id,
-            profiles!left(
-              id,
-              first_name,
-              last_name,
-              is_active
-            )
-          )
-        `)
+        .select('id, name, contact_email, contact_phone')
         .eq('organization_type', 'subcontractor')
         .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
 
-      // Return ALL subcontractor organizations, regardless of user count
-      const transformedData: SubcontractorOrganization[] = (data || []).map(org => {
-        const activeUsers = (org.organization_members || [])
-          .filter((om: any) => om.profiles?.is_active)
-          .map((om: any) => ({
-            id: om.profiles.id,
-            full_name: `${om.profiles.first_name} ${om.profiles.last_name}`.trim()
-          }));
-
-        const firstActiveUser = activeUsers[0] || null;
-
-        return {
-          id: org.id,
-          name: org.name,
-          contact_email: org.contact_email,
-          contact_phone: org.contact_phone,
-          active_user_count: activeUsers.length,
-          active_users: activeUsers.length, // For backward compatibility
-          first_active_user: firstActiveUser,
-          first_active_user_id: firstActiveUser?.id,
-          first_active_user_name: firstActiveUser?.full_name
-        };
-      });
-
-      console.log('🏢 Subcontractor Organizations Query Result:', {
-        rawData: data,
-        transformedData,
-        count: transformedData.length,
-        allOrganizations: transformedData.map(o => ({ 
-          id: o.id, 
-          name: o.name, 
-          userCount: o.active_user_count,
-          hasUsers: o.active_user_count > 0
-        }))
-      });
+      // Transform data with backward compatibility (default values for performance)
+      const transformedData = (data || []).map(org => ({
+        ...org,
+        active_user_count: 0, // Default for performance - not needed for filters
+        active_users: 0, // Backward compatibility
+        first_active_user: null, // Default for performance - not needed for filters
+        first_active_user_id: undefined,
+        first_active_user_name: undefined
+      }));
 
       return transformedData;
     },

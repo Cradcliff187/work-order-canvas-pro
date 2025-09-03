@@ -63,7 +63,7 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
   const [showDateFrom, setShowDateFrom] = useState(false);
   const [showDateTo, setShowDateTo] = useState(false);
 
-  const { data: partnerOrganizations } = useQuery({
+  const { data: partnerOrganizations, isLoading: isLoadingPartners } = useQuery({
     queryKey: ['partner-organizations'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -77,8 +77,8 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
     },
   });
   
-  const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
-  const { data: locations } = usePartnerLocations();
+  const { data: subcontractorOrganizations, isLoading: isLoadingSubcontractors } = useSubcontractorOrganizations();
+  const { data: locations, isLoading: isLoadingLocations } = usePartnerLocations(value.partner_organization_ids?.[0]);
 
   // Calculate active filter count
   const activeCount = useMemo(() => {
@@ -216,7 +216,8 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
                 options={partnerOptions}
                 selectedValues={value.partner_organization_ids || []}
                 onSelectionChange={(filterValue) => handleFilterChange('partner_organization_ids', filterValue)}
-                placeholder="Filter by partner..."
+                placeholder={isLoadingPartners ? "Loading partners..." : "Filter by partner..."}
+                disabled={isLoadingPartners}
                 className={inputClass}
               />
             </div>
@@ -232,7 +233,8 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
                 options={subcontractorOptions}
                 selectedValues={value.subcontractor_organization_ids || []}
                 onSelectionChange={(filterValue) => handleFilterChange('subcontractor_organization_ids', filterValue)}
-                placeholder="Filter by subcontractor..."
+                placeholder={isLoadingSubcontractors ? "Loading subcontractors..." : "Filter by subcontractor..."}
+                disabled={isLoadingSubcontractors}
                 className={inputClass}
               />
             </div>
@@ -298,15 +300,16 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
 
           {isMobileVersion && showLocations && <div className="border-t border-border/50" />}
 
-          {/* Locations Filter */}
-          {showLocations && (
+          {/* Locations Filter - Only show when partner is selected */}
+          {showLocations && value.partner_organization_ids && value.partner_organization_ids.length > 0 && (
             <div className={filterItemClass}>
               <label className="text-sm font-medium mb-2 block text-foreground">Locations</label>
               <MultiSelectFilter
                 options={locationOptions}
                 selectedValues={value.location_filter || []}
                 onSelectionChange={(filterValue) => handleFilterChange('location_filter', filterValue)}
-                placeholder="Select locations..."
+                placeholder={isLoadingLocations ? "Loading locations..." : "Select locations..."}
+                disabled={isLoadingLocations}
                 className={inputClass}
               />
             </div>
