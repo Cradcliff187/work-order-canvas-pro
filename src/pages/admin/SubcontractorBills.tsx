@@ -396,6 +396,15 @@ const table = useReactTable({
         </div>
       </header>
 
+      {/* Shared Filters - Single instance for both mobile and desktop */}
+      <div className="mb-4">
+        <CompactSubcontractorBillFilters
+          value={filters}
+          onChange={handleFiltersChange}
+          onClear={handleClearFilters}
+        />
+      </div>
+
       {/* Results */}
       {isMobile ? (
         <MobilePullToRefresh onRefresh={async () => { await refetch(); }}>
@@ -423,16 +432,8 @@ const table = useReactTable({
               )}
             </div>
 
-            {/* Filter and bulk actions row */}
+            {/* Bulk actions row */}
             <div className="flex items-center gap-2 overflow-x-auto">
-              {/* Filters - Make filter button full width on mobile */}
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <CompactSubcontractorBillFilters
-                  value={filters}
-                  onChange={handleFiltersChange}
-                  onClear={handleClearFilters}
-                />
-              </div>
 
               {/* Bulk mode actions */}
               {bulkMode && selectedCount > 0 && (
@@ -562,13 +563,8 @@ const table = useReactTable({
                   </Button>
                 )}
 
-                {/* Filters and Search */}
+                {/* Search */}
                 <div className="flex items-center gap-2">
-                  <CompactSubcontractorBillFilters
-                    value={filters}
-                    onChange={handleFiltersChange}
-                    onClear={handleClearFilters}
-                  />
                   <div className="relative flex-1 sm:flex-initial sm:w-80">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <SmartSearchInput
