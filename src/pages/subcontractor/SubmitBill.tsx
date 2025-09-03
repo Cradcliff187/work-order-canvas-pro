@@ -495,17 +495,24 @@ export default function SubmitBill() {
                   <p>No completed work orders available for billing</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {availableWorkOrders.map((workOrder) => (
-                    <WorkOrderAmountCard
-                      key={workOrder.id}
-                      workOrder={workOrder}
-                      isSelected={workOrder.id in formData.selectedWorkOrders}
-                      amount={formData.selectedWorkOrders[workOrder.id] || 0}
-                      onSelectionChange={(checked) => handleWorkOrderSelection(workOrder.id, checked)}
-                      onAmountChange={(amount) => handleWorkOrderAmountChange(workOrder.id, amount)}
-                    />
-                  ))}
+                <div className={availableWorkOrders.length > 4 
+                  ? "grid grid-cols-1 lg:grid-cols-2 gap-4" 
+                  : "space-y-4"
+                }>
+                  {availableWorkOrders.map((workOrder) => {
+                    const isCompactMode = availableWorkOrders.length > 4;
+                    return (
+                      <WorkOrderAmountCard
+                        key={workOrder.id}
+                        workOrder={workOrder}
+                        isSelected={workOrder.id in formData.selectedWorkOrders}
+                        amount={formData.selectedWorkOrders[workOrder.id] || 0}
+                        onSelectionChange={(checked) => handleWorkOrderSelection(workOrder.id, checked)}
+                        onAmountChange={(amount) => handleWorkOrderAmountChange(workOrder.id, amount)}
+                        compact={isCompactMode}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </StandardFormLayout.FieldGroup>

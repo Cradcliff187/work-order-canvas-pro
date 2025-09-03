@@ -30,6 +30,7 @@ interface WorkOrderAmountCardProps {
   onSelectionChange: (checked: boolean) => void;
   onAmountChange: (amount: number) => void;
   showWorkSummary?: boolean;
+  compact?: boolean;
 }
 
 export const WorkOrderAmountCard: React.FC<WorkOrderAmountCardProps> = ({
@@ -39,6 +40,7 @@ export const WorkOrderAmountCard: React.FC<WorkOrderAmountCardProps> = ({
   onSelectionChange,
   onAmountChange,
   showWorkSummary = true,
+  compact = false,
 }) => {
   const approvedReport = workOrder.work_order_reports?.find(report => report.status === 'approved');
   // Suggested amount should come from actual bill records, not reports
@@ -58,7 +60,7 @@ export const WorkOrderAmountCard: React.FC<WorkOrderAmountCardProps> = ({
 
   return (
     <Card className={`transition-all duration-200 ${isSelected ? 'ring-2 ring-primary shadow-md' : 'hover:shadow-sm'}`}>
-      <CardContent className="p-4">
+      <CardContent className={compact ? "p-3" : "p-4"}>
         <div className="flex items-start gap-3">
           <Checkbox
             checked={isSelected}
@@ -66,7 +68,7 @@ export const WorkOrderAmountCard: React.FC<WorkOrderAmountCardProps> = ({
             className="mt-1"
           />
           
-          <div className="flex-1 space-y-3">
+          <div className={`flex-1 ${compact ? "space-y-2" : "space-y-3"}`}>
             {/* Work Order Header */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
@@ -87,7 +89,7 @@ export const WorkOrderAmountCard: React.FC<WorkOrderAmountCardProps> = ({
             </div>
 
             {/* Work Summary */}
-            {showWorkSummary && approvedReport && (
+            {showWorkSummary && !compact && approvedReport && (
               <>
                 <Separator />
                 <div className="space-y-2 text-xs">
@@ -120,7 +122,7 @@ export const WorkOrderAmountCard: React.FC<WorkOrderAmountCardProps> = ({
             {isSelected && (
               <>
                 <Separator />
-                <div className="space-y-3">
+                <div className={compact ? "space-y-2" : "space-y-3"}>
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium">Bill Amount</Label>
                     {suggestedAmount > 0 && (
