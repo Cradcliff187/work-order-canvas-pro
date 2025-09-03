@@ -538,7 +538,21 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
             {/* Work Orders */}
             <Separator />
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Linked Work Orders</h3>
+              <h3 className="text-lg font-semibold">
+                Linked Work Orders
+                <Badge variant="secondary" className="ml-2">
+                  {invoice.subcontractor_bill_work_orders?.length || 0}
+                </Badge>
+              </h3>
+              
+              {/* Debug info */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="p-4 bg-yellow-100 rounded text-sm">
+                  <p><strong>Debug Info:</strong></p>
+                  <p>Work orders count: {invoice.subcontractor_bill_work_orders?.length || 0}</p>
+                  <p>First work order data: {JSON.stringify(invoice.subcontractor_bill_work_orders?.[0], null, 2)}</p>
+                </div>
+              )}
               <Table>
                 <TableHeader>
                   <TableRow>

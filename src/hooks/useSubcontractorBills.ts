@@ -161,7 +161,7 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
       // Apply database-level search
       if (search && search.trim()) {
         const searchTerm = `%${search.trim()}%`;
-        query = query.or(`internal_bill_number.ilike.${searchTerm},external_bill_number.ilike.${searchTerm},subcontractor_organization.name.ilike.${searchTerm}`);
+        query = query.or(`internal_bill_number.ilike.${searchTerm},external_bill_number.ilike.${searchTerm}`);
       }
 
       // Apply pagination
@@ -290,7 +290,7 @@ export const useSubcontractorBill = (id: string) => {
           )
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
