@@ -103,11 +103,11 @@ export const createBillColumns = ({
                 {items.map((it) => (
                   <Link 
                     key={it.id} 
-                    to={`/admin/work-orders/${it.work_orders.id}`} 
+                    to={`/admin/work-orders/${it.work_order_id}`} 
                     onClick={(e) => e.stopPropagation()}
                     className="block font-mono text-xs hover:text-primary transition-colors"
                   >
-                    {it.work_orders.work_order_number || 'N/A'}
+                    {`WO-${it.work_order_id.slice(0, 8)}`}
                   </Link>
                 ))}
               </div>

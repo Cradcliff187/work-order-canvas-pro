@@ -202,7 +202,7 @@ const SubcontractorBills = () => {
                         <span className="text-muted-foreground">Work Orders: </span>
                         {bill.subcontractor_bill_work_orders.map((sbwo, index) => (
                           <span key={sbwo.id}>
-                            {sbwo.work_orders?.work_order_number || `WO-${sbwo.work_order_id.slice(0, 8)}`}
+                            {`WO-${sbwo.work_order_id.slice(0, 8)}`}
                             {index < bill.subcontractor_bill_work_orders.length - 1 && ", "}
                           </span>
                         ))}

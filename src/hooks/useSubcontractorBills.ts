@@ -5,10 +5,6 @@ export interface SubcontractorBillFilters {
   search?: string;
   status?: string;
   subcontractor_organization_ids?: string[];
-  partner_organization_ids?: string[];
-  location_filter?: string[];
-  invoice_status?: string[];
-  partner_billing_status?: string[];
   overdue?: boolean;
   dateFrom?: Date;
   dateTo?: Date;
@@ -62,26 +58,6 @@ export interface SubcontractorBill {
     work_order_id: string;
     amount: number;
     description?: string;
-    work_orders?: {
-      id: string;
-      work_order_number: string;
-      title: string;
-      organization_id: string;
-      date_completed?: string;
-      store_location?: string;
-      city?: string;
-      state?: string;
-      organizations?: {
-        name: string;
-      };
-      work_order_assignments?: Array<{
-        assigned_organization_id: string;
-        assigned_organization?: {
-          id: string;
-          name: string;
-        };
-      }>;
-    };
   }>;
   subcontractor_bill_attachments?: Array<{
     id: string;
@@ -100,10 +76,6 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
     search = '',
     status = '',
     subcontractor_organization_ids,
-    partner_organization_ids,
-    location_filter,
-    invoice_status,
-    partner_billing_status,
     overdue,
     dateFrom,
     dateTo,
@@ -112,7 +84,7 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
   } = filters;
 
   return useQuery({
-    queryKey: ['subcontractor-bills', { search, status, subcontractor_organization_ids, partner_organization_ids, location_filter, invoice_status, partner_billing_status, overdue, dateFrom, dateTo, page, pageSize }],
+    queryKey: ['subcontractor-bills', { search, status, subcontractor_organization_ids, overdue, dateFrom, dateTo, page, pageSize }],
     queryFn: async () => {
       let query = supabase
         .from('subcontractor_bills')
@@ -161,27 +133,7 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
             id,
             work_order_id,
             amount,
-            description,
-            work_orders (
-              id,
-              work_order_number,
-              title,
-              organization_id,
-              date_completed,
-              store_location,
-              city,
-              state,
-              organizations!organization_id (
-                name
-              ),
-              work_order_assignments (
-                assigned_organization_id,
-                assigned_organization:organizations!assigned_organization_id (
-                  id,
-                  name
-                )
-              )
-            )
+            description
           ),
           subcontractor_bill_attachments (
             id,
@@ -200,45 +152,25 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
       }
 
       if (subcontractor_organization_ids && subcontractor_organization_ids.length > 0) {
-        // Filter by work performers (assigned organizations) through work orders
-        query = query.in('subcontractor_bill_work_orders.work_orders.work_order_assignments.assigned_organization_id', subcontractor_organization_ids);
-      }
-
-      if (partner_organization_ids && partner_organization_ids.length > 0) {
-        // Filter by partner organizations where work was performed
-        query = query.in('subcontractor_bill_work_orders.work_orders.organization_id', partner_organization_ids);
-      }
-
-      if (location_filter && location_filter.length > 0) {
-        // Filter by work order locations
-        const locationQueries = location_filter.map(location => 
-          `subcontractor_bill_work_orders.work_orders.store_location.ilike.%${location}%,subcontractor_bill_work_orders.work_orders.city.ilike.%${location}%`
-        ).join(',');
-        query = query.or(locationQueries);
+        query = query.in('subcontractor_organization_id', subcontractor_organization_ids);
       }
 
       if (dateFrom) {
-        // Filter by work completion dates instead of bill creation dates
-        query = query.gte('subcontractor_bill_work_orders.work_orders.date_completed', dateFrom.toISOString());
+        query = query.gte('created_at', dateFrom.toISOString());
       }
 
       if (dateTo) {
-        // Filter by work completion dates instead of bill creation dates  
-        query = query.lte('subcontractor_bill_work_orders.work_orders.date_completed', dateTo.toISOString());
+        query = query.lte('created_at', dateTo.toISOString());
       }
 
       if (overdue) {
         query = query.lt('due_date', new Date().toISOString().split('T')[0]);
       }
 
-      if (partner_billing_status && partner_billing_status.length > 0) {
-        query = query.in('partner_billing_status', partner_billing_status);
-      }
-
-      // Apply database-level search - include work order numbers
+      // Apply database-level search
       if (search && search.trim()) {
         const searchTerm = `%${search.trim()}%`;
-        query = query.or(`internal_bill_number.ilike.${searchTerm},external_bill_number.ilike.${searchTerm},subcontractor_organization.name.ilike.${searchTerm},subcontractor_bill_work_orders.work_orders.work_order_number.ilike.${searchTerm}`);
+        query = query.or(`internal_bill_number.ilike.${searchTerm},external_bill_number.ilike.${searchTerm},subcontractor_organization.name.ilike.${searchTerm}`);
       }
 
       // Apply pagination
@@ -314,19 +246,7 @@ export const useSubcontractorBill = (id: string) => {
             id,
             work_order_id,
             amount,
-            description,
-            work_orders (
-              id,
-              work_order_number,
-              title,
-              description,
-              organization_id,
-              status,
-              created_at,
-              organizations!organization_id (
-                name
-              )
-            )
+            description
           ),
           subcontractor_bill_attachments (
             id,

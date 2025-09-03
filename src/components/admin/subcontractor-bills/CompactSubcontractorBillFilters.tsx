@@ -78,18 +78,14 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
   });
   
   const { data: subcontractorOrganizations, isLoading: isLoadingSubcontractors } = useSubcontractorOrganizations();
-  const { data: locations, isLoading: isLoadingLocations } = usePartnerLocations(value.partner_organization_ids?.[0]);
 
   // Calculate active filter count
   const activeCount = useMemo(() => {
     return [
       value.status?.length,
-      value.payment_status?.length,
-      value.partner_organization_ids?.length,
       value.subcontractor_organization_ids?.length, 
       value.date_range?.from,
       value.date_range?.to,
-      value.location_filter?.length,
       value.overdue
     ].filter(Boolean).length;
   }, [value]);
@@ -105,11 +101,6 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
     label: org.name
   })) || [];
 
-  const locationOptions = useMemo(() => {
-    const allLocations = (locations || []).map(loc => loc.location_name).filter(Boolean);
-    const uniqueLocations = Array.from(new Set(allLocations));
-    return uniqueLocations.map(loc => ({ value: loc, label: loc }));
-  }, [locations]);
 
   // Handle filter changes
   const handleFilterChange = useCallback((key: string, filterValue: string[]) => {
@@ -194,34 +185,6 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
 
           {isMobileVersion && <div className="border-t border-border/50" />}
 
-          {/* Payment Status Filter */}
-          <div className={filterItemClass}>
-            <label className="text-sm font-medium mb-2 block text-foreground">Payment Status</label>
-            <MultiSelectFilter
-              options={paymentStatusOptions}
-              selectedValues={value.payment_status || []}
-              onSelectionChange={(filterValue) => handleFilterChange('payment_status', filterValue)}
-              placeholder="Filter by payment status..."
-              className={inputClass}
-            />
-          </div>
-
-          {isMobileVersion && showPartner && <div className="border-t border-border/50" />}
-
-          {/* Partner Filter */}
-          {showPartner && (
-            <div className={filterItemClass}>
-              <label className="text-sm font-medium mb-2 block text-foreground">Partner</label>
-              <MultiSelectFilter
-                options={partnerOptions}
-                selectedValues={value.partner_organization_ids || []}
-                onSelectionChange={(filterValue) => handleFilterChange('partner_organization_ids', filterValue)}
-                placeholder={isLoadingPartners ? "Loading partners..." : "Filter by partner..."}
-                disabled={isLoadingPartners}
-                className={inputClass}
-              />
-            </div>
-          )}
 
           {isMobileVersion && showSubcontractor && <div className="border-t border-border/50" />}
 
@@ -298,22 +261,6 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
             </div>
           </div>
 
-          {isMobileVersion && showLocations && <div className="border-t border-border/50" />}
-
-          {/* Locations Filter - Only show when partner is selected */}
-          {showLocations && value.partner_organization_ids && value.partner_organization_ids.length > 0 && (
-            <div className={filterItemClass}>
-              <label className="text-sm font-medium mb-2 block text-foreground">Locations</label>
-              <MultiSelectFilter
-                options={locationOptions}
-                selectedValues={value.location_filter || []}
-                onSelectionChange={(filterValue) => handleFilterChange('location_filter', filterValue)}
-                placeholder={isLoadingLocations ? "Loading locations..." : "Select locations..."}
-                disabled={isLoadingLocations}
-                className={inputClass}
-              />
-            </div>
-          )}
         </div>
         
         {/* Action buttons */}

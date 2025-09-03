@@ -69,11 +69,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 const initialFilters: SubcontractorBillFiltersValue = {
   search: '',
   overdue: false,
-  partner_organization_ids: [],
-  location_filter: [],
   subcontractor_organization_ids: [],
   status: [],
-  payment_status: [],
 };
 
 export default function SubcontractorBills() {
@@ -158,23 +155,19 @@ export default function SubcontractorBills() {
     return {
       search: filters.search,
       overdue: filters.overdue,
-      partner_organization_ids: filters.partner_organization_ids,
-      location_filter: filters.location_filter,
       subcontractor_organization_ids: filters.subcontractor_organization_ids,
       status: filters.status?.[0], // Convert array to single value
-      payment_status: filters.payment_status,
-      date_range: filters.date_range,
+      dateFrom: filters.date_range?.from ? new Date(filters.date_range.from) : undefined,
+      dateTo: filters.date_range?.to ? new Date(filters.date_range.to) : undefined,
       page
     };
   }, [
     filters.search,
     filters.overdue,
-    filters.partner_organization_ids,
-    filters.location_filter,
     filters.subcontractor_organization_ids,
     filters.status,
-    filters.payment_status,
-    filters.date_range,
+    filters.date_range?.from,
+    filters.date_range?.to,
     page
   ]);
 
@@ -304,7 +297,7 @@ const table = useReactTable({
       'Amount': invoice.total_amount,
       'Status': invoice.status,
       'Due Date': invoice.due_date ? format(new Date(invoice.due_date), 'yyyy-MM-dd') : '',
-      'Work Orders': invoice.subcontractor_bill_work_orders?.map(sbwo => sbwo.work_orders?.work_order_number).filter(Boolean).join(', ') || '',
+      'Work Orders': invoice.subcontractor_bill_work_orders?.map(sbwo => `WO-${sbwo.work_order_id.slice(0, 8)}`).join(', ') || '',
       'Created': format(new Date(invoice.created_at), 'yyyy-MM-dd'),
     }));
     

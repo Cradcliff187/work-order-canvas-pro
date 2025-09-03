@@ -441,7 +441,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                           <SelectContent>
                             {invoice.subcontractor_bill_work_orders.map((iwo) => (
                               <SelectItem key={iwo.work_order_id} value={iwo.work_order_id}>
-                                {iwo.work_orders.work_order_number || iwo.work_orders.title}
+                                {`WO-${iwo.work_order_id.slice(0, 8)}`}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -486,7 +486,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     const items = mapToItems(attachments.filter((a) => a.work_order_id === iwo.work_order_id));
                     return {
                       key: iwo.work_order_id,
-                      label: iwo.work_orders.work_order_number || 'WO',
+                      label: `WO-${iwo.work_order_id.slice(0, 8)}`,
                       count: items.length,
                       items,
                     };
@@ -549,14 +549,14 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   {invoice.subcontractor_bill_work_orders.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-mono">
-                        {item.work_orders.work_order_number || 'N/A'}
+                        {`WO-${item.work_order_id.slice(0, 8)}`}
                       </TableCell>
-                      <TableCell>{item.work_orders.title}</TableCell>
+                      <TableCell>Work Order</TableCell>
                       <TableCell>
                         {formatCurrency(Number(item.amount), true)}
                       </TableCell>
                       <TableCell className="max-w-[480px] whitespace-pre-wrap break-words">
-                        {item.description?.trim() || (item.work_orders as any)?.description || '—'}
+                        {item.description?.trim() || '—'}
                       </TableCell>
                     </TableRow>
                   ))}
