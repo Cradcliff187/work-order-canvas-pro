@@ -340,32 +340,28 @@ export default function SubcontractorBills() {
 
   const totalPages = Math.ceil((data?.count || 0) / limit);
 
-  // Handle error state with conditional rendering instead of early return
-  if (error) {
-    console.error('Bills query error:', error);
-    return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center space-y-4">
-              <p className="text-destructive">We couldn't load bills. Please try again.</p>
-              <Button onClick={() => refetch()} variant="outline">
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Handle loading state with conditional rendering instead of early return
-  if (isLoading && !data) {
-    return <LoadingSpinner />;
-  }
-
   return (
+    <>
+      {/* Error State */}
+      {error ? (
+        <div className="p-6">
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center space-y-4">
+                <p className="text-destructive">We couldn't load bills. Please try again.</p>
+                <Button onClick={() => refetch()} variant="outline">
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : isLoading && !data ? (
+        /* Loading State */
+        <LoadingSpinner />
+      ) : (
+        /* Main Content */
     <div className="p-6 overflow-hidden">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 bg-popover text-foreground border rounded px-3 py-2 shadow">Skip to main content</a>
       <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
@@ -868,5 +864,7 @@ export default function SubcontractorBills() {
       />
       </main>
     </div>
+      )}
+    </>
   );
 }
