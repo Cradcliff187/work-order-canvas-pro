@@ -7,8 +7,6 @@ export interface SubcontractorBillFilters {
   subcontractor_organization_ids?: string[];
   partner_organization_ids?: string[];
   location_filter?: string[];
-  operational_status?: string[];
-  report_status?: string[];
   invoice_status?: string[];
   partner_billing_status?: string[];
   overdue?: boolean;
@@ -40,7 +38,6 @@ export interface SubcontractorBill {
   subcontractor_notes?: string;
   payment_terms?: string;
   purchase_order_number?: string;
-  operational_status?: string;
   partner_billing_status?: string;
   submitted_by_profile?: {
     id: string;
@@ -94,8 +91,6 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
     subcontractor_organization_ids,
     partner_organization_ids,
     location_filter,
-    operational_status,
-    report_status,
     invoice_status,
     partner_billing_status,
     overdue,
@@ -106,7 +101,7 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
   } = filters;
 
   return useQuery({
-    queryKey: ['subcontractor-bills', { search, status, subcontractor_organization_ids, partner_organization_ids, location_filter, operational_status, report_status, invoice_status, partner_billing_status, overdue, dateFrom, dateTo, page, pageSize }],
+    queryKey: ['subcontractor-bills', { search, status, subcontractor_organization_ids, partner_organization_ids, location_filter, invoice_status, partner_billing_status, overdue, dateFrom, dateTo, page, pageSize }],
     queryFn: async () => {
       let query = supabase
         .from('subcontractor_bills')
@@ -132,7 +127,6 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
           subcontractor_notes,
           payment_terms,
           purchase_order_number,
-          operational_status,
           partner_billing_status,
           submitted_by_profile:profiles!submitted_by (
             id,
@@ -199,10 +193,6 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         query = query.lt('due_date', new Date().toISOString().split('T')[0]);
       }
 
-      if (operational_status && operational_status.length > 0) {
-        query = query.in('operational_status', operational_status);
-      }
-
       if (partner_billing_status && partner_billing_status.length > 0) {
         query = query.in('partner_billing_status', partner_billing_status);
       }
@@ -263,7 +253,6 @@ export const useSubcontractorBill = (id: string) => {
           subcontractor_notes,
           payment_terms,
           purchase_order_number,
-          operational_status,
           partner_billing_status,
           submitted_by_profile:profiles!submitted_by (
             id,
