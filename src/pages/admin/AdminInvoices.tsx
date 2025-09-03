@@ -113,24 +113,6 @@ export default function AdminInvoices() {
 
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
 
-  // Clean filters to ensure array fields are always arrays
-  const cleanFilters = useMemo(() => ({
-    search: filters.search || '',
-    overdue: filters.overdue || false,
-    partner_organization_ids: Array.isArray(filters.partner_organization_ids) ? filters.partner_organization_ids : [],
-    location_filter: Array.isArray(filters.location_filter) ? filters.location_filter : [],
-    subcontractor_organization_ids: Array.isArray(filters.subcontractor_organization_ids) ? filters.subcontractor_organization_ids : [],
-    invoice_status: Array.isArray(filters.invoice_status) ? filters.invoice_status : [],
-    partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
-  }), [
-    filters.search,
-    filters.overdue,
-    filters.partner_organization_ids,
-    filters.location_filter,
-    filters.subcontractor_organization_ids,
-    filters.invoice_status,
-    filters.partner_billing_status
-  ]);
 
   const handleClearFilters = () => {
     clearFilters();
@@ -184,7 +166,7 @@ export default function AdminInvoices() {
   };
 
 
-  const { data, isLoading, error, refetch } = useSubcontractorBills({ ...cleanFilters, page });
+  const { data, isLoading, error, refetch } = useSubcontractorBills({ ...filters, page });
 
   
   const handleViewBill = (invoice: SubcontractorBill) => {
