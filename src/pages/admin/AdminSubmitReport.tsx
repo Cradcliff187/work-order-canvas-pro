@@ -1,8 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -358,7 +356,7 @@ export default function AdminSubmitReport() {
       
       <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="space-y-4">
+      <div className="flex items-center gap-4">
         <Button 
           variant="outline" 
           size="icon"
@@ -366,25 +364,17 @@ export default function AdminSubmitReport() {
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Submit Work Report</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3">
-              <Badge variant="outline">{workOrder.work_order_number}</Badge>
-              <span className="text-muted-foreground">
-                {assignedSubcontractor 
-                  ? `For ${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}`
-                  : assignedOrganization?.name
-                  ? `For ${assignedOrganization.name}`
-                  : `Admin Report`
-                }
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        <div>
+          <h1 className="text-2xl font-bold">Submit Work Report</h1>
+          <p className="text-muted-foreground">
+            {assignedSubcontractor 
+              ? `For ${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name} • ${workOrder.work_order_number}`
+              : assignedOrganization?.name
+              ? `For ${assignedOrganization.name} • ${workOrder.work_order_number}`
+              : `Admin Report • ${workOrder.work_order_number}`
+            }
+          </p>
+        </div>
       </div>
 
       <StepProgressIndicator
@@ -399,10 +389,11 @@ export default function AdminSubmitReport() {
         <Alert>
           <Users className="h-4 w-4" />
           <AlertDescription>
-            Assigned to: {assignedSubcontractor 
+            <strong>Assignment Details:</strong> This work order is assigned to{' '}
+            {assignedSubcontractor 
               ? `${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}`
               : assignedOrganization?.name
-            }
+            }. The report will be submitted on their behalf and logged for audit purposes.
           </AlertDescription>
         </Alert>
       )}
@@ -411,7 +402,7 @@ export default function AdminSubmitReport() {
         <Alert variant="default" className="border-amber-200 bg-amber-50 text-amber-800">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Unassigned - Select organization below (optional)
+            <strong>Unassigned Work Order:</strong> This work order has no assignment. You can submit as admin-only or optionally assign it to a subcontractor organization.
           </AlertDescription>
         </Alert>
       )}
@@ -492,6 +483,24 @@ export default function AdminSubmitReport() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="notes">Additional Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Any additional information or observations..."
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="min-h-[80px]"
+                />
+              </div>
+            </StandardFormLayout.FieldGroup>
+          </StandardFormLayout.Section>
+
+          <StandardFormLayout.Section 
+            title="Time Tracking"
+            description="Record hours worked (optional)"
+          >
+            <StandardFormLayout.FieldGroup columns={1}>
+              <div className="space-y-2">
                 <Label htmlFor="hoursWorked">Hours Worked</Label>
                 <Input
                   id="hoursWorked"
@@ -506,22 +515,11 @@ export default function AdminSubmitReport() {
                   Optional: Enter total hours worked on this assignment
                 </p>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Any additional information or observations..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  className="min-h-[80px]"
-                />
-              </div>
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
           <StandardFormLayout.Section 
-            title="Documentation"
+            title="Photos & Documentation"
             description="Upload photos and documents related to the work"
           >
             <StandardFormLayout.FieldGroup>
