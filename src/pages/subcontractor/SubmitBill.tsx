@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { Upload, ArrowLeft, FileText, Loader2, Save, Building2, Info } from 'lucide-react';
@@ -310,6 +312,30 @@ export default function SubmitBill() {
           </div>
         </div>
       </div>
+
+      {/* Submission Context Card */}
+      {isAdminMode && formData.selectedOrganizationId && selectedOrganization && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                  {selectedOrganization.name}
+                </Badge>
+                <span className="text-sm font-medium text-primary">Admin Submission</span>
+              </div>
+              {totalAmount > 0 && (
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Total Value</p>
+                  <p className="text-lg font-semibold text-primary">
+                    ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <StandardFormLayout>
