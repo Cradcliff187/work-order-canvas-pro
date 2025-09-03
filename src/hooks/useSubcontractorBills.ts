@@ -85,7 +85,16 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
   } = filters;
 
   return useQuery({
-    queryKey: ['subcontractor-bills', { search, status, subcontractor_organization_ids, overdue, date_range, page, pageSize }],
+    queryKey: [
+      'subcontractor-bills',
+      page,
+      pageSize,
+      search || '',
+      JSON.stringify(status || []),
+      overdue ? 'overdue' : 'all',
+      JSON.stringify(subcontractor_organization_ids || []),
+      JSON.stringify(date_range || {}),
+    ],
     queryFn: async () => {
       let query = supabase
         .from('subcontractor_bills')
