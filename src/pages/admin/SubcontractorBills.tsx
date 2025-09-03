@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,7 +64,6 @@ import { type SubcontractorBillFiltersValue } from '@/types/subcontractor-bills'
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { LoadingCard } from '@/components/ui/loading-states';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useOrganizationAuth } from '@/contexts/OrganizationAuthContext';
 
 // Define clean initial filters structure outside component
 const initialFilters: SubcontractorBillFiltersValue = {
@@ -78,19 +77,9 @@ const initialFilters: SubcontractorBillFiltersValue = {
 };
 
 export default function SubcontractorBills() {
-  const { loading: authLoading } = useOrganizationAuth();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
-  // Early return during auth loading to prevent filter initialization
-  if (authLoading) {
-    return (
-      <div className="p-6">
-        <LoadingSpinner />
-      </div>
-    );
-  }
   const [selectedBill, setSelectedBill] = useState<SubcontractorBill | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -100,6 +89,17 @@ export default function SubcontractorBills() {
   
   
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-subcontractor-bills-filters-v1', initialFilters);
+
+  // 🧪 Debug Code - Add this to see the cascade happening
+  const renderCount = useRef(0);
+
+  useEffect(() => {
+    renderCount.current++;
+    if (renderCount.current > 5) {
+      console.error(`🚨 EXCESSIVE RENDERS: #${renderCount.current}`);
+      console.trace('Render cause');
+    }
+  }, []);
 
   const handleClearFilters = () => {
     clearFilters();
@@ -178,6 +178,10 @@ export default function SubcontractorBills() {
     page
   ]);
 
+  // 🔧 Debug transformedFilters changes
+  useEffect(() => {
+    console.log('🎯 transformedFilters changed:', transformedFilters);
+  }, [transformedFilters]);
 
   const { data, isLoading, error, refetch } = useSubcontractorBills(transformedFilters);
 
