@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -356,7 +358,7 @@ export default function AdminSubmitReport() {
       
       <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="space-y-4">
         <Button 
           variant="outline" 
           size="icon"
@@ -364,17 +366,25 @@ export default function AdminSubmitReport() {
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Submit Work Report</h1>
-          <p className="text-muted-foreground">
-            {assignedSubcontractor 
-              ? `For ${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name} • ${workOrder.work_order_number}`
-              : assignedOrganization?.name
-              ? `For ${assignedOrganization.name} • ${workOrder.work_order_number}`
-              : `Admin Report • ${workOrder.work_order_number}`
-            }
-          </p>
-        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Submit Work Report</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline">{workOrder.work_order_number}</Badge>
+              <span className="text-muted-foreground">
+                {assignedSubcontractor 
+                  ? `For ${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}`
+                  : assignedOrganization?.name
+                  ? `For ${assignedOrganization.name}`
+                  : `Admin Report`
+                }
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <StepProgressIndicator
