@@ -16,10 +16,9 @@ import { Link, useSearchParams } from "react-router-dom";
 
 const SubcontractorBills = () => {
   const [searchParams] = useSearchParams();
-  const initialStatus = searchParams.get('status');
   const [paymentFilter, setPaymentFilter] = useState<string | undefined>(() => searchParams.get('payment') || undefined);
   
-  const [statusFilter, setStatusFilter] = useState(initialStatus || "all");
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || "all");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
 
