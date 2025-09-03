@@ -53,11 +53,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userOrganizations, setUserOrganizations] = useState<OrganizationMember[]>([]);
   
-  console.log('[AUTH-CONTEXT] Render', { 
-    userOrgsLength: userOrganizations.length,
-    userOrgsIds: userOrganizations.map(o => o.organization_id)
-  });
   const [loading, setLoading] = useState(true);
+  const [authTransitioning, setAuthTransitioning] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   
   // Ref to prevent duplicate profile fetching
@@ -231,32 +228,42 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     // Set up auth state listener - this will handle both initial session and changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('🔐 Auth state change:', event, session?.user?.id);
-        
         if (!mounted) return;
         
         // Handle password recovery flow
         if (event === 'PASSWORD_RECOVERY') {
-          console.log('Password recovery event detected - setting recovery mode');
           sessionStorage.setItem('password_recovery_mode', 'true');
+          return;
         }
         
-        if (event === 'SIGNED_IN' && sessionStorage.getItem('password_recovery_mode')) {
-          console.log('User signed in from recovery link - maintaining recovery mode');
-          // Keep the recovery flag until the user actually resets their password
-        }
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Don't await here to prevent blocking the auth state callback
-          fetchProfile(session.user.id);
-        } else {
+        // Only process stable auth events to prevent cascade
+        if (event === 'SIGNED_IN') {
+          setAuthTransitioning(false);
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            fetchProfile(session.user.id);
+          }
+          
+          if (event === 'SIGNED_IN' && sessionStorage.getItem('password_recovery_mode')) {
+            // Keep recovery flag until password reset
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setAuthTransitioning(false);
+          setSession(null);
+          setUser(null);
           setProfile(null);
           setUserOrganizations([]);
           setAuthError(null);
           setLoading(false);
+        } else {
+          // For TOKEN_REFRESHED, INITIAL_SESSION - mark as transitioning
+          setAuthTransitioning(true);
+          if (session) {
+            setSession(session);
+            setUser(session?.user ?? null);
+          }
         }
       }
     );
@@ -376,13 +383,16 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     }
   };
 
+  // Stable context value - prevent changes during auth transitions
+  const contextLoading = loading || authTransitioning;
+  
   const value: OrganizationAuthContextType = useMemo(() => ({
     user,
     session,
     profile,
     userOrganizations: memoizedUserOrganizations,
     userOrganization,
-    loading,
+    loading: contextLoading,
     authError,
     retryAuth,
     signUp,
@@ -398,7 +408,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     profile,
     memoizedUserOrganizations,
     userOrganization,
-    loading,
+    contextLoading,
     authError,
     retryAuth,
     signUp,

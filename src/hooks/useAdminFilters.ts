@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { countActiveFilters } from '@/lib/filters';
+import { useOrganizationAuth } from '@/contexts/OrganizationAuthContext';
 
 interface UseAdminFiltersOptions<T> {
   excludeKeys?: (keyof T)[];
@@ -10,6 +11,7 @@ export function useAdminFilters<T extends Record<string, any>>(
   initialFilters: T,
   options?: UseAdminFiltersOptions<T>
 ) {
+  const { loading: authLoading } = useOrganizationAuth();
   // Sanitize filters before saving to localStorage
   const sanitizeFilters = (filters: T): Partial<T> => {
     return Object.entries(filters).reduce((acc, [key, value]) => {
@@ -119,8 +121,10 @@ export function useAdminFilters<T extends Record<string, any>>(
     setFiltersInternal(initialFilters);
   }, [storageKey, JSON.stringify(initialFilters)]); // Serialize for stability
 
-  // Save to localStorage with debounce to prevent rapid writes
+  // Save to localStorage with debounce - skip during auth loading
   useEffect(() => {
+    if (authLoading) return; // Skip saving during auth transitions
+    
     const timeoutId = setTimeout(() => {
       // Sanitize filters before saving
       const cleanFilters = sanitizeFilters(filters);
@@ -131,7 +135,7 @@ export function useAdminFilters<T extends Record<string, any>>(
     }, 100); // Debounce 100ms
 
     return () => clearTimeout(timeoutId);
-  }, [storageKey, filters]);
+  }, [storageKey, filters, authLoading]);
 
   // Calculate filter count
   const filterCount = useMemo(() => {
