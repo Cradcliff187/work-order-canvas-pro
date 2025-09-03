@@ -3,6 +3,7 @@ import { format, addDays, isAfter, isBefore } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -10,8 +11,10 @@ import { cn } from '@/lib/utils';
 interface BillDatesFieldsProps {
   billDate: Date | null;
   dueDate: Date | null;
+  paymentTerms: string;
   onChangeBillDate: (date: Date) => void;
   onChangeDueDate: (date: Date) => void;
+  onChangePaymentTerms: (value: string) => void;
   error?: string | null;
   className?: string;
 }
@@ -19,8 +22,10 @@ interface BillDatesFieldsProps {
 export function BillDatesFields({
   billDate,
   dueDate,
+  paymentTerms,
   onChangeBillDate,
   onChangeDueDate,
+  onChangePaymentTerms,
   error,
   className,
 }: BillDatesFieldsProps) {
@@ -44,7 +49,7 @@ export function BillDatesFields({
   };
 
   return (
-    <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-4", className)}>
+    <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4", className)}>
       <div className="space-y-2">
         <Label>Bill Date</Label>
         <Popover>
@@ -101,6 +106,18 @@ export function BillDatesFields({
         </Popover>
         <p className="text-xs text-muted-foreground">Must be on or after bill date</p>
         {!!error && <p className="text-xs text-destructive">{error}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="paymentTerms">Payment Terms</Label>
+        <Input
+          id="paymentTerms"
+          placeholder="Net 30"
+          value={paymentTerms}
+          onChange={(e) => onChangePaymentTerms(e.target.value)}
+          className="w-full"
+        />
+        <p className="text-xs text-muted-foreground">Defaults to "Net 30"</p>
       </div>
     </div>
   );

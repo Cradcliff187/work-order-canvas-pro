@@ -413,8 +413,10 @@ export default function SubmitBill() {
                   <BillDatesFields
                     billDate={formData.billDate}
                     dueDate={formData.dueDate}
+                    paymentTerms={formData.paymentTerms}
                     onChangeBillDate={(d) => setFormData(prev => ({ ...prev, billDate: d, dueDate: prev.dueDate && isBefore(prev.dueDate, d) ? addDays(d, 30) : prev.dueDate }))}
                     onChangeDueDate={(d) => setFormData(prev => ({ ...prev, dueDate: d }))}
+                    onChangePaymentTerms={(value) => setFormData(prev => ({ ...prev, paymentTerms: value }))}
                     error={dateError}
                   />
                 </CardContent>
@@ -444,7 +446,7 @@ export default function SubmitBill() {
           >
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
-                <Label htmlFor="subcontractorNotes">Subcontractor Notes</Label>
+                <Label htmlFor="subcontractorNotes">Notes</Label>
                 <Textarea
                   id="subcontractorNotes"
                   placeholder="Add any relevant notes for the admin to review..."
@@ -452,18 +454,6 @@ export default function SubmitBill() {
                   onChange={(e) => setFormData(prev => ({ ...prev, subcontractorNotes: e.target.value }))}
                   className="min-h-[80px]"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="paymentTerms">Payment Terms</Label>
-                <Input
-                  id="paymentTerms"
-                  placeholder="Net 30"
-                  value={formData.paymentTerms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Defaults to "Net 30". Adjust if different terms apply.
-                </p>
               </div>
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
