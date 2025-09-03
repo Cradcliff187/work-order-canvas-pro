@@ -615,32 +615,34 @@ export default function SubmitBill() {
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
-          <StandardFormLayout.Actions>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleSaveDraft}
-              disabled={isSubmitting}
-              className="min-h-[44px]"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Save Draft
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting || selectedWorkOrderIds.length === 0 || (isAdminMode && !formData.selectedOrganizationId)}
-              className="min-h-[44px]"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
+          <div className="sticky bottom-0 bg-background border-t p-4 -mx-4">
+            <StandardFormLayout.Actions className="border-t-0 pt-0">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleSaveDraft}
+                disabled={isSubmitting}
+                className="min-h-[44px]"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save Draft
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || selectedWorkOrderIds.length === 0 || (isAdminMode && !formData.selectedOrganizationId)}
+                className="min-h-[44px]"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
                   'Submit Bill'
                 )}
               </Button>
-          </StandardFormLayout.Actions>
+            </StandardFormLayout.Actions>
+          </div>
         </StandardFormLayout>
       </form>
     </div>
