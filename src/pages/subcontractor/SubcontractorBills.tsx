@@ -17,7 +17,7 @@ import { Link, useSearchParams } from "react-router-dom";
 const SubcontractorBills = () => {
   const [searchParams] = useSearchParams();
   const initialStatus = searchParams.get('status');
-  const initialPayment = searchParams.get('payment');
+  const [paymentFilter, setPaymentFilter] = useState<string | undefined>(() => searchParams.get('payment') || undefined);
   
   const [statusFilter, setStatusFilter] = useState(initialStatus || "all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,17 +26,17 @@ const SubcontractorBills = () => {
   // Memoize filters to prevent unnecessary re-fetches
   const filters = useMemo(() => ({
     status: statusFilter && statusFilter !== "all" ? statusFilter : undefined,
-    paymentStatus: initialPayment as 'paid' | 'unpaid' | undefined,
+    paymentStatus: paymentFilter as 'paid' | 'unpaid' | undefined,
     search: searchQuery || undefined,
     page,
     limit: 20,
-  }), [statusFilter, initialPayment, searchQuery, page]);
+  }), [statusFilter, paymentFilter, searchQuery, page]);
 
   const { data: billsData, isLoading, error, refetch } = useSubcontractorBills(filters);
   const bills = billsData?.data || [];
   const totalCount = billsData?.count || 0;
 
-  const hasFilters = statusFilter !== "all" || searchQuery || initialPayment;
+  const hasFilters = statusFilter !== "all" || searchQuery || paymentFilter;
 
 
   if (isLoading) {
