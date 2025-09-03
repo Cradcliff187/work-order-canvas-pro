@@ -175,15 +175,6 @@ export default function SubcontractorBills() {
 
   const { data, isLoading, error, refetch } = useSubcontractorBills(queryFilters);
 
-  if (error) {
-    console.error('Bills query error:', error);
-    return <div>Error loading bills. Please refresh the page.</div>;
-  }
-
-  if (isLoading && !data) {
-    return <LoadingSpinner />;
-  }
-
   const handleViewBill = (invoice: SubcontractorBill) => {
     setSelectedBill(invoice);
     setModalOpen(true);
@@ -235,18 +226,18 @@ export default function SubcontractorBills() {
     toggleColumn,
     resetToDefaults,
     getAllColumns,
-} = useColumnVisibility({
-  storageKey: 'admin-invoices-columns-v1',
-  legacyKeys: ['admin-invoices-column-visibility'],
-  columnMetadata: columnMetadata as any,
-});
+  } = useColumnVisibility({
+    storageKey: 'admin-invoices-columns-v1',
+    legacyKeys: ['admin-invoices-column-visibility'],
+    columnMetadata: columnMetadata as any,
+  });
 
   const columnOptions = getAllColumns().map((c) => ({
     ...c,
     canHide: c.id !== 'select' && c.id !== 'actions' && c.id !== 'work_orders',
   }));
 
-const table = useReactTable({
+  const table = useReactTable({
   data: (data?.data || []) as SubcontractorBill[],
   columns,
   getCoreRowModel: getCoreRowModel(),
@@ -349,21 +340,32 @@ const table = useReactTable({
 
   const totalPages = Math.ceil((data?.count || 0) / limit);
 
-  return error ? (
-    <div className="p-6">
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center space-y-4">
-            <p className="text-destructive">We couldn't load bills. Please try again.</p>
-            <Button onClick={() => refetch()} variant="outline">
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Retry
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  ) : (
+  // Handle error state with conditional rendering instead of early return
+  if (error) {
+    console.error('Bills query error:', error);
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <p className="text-destructive">We couldn't load bills. Please try again.</p>
+              <Button onClick={() => refetch()} variant="outline">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle loading state with conditional rendering instead of early return
+  if (isLoading && !data) {
+    return <LoadingSpinner />;
+  }
+
+  return (
     <div className="p-6 overflow-hidden">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 bg-popover text-foreground border rounded px-3 py-2 shadow">Skip to main content</a>
       <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
