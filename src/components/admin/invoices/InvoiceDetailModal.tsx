@@ -53,6 +53,7 @@ import { UniversalUploadSheet } from '@/components/upload';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useToast } from '@/hooks/use-toast';
 import { isImageFile } from '@/utils/fileUtils';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ImageLightbox } from '@/components/work-orders/shared/ImageLightbox';
 
 interface InvoiceDetailModalProps {
@@ -62,7 +63,7 @@ interface InvoiceDetailModalProps {
 }
 
 export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailModalProps) {
-  const { data: fullInvoice } = useSubcontractorBill(invoice?.id || '');
+  const { data: fullInvoice, isLoading } = useSubcontractorBill(invoice?.id || '');
   const invoiceData = fullInvoice || invoice;
 
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -234,6 +235,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
             </DialogDescription>
           </DialogHeader>
 
+          {isLoading && !invoice ? (
+            <LoadingSpinner />
+          ) : (
           <div className="space-y-6">
             {/* Invoice Header */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -609,7 +613,8 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                 </TableBody>
               </Table>
             </div>
-          </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
