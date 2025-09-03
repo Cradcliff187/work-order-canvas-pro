@@ -20,6 +20,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useSubcontractorBillSubmission } from '@/hooks/useSubcontractorBillSubmission';
 import { WorkOrderAmountCard } from '@/components/subcontractor-bills/WorkOrderAmountCard';
 import { BillTotalSummary } from '@/components/subcontractor-bills/BillTotalSummary';
+import { PreSubmissionSummaryCard } from '@/components/subcontractor-bills/PreSubmissionSummaryCard';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { BillDatesFields } from '@/components/subcontractor-bills/BillDatesFields';
 import { validateReportBeforeInvoice } from '@/lib/validations/estimate-validations';
@@ -517,6 +518,17 @@ export default function SubmitBill() {
               )}
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
+
+          {selectedWorkOrderIds.length > 0 && (
+            <div className="mt-6 mb-6">
+              <PreSubmissionSummaryCard
+                totalAmount={totalAmount}
+                workOrderCount={selectedWorkOrderIds.length}
+                billDate={formData.billDate}
+                dueDate={formData.dueDate}
+              />
+            </div>
+          )}
 
           {selectedWorkOrderIds.length > 0 && (
             <StandardFormLayout.Section 
