@@ -43,7 +43,8 @@ import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
-import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
+import { TablePagination } from '@/components/admin/shared/TablePagination';
 import { Badge } from '@/components/ui/badge';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
@@ -81,8 +82,10 @@ export default function SubcontractorBills() {
   const [modalOpen, setModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [page, setPage] = useState(1);
-  const limit = 10;
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
   
   
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-subcontractor-bills-filters-v1', initialFilters);
@@ -153,7 +156,7 @@ export default function SubcontractorBills() {
   };
 
 
-  // Add page to filters for hook
+  // Add pagination to filters for hook
   const queryFilters = useMemo(() => ({
     search: deferredSearch,
     status: filters.status || [],
@@ -161,8 +164,8 @@ export default function SubcontractorBills() {
     overdue: filters.overdue || false,
     dateFrom: filters.date_range?.from ? new Date(filters.date_range.from) : undefined,
     dateTo: filters.date_range?.to ? new Date(filters.date_range.to) : undefined,
-    page,
-    pageSize: 10
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize
   }), [
     deferredSearch,
     filters.status,
@@ -170,7 +173,8 @@ export default function SubcontractorBills() {
     filters.overdue,
     filters.date_range?.from,
     filters.date_range?.to,
-    page
+    pagination.pageIndex,
+    pagination.pageSize
   ]);
 
   const { data, isLoading, error, refetch } = useSubcontractorBills(queryFilters);
@@ -238,20 +242,24 @@ export default function SubcontractorBills() {
   }));
 
   const table = useReactTable({
-  data: (data?.data || []) as SubcontractorBill[],
-  columns,
-  getCoreRowModel: getCoreRowModel(),
-  getSortedRowModel: getSortedRowModel(),
-  getRowId: (row) => row.id,
-  onRowSelectionChange: setRowSelection,
-  onSortingChange: setSorting,
-  onColumnVisibilityChange: setColumnVisibility,
-  state: {
-    rowSelection,
-    sorting,
-    columnVisibility,
-  },
-});
+    data: (data?.data || []) as SubcontractorBill[],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getRowId: (row) => row.id,
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination,
+    manualPagination: true,
+    pageCount: Math.ceil((data?.count || 0) / pagination.pageSize),
+    state: {
+      rowSelection,
+      sorting,
+      columnVisibility,
+      pagination,
+    },
+  });
 
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
 
@@ -334,11 +342,7 @@ export default function SubcontractorBills() {
   };
 
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
-
-  const totalPages = Math.ceil((data?.count || 0) / limit);
+  // Remove custom pagination handlers - now handled by react-table
 
   return (
     <>
@@ -629,9 +633,11 @@ export default function SubcontractorBills() {
 
           <CardContent className="p-0 overflow-hidden">
             {isLoading ? (
-              <TableSkeleton 
+              <EnhancedTableSkeleton 
                 rows={10} 
                 columns={INVOICE_COLUMN_METADATA.columns.length}
+                showHeader={true}
+                showActions={true}
               />
             ) : data?.data?.length === 0 ? (
               <EmptyTableState
@@ -775,49 +781,19 @@ export default function SubcontractorBills() {
                     ) : null}
                   </div>
                 )}
+
+                {/* Pagination */}
+                <TablePagination
+                  table={table}
+                  totalCount={data?.count}
+                  isMobile={isMobile}
+                  itemName="bills"
+                />
               </>
             )}
           </CardContent>
         </Card>
       )}
-
-    {/* Pagination */}
-    {totalPages > 1 && (
-      <div className={`flex items-center py-4 ${isMobile ? 'flex-col space-y-4' : 'justify-between space-x-2'}`}>
-        <div className="flex-1 text-sm text-muted-foreground">
-          {selectedCount > 0 && (
-            <span>{selectedCount} of {table.getFilteredRowModel().rows.length} {isMobile ? 'items' : 'row(s)'} selected.</span>
-          )}
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page <= 1}
-            className="min-h-[44px] px-4"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline ml-2">Previous</span>
-            <span className="sm:hidden">Prev</span>
-          </Button>
-          <div className="text-sm font-medium">
-            Page {page} of {totalPages}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page >= totalPages}
-            className="min-h-[44px] px-4"
-          >
-            <span className="hidden sm:inline mr-2">Next</span>
-            <span className="sm:hidden">Next</span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    )}
 
       {/* Detail Modal */}
       <InvoiceDetailModal
