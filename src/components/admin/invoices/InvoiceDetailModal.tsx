@@ -568,14 +568,6 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                 </Badge>
               </h3>
               
-              {/* Debug info */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="p-4 bg-yellow-100 rounded text-sm">
-                  <p><strong>Debug Info:</strong></p>
-                  <p>Work orders count: {invoiceData.subcontractor_bill_work_orders?.length || 0}</p>
-                  <p>First work order data: {JSON.stringify(invoiceData.subcontractor_bill_work_orders?.[0], null, 2)}</p>
-                </div>
-              )}
               <Table>
                 <TableHeader>
                   <TableRow>
