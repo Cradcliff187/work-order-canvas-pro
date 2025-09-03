@@ -278,7 +278,7 @@ const table = useReactTable({
       'Amount': invoice.total_amount,
       'Status': invoice.status,
       'Due Date': invoice.due_date ? format(new Date(invoice.due_date), 'yyyy-MM-dd') : '',
-      'Work Orders': invoice.subcontractor_bill_work_orders?.map(sbwo => `WO-${sbwo.work_order_id.slice(0, 8)}`).join(', ') || '',
+      'Work Orders': invoice.workOrderCount || 0,
       'Created': format(new Date(invoice.created_at), 'yyyy-MM-dd'),
     }));
     
@@ -488,7 +488,7 @@ const table = useReactTable({
                     data={{
                       'Amount': formatCurrency(invoice.total_amount),
                       'Due': format(new Date(invoice.due_date), 'MMM d, yyyy'),
-                      'Work Orders': String(invoice.subcontractor_bill_work_orders?.length || 0)
+                      'Work Orders': String(invoice.workOrderCount || 0)
                     }}
                     actions={[
                       { label: 'View', icon: FileText, onClick: () => handleViewBill(invoice) },
@@ -721,7 +721,7 @@ const table = useReactTable({
                               data={{
                                 'Amount': formatCurrency(invoice.total_amount),
                                 'Submitted': invoice.submitted_at ? format(new Date(invoice.submitted_at), 'MMM d, yyyy') : 'N/A',
-                                'Work Orders': String(invoice.subcontractor_bill_work_orders?.length || 0)
+                                'Work Orders': String(invoice.workOrderCount || 0)
                               }}
                               actions={[
                                 { label: 'View', icon: FileText, onClick: () => handleViewBill(invoice) },

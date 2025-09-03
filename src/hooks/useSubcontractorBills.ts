@@ -37,6 +37,12 @@ export interface SubcontractorBill {
   payment_terms?: string;
   purchase_order_number?: string;
   partner_billing_status?: string;
+  subcontractor_organization?: {
+    id: string;
+    name: string;
+  };
+  workOrderCount?: number;
+  // Heavy nested data only available in detail view
   submitted_by_profile?: {
     id: string;
     first_name: string;
@@ -48,12 +54,6 @@ export interface SubcontractorBill {
     first_name: string;
     last_name: string;
     email: string;
-  };
-  subcontractor_organization?: {
-    id: string;
-    name: string;
-    contact_email: string;
-    organization_type: string;
   };
   subcontractor_bill_work_orders?: Array<{
     id: string;
@@ -102,48 +102,16 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
           paid_at,
           created_at,
           updated_at,
-          submitted_by,
-          approved_by,
-          subcontractor_organization_id,
-          approval_notes,
           payment_reference,
           admin_notes,
           subcontractor_notes,
           payment_terms,
           purchase_order_number,
           partner_billing_status,
-          submitted_by_profile:profiles!submitted_by (
-            id,
-            first_name,
-            last_name,
-            email
-          ),
-          approved_by_profile:profiles!approved_by (
-            id,
-            first_name,
-            last_name,
-            email
-          ),
+          subcontractor_organization_id,
           subcontractor_organization:organizations!subcontractor_organization_id (
             id,
-            name,
-            contact_email,
-            organization_type
-          ),
-          subcontractor_bill_work_orders (
-            id,
-            work_order_id,
-            amount,
-            description
-          ),
-          subcontractor_bill_attachments (
-            id,
-            file_name,
-            file_url,
-            file_type,
-            file_size,
-            uploaded_by,
-            created_at
+            name
           )
         `, { count: 'exact' });
 
@@ -186,8 +154,23 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
 
       if (error) throw error;
 
+      // Add work order count for each bill
+      const billsWithCounts = await Promise.all(
+        (data || []).map(async (bill) => {
+          const { count: workOrderCount } = await supabase
+            .from('subcontractor_bill_work_orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('subcontractor_bill_id', bill.id);
+          
+          return {
+            ...bill,
+            workOrderCount: workOrderCount || 0
+          };
+        })
+      );
+
       return {
-        data: data || [],
+        data: billsWithCounts,
         count: count || 0,
         totalPages: Math.ceil((count || 0) / pageSize)
       };

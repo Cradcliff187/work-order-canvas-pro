@@ -175,10 +175,10 @@ const SubcontractorBills = () => {
                           ({bill.external_bill_number})
                         </span>
                       )}
-                      {(bill.subcontractor_bill_attachments?.length || 0) > 0 && (
+                      {bill.workOrderCount && bill.workOrderCount > 0 && (
                         <div className="flex items-center gap-1 text-blue-600">
-                          <Paperclip className="h-4 w-4" />
-                          <span className="text-xs">{bill.subcontractor_bill_attachments?.length}</span>
+                          <FileText className="h-4 w-4" />
+                          <span className="text-xs">{bill.workOrderCount} WO</span>
                         </div>
                       )}
                       <FinancialStatusBadge 
@@ -210,16 +210,11 @@ const SubcontractorBills = () => {
                       )}
                     </div>
 
-                    {/* Work Orders */}
-                    {bill.subcontractor_bill_work_orders && bill.subcontractor_bill_work_orders.length > 0 && (
+                    {/* Work Orders Count */}
+                    {bill.workOrderCount && bill.workOrderCount > 0 && (
                       <div className="text-sm">
                         <span className="text-muted-foreground">Work Orders: </span>
-                        {bill.subcontractor_bill_work_orders.map((sbwo, index) => (
-                          <span key={sbwo.id}>
-                            {`WO-${sbwo.work_order_id.slice(0, 8)}`}
-                            {index < bill.subcontractor_bill_work_orders.length - 1 && ", "}
-                          </span>
-                        ))}
+                        <Badge variant="outline">{bill.workOrderCount}</Badge>
                       </div>
                     )}
                   </div>
