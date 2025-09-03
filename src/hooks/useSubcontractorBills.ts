@@ -36,7 +36,6 @@ export interface SubcontractorBill {
   subcontractor_notes?: string;
   payment_terms?: string;
   purchase_order_number?: string;
-  partner_billing_status?: string;
   subcontractor_organization?: {
     id: string;
     name: string;
@@ -116,7 +115,6 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
           subcontractor_notes,
           payment_terms,
           purchase_order_number,
-          partner_billing_status,
           subcontractor_organization_id,
           subcontractor_organization:organizations!subcontractor_organization_id (
             id,
@@ -223,7 +221,6 @@ export const useSubcontractorBill = (id: string) => {
           subcontractor_notes,
           payment_terms,
           purchase_order_number,
-          partner_billing_status,
           submitted_by_profile:profiles!submitted_by (
             id,
             first_name,
