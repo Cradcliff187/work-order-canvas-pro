@@ -337,7 +337,7 @@ export default function SubmitBill() {
         </Card>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <StandardFormLayout>
           {isAdminMode && (
             <StandardFormLayout.Section 
