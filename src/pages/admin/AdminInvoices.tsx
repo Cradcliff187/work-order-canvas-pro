@@ -122,15 +122,17 @@ export default function AdminInvoices() {
     report_status: Array.isArray(filters.report_status) ? filters.report_status : [],
     invoice_status: Array.isArray(filters.invoice_status) ? filters.invoice_status : [],
     partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
-  }), [filters]);
-
-  useEffect(() => {
-    console.log('🔍 Bill Filters Changed:', {
-      subcontractors: cleanFilters.subcontractor_organization_ids,
-      operational: cleanFilters.operational_status,
-      billing: cleanFilters.partner_billing_status
-    });
-  }, [cleanFilters]);
+  }), [
+    filters.search,
+    filters.overdue,
+    filters.partner_organization_ids,
+    filters.location_filter,
+    filters.subcontractor_organization_ids,
+    filters.operational_status,
+    filters.report_status,
+    filters.invoice_status,
+    filters.partner_billing_status
+  ]);
 
   const handleFiltersChange = (newFilters: InvoiceFiltersValue) => {
     setFilters(newFilters);
