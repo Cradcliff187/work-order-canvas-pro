@@ -439,9 +439,12 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                             <SelectValue placeholder="Select work order" />
                           </SelectTrigger>
                           <SelectContent>
-                            {(invoice.subcontractor_bill_work_orders ?? []).map((iwo) => (
+                           {(invoice.subcontractor_bill_work_orders ?? []).map((iwo) => (
                               <SelectItem key={iwo.work_order_id} value={iwo.work_order_id}>
-                                {`WO-${iwo.work_order_id.slice(0, 8)}`}
+                                {iwo.work_orders?.work_order_number 
+                                  ? `${iwo.work_orders.work_order_number} - ${iwo.work_orders.title}`
+                                  : `WO-${iwo.work_order_id.slice(0, 8)}`
+                                }
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -541,6 +544,8 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   <TableRow>
                     <TableHead>Work Order #</TableHead>
                     <TableHead>Title</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Trade</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Description</TableHead>
                   </TableRow>
@@ -549,13 +554,48 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   {(invoice.subcontractor_bill_work_orders ?? []).map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-mono">
-                        {`WO-${item.work_order_id.slice(0, 8)}`}
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto font-mono text-primary"
+                          onClick={() => window.open(`/admin/work-orders/${item.work_order_id}`, '_blank')}
+                        >
+                          {item.work_orders?.work_order_number || `WO-${item.work_order_id.slice(0, 8)}`}
+                          <ExternalLink className="ml-1 h-3 w-3" />
+                        </Button>
                       </TableCell>
-                      <TableCell>Work Order</TableCell>
+                      <TableCell className="max-w-[200px]">
+                        <div className="truncate" title={item.work_orders?.title}>
+                          {item.work_orders?.title || 'Work Order'}
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[150px]">
+                        <div className="text-sm">
+                          {item.work_orders?.store_location && (
+                            <div className="font-medium">{item.work_orders.store_location}</div>
+                          )}
+                          {(item.work_orders?.street_address || item.work_orders?.city) && (
+                            <div className="text-muted-foreground truncate">
+                              {[item.work_orders?.street_address, item.work_orders?.city, item.work_orders?.state]
+                                .filter(Boolean)
+                                .join(', ')}
+                            </div>
+                          )}
+                          {item.work_orders?.organizations?.name && (
+                            <div className="text-xs text-muted-foreground">
+                              {item.work_orders.organizations.name}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {item.work_orders?.trades?.name || '—'}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         {formatCurrency(Number(item.amount), true)}
                       </TableCell>
-                      <TableCell className="max-w-[480px] whitespace-pre-wrap break-words">
+                      <TableCell className="max-w-[300px] whitespace-pre-wrap break-words">
                         {item.description?.trim() || '—'}
                       </TableCell>
                     </TableRow>

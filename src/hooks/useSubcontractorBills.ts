@@ -59,6 +59,21 @@ export interface SubcontractorBill {
     work_order_id: string;
     amount: number;
     description?: string;
+    work_orders?: {
+      id: string;
+      work_order_number: string;
+      title: string;
+      store_location?: string;
+      street_address?: string;
+      city?: string;
+      state?: string;
+      organizations?: {
+        name: string;
+      };
+      trades?: {
+        name: string;
+      };
+    };
   }>;
   subcontractor_bill_attachments?: Array<{
     id: string;
@@ -243,7 +258,22 @@ export const useSubcontractorBill = (id: string) => {
             id,
             work_order_id,
             amount,
-            description
+            description,
+            work_orders (
+              id,
+              work_order_number,
+              title,
+              store_location,
+              street_address,
+              city,
+              state,
+              organizations (
+                name
+              ),
+              trades (
+                name
+              )
+            )
           ),
           subcontractor_bill_attachments (
             id,
