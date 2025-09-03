@@ -67,11 +67,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 
 export default function AdminInvoices() {
   const isMobile = useIsMobile();
-  console.log('📱 Device Detection:', { 
-    isMobile, 
-    windowWidth: window.innerWidth,
-    userAgent: navigator.userAgent.substring(0, 50)
-  });
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedBill, setSelectedBill] = useState<SubcontractorBill | null>(null);
@@ -89,14 +84,12 @@ export default function AdminInvoices() {
     partner_organization_ids: [],
     location_filter: [],
     subcontractor_organization_ids: [],
-    operational_status: [],
-    report_status: [],
     invoice_status: [],
     partner_billing_status: [],
   };
 
   // Get initial filters with default "submitted" status for first-time users
-  const getInitialFilters = (): InvoiceFiltersValue => {
+  const getInitialFilters = useCallback((): InvoiceFiltersValue => {
     const stored = localStorage.getItem('admin-invoices-filters-v2');
     if (stored) {
       try {
@@ -108,8 +101,6 @@ export default function AdminInvoices() {
           partner_organization_ids: Array.isArray(parsed.partner_organization_ids) ? parsed.partner_organization_ids : [],
           location_filter: Array.isArray(parsed.location_filter) ? parsed.location_filter : [],
           subcontractor_organization_ids: Array.isArray(parsed.subcontractor_organization_ids) ? parsed.subcontractor_organization_ids : [],
-          operational_status: Array.isArray(parsed.operational_status) ? parsed.operational_status : [],
-          report_status: Array.isArray(parsed.report_status) ? parsed.report_status : [],
           invoice_status: Array.isArray(parsed.invoice_status) ? parsed.invoice_status : ['submitted'],
           partner_billing_status: Array.isArray(parsed.partner_billing_status) ? parsed.partner_billing_status : [],
         };
@@ -118,7 +109,7 @@ export default function AdminInvoices() {
       }
     }
     return { ...initialFilters, invoice_status: ['submitted'] };
-  };
+  }, []);
 
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
 
@@ -129,8 +120,6 @@ export default function AdminInvoices() {
     partner_organization_ids: Array.isArray(filters.partner_organization_ids) ? filters.partner_organization_ids : [],
     location_filter: Array.isArray(filters.location_filter) ? filters.location_filter : [],
     subcontractor_organization_ids: Array.isArray(filters.subcontractor_organization_ids) ? filters.subcontractor_organization_ids : [],
-    operational_status: Array.isArray(filters.operational_status) ? filters.operational_status : [],
-    report_status: Array.isArray(filters.report_status) ? filters.report_status : [],
     invoice_status: Array.isArray(filters.invoice_status) ? filters.invoice_status : [],
     partner_billing_status: Array.isArray(filters.partner_billing_status) ? filters.partner_billing_status : [],
   }), [
@@ -139,8 +128,6 @@ export default function AdminInvoices() {
     filters.partner_organization_ids,
     filters.location_filter,
     filters.subcontractor_organization_ids,
-    filters.operational_status,
-    filters.report_status,
     filters.invoice_status,
     filters.partner_billing_status
   ]);
@@ -162,11 +149,6 @@ export default function AdminInvoices() {
       desktop: ['table', 'card']
     },
     defaultMode: 'table'
-  });
-  console.log('👁️ View Mode:', { 
-    viewMode, 
-    allowedModes,
-    isMobile 
   });
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
@@ -810,8 +792,9 @@ const table = useReactTable({
     {totalPages > 1 && (
       <div className={`flex items-center py-4 ${isMobile ? 'flex-col space-y-4' : 'justify-between space-x-2'}`}>
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
-          {table.getFilteredRowModel().rows.length} {isMobile ? 'items' : 'row(s)'} selected.
+          {selectedCount > 0 && (
+            <span>{selectedCount} of {table.getFilteredRowModel().rows.length} {isMobile ? 'items' : 'row(s)'} selected.</span>
+          )}
         </div>
         <div className="flex items-center space-x-2">
           <Button
