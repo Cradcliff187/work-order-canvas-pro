@@ -458,10 +458,27 @@ export default function SubmitBill() {
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
-          <StandardFormLayout.Section 
-            title="Select Work Orders"
-            description="Choose completed work orders to include in this bill"
-          >
+          <StandardFormLayout.Section>
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-foreground">Select Work Orders</h3>
+                {selectedWorkOrderIds.length > 0 && (
+                  <>
+                    <Badge variant="secondary" className="h-5 text-[10px] px-1.5">
+                      ({selectedWorkOrderIds.length} selected)
+                    </Badge>
+                    {totalAmount > 0 && (
+                      <Badge variant="success" className="h-5 text-[10px] px-1.5">
+                        ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Badge>
+                    )}
+                  </>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Choose completed work orders to include in this bill
+              </p>
+            </div>
             <StandardFormLayout.FieldGroup>
               {isAdminMode && !formData.selectedOrganizationId ? (
                 <div className="text-center py-8 text-muted-foreground">
