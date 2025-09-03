@@ -422,14 +422,6 @@ export default function SubcontractorBills() {
         </div>
       </header>
 
-      {/* Shared Filters - Single instance for both mobile and desktop */}
-      <div className="mb-4">
-        <CompactSubcontractorBillFilters
-          value={filters}
-          onChange={handleFiltersChange}
-          onClear={handleClearFilters}
-        />
-      </div>
 
       {/* Results */}
       {isMobile ? (
@@ -589,8 +581,13 @@ export default function SubcontractorBills() {
                   </Button>
                 )}
 
-                {/* Search */}
+                {/* Filters and Search */}
                 <div className="flex items-center gap-2">
+                  <CompactSubcontractorBillFilters
+                    value={filters}
+                    onChange={handleFiltersChange}
+                    onClear={handleClearFilters}
+                  />
                   <div className="relative flex-1 sm:flex-initial sm:w-80">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <SmartSearchInput
