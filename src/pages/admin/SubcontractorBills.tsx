@@ -175,7 +175,15 @@ export default function SubcontractorBills() {
 
   const { data, isLoading, error, refetch } = useSubcontractorBills(queryFilters);
 
-  
+  if (error) {
+    console.error('Bills query error:', error);
+    return <div>Error loading bills. Please refresh the page.</div>;
+  }
+
+  if (isLoading && !data) {
+    return <LoadingSpinner />;
+  }
+
   const handleViewBill = (invoice: SubcontractorBill) => {
     setSelectedBill(invoice);
     setModalOpen(true);
