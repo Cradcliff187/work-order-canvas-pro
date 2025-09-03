@@ -399,11 +399,10 @@ export default function AdminSubmitReport() {
         <Alert>
           <Users className="h-4 w-4" />
           <AlertDescription>
-            <strong>Assignment Details:</strong> This work order is assigned to{' '}
-            {assignedSubcontractor 
+            Assigned to: {assignedSubcontractor 
               ? `${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}`
               : assignedOrganization?.name
-            }. The report will be submitted on their behalf and logged for audit purposes.
+            }
           </AlertDescription>
         </Alert>
       )}
@@ -412,7 +411,7 @@ export default function AdminSubmitReport() {
         <Alert variant="default" className="border-amber-200 bg-amber-50 text-amber-800">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Unassigned Work Order:</strong> This work order has no assignment. You can submit as admin-only or optionally assign it to a subcontractor organization.
+            Unassigned - Select organization below (optional)
           </AlertDescription>
         </Alert>
       )}
