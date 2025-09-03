@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,6 +65,40 @@ import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { LoadingCard } from '@/components/ui/loading-states';
 import { EmptyState } from '@/components/ui/empty-state';
 
+// Define clean initial filters structure outside component
+const initialFilters: InvoiceFiltersValue = {
+  search: '',
+  overdue: false,
+  partner_organization_ids: [],
+  location_filter: [],
+  subcontractor_organization_ids: [],
+  invoice_status: [],
+  partner_billing_status: [],
+};
+
+// Get initial filters with localStorage logic
+const getInitialFilters = (): InvoiceFiltersValue => {
+  const stored = localStorage.getItem('admin-invoices-filters-v2');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      return {
+        ...initialFilters,
+        ...parsed,
+        // Ensure arrays are properly initialized
+        partner_organization_ids: Array.isArray(parsed.partner_organization_ids) ? parsed.partner_organization_ids : [],
+        location_filter: Array.isArray(parsed.location_filter) ? parsed.location_filter : [],
+        subcontractor_organization_ids: Array.isArray(parsed.subcontractor_organization_ids) ? parsed.subcontractor_organization_ids : [],
+        invoice_status: Array.isArray(parsed.invoice_status) ? parsed.invoice_status : [],
+        partner_billing_status: Array.isArray(parsed.partner_billing_status) ? parsed.partner_billing_status : [],
+      };
+    } catch {
+      return { ...initialFilters };
+    }
+  }
+  return { ...initialFilters };
+};
+
 export default function AdminInvoices() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -77,40 +111,6 @@ export default function AdminInvoices() {
   const limit = 10;
   
   
-  // Define clean initial filters structure
-  const initialFilters: InvoiceFiltersValue = {
-    search: '',
-    overdue: false,
-    partner_organization_ids: [],
-    location_filter: [],
-    subcontractor_organization_ids: [],
-    invoice_status: [],
-    partner_billing_status: [],
-  };
-
-  // Get initial filters with default "submitted" status for first-time users
-  const getInitialFilters = useCallback((): InvoiceFiltersValue => {
-    const stored = localStorage.getItem('admin-invoices-filters-v2');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        return {
-          ...initialFilters,
-          ...parsed,
-          // Ensure arrays are properly initialized
-          partner_organization_ids: Array.isArray(parsed.partner_organization_ids) ? parsed.partner_organization_ids : [],
-          location_filter: Array.isArray(parsed.location_filter) ? parsed.location_filter : [],
-          subcontractor_organization_ids: Array.isArray(parsed.subcontractor_organization_ids) ? parsed.subcontractor_organization_ids : [],
-          invoice_status: Array.isArray(parsed.invoice_status) ? parsed.invoice_status : [],
-          partner_billing_status: Array.isArray(parsed.partner_billing_status) ? parsed.partner_billing_status : [],
-        };
-      } catch {
-        return { ...initialFilters };
-      }
-    }
-    return { ...initialFilters };
-  }, []);
-
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v2', getInitialFilters());
 
 
