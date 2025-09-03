@@ -57,7 +57,7 @@ export function BillDatesFields({
             <Button
               variant="outline"
               className={cn(
-                "w-full justify-start text-left font-normal",
+                "w-full justify-start text-left font-normal min-h-[44px]",
                 !billDate && "text-muted-foreground"
               )}
             >
@@ -85,7 +85,7 @@ export function BillDatesFields({
             <Button
               variant="outline"
               className={cn(
-                "w-full justify-start text-left font-normal",
+                "w-full justify-start text-left font-normal min-h-[44px]",
                 !dueDate && "text-muted-foreground"
               )}
             >
@@ -115,7 +115,7 @@ export function BillDatesFields({
           placeholder="Net 30"
           value={paymentTerms}
           onChange={(e) => onChangePaymentTerms(e.target.value)}
-          className="w-full"
+          className="w-full min-h-[44px] px-4 py-3"
         />
         <p className="text-xs text-muted-foreground">Defaults to "Net 30"</p>
       </div>

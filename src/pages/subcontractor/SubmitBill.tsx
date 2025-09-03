@@ -380,13 +380,13 @@ export default function SubmitBill() {
                  {isAdminMode && (
                    <div className="space-y-2">
                      <Label htmlFor="adminNotes">Admin Notes</Label>
-                     <Textarea
-                       id="adminNotes"
-                       placeholder="Document why this bill was entered manually by admin..."
-                       value={formData.adminNotes}
-                       onChange={(e) => setFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
-                       className="min-h-[100px] transition-all duration-200"
-                     />
+                      <Textarea
+                        id="adminNotes"
+                        placeholder="Document why this bill was entered manually by admin..."
+                        value={formData.adminNotes}
+                        onChange={(e) => setFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
+                        className="min-h-[100px] min-h-[44px] px-4 py-3 transition-all duration-200"
+                      />
                      <p className="text-xs text-muted-foreground">
                        These notes will help track why this bill was entered manually and any special circumstances.
                      </p>
@@ -417,6 +417,7 @@ export default function SubmitBill() {
                         placeholder="BILL-2024-001"
                         value={formData.externalInvoiceNumber}
                         onChange={(e) => setFormData(prev => ({ ...prev, externalInvoiceNumber: e.target.value }))}
+                        className="min-h-[44px] px-4 py-3"
                       />
                       <p className="text-xs text-muted-foreground">
                         Optional: Your own bill number for reference
@@ -430,6 +431,7 @@ export default function SubmitBill() {
                         placeholder="PO-123456"
                         value={formData.purchaseOrderNumber}
                         onChange={(e) => setFormData(prev => ({ ...prev, purchaseOrderNumber: e.target.value }))}
+                        className="min-h-[44px] px-4 py-3"
                       />
                       <p className="text-xs text-muted-foreground">
                         Optional: Provide a PO number if applicable
@@ -467,7 +469,7 @@ export default function SubmitBill() {
                   placeholder="Add any relevant notes for the admin to review..."
                   value={formData.subcontractorNotes}
                   onChange={(e) => setFormData(prev => ({ ...prev, subcontractorNotes: e.target.value }))}
-                  className="min-h-[80px]"
+                  className="min-h-[80px] min-h-[44px] px-4 py-3"
                 />
               </div>
             </StandardFormLayout.FieldGroup>

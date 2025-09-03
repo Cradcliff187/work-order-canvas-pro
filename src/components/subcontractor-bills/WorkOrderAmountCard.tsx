@@ -156,7 +156,7 @@ export const WorkOrderAmountCard: React.FC<WorkOrderAmountCardProps> = ({
                         placeholder="0.00"
                         value={amount || ''}
                         onChange={(e) => onAmountChange(parseFloat(e.target.value) || 0)}
-                        className="pl-9"
+                        className="pl-9 min-h-[44px] px-4 py-3"
                       />
                     </div>
                   </div>

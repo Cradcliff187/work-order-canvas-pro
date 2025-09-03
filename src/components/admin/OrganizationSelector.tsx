@@ -82,7 +82,7 @@ export function OrganizationSelector({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("justify-between", className)}
+          className={cn("justify-between min-h-[44px]", className)}
         >
           {selectedOrganization ? (
             <div className="flex items-center gap-2">
