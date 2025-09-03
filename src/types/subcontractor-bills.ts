@@ -1,10 +1,6 @@
 export interface SubcontractorBillFiltersValue {
   search?: string;
-  status?: string[];
-  subcontractor_organization_ids?: string[];
-  date_range?: {
-    from?: string;
-    to?: string;
-  };
+  status?: string;
+  subcontractor_id?: string;
   overdue?: boolean;
 }

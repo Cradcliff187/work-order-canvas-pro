@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useSubcontractorBills, SubcontractorBill } from '@/hooks/useSubcontractorBills';
-import { CompactSubcontractorBillFilters } from "@/components/admin/subcontractor-bills/CompactSubcontractorBillFilters";
+import { SimpleSubcontractorBillFilters } from "@/components/admin/subcontractor-bills/SimpleSubcontractorBillFilters";
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createBillColumns } from '@/components/admin/invoices/InvoiceColumns';
@@ -69,8 +69,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 const initialFilters: SubcontractorBillFiltersValue = {
   search: '',
   overdue: false,
-  subcontractor_organization_ids: [],
-  status: [],
+  subcontractor_id: undefined,
+  status: undefined,
 };
 
 export default function SubcontractorBills() {
@@ -398,7 +398,7 @@ const table = useReactTable({
 
       {/* Shared Filters - Single instance for both mobile and desktop */}
       <div className="mb-4">
-        <CompactSubcontractorBillFilters
+        <SimpleSubcontractorBillFilters
           value={filters}
           onChange={handleFiltersChange}
           onClear={handleClearFilters}
