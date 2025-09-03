@@ -559,7 +559,6 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     <TableHead>Work Order #</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead>Trade</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Description</TableHead>
                   </TableRow>
@@ -594,17 +593,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                                 .join(', ')}
                             </div>
                           )}
-                          {item.work_orders?.organizations?.name && (
-                            <div className="text-xs text-muted-foreground">
-                              {item.work_orders.organizations.name}
-                            </div>
-                          )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {item.work_orders?.trades?.name || '—'}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         {formatCurrency(Number(item.amount), true)}
