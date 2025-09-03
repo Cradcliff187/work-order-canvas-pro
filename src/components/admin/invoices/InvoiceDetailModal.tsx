@@ -56,7 +56,23 @@ import { isImageFile } from '@/utils/fileUtils';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ImageLightbox } from '@/components/work-orders/shared/ImageLightbox';
 
+/**
+ * Props for InvoiceDetailModal component
+ * 
+ * This component accepts a potentially partial SubcontractorBill from the list view
+ * and uses the useSubcontractorBill hook to fetch complete details including
+ * nested relationships (work orders, attachments, user profiles).
+ */
 interface InvoiceDetailModalProps {
+  /**
+   * Subcontractor bill data - may be partial data from list view.
+   * The component will automatically fetch complete details including:
+   * - Work orders (subcontractor_bill_work_orders)
+   * - Attachments (subcontractor_bill_attachments) 
+   * - User profiles (submitted_by_profile, approved_by_profile)
+   * 
+   * If null, the component will show in loading state until useSubcontractorBill loads data.
+   */
   invoice: SubcontractorBill | null;
   isOpen: boolean;
   onClose: () => void;
