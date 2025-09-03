@@ -492,24 +492,6 @@ export default function AdminSubmitReport() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Any additional information or observations..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  className="min-h-[80px]"
-                />
-              </div>
-            </StandardFormLayout.FieldGroup>
-          </StandardFormLayout.Section>
-
-          <StandardFormLayout.Section 
-            title="Time Tracking"
-            description="Record hours worked (optional)"
-          >
-            <StandardFormLayout.FieldGroup columns={1}>
-              <div className="space-y-2">
                 <Label htmlFor="hoursWorked">Hours Worked</Label>
                 <Input
                   id="hoursWorked"
@@ -524,11 +506,22 @@ export default function AdminSubmitReport() {
                   Optional: Enter total hours worked on this assignment
                 </p>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Additional Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Any additional information or observations..."
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="min-h-[80px]"
+                />
+              </div>
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
           <StandardFormLayout.Section 
-            title="Photos & Documentation"
+            title="Documentation"
             description="Upload photos and documents related to the work"
           >
             <StandardFormLayout.FieldGroup>
