@@ -150,33 +150,14 @@ export default function SubcontractorBills() {
   };
 
 
-  // Transform filters to match hook expectations with stable dependencies
-  const transformedFilters = useMemo(() => {
-    return {
-      search: filters.search,
-      overdue: filters.overdue,
-      subcontractor_organization_ids: filters.subcontractor_organization_ids,
-      status: filters.status?.[0], // Convert array to single value
-      dateFrom: filters.date_range?.from ? new Date(filters.date_range.from) : undefined,
-      dateTo: filters.date_range?.to ? new Date(filters.date_range.to) : undefined,
-      page
-    };
-  }, [
-    filters.search,
-    filters.overdue,
-    filters.subcontractor_organization_ids,
-    filters.status,
-    filters.date_range?.from,
-    filters.date_range?.to,
-    page
-  ]);
+  // Add page to filters for hook
+  const queryFilters = useMemo(() => ({
+    ...filters,
+    page,
+    pageSize: 10
+  }), [filters, page]);
 
-  // 🔧 Debug transformedFilters changes
-  useEffect(() => {
-    console.log('🎯 transformedFilters changed:', transformedFilters);
-  }, [transformedFilters]);
-
-  const { data, isLoading, error, refetch } = useSubcontractorBills(transformedFilters);
+  const { data, isLoading, error, refetch } = useSubcontractorBills(queryFilters);
 
   
   const handleViewBill = (invoice: SubcontractorBill) => {

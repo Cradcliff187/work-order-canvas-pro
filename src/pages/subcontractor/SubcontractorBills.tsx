@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSubcontractorBills } from "@/hooks/useSubcontractorBills";
+import { SubcontractorBillFiltersValue } from "@/types/subcontractor-bills";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,26 +17,28 @@ import { Link, useSearchParams } from "react-router-dom";
 
 const SubcontractorBills = () => {
   const [searchParams] = useSearchParams();
-  const [paymentFilter, setPaymentFilter] = useState<string | undefined>(() => searchParams.get('payment') || undefined);
   
-  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || "all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<SubcontractorBillFiltersValue>(() => ({
+    search: "",
+    status: [],
+    subcontractor_organization_ids: [],
+    date_range: {},
+    overdue: false,
+  }));
   const [page, setPage] = useState(1);
 
-  // Memoize filters to prevent unnecessary re-fetches
-  const filters = useMemo(() => ({
-    status: statusFilter && statusFilter !== "all" ? statusFilter : undefined,
-    paymentStatus: paymentFilter as 'paid' | 'unpaid' | undefined,
-    search: searchQuery || undefined,
+  // Memoize query filters to prevent unnecessary re-fetches
+  const queryFilters = useMemo(() => ({
+    ...filters,
     page,
-    limit: 20,
-  }), [statusFilter, paymentFilter, searchQuery, page]);
+    pageSize: 20,
+  }), [filters, page]);
 
-  const { data: billsData, isLoading, error, refetch } = useSubcontractorBills(filters);
+  const { data: billsData, isLoading, error, refetch } = useSubcontractorBills(queryFilters);
   const bills = billsData?.data || [];
   const totalCount = billsData?.count || 0;
 
-  const hasFilters = statusFilter !== "all" || searchQuery || paymentFilter;
+  const hasFilters = filters.search || filters.status?.length || filters.subcontractor_organization_ids?.length || filters.date_range?.from || filters.date_range?.to || filters.overdue;
 
 
   if (isLoading) {
@@ -103,13 +106,19 @@ const SubcontractorBills = () => {
                 <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
                 <Input
                   placeholder="Search bills..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={filters.search || ""}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}
                   className="pl-10"
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select 
+              value={filters.status?.length === 1 ? filters.status[0] : "all"} 
+              onValueChange={(value) => setFilters({ 
+                ...filters, 
+                status: value === "all" ? [] : [value] 
+              })}
+            >
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -138,8 +147,13 @@ const SubcontractorBills = () => {
             action={hasFilters ? {
               label: "Clear Filters",
               onClick: () => {
-                setStatusFilter("all");
-                setSearchQuery("");
+                setFilters({
+                  search: "",
+                  status: [],
+                  subcontractor_organization_ids: [],
+                  date_range: {},
+                  overdue: false,
+                });
               },
               icon: Filter
             } : {
