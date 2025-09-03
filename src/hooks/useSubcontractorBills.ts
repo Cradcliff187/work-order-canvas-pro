@@ -3,9 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface SubcontractorBillFilters {
   search?: string;
-  status?: string;
-  subcontractor_id?: string;
+  status?: string[];
+  subcontractor_organization_ids?: string[];
   overdue?: boolean;
+  date_range?: {
+    from?: string;
+    to?: string;
+  };
   page?: number;
   pageSize?: number;
 }
@@ -73,14 +77,15 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
   const {
     search = '',
     status,
-    subcontractor_id,
+    subcontractor_organization_ids,
     overdue,
+    date_range,
     page = 1,
     pageSize = 10
   } = filters;
 
   return useQuery({
-    queryKey: ['subcontractor-bills', { search, status, subcontractor_id, overdue, page, pageSize }],
+    queryKey: ['subcontractor-bills', { search, status, subcontractor_organization_ids, overdue, date_range, page, pageSize }],
     queryFn: async () => {
       let query = supabase
         .from('subcontractor_bills')
@@ -143,12 +148,20 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         `, { count: 'exact' });
 
       // Apply server-side filters
-      if (status) {
-        query = query.eq('status', status);
+      if (status && status.length > 0) {
+        query = query.in('status', status);
       }
 
-      if (subcontractor_id) {
-        query = query.eq('subcontractor_organization_id', subcontractor_id);
+      if (subcontractor_organization_ids && subcontractor_organization_ids.length > 0) {
+        query = query.in('subcontractor_organization_id', subcontractor_organization_ids);
+      }
+
+      if (date_range?.from) {
+        query = query.gte('created_at', new Date(date_range.from).toISOString());
+      }
+
+      if (date_range?.to) {
+        query = query.lte('created_at', new Date(date_range.to).toISOString());
       }
 
       if (overdue) {

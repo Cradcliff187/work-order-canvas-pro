@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SimpleSubcontractorBillFilters } from "@/components/admin/subcontractor-bills/SimpleSubcontractorBillFilters";
+import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingCard } from "@/components/ui/loading-states";
 import { QueryError, QueryErrorBoundary } from "@/components/ui/query-error-boundary";
@@ -20,8 +20,9 @@ const SubcontractorBills = () => {
   
   const [filters, setFilters] = useState<SubcontractorBillFiltersValue>(() => ({
     search: "",
-    status: undefined,
-    subcontractor_id: undefined,
+    status: [],
+    subcontractor_organization_ids: [],
+    date_range: {},
     overdue: false,
   }));
   const [page, setPage] = useState(1);
@@ -37,7 +38,7 @@ const SubcontractorBills = () => {
   const bills = billsData?.data || [];
   const totalCount = billsData?.count || 0;
 
-  const hasFilters = filters.search || filters.status || filters.subcontractor_id || filters.overdue;
+  const hasFilters = filters.search || filters.status?.length || filters.subcontractor_organization_ids?.length || filters.date_range?.from || filters.date_range?.to || filters.overdue;
 
 
   if (isLoading) {
@@ -97,16 +98,41 @@ const SubcontractorBills = () => {
         </div>
 
       {/* Filters */}
-      <SimpleSubcontractorBillFilters
-        value={filters}
-        onChange={setFilters}
-        onClear={() => setFilters({
-          search: "",
-          status: undefined,
-          subcontractor_id: undefined,
-          overdue: false,
-        })}
-      />
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search bills..."
+                  value={filters.search || ""}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <Select 
+              value={filters.status?.length === 1 ? filters.status[0] : "all"} 
+              onValueChange={(value) => setFilters({ 
+                ...filters, 
+                status: value === "all" ? [] : [value] 
+              })}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="submitted">Submitted</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Bills List */}
       <div className="space-y-4">
@@ -123,11 +149,13 @@ const SubcontractorBills = () => {
               onClick: () => {
                 setFilters({
                   search: "",
-                  status: undefined,
-                  subcontractor_id: undefined,
+                  status: [],
+                  subcontractor_organization_ids: [],
+                  date_range: {},
                   overdue: false,
                 });
-              }
+              },
+              icon: Filter
             } : {
               label: "Create Your First Bill",
               onClick: () => window.location.href = '/subcontractor/submit-bill',
