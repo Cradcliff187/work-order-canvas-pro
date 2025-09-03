@@ -152,10 +152,23 @@ export default function SubcontractorBills() {
 
   // Add page to filters for hook
   const queryFilters = useMemo(() => ({
-    ...filters,
+    search: filters.search || '',
+    status: filters.status || [],
+    subcontractor_organization_ids: filters.subcontractor_organization_ids || [],
+    overdue: filters.overdue || false,
+    dateFrom: filters.date_range?.from ? new Date(filters.date_range.from) : undefined,
+    dateTo: filters.date_range?.to ? new Date(filters.date_range.to) : undefined,
     page,
     pageSize: 10
-  }), [filters, page]);
+  }), [
+    filters.search,
+    filters.status,
+    filters.subcontractor_organization_ids,
+    filters.overdue,
+    filters.date_range?.from,
+    filters.date_range?.to,
+    page
+  ]);
 
   const { data, isLoading, error, refetch } = useSubcontractorBills(queryFilters);
 
