@@ -29,9 +29,7 @@ export interface CompactSubcontractorBillFiltersProps {
 }
 
 const defaultBillStatusOptions = [
-  { value: 'submitted', label: 'Submitted' },
   { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' },
   { value: 'paid', label: 'Paid' },
 ];
 
