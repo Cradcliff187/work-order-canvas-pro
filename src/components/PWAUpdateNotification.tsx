@@ -9,21 +9,36 @@ export function PWAUpdateNotification() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (updateAvailable || needsRefresh) {
-      setDismissed(false);
+    // Check if notification was recently dismissed
+    const dismissedUntil = localStorage.getItem('pwa-update-dismissed');
+    if (dismissedUntil) {
+      const dismissedTime = new Date(dismissedUntil).getTime();
+      const now = new Date().getTime();
+      // Keep dismissed for 10 minutes
+      if (now - dismissedTime < 10 * 60 * 1000) {
+        setDismissed(true);
+      }
     }
-  }, [updateAvailable, needsRefresh]);
+  }, []);
 
   if ((!updateAvailable && !needsRefresh) || dismissed) {
     return null;
   }
 
   const handleUpdate = () => {
+    setDismissed(true);
+    localStorage.setItem('pwa-update-dismissed', new Date().toISOString());
+    
     if (updateAvailable) {
       skipWaiting();
     } else if (needsRefresh) {
       refresh();
     }
+  };
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    localStorage.setItem('pwa-update-dismissed', new Date().toISOString());
   };
 
   return (
@@ -48,7 +63,7 @@ export function PWAUpdateNotification() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setDismissed(true)}
+            onClick={handleDismiss}
             className="h-6 w-6 p-0"
           >
             <X className="h-3 w-3" />

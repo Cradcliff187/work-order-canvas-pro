@@ -93,10 +93,24 @@ export function usePWA(): PWAState & PWAActions {
   const skipWaiting = (): void => {
     if (wb) {
       wb.messageSkipWaiting();
+      // Clear states after triggering update
+      setTimeout(() => {
+        setState(prev => ({ 
+          ...prev, 
+          updateAvailable: false, 
+          needsRefresh: false 
+        }));
+      }, 1000);
     }
   };
 
   const refresh = (): void => {
+    // Clear states before refresh
+    setState(prev => ({ 
+      ...prev, 
+      updateAvailable: false, 
+      needsRefresh: false 
+    }));
     window.location.reload();
   };
 
