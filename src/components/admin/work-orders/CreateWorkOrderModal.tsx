@@ -573,7 +573,14 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         {/* Scrollable Form Content */}
         <ScrollArea className="flex-1 overflow-auto">
           <Form {...form}>
-            <div className="space-y-6 pr-6">
+            <div 
+              className="space-y-6 pr-6"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'BUTTON') {
+                  e.preventDefault();
+                }
+              }}
+            >
               {/* Step 0: Organization Selection (Admin Only) */}
               {isAdmin && currentStep === 0 && (
                 <Card>
@@ -896,58 +903,45 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
 
         {/* Fixed Navigation Footer */}
         <div className="flex-shrink-0 pt-4 border-t">
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="flex justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === (isAdmin ? 0 : 1)}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Previous
-              </Button>
+          <div className="flex justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === (isAdmin ? 0 : 1)}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
 
-              {currentStep < 3 ? (
-                <Button 
-                  type="button" 
-                  onClick={() => {
-                    console.log('🔄 Next button clicked!');
-                    handleNext();
-                  }}
-                >
-                  Next
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : (
-                <Button 
-                  type="submit" 
-                  disabled={createWorkOrderMutation.isPending}
-                  onClick={() => {
-                    console.log('📤 Submit button clicked!');
-                    console.log('📊 Form state:', {
-                      isValid: form.formState.isValid,
-                      errors: form.formState.errors,
-                      isDirty: form.formState.isDirty,
-                      isSubmitting: form.formState.isSubmitting,
-                    });
-                  }}
-                >
-                  {createWorkOrderMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Create Work Order
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          </form>
+            {currentStep < 3 ? (
+              <Button 
+                type="button" 
+                onClick={handleNext}
+              >
+                Next
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            ) : (
+              <Button 
+                type="button"  // Changed from "submit" to "button"
+                onClick={() => form.handleSubmit(onSubmit)()}  // Direct onClick handler
+                disabled={createWorkOrderMutation.isPending}
+              >
+                {createWorkOrderMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Create Work Order
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
