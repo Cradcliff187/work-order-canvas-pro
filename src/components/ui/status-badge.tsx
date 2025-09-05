@@ -2,6 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { statusConfig, type EntityType } from '@/components/admin/shared/tableConfig';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { 
   Circle, 
   CheckCircle, 
@@ -98,68 +99,68 @@ export function StatusBadge({
 }: StatusBadgeProps) {
   const config = statusConfig[type]?.[status];
   
-  const sizeClasses = {
-    sm: {
-      text: 'text-xs',
-      padding: 'px-2 py-1',
-      icon: 'h-3 w-3',
-      height: 'h-6',
-      minWidth: 'min-w-[80px]'
-    },
-    default: {
-      text: 'text-xs',
-      padding: 'px-3 py-1.5',
-      icon: 'h-4 w-4',
-      height: 'h-7',
-      minWidth: 'min-w-[100px]'
-    },
-    lg: {
-      text: 'text-sm',
-      padding: 'px-4 py-2',
-      icon: 'h-5 w-5',
-      height: 'h-10',
-      minWidth: 'min-w-[120px]'
-    }
+  const iconSizeClasses = {
+    sm: 'h-3 w-3',
+    default: 'h-4 w-4',
+    lg: 'h-5 w-5'
   };
+  
+  const Icon = showIcon ? iconMap[status] : null;
+  const fallbackText = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   
   if (!config) {
     // Fallback for unknown statuses
     return (
-      <Badge 
-        variant={variant}
-        className={cn(
-          'inline-flex items-center justify-center font-medium rounded-md border transition-colors text-center',
-          sizeClasses[size].padding,
-          sizeClasses[size].height,
-          sizeClasses[size].minWidth,
-          'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
-          variant === 'outline' && 'bg-transparent',
-          className
-        )}
-      >
-        {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-      </Badge>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge 
+            variant={variant}
+            className={cn(
+              "inline-flex items-center gap-1.5 font-medium",
+              size === "sm" && "h-5 text-xs px-2 max-w-[140px]",
+              size === "default" && "h-6 text-xs px-2.5 max-w-[160px]", 
+              size === "lg" && "h-7 text-sm px-3 max-w-[180px]",
+              'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+              variant === 'outline' && 'bg-transparent',
+              className
+            )}
+          >
+            {showIcon && Icon && <Icon className={iconSizeClasses[size]} />}
+            <span className="truncate">{fallbackText}</span>
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{fallbackText}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   }
   
-  const Icon = showIcon ? iconMap[status] : null;
+  const displayText = children || config.label;
   
   return (
-    <Badge
-      variant={variant}
-      className={cn(
-        'inline-flex items-center justify-center font-medium rounded-md border transition-colors text-center',
-        sizeClasses[size].padding,
-        sizeClasses[size].height,
-        sizeClasses[size].minWidth,
-        config.className,
-        variant === 'outline' && 'bg-transparent',
-        className
-      )}
-    >
-      {Icon && <Icon className={sizeClasses[size].icon} />}
-      <span>{children || config.label}</span>
-    </Badge>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          variant={variant}
+          className={cn(
+            "inline-flex items-center gap-1.5 font-medium",
+            size === "sm" && "h-5 text-xs px-2 max-w-[140px]",
+            size === "default" && "h-6 text-xs px-2.5 max-w-[160px]", 
+            size === "lg" && "h-7 text-sm px-3 max-w-[180px]",
+            config.className,
+            variant === 'outline' && 'bg-transparent',
+            className
+          )}
+        >
+          {showIcon && Icon && <Icon className={iconSizeClasses[size]} />}
+          <span className="truncate">{displayText}</span>
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{displayText}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
