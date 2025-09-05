@@ -66,6 +66,10 @@ export const statusConfig = {
     rejected: {
       label: "Rejected",
       className: "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+    },
+    not_billed: {
+      label: "Not Billed",
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     }
   },
   operationalStatus: {

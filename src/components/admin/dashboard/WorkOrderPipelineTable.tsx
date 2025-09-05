@@ -255,26 +255,22 @@ export function WorkOrderPipelineTable({
       cell: ({ row }) => {
         const item = row.original;
         
-        const getInvoiceStatusForBadge = () => {
-          if (!item.invoice_status) {
-            if (item.status === 'completed' && item.report_status === 'approved') {
-              return 'pending';
-            }
-            return 'pending';
-          }
+        const getBillStatus = () => {
+          if (!item.invoice_status) return 'not_billed';
           
           switch (item.invoice_status) {
-            case 'approved':
-              return 'approved_for_payment';
             case 'submitted':
-            case 'pending':
               return 'pending';
+            case 'approved':
+              return 'approved';
+            case 'paid':
+              return 'paid';
             default:
               return 'pending';
           }
         };
         
-        const statusValue = getInvoiceStatusForBadge();
+        const statusValue = getBillStatus();
         
         return <FinancialStatusBadge status={statusValue} size="sm" showIcon />;
       },
@@ -379,7 +375,18 @@ export function WorkOrderPipelineTable({
                 metadata={[
                   { label: 'Status', value: item.status },
                   { label: 'Report', value: item.report_status || 'Not submitted' },
-                  { label: 'Invoice', value: item.invoice_status || 'None' },
+                  { 
+                    label: 'Invoice', 
+                    value: (() => {
+                      if (!item.invoice_status) return 'Not Billed';
+                      switch (item.invoice_status) {
+                        case 'submitted': return 'Pending';
+                        case 'approved': return 'Approved';
+                        case 'paid': return 'Paid';
+                        default: return 'Pending';
+                      }
+                    })()
+                  },
                   { 
                     label: 'Amount', 
                     value: item.subcontractor_bill_amount ? `$${item.subcontractor_bill_amount.toLocaleString()}` : '—'
@@ -467,7 +474,18 @@ export function WorkOrderPipelineTable({
                       metadata={[
                         { label: 'Status', value: item.status },
                         { label: 'Report', value: item.report_status || 'Not submitted' },
-                        { label: 'Invoice', value: item.invoice_status || 'None' },
+                        { 
+                          label: 'Invoice', 
+                          value: (() => {
+                            if (!item.invoice_status) return 'Not Billed';
+                            switch (item.invoice_status) {
+                              case 'submitted': return 'Pending';
+                              case 'approved': return 'Approved';
+                              case 'paid': return 'Paid';
+                              default: return 'Pending';
+                            }
+                          })()
+                        },
                         { 
                           label: 'Amount', 
                           value: item.subcontractor_bill_amount ? `$${item.subcontractor_bill_amount.toLocaleString()}` : '—'
