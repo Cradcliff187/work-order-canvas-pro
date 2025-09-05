@@ -66,10 +66,10 @@ export default function AdminOrganizations() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
-  const [filters, setFilters] = useState<OrganizationFilters>({});
   const [search, setSearch] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(search, 500);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'internal' | 'partner' | 'subcontractor'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [bulkMode, setBulkMode] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -78,21 +78,16 @@ export default function AdminOrganizations() {
     pageSize: 25,
   });
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
   const isMobile = useIsMobile();
 
   const { data: organizations, isLoading, error, refetch } = useOrganizations();
-
-  useEffect(() => {
-    setFilters({ search: debouncedSearch });
-  }, [debouncedSearch]);
 
   // Sync searchTerm with search state
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setSearch(value);
   };
-
-  const [typeFilter, setTypeFilter] = useState<'all' | 'internal' | 'partner' | 'subcontractor'>('all');
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
@@ -101,13 +96,6 @@ export default function AdminOrganizations() {
     if (statusFilter !== 'all') count++;
     return count;
   }, [typeFilter, statusFilter]);
-  const [sort, setSort] = useState<{ key: 'name' | 'initials' | 'contact_email' | 'organization_type'; desc: boolean}>(() => {
-    try {
-      const raw = localStorage.getItem('admin-organizations-sort-v1');
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    return { key: 'name', desc: false };
-  });
 
   // Persist filters in localStorage
   useEffect(() => {
@@ -177,22 +165,70 @@ export default function AdminOrganizations() {
     await refetch();
   };
 
-  const ORGANIZATION_COLUMN_METADATA = {
-    columns: [
-      { id: 'name', label: 'Name', defaultVisible: true },
-      { id: 'initials', label: 'Initials', defaultVisible: true },
-      { id: 'organization_type', label: 'Type', defaultVisible: true },
-      { id: 'contact_email', label: 'Email', defaultVisible: true },
-      { id: 'contact_phone', label: 'Phone', defaultVisible: false },
-      { id: 'address', label: 'Address', defaultVisible: false },
-      { id: 'is_active', label: 'Status', defaultVisible: true },
-      { id: 'created_at', label: 'Created', defaultVisible: false },
-    ]
-  };
+  // Column definitions for @tanstack/react-table
+  const columns = useMemo<ColumnDef<Organization>[]>(() => [
+    {
+      id: 'initials',
+      accessorKey: 'initials',
+      header: 'Initials',
+      cell: ({ getValue }) => (
+        <div className="font-medium">{getValue<string>() || 'N/A'}</div>
+      ),
+    },
+    {
+      id: 'name',
+      accessorKey: 'name',
+      header: 'Name',
+      cell: ({ getValue }) => getValue<string>(),
+    },
+    {
+      id: 'contact_email',
+      accessorKey: 'contact_email',
+      header: 'Email',
+      cell: ({ getValue }) => getValue<string>() || 'N/A',
+    },
+    {
+      id: 'organization_type',
+      accessorKey: 'organization_type',
+      header: 'Type',
+      cell: ({ getValue }) => {
+        const type = getValue<string>();
+        return (
+          <Badge 
+            variant={type === 'partner' ? 'default' : 'secondary'}
+            className="h-5 text-[10px] px-1.5"
+          >
+            {type}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedOrganization(row.original);
+              setShowEditModal(true);
+            }}
+          >
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
+        </div>
+      ),
+    },
+  ], []);
 
+  // Column visibility metadata for the dropdown
   const columnMetadata = {
-    name: { label: 'Name', defaultVisible: true },
     initials: { label: 'Initials', defaultVisible: true },
+    name: { label: 'Name', defaultVisible: true },
     organization_type: { label: 'Type', defaultVisible: true },
     contact_email: { label: 'Email', defaultVisible: true },
     contact_phone: { label: 'Phone', defaultVisible: false },
@@ -213,17 +249,10 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
     canHide: col.id !== 'actions',
   }));
 
-  const filteredOrganizations = useMemo(() => {
+  // Filter data based on search and other filters
+  const filteredData = useMemo(() => {
     let data = organizations ?? [];
-    const q = (filters.search ?? '').toLowerCase().trim();
-    if (q) {
-      data = data.filter(o => {
-        const hay = [o.name, o.initials, o.contact_email, o.contact_phone, o.address]
-          .filter(Boolean)
-          .map(s => String(s).toLowerCase());
-        return hay.some(s => s.includes(q));
-      });
-    }
+    
     if (typeFilter !== 'all') {
       data = data.filter(o => o.organization_type === typeFilter);
     }
@@ -232,14 +261,44 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
     } else if (statusFilter === 'inactive') {
       data = data.filter(o => !o.is_active);
     }
-    const sorted = [...data].sort((a, b) => {
-      const aVal = String((a as any)[sort.key] ?? '').toLowerCase();
-      const bVal = String((b as any)[sort.key] ?? '').toLowerCase();
-      const cmp = aVal.localeCompare(bVal);
-      return sort.desc ? -cmp : cmp;
-    });
-    return sorted;
-  }, [organizations, filters.search, typeFilter, statusFilter, sort]);
+    
+    return data;
+  }, [organizations, typeFilter, statusFilter]);
+
+  // Initialize React Table
+  const table = useReactTable({
+    data: filteredData,
+    columns,
+    state: {
+      sorting,
+      pagination,
+      rowSelection,
+      globalFilter: debouncedSearch,
+    },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    globalFilterFn: (row, columnId, value) => {
+      const searchValue = String(value).toLowerCase();
+      const searchableFields = [
+        row.original.name,
+        row.original.initials,
+        row.original.contact_email,
+        row.original.contact_phone,
+        row.original.address
+      ].filter(Boolean).map(s => String(s).toLowerCase());
+      
+      return searchableFields.some(field => field.includes(searchValue));
+    },
+  });
+
+  // Get filtered organizations for mobile view and other uses
+  const filteredOrganizations = table.getFilteredRowModel().rows.map(row => row.original);
 
   const handleExport = (formatType: 'csv' | 'excel') => {
     const exportData = filteredOrganizations.map(org => ({
@@ -280,7 +339,6 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
   const handleClearFilters = () => {
     setSearch('');
     setSearchTerm('');
-    setFilters({});
     setTypeFilter('all');
     setStatusFilter('all');
     try {
@@ -425,7 +483,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                   <EmptyTableState
                     icon={ClipboardList}
                     title="No organizations found"
-                    description={(filters.search || typeFilter !== 'all' || statusFilter !== 'all') ? "Try adjusting your search or filters" : "Get started by creating your first organization"}
+                    description={(debouncedSearch || typeFilter !== 'all' || statusFilter !== 'all') ? "Try adjusting your search or filters" : "Get started by creating your first organization"}
                     action={{
                       label: "Create Organization",
                       onClick: () => setShowCreateModal(true),
@@ -532,119 +590,87 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             {/* Desktop Table View */}
             {viewMode === 'table' && (
               <div className="hidden lg:block rounded-md border">
-              <Table className="admin-table">
+                <Table className="admin-table">
                   <TableHeader>
-                    <TableRow>
-                      {columnVisibility['initials'] && (
-                        <TableHead className="w-[120px]">
-                          <button
-                            className="flex items-center gap-1"
-                            onClick={() => setSort((s) => ({ key: 'initials', desc: s.key === 'initials' ? !s.desc : false }))}
-                            aria-label={`Sort by initials ${sort.key === 'initials' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead 
+                            key={header.id}
+                            className={header.id === 'initials' ? 'w-[120px]' : undefined}
                           >
-                            <span>Initials</span>
-                            {sort.key === 'initials' ? (
-                              sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            {header.isPlaceholder ? null : (
+                              <div
+                                className={
+                                  header.column.getCanSort()
+                                    ? 'cursor-pointer select-none flex items-center gap-1'
+                                    : ''
+                                }
+                                onClick={header.column.getToggleSortingHandler()}
+                              >
+                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                {header.column.getCanSort() && (
+                                  <>
+                                    {{
+                                      asc: <ArrowUp className="h-4 w-4 text-muted-foreground" />,
+                                      desc: <ArrowDown className="h-4 w-4 text-muted-foreground" />,
+                                    }[header.column.getIsSorted() as string] ?? (
+                                      <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                  </>
+                                )}
+                              </div>
                             )}
-                          </button>
-                        </TableHead>
-                      )}
-                      {columnVisibility['name'] && (
-                        <TableHead>
-                          <button
-                            className="flex items-center gap-1"
-                            onClick={() => setSort((s) => ({ key: 'name', desc: s.key === 'name' ? !s.desc : false }))}
-                            aria-label={`Sort by name ${sort.key === 'name' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
-                          >
-                            <span>Name</span>
-                            {sort.key === 'name' ? (
-                              sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </button>
-                        </TableHead>
-                      )}
-...
-                    </TableRow>
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
                   </TableHeader>
-                <TableBody>
-                  {filteredOrganizations.map((organization) => (
-                    <TableRow 
-                      key={organization.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        // Don't navigate if clicking interactive elements
-                        const target = e.target as HTMLElement;
-                        if (target instanceof HTMLButtonElement || 
-                            target instanceof HTMLInputElement ||
-                            target.closest('[role="checkbox"]') ||
-                            target.closest('[data-radix-collection-item]') ||
-                            target.closest('.dropdown-trigger')) {
-                          return;
-                        }
-                        setSelectedOrganization(organization);
-                        setShowEditModal(true);
-                      }}
-                      onKeyDown={(e) => {
-                        const target = e.target as HTMLElement;
-                        if (target instanceof HTMLButtonElement || 
-                            target instanceof HTMLInputElement ||
-                            target.closest('[role=\"checkbox\"]') ||
-                            target.closest('[data-radix-collection-item]') ||
-                            target.closest('.dropdown-trigger')) {
-                          return;
-                        }
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setSelectedOrganization(organization);
+                  <TableBody>
+                    {table.getRowModel().rows.map((row) => (
+                      <TableRow 
+                        key={row.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          // Don't navigate if clicking interactive elements
+                          const target = e.target as HTMLElement;
+                          if (target instanceof HTMLButtonElement || 
+                              target instanceof HTMLInputElement ||
+                              target.closest('[role="checkbox"]') ||
+                              target.closest('[data-radix-collection-item]') ||
+                              target.closest('.dropdown-trigger')) {
+                            return;
+                          }
+                          setSelectedOrganization(row.original);
                           setShowEditModal(true);
-                        }
-                      }}
-                    >
-                      {columnVisibility['initials'] && (
-                        <TableCell className="font-medium">{organization.initials}</TableCell>
-                      )}
-                      {columnVisibility['name'] && (
-                        <TableCell>{organization.name}</TableCell>
-                      )}
-                      {columnVisibility['contact_email'] && (
-                        <TableCell>{organization.contact_email}</TableCell>
-                      )}
-                      {columnVisibility['organization_type'] && (
-                        <TableCell>
-                          <Badge 
-                            variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
-                            className="h-5 text-[10px] px-1.5"
-                          >
-                            {organization.organization_type}
-                          </Badge>
-                        </TableCell>
-                      )}
-                      {columnVisibility['actions'] && (
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedOrganization(organization);
-                              setShowEditModal(true);
-                            }}
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        }}
+                        onKeyDown={(e) => {
+                          const target = e.target as HTMLElement;
+                          if (target instanceof HTMLButtonElement || 
+                              target instanceof HTMLInputElement ||
+                              target.closest('[role=\"checkbox\"]') ||
+                              target.closest('[data-radix-collection-item]') ||
+                              target.closest('.dropdown-trigger')) {
+                            return;
+                          }
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedOrganization(row.original);
+                            setShowEditModal(true);
+                          }
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
 
@@ -692,17 +718,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         
         {/* Pagination */}
         <TablePagination 
-          table={{
-            getState: () => ({ pagination }),
-            getPageCount: () => Math.ceil(filteredOrganizations.length / pagination.pageSize),
-            getCanPreviousPage: () => pagination.pageIndex > 0,
-            getCanNextPage: () => (pagination.pageIndex + 1) * pagination.pageSize < filteredOrganizations.length,
-            previousPage: () => setPagination(prev => ({ ...prev, pageIndex: Math.max(0, prev.pageIndex - 1) })),
-            nextPage: () => setPagination(prev => ({ ...prev, pageIndex: prev.pageIndex + 1 })),
-            setPageSize: (size: number) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
-            getRowModel: () => ({ rows: filteredOrganizations }),
-            getFilteredRowModel: () => ({ rows: filteredOrganizations })
-          } as any}
+          table={table}
           totalCount={filteredOrganizations.length}
           itemName="organizations"
           isMobile={isMobile}
