@@ -260,7 +260,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm font-semibold text-muted-foreground">
-                    Internal Invoice #
+                    Bill #
                   </Label>
                   <div className="mt-1 font-mono text-lg font-semibold">
                     {invoiceData.internal_bill_number}
@@ -269,7 +269,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                 
                 <div>
                   <Label className="text-sm font-semibold text-muted-foreground">
-                    Vendor Invoice #
+                    External Bill #
                   </Label>
                   <div className="mt-1 font-mono text-lg">
                     {invoiceData.external_bill_number || 'Not provided'}
@@ -321,7 +321,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">
-                      Invoice Date
+                      Bill Date
                     </Label>
                     <div className="mt-1">
                       {invDate ? format(invDate, 'MMM d, yyyy') : '—'}
@@ -375,12 +375,12 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
             <div className="flex gap-2">
               {canApprove && (
                 <Button onClick={() => setApproveDialogOpen(true)}>
-                  Approve Invoice
+                  Approve Bill
                 </Button>
               )}
               {canReject && (
                 <Button variant="destructive" onClick={() => setRejectDialogOpen(true)}>
-                  Reject Invoice
+                  Reject Bill
                 </Button>
               )}
               {canMarkPaid && (
@@ -634,9 +634,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
       <AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Approve Invoice</AlertDialogTitle>
+            <AlertDialogTitle>Approve Bill</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to approve this invoice? This action cannot be undone.
+              Are you sure you want to approve this bill? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
@@ -694,9 +694,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
       <AlertDialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mark Invoice as Paid</AlertDialogTitle>
+            <AlertDialogTitle>Mark Bill as Paid</AlertDialogTitle>
             <AlertDialogDescription>
-              Enter the payment reference number to mark this invoice as paid.
+              Enter the payment reference number to mark this bill as paid.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4 space-y-4">
