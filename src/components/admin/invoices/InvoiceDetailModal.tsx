@@ -243,11 +243,11 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button]:min-h-[44px] [&>button]:min-w-[44px]">
           <DialogHeader>
-            <DialogTitle>Invoice Details</DialogTitle>
+            <DialogTitle>Bill Details</DialogTitle>
             <DialogDescription>
-              View and manage invoice details, including approval status, payment information, and linked work orders.
+              View and manage bill details, including approval status, payment information, and linked work orders.
             </DialogDescription>
           </DialogHeader>
 
