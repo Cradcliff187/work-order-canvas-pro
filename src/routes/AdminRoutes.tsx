@@ -210,6 +210,16 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
+    <Route path="/admin/subcontractor-bills/create" element={
+      <ProtectedRoute requiredUserType="admin">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <SubmitBill />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
     {/* Redirect old invoices URL to new subcontractor-bills URL */}
     <Route path="/admin/invoices" element={<Navigate to="/admin/subcontractor-bills" replace />} />
     
