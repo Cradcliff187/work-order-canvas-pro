@@ -243,7 +243,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button]:min-h-[44px] [&>button]:min-w-[44px]">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 [&>button]:min-h-[44px] [&>button]:min-w-[44px]">
           <DialogHeader>
             <DialogTitle>Bill Details</DialogTitle>
             <DialogDescription>
