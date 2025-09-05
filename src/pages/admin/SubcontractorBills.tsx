@@ -450,8 +450,14 @@ export default function SubcontractorBills() {
               )}
             </div>
 
-            {/* Bulk actions row */}
+            {/* Filters and bulk actions row */}
             <div className="flex items-center gap-2 overflow-x-auto">
+              {/* Mobile Filters */}
+              <CompactSubcontractorBillFilters
+                value={filters}
+                onChange={handleFiltersChange}
+                onClear={handleClearFilters}
+              />
 
               {/* Bulk mode actions */}
               {bulkMode && selectedCount > 0 && (
