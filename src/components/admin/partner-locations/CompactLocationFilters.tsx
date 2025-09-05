@@ -122,11 +122,11 @@ export function CompactLocationFilters({
       </div>
       
       {/* Action buttons - matches Work Orders exactly */}
-      <div className="flex justify-between pt-4 border-t">
-        <Button variant="outline" onClick={handleClearFilters}>
+      <div className="flex gap-3 pt-4 border-t bg-background/95 backdrop-blur">
+        <Button variant="outline" onClick={handleClearFilters} className="flex-1 h-12">
           Clear
         </Button>
-        <Button onClick={handleApplyFilters}>
+        <Button onClick={handleApplyFilters} className="flex-1 h-12">
           Apply
         </Button>
       </div>
@@ -152,11 +152,8 @@ export function CompactLocationFilters({
         </div>
         
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-4" style={{ height: 'calc(100vh - 136px)' }}>
-          <div className="space-y-4">
-            {/* Filter fields go here, wrapped for mobile */}
-            <FilterContent />
-          </div>
+        <div className="max-h-[calc(100vh-140px)] overflow-y-auto p-4">
+          <FilterContent />
         </div>
       </div>
     );
