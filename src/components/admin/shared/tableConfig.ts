@@ -224,6 +224,24 @@ export const statusConfig = {
       label: "Unassigned",
       className: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
     }
+  },
+  partnerBilling: {
+    ready: {
+      label: "Ready to Invoice",
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
+    },
+    billed: {
+      label: "Invoiced",
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+    },
+    pending: {
+      label: "Pending",
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
+    },
+    null: {
+      label: "Not Ready",
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+    }
   }
 } as const;
 

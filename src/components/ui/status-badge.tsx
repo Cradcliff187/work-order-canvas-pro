@@ -11,7 +11,9 @@ import {
   DollarSign,
   FileText,
   TrendingUp,
-  Users
+  Users,
+  Check,
+  X
 } from 'lucide-react';
 
 interface StatusBadgeProps {
@@ -77,7 +79,12 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   // Assignment Status Icons
   internal: Users,
   external: Users,
-  unassigned: Circle
+  unassigned: Circle,
+  
+  // Partner Billing Status Icons
+  ready: CheckCircle,
+  billed: Check,
+  null: X
 };
 
 export function StatusBadge({
@@ -187,4 +194,8 @@ export function AssignedToStatusBadge(props: Omit<StatusBadgeProps, 'type'>) {
 
 export function ComputedFinancialStatusBadge(props: Omit<StatusBadgeProps, 'type'>) {
   return <StatusBadge type="computedFinancialStatus" {...props} />;
+}
+
+export function PartnerBillingStatusBadge(props: Omit<StatusBadgeProps, 'type'>) {
+  return <StatusBadge type="partnerBilling" {...props} />;
 }
