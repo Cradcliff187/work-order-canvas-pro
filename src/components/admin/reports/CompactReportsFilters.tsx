@@ -329,7 +329,7 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
         </div>
         
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="max-h-[calc(100vh-140px)] overflow-y-auto p-4 space-y-4">
           {/* Status Filter */}
           <div>
             <label className="text-sm font-medium mb-2 block">Report Status</label>
@@ -456,18 +456,18 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
         </div>
 
         {/* Sticky action buttons */}
-        <div className="border-t bg-background p-4">
-          <div className="flex gap-2">
+        <div className="p-4 border-t bg-background/95 backdrop-blur">
+          <div className="flex gap-3">
             <Button 
               variant="outline" 
               onClick={handleClearFilters}
-              className="flex-1"
+              className="flex-1 h-12"
             >
               Clear
             </Button>
             <Button 
               onClick={handleApplyFilters}
-              className="flex-1"
+              className="flex-1 h-12"
             >
               Apply
             </Button>

@@ -235,7 +235,7 @@ export function CompactInvoiceFilters({
         </div>
         
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="max-h-[calc(100vh-140px)] overflow-y-auto p-4 space-y-4">
           {/* Overdue Quick Filter */}
           <div>
             <label className="text-sm font-medium mb-2 block">Quick Filters</label>
@@ -326,12 +326,12 @@ export function CompactInvoiceFilters({
         </div>
         
         {/* Bottom action buttons */}
-        <div className="p-4 border-t bg-background">
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClearFilters} className="flex-1">
+        <div className="p-4 border-t bg-background/95 backdrop-blur">
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={handleClearFilters} className="flex-1 h-12">
               Clear
             </Button>
-            <Button onClick={handleApplyFilters} className="flex-1">
+            <Button onClick={handleApplyFilters} className="flex-1 h-12">
               Apply
             </Button>
           </div>

@@ -313,7 +313,7 @@ export const CompactSubcontractorBillFilters: React.FC<CompactSubcontractorBillF
           </div>
           
           {/* Scrollable content with safe area padding */}
-          <div className="flex-1 overflow-y-auto px-4 py-6 pb-safe-offset-4">
+          <div className="max-h-[calc(100vh-140px)] overflow-y-auto px-4 py-6 pb-safe-offset-4">
             <FilterContent isMobileVersion={true} />
           </div>
         </div>
