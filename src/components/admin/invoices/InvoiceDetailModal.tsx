@@ -578,60 +578,106 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                 </Badge>
               </h3>
               
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Work Order #</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Description</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(invoiceData.subcontractor_bill_work_orders ?? []).map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-mono">
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto font-mono text-primary"
-                          onClick={() => window.open(`/admin/work-orders/${item.work_order_id}`, '_blank')}
-                        >
-                          {(item.work_orders?.work_order_number && item.work_orders.work_order_number.trim()) 
-                            ? item.work_orders.work_order_number 
-                            : item.work_order_id}
-                          <ExternalLink className="ml-1 h-3 w-3" />
-                        </Button>
-                      </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <div className="truncate" title={item.work_orders?.title}>
-                          {item.work_orders?.title || 'Work Order'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[150px]">
-                        <div className="text-sm">
-                          {item.work_orders?.store_location && (
-                            <div className="font-medium">{item.work_orders.store_location}</div>
-                          )}
-                          {(item.work_orders?.street_address || item.work_orders?.city) && (
-                            <div className="text-muted-foreground truncate">
-                              {[item.work_orders?.street_address, item.work_orders?.city, item.work_orders?.state]
-                                .filter(Boolean)
-                                .join(', ')}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(Number(item.amount), true)}
-                      </TableCell>
-                      <TableCell className="max-w-[300px] whitespace-pre-wrap break-words">
-                        {item.work_orders?.description?.trim() || '—'}
-                      </TableCell>
+              {/* Desktop Table View */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Work Order #</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Description</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {(invoiceData.subcontractor_bill_work_orders ?? []).map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-mono">
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto font-mono text-primary"
+                            onClick={() => window.open(`/admin/work-orders/${item.work_order_id}`, '_blank')}
+                          >
+                            {(item.work_orders?.work_order_number && item.work_orders.work_order_number.trim()) 
+                              ? item.work_orders.work_order_number 
+                              : item.work_order_id}
+                            <ExternalLink className="ml-1 h-3 w-3" />
+                          </Button>
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          <div className="truncate" title={item.work_orders?.title}>
+                            {item.work_orders?.title || 'Work Order'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-[150px]">
+                          <div className="text-sm">
+                            {item.work_orders?.store_location && (
+                              <div className="font-medium">{item.work_orders.store_location}</div>
+                            )}
+                            {(item.work_orders?.street_address || item.work_orders?.city) && (
+                              <div className="text-muted-foreground truncate">
+                                {[item.work_orders?.street_address, item.work_orders?.city, item.work_orders?.state]
+                                  .filter(Boolean)
+                                  .join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(Number(item.amount), true)}
+                        </TableCell>
+                        <TableCell className="max-w-[300px] whitespace-pre-wrap break-words">
+                          {item.work_orders?.description?.trim() || '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="block sm:hidden space-y-3">
+                {(invoiceData.subcontractor_bill_work_orders ?? []).map((item) => (
+                  <Card key={item.id} className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-mono text-primary text-sm font-medium"
+                        onClick={() => window.open(`/admin/work-orders/${item.work_order_id}`, '_blank')}
+                      >
+                        {(item.work_orders?.work_order_number && item.work_orders.work_order_number.trim()) 
+                          ? item.work_orders.work_order_number 
+                          : item.work_order_id}
+                        <ExternalLink className="ml-1 h-3 w-3" />
+                      </Button>
+                      <span className="font-semibold">{formatCurrency(Number(item.amount), true)}</span>
+                    </div>
+                    <div className="text-sm text-muted-foreground mb-1">
+                      {item.work_orders?.store_location && (
+                        <div className="font-medium text-foreground">{item.work_orders.store_location}</div>
+                      )}
+                      {(item.work_orders?.street_address || item.work_orders?.city) && (
+                        <div>
+                          {[item.work_orders?.street_address, item.work_orders?.city, item.work_orders?.state]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </div>
+                      )}
+                    </div>
+                    {item.work_orders?.title && (
+                      <div className="text-sm font-medium mb-1">
+                        {item.work_orders.title}
+                      </div>
+                    )}
+                    {item.work_orders?.description?.trim() && (
+                      <p className="text-sm line-clamp-2 text-muted-foreground">
+                        {item.work_orders.description}
+                      </p>
+                    )}
+                  </Card>
+                ))}
+              </div>
             </div>
             </div>
           )}
