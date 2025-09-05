@@ -74,7 +74,7 @@ export function AdminFilterBar({
           side={sheetSide} 
           className={clsx(
             'w-full',
-            sheetSide === 'bottom' ? 'h-[85vh]' : 'sm:w-[420px]'
+            sheetSide === 'bottom' ? 'max-h-[85vh]' : 'sm:w-[420px]'
           )}
         >
           <SheetHeader>
