@@ -290,71 +290,73 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                 </CardContent>
               </Card>
 
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-semibold text-muted-foreground">
-                    Subcontractor
-                  </Label>
-                  <div className="mt-1 text-lg font-medium">
-                    {invoiceData.subcontractor_organization.name}
-                  </div>
-                </div>
-              </div>
+              <Card className="bg-muted/10">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-semibold text-muted-foreground">
+                        Subcontractor
+                      </Label>
+                      <div className="mt-1 text-lg font-medium">
+                        {invoiceData.subcontractor_organization.name}
+                      </div>
+                    </div>
 
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-semibold text-muted-foreground">
-                    Total Amount
-                  </Label>
-                  <div className="mt-1 text-2xl font-bold">{formatCurrency(Number(invoiceData.total_amount), true)}</div>
-                </div>
+                    <div>
+                      <Label className="text-sm font-semibold text-muted-foreground">
+                        Total Amount
+                      </Label>
+                      <div className="mt-1 text-2xl font-bold">{formatCurrency(Number(invoiceData.total_amount), true)}</div>
+                    </div>
 
-                <div>
-                  <Label className="text-sm font-semibold text-muted-foreground">
-                    Status
-                  </Label>
-                  <div className="mt-1 flex items-center gap-2">
-                    <FinancialStatusBadge status={invoiceData.status} size="sm" showIcon />
-                    {isOverdue && (
-                      <Badge variant="destructive" className="gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        Overdue
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+                    <div>
+                      <Label className="text-sm font-semibold text-muted-foreground">
+                        Status
+                      </Label>
+                      <div className="mt-1 flex items-center gap-2">
+                        <FinancialStatusBadge status={invoiceData.status} size="sm" showIcon />
+                        {isOverdue && (
+                          <Badge variant="destructive" className="gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            Overdue
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">
-                      Bill Date
-                    </Label>
-                    <div className="mt-1">
-                      {invDate ? format(invDate, 'MMM d, yyyy') : '—'}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">
+                          Bill Date
+                        </Label>
+                        <div className="mt-1">
+                          {invDate ? format(invDate, 'MMM d, yyyy') : '—'}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">
+                          Due Date
+                        </Label>
+                        <div className="mt-1">
+                          {dueDate ? format(dueDate, 'MMM d, yyyy') : '—'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-semibold text-muted-foreground">
+                        Submitted Date
+                      </Label>
+                      <div className="mt-1">
+                        {invoiceData.submitted_at
+                          ? format(new Date(invoiceData.submitted_at), 'MMM d, yyyy')
+                          : 'Not submitted'
+                        }
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">
-                      Due Date
-                    </Label>
-                    <div className="mt-1">
-                      {dueDate ? format(dueDate, 'MMM d, yyyy') : '—'}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-semibold text-muted-foreground">
-                    Submitted Date
-                  </Label>
-                  <div className="mt-1">
-                    {invoiceData.submitted_at
-                      ? format(new Date(invoiceData.submitted_at), 'MMM d, yyyy')
-                      : 'Not submitted'
-                    }
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
 
             <Separator />
