@@ -243,7 +243,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 [&>button]:min-h-[44px] [&>button]:min-w-[44px]">
+        <DialogContent className="w-full sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 [&>button]:min-h-[44px] [&>button]:min-w-[44px]">
           <DialogHeader>
             <DialogTitle>Bill Details</DialogTitle>
             <DialogDescription>
@@ -256,12 +256,12 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
           ) : (
           <div className="space-y-6">
             {/* Invoice Header */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <Card className="bg-muted/10">
                 <CardContent className="pt-6">
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-sm font-semibold text-muted-foreground">
+                      <Label className="text-sm sm:text-base font-semibold text-muted-foreground">
                         Bill #
                       </Label>
                       <div className="mt-1 font-mono text-lg font-semibold">
@@ -270,7 +270,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     </div>
                     
                     <div>
-                      <Label className="text-sm font-semibold text-muted-foreground">
+                      <Label className="text-sm sm:text-base font-semibold text-muted-foreground">
                         External Bill #
                       </Label>
                       <div className="mt-1 font-mono text-lg">
@@ -279,7 +279,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     </div>
 
                     <div>
-                      <Label className="text-sm font-semibold text-muted-foreground">
+                      <Label className="text-sm sm:text-base font-semibold text-muted-foreground">
                         Purchase Order #
                       </Label>
                       <div className="mt-1">
@@ -294,7 +294,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                 <CardContent className="pt-6">
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-sm font-semibold text-muted-foreground">
+                      <Label className="text-sm sm:text-base font-semibold text-muted-foreground">
                         Subcontractor
                       </Label>
                       <div className="mt-1 text-lg font-medium">
@@ -303,14 +303,14 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     </div>
 
                     <div>
-                      <Label className="text-sm font-semibold text-muted-foreground">
+                      <Label className="text-sm sm:text-base font-semibold text-muted-foreground">
                         Total Amount
                       </Label>
                       <div className="mt-1 text-2xl font-bold">{formatCurrency(Number(invoiceData.total_amount), true)}</div>
                     </div>
 
                     <div>
-                      <Label className="text-sm font-semibold text-muted-foreground">
+                      <Label className="text-sm sm:text-base font-semibold text-muted-foreground">
                         Status
                       </Label>
                       <div className="mt-1 flex items-center gap-2">
@@ -324,9 +324,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-sm font-medium text-muted-foreground">
+                        <Label className="text-sm sm:text-base font-medium text-muted-foreground">
                           Bill Date
                         </Label>
                         <div className="mt-1">
@@ -334,7 +334,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                         </div>
                       </div>
                       <div>
-                        <Label className="text-sm font-medium text-muted-foreground">
+                        <Label className="text-sm sm:text-base font-medium text-muted-foreground">
                           Due Date
                         </Label>
                         <div className="mt-1">
@@ -344,7 +344,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     </div>
 
                     <div>
-                      <Label className="text-sm font-semibold text-muted-foreground">
+                      <Label className="text-sm sm:text-base font-semibold text-muted-foreground">
                         Submitted Date
                       </Label>
                       <div className="mt-1">
@@ -362,15 +362,15 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
             <Separator />
 
             {/* Subcontractor Notes and Terms */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Subcontractor Notes</Label>
+                <Label className="text-sm sm:text-base font-medium text-muted-foreground">Subcontractor Notes</Label>
                 <div className="mt-1 p-3 bg-muted rounded-md min-h-[48px]">
                   {(invoiceData as any).subcontractor_notes || '—'}
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Payment Terms</Label>
+                <Label className="text-sm sm:text-base font-medium text-muted-foreground">Payment Terms</Label>
                 <div className="mt-1">
                   {(invoiceData as any).payment_terms || 'Net 30'}
                 </div>
@@ -404,10 +404,10 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                 <Separator />
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Payment Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {invoiceData.approved_at && (
                       <div>
-                        <Label className="text-sm font-medium text-muted-foreground">
+                        <Label className="text-sm sm:text-base font-medium text-muted-foreground">
                           Approved Date
                         </Label>
                         <div className="mt-1">
@@ -423,7 +423,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     
                     {invoiceData.paid_at && (
                       <div>
-                        <Label className="text-sm font-medium text-muted-foreground">
+                        <Label className="text-sm sm:text-base font-medium text-muted-foreground">
                           Paid Date
                         </Label>
                         <div className="mt-1">
@@ -440,7 +440,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   
                   {invoiceData.approval_notes && (
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">
+                      <Label className="text-sm sm:text-base font-medium text-muted-foreground">
                         Notes
                       </Label>
                       <div className="mt-1 p-3 bg-muted rounded-md">
@@ -455,7 +455,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
             {/* Attachments */}
             <Separator />
             <div className="space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h3 className="text-lg font-semibold">
                   Attachments
                   <Badge variant="secondary" className="ml-2">{attachments.length}</Badge>
