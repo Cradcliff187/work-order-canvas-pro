@@ -700,7 +700,8 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             previousPage: () => setPagination(prev => ({ ...prev, pageIndex: Math.max(0, prev.pageIndex - 1) })),
             nextPage: () => setPagination(prev => ({ ...prev, pageIndex: prev.pageIndex + 1 })),
             setPageSize: (size: number) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
-            getRowModel: () => ({ rows: filteredOrganizations })
+            getRowModel: () => ({ rows: filteredOrganizations }),
+            getFilteredRowModel: () => ({ rows: filteredOrganizations })
           } as any}
           totalCount={filteredOrganizations.length}
           itemName="organizations"
