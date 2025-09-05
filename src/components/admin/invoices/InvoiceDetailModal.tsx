@@ -257,34 +257,40 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
           <div className="space-y-6">
             {/* Invoice Header */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-muted/10">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-semibold text-muted-foreground">
+                        Bill #
+                      </Label>
+                      <div className="mt-1 font-mono text-lg font-semibold">
+                        {invoiceData.internal_bill_number}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-semibold text-muted-foreground">
+                        External Bill #
+                      </Label>
+                      <div className="mt-1 font-mono text-lg">
+                        {invoiceData.external_bill_number || 'Not provided'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-semibold text-muted-foreground">
+                        Purchase Order #
+                      </Label>
+                      <div className="mt-1">
+                        {(invoiceData as any).purchase_order_number || '—'}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-semibold text-muted-foreground">
-                    Bill #
-                  </Label>
-                  <div className="mt-1 font-mono text-lg font-semibold">
-                    {invoiceData.internal_bill_number}
-                  </div>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-semibold text-muted-foreground">
-                    External Bill #
-                  </Label>
-                  <div className="mt-1 font-mono text-lg">
-                    {invoiceData.external_bill_number || 'Not provided'}
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-semibold text-muted-foreground">
-                    Purchase Order #
-                  </Label>
-                  <div className="mt-1">
-                    {(invoiceData as any).purchase_order_number || '—'}
-                  </div>
-                </div>
-
                 <div>
                   <Label className="text-sm font-semibold text-muted-foreground">
                     Subcontractor
