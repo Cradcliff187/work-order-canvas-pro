@@ -393,7 +393,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
               )}
               {canMarkPaid && (
                 <Button variant="outline" onClick={() => setPaymentDialogOpen(true)}>
-                  Mark as Paid
+                  Mark Bill as Paid
                 </Button>
               )}
             </div>
