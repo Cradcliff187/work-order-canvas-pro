@@ -230,20 +230,28 @@ export const statusConfig = {
     }
   },
   partnerBilling: {
+    work_pending: {
+      label: "Work Pending",
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
+    },
+    report_pending: {
+      label: "Report Pending", 
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
+    },
+    bill_needed: {
+      label: "Bill Needed",
+      className: "bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700"
+    },
+    bill_pending: {
+      label: "Bill Pending",
+      className: "bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700"
+    },
     ready: {
       label: "Ready to Invoice",
       className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     billed: {
       label: "Invoiced",
-      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
-    },
-    pending: {
-      label: "Pending",
-      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
-    },
-    null: {
-      label: "Not Ready",
       className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     }
   }

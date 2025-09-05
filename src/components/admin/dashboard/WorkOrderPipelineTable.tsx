@@ -63,30 +63,40 @@ export function WorkOrderPipelineTable({
   const navigate = useNavigate();
   const isMobileDevice = useIsMobile();
 
-  // Helper function to get partner invoicing status based on workflow
-  const getPartnerInvoicingStatus = (item: WorkOrderPipelineItem): string => {
-    // Based on the 4-step workflow: Report Created → Subcontractor Bill → Bill Approved → Invoice Partner
+  // Helper function to get partner billing status based on workflow
+  const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
+    // If work not completed → "Work Pending"
     if (item.status !== 'completed') {
-      return 'report_pending'; // Work not completed yet
+      return 'work_pending';
     }
     
+    // If report not approved → "Report Pending"  
     if (item.report_status !== 'approved') {
-      return 'invoice_needed'; // Report not approved yet
+      return 'report_pending';
     }
     
-    if (item.invoice_status === 'submitted' || item.invoice_status === 'pending') {
-      return 'invoice_pending'; // Has pending subcontractor bills
+    // If no subcontractor bill → "Bill Needed"
+    if (!item.invoice_status) {
+      return 'bill_needed';
     }
     
-    if (item.partner_bill_status === 'billed' || item.partner_billed_at) {
-      return 'billed'; // Already invoiced to partner
+    // If bill pending (submitted) → "Bill Pending"
+    if (item.invoice_status === 'submitted') {
+      return 'bill_pending';
     }
     
-    if (item.invoice_status === 'approved') {
-      return 'ready_to_bill'; // Has approved bills, ready to invoice partner
+    // If partner_bill_status='billed' → "Invoiced"
+    if (item.partner_bill_status === 'billed') {
+      return 'billed';
     }
     
-    return 'invoice_needed'; // Default - needs subcontractor bill
+    // If bill approved & partner_bill_status='ready' → "Ready to Invoice"
+    if (item.invoice_status === 'approved' && item.partner_bill_status === 'ready') {
+      return 'ready';
+    }
+    
+    // Default fallback
+    return 'bill_needed';
   };
 
   const tableColumns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
@@ -278,7 +288,7 @@ export function WorkOrderPipelineTable({
     {
       id: 'partner_invoicing',
       header: 'Partner Invoicing Status',
-      cell: ({ row }) => <StatusBadge type="partnerInvoicing" status={getPartnerInvoicingStatus(row.original)} size="sm" showIcon />,
+      cell: ({ row }) => <StatusBadge type="partnerBilling" status={getPartnerBillingStatus(row.original)} size="sm" showIcon />,
     },
     {
       id: 'amount',
