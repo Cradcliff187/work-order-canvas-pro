@@ -197,107 +197,105 @@ export default function BillingDashboard() {
 
   return (
     <>
-      <main className="container mx-auto p-6 space-y-6 max-w-7xl">
-        {/* Header */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Billing Pipeline</h1>
-            <p className="text-muted-foreground">
-              {totalWorkOrders} work orders in pipeline
-              {totalValue > 0 && (
-                <span className="ml-2">• {formatCurrency(totalValue)} total value</span>
-              )}
-            </p>
-          </div>
-          <Button onClick={handleGeneratePartnerInvoice} className="shrink-0">
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Partner Invoice
-          </Button>
-        </header>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold">{totalWorkOrders}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Ready to Invoice</p>
-                <p className="text-2xl font-bold">{readyToBill}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-500/10 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending Reports</p>
-                <p className="text-2xl font-bold">{pendingReports}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-destructive/10 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-xl font-bold">{formatCurrency(totalValue)}</p>
-              </div>
-            </div>
-          </Card>
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Billing Pipeline</h1>
+          <p className="text-muted-foreground">
+            {totalWorkOrders} work orders in pipeline
+            {totalValue > 0 && (
+              <span className="ml-2">• {formatCurrency(totalValue)} total value</span>
+            )}
+          </p>
         </div>
+        <Button onClick={handleGeneratePartnerInvoice} className="shrink-0">
+          <FileText className="h-4 w-4 mr-2" />
+          Generate Partner Invoice
+        </Button>
+      </header>
 
-        {/* Pipeline Table */}
-        <BillingPipelineTable
-          data={filteredPipelineData}
-          isLoading={pipelineLoading}
-          isError={pipelineError}
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          allowedModes={['table', 'card']}
-          filters={filters}
-          onFiltersChange={setFilters}
-          onClearFilters={clearFilters}
-          filterCount={filterCount}
-          columnVisibilityColumns={getAllColumns()}
-          onToggleColumn={toggleColumn}
-          onResetColumns={resetToDefaults}
-          onExport={handleExport}
-          onRefresh={handleRefresh}
-          isMobile={isMobile}
-        />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total Items</p>
+              <p className="text-2xl font-bold">{totalWorkOrders}</p>
+            </div>
+          </div>
+        </Card>
 
-        {/* Invoice Detail Modal */}
-        <InvoiceDetailModal
-          invoice={selectedInvoice}
-          isOpen={invoiceModalOpen}
-          onClose={() => {
-            setInvoiceModalOpen(false);
-            setSelectedInvoice(null);
-          }}
-        />
-      </main>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-500/10 rounded-lg">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Ready to Invoice</p>
+              <p className="text-2xl font-bold">{readyToBill}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-yellow-500/10 rounded-lg">
+              <Clock className="h-5 w-5 text-yellow-500" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Pending Reports</p>
+              <p className="text-2xl font-bold">{pendingReports}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-destructive/10 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total Value</p>
+              <p className="text-xl font-bold">{formatCurrency(totalValue)}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Pipeline Table */}
+      <BillingPipelineTable
+        data={filteredPipelineData}
+        isLoading={pipelineLoading}
+        isError={pipelineError}
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        allowedModes={['table', 'card']}
+        filters={filters}
+        onFiltersChange={setFilters}
+        onClearFilters={clearFilters}
+        filterCount={filterCount}
+        columnVisibilityColumns={getAllColumns()}
+        onToggleColumn={toggleColumn}
+        onResetColumns={resetToDefaults}
+        onExport={handleExport}
+        onRefresh={handleRefresh}
+        isMobile={isMobile}
+      />
+
+      {/* Invoice Detail Modal */}
+      <InvoiceDetailModal
+        invoice={selectedInvoice}
+        isOpen={invoiceModalOpen}
+        onClose={() => {
+          setInvoiceModalOpen(false);
+          setSelectedInvoice(null);
+        }}
+      />
     </>
   );
 }
