@@ -467,32 +467,6 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
               />
             </div>
           </div>
-          
-          {/* Mobile toolbar */}
-          <div className="sm:hidden bg-muted/30 border rounded-lg p-3 space-y-3 m-4">
-            <SmartSearchInput
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full"
-            />
-            <div className="flex items-center gap-2">
-              <CompactOrganizationFilters
-                value={{
-                  organizationType: typeFilter,
-                  status: statusFilter
-                }}
-                onChange={(filters) => {
-                  setTypeFilter(filters.organizationType || 'all');
-                  setStatusFilter(filters.status || 'all');
-                }}
-                onClear={() => {
-                  setTypeFilter('all');
-                  setStatusFilter('all');
-                }}
-              />
-            </div>
-          </div>
         </div>
 
         <CardContent className="p-0">
