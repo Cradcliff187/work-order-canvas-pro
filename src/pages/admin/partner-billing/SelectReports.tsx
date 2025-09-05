@@ -195,7 +195,7 @@ export default function SelectBills() {
     getCanPreviousPage: () => pagination.pageIndex > 0,
     getCanNextPage: () => (pagination.pageIndex + 1) * pagination.pageSize < filteredAndSortedBills.length,
     getPageCount: () => Math.ceil(filteredAndSortedBills.length / pagination.pageSize)
-  };
+  } as any;
 
   // Calculate totals based on selected bills
   const calculations = useMemo(() => {
@@ -652,7 +652,7 @@ export default function SelectBills() {
                           <MobileTableCard 
                             key={bill.bill_id}
                             selected={isSelected}
-                            onSelectChange={(checked) => handleBillToggle(bill.bill_id, checked)}
+        onSelect={(checked) => handleBillToggle(bill.bill_id, checked)}
                           >
                             <div className="space-y-3">
                               <div className="flex items-start justify-between">

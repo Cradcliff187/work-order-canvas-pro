@@ -29,7 +29,7 @@ interface MobileTableCardProps {
   className?: string;
   metadata?: Array<{ label: string; value: string }>;
   selected?: boolean;
-  onSelect?: () => void;
+  onSelect?: (checked: boolean) => void;
 }
 
 export function MobileTableCard({ 

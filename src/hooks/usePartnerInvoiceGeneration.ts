@@ -59,20 +59,21 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
   const invoiceNumber = await generatePartnerInvoiceNumber();
   const invoiceDate = new Date().toISOString().split('T')[0];
   
-  // Get selected reports with their costs
-  const { data: selectedReports, error: reportsError } = await supabase
-    .from('work_order_reports')
+  // Get selected bills with their details
+  const { data: selectedBills, error: billsError } = await supabase
+    .from('subcontractor_bills')
     .select(`
       id,
-      work_order_id,
-      work_performed,
-      subcontractor_costs:subcontractor_bill_work_orders!work_order_report_id(amount)
+      internal_bill_number,
+      external_bill_number,
+      total_amount,
+      subcontractor_organization_id
     `)
-    .in('id', data.selectedReportIds)
+    .in('id', data.selectedBillIds)
     .eq('status', 'approved');
     
-  if (reportsError || !selectedReports) {
-    throw new Error('Failed to fetch selected reports');
+  if (billsError || !selectedBills) {
+    throw new Error('Failed to fetch selected bills');
   }
 
   // Create partner invoice
@@ -96,17 +97,17 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     throw new Error('Failed to create partner invoice');
   }
 
-  // Create line items
-  const lineItems = selectedReports.map(report => {
-    const cost = report.subcontractor_costs?.reduce((sum: number, cost: any) => sum + Number(cost.amount), 0) || 0;
+  // Create line items from bills
+  const lineItems = selectedBills.map(bill => {
+    const cost = bill.total_amount || 0;
     const markupAmount = cost * (data.markupPercentage / 100);
     const totalAmount = cost + markupAmount;
     
     return {
       partner_invoice_id: partnerInvoice.id,
-      work_order_report_id: report.id,
+      work_order_report_id: null, // Bills don't have specific work order reports
       amount: totalAmount,
-      description: report.work_performed.substring(0, 200)
+      description: `Bill ${bill.internal_bill_number}${bill.external_bill_number ? ` (${bill.external_bill_number})` : ''}`
     };
   });
   
@@ -119,18 +120,16 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
   }
 
 
-  // Update work order reports with billing info
+  // Update bills with partner billing info
   const { error: updateError } = await supabase
-    .from('work_order_reports')
+    .from('subcontractor_bills')
     .update({
-      partner_invoice_id: partnerInvoice.id,
-      partner_billed_at: new Date().toISOString(),
-      partner_billed_amount: data.totalAmount
+      partner_billing_status: 'invoiced'
     })
-    .in('id', data.selectedReportIds);
+    .in('id', data.selectedBillIds);
     
   if (updateError) {
-    throw new Error('Failed to update work order reports');
+    throw new Error('Failed to update bill status');
   }
 
   return {
@@ -147,7 +146,7 @@ export function usePartnerInvoiceGeneration() {
     mutationFn: generatePartnerInvoice,
     onSuccess: (result) => {
       // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['partner-unbilled-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['partner-ready-bills'] });
       queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
       
       toast({
