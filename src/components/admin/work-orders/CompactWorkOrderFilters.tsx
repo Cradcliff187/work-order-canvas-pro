@@ -514,12 +514,12 @@ export const CompactWorkOrderFilters: React.FC<CompactWorkOrderFiltersProps> = (
         </div>
         
         {/* Bottom action buttons */}
-        <div className="p-4 border-t bg-background">
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClearFilters} className="flex-1">
+        <div className="p-4 border-t bg-background/95 backdrop-blur">
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={handleClearFilters} className="flex-1 h-12">
               Clear
             </Button>
-            <Button onClick={handleApplyFilters} className="flex-1">
+            <Button onClick={handleApplyFilters} className="flex-1 h-12">
               Apply
             </Button>
           </div>
