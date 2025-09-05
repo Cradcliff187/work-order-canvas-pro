@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface GeneratePartnerInvoiceData {
   partnerOrganizationId: string;
-  selectedReportIds: string[];
+  selectedBillIds: string[];
   markupPercentage: number;
   subtotal: number;
   totalAmount: number;

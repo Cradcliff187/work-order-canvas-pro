@@ -2324,17 +2324,19 @@ export type Database = {
           work_order_count: number
         }[]
       }
-      get_partner_unbilled_reports_with_approved_bills: {
+      get_partner_ready_bills: {
         Args: { partner_org_id: string }
         Returns: {
-          approved_subcontractor_bill_amount: number
-          location_name: string
-          report_date: string
-          status: string
-          total_cost: number
-          work_order_id: string
-          work_order_number: string
-          work_order_report_id: string
+          bill_date: string
+          bill_id: string
+          external_bill_number: string
+          internal_bill_number: string
+          subcontractor_org_initials: string
+          subcontractor_org_name: string
+          subcontractor_organization_id: string
+          total_amount: number
+          work_order_count: number
+          work_order_numbers: string[]
         }[]
       }
       get_profile_id_direct: {
