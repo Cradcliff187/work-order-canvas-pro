@@ -246,7 +246,7 @@ export function WorkOrderPipelineTable({
       cell: ({ row }) => {
         const item = row.original;
         const reportStatus = item.report_status || 'not_submitted';
-        return <ReportStatusBadge status={reportStatus} size="sm" />;
+        return <ReportStatusBadge status={reportStatus} size="sm" showIcon />;
       },
     },
     {
