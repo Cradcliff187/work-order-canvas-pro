@@ -19,6 +19,7 @@ import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/li
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { CompactEmployeeFilters } from '@/components/admin/employees/CompactEmployeeFilters';
 
 export default function AdminEmployees() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -293,37 +294,25 @@ export default function AdminEmployees() {
             </div>
             
             <div className="flex gap-2 items-center">
-              <Button
-                variant={activeFilter === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveFilter('all')}
-              >
-                All ({data?.totalCount || 0})
-              </Button>
-              <Button
-                variant={activeFilter === 'active' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveFilter('active')}
-              >
-                Active ({data?.activeCount || 0})
-              </Button>
-              <Button
-                variant={activeFilter === 'inactive' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveFilter('inactive')}
-              >
-                Inactive ({data?.inactiveCount || 0})
-              </Button>
-              <div className="flex items-center gap-2">
-                <div className="flex flex-col">
-                  <label className="text-xs text-muted-foreground">From</label>
-                  <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9" />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-muted-foreground">To</label>
-                  <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9" />
-                </div>
-              </div>
+              <CompactEmployeeFilters
+                value={{ activeFilter, dateFrom, dateTo }}
+                onChange={(filters) => {
+                  if (filters.activeFilter !== undefined) setActiveFilter(filters.activeFilter);
+                  if (filters.dateFrom !== undefined) setDateFrom(filters.dateFrom);
+                  if (filters.dateTo !== undefined) setDateTo(filters.dateTo);
+                }}
+                onClear={() => {
+                  setActiveFilter('all');
+                  setDateFrom('');
+                  setDateTo('');
+                  try {
+                    localStorage.removeItem('admin-employees-filters-v1');
+                  } catch {}
+                }}
+                totalCount={data?.totalCount || 0}
+                activeCount={data?.activeCount || 0}
+                inactiveCount={data?.inactiveCount || 0}
+              />
               <ColumnVisibilityDropdown 
                 columns={columnOptions}
                 onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
