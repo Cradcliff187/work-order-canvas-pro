@@ -38,7 +38,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Main content with consistent container and padding */}
           <main id="main-content" role="main" tabIndex={-1} className={`flex-1 overflow-x-hidden overflow-y-auto ${mainPaddingClass}`}>
-            <div className={`container mx-auto ${contentPaddingClass} ${maxWidthClass}`}>
+            <div className={`${contentPaddingClass} ${maxWidthClass}`}>
               {children}
             </div>
           </main>
