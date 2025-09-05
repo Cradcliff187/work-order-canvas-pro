@@ -456,22 +456,20 @@ export const CompactReportsFilters: React.FC<CompactReportsFiltersProps> = ({
         </div>
 
         {/* Sticky action buttons */}
-        <div className="p-4 border-t bg-background/95 backdrop-blur">
-          <div className="flex gap-3">
-            <Button 
-              variant="outline" 
-              onClick={handleClearFilters}
-              className="flex-1 h-12"
-            >
-              Clear
-            </Button>
-            <Button 
-              onClick={handleApplyFilters}
-              className="flex-1 h-12"
-            >
-              Apply
-            </Button>
-          </div>
+        <div className="flex gap-3 pt-4 border-t bg-background/95 backdrop-blur">
+          <Button 
+            variant="outline" 
+            onClick={handleClearFilters}
+            className="flex-1 h-12"
+          >
+            Clear
+          </Button>
+          <Button 
+            onClick={handleApplyFilters}
+            className="flex-1 h-12"
+          >
+            Apply
+          </Button>
         </div>
       </div>
     );
