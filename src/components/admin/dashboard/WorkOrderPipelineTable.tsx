@@ -103,15 +103,45 @@ export function WorkOrderPipelineTable({
     {
       id: 'work_order_number',
       header: 'WO #',
-      size: 150, // Fixed width
+      size: 150,
       cell: ({ row }) => {
         const item = row.original;
         
+        const copyToClipboard = (e: React.MouseEvent) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(item.work_order_number || '');
+        };
+
         return (
           <div className="flex items-center gap-1.5">
-            <span className="font-mono text-sm font-medium tracking-tight">
-              {item.work_order_number}
-            </span>
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <span className="font-mono text-sm font-medium tracking-tight cursor-pointer hover:text-primary transition-colors">
+                  {item.work_order_number}
+                </span>
+              </HoverCardTrigger>
+              <HoverCardContent 
+                className="z-[99999] w-auto max-w-[300px] p-3 bg-popover border shadow-lg" 
+                align="start" 
+                side="right"
+                sideOffset={5}
+              >
+                <div className="space-y-2">
+                  <div className="font-mono font-semibold">{item.work_order_number}</div>
+                  {item.title && (
+                    <div className="text-sm text-muted-foreground">{item.title}</div>
+                  )}
+                  <button 
+                    onClick={copyToClipboard}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 mt-2"
+                  >
+                    <Copy className="h-3 w-3" />
+                    Copy to clipboard
+                  </button>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+            
             {item.age_days !== undefined && (
               <Badge 
                 variant={item.is_overdue ? 'destructive' : 'outline'} 
