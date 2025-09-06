@@ -335,6 +335,34 @@ export function WorkOrderPipelineTable({
         );
       },
     },
+    {
+      id: 'profit_margin',
+      header: 'Margin',
+      cell: ({ row }) => {
+        const item = row.original;
+        
+        if (!item.subcontractor_bill_amount) {
+          return <span className="text-muted-foreground text-sm">—</span>;
+        }
+        
+        const partnerAmount = item.partner_billed_amount || 
+          (item.subcontractor_bill_amount * (1 + (item.internal_markup_percentage || 30) / 100));
+        
+        const margin = partnerAmount - item.subcontractor_bill_amount;
+        const marginPercent = (margin / partnerAmount) * 100;
+        
+        return (
+          <div className="text-right text-sm">
+            <div className="font-medium text-green-600 dark:text-green-400">
+              ${margin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {marginPercent.toFixed(1)}%
+            </div>
+          </div>
+        );
+      },
+    },
   ], []);
 
   const table = useReactTable({
@@ -431,6 +459,20 @@ export function WorkOrderPipelineTable({
                         return `$${amount.toLocaleString()}`;
                       }
                       return '—';
+                    })()
+                  },
+                  { 
+                    label: 'Margin', 
+                    value: (() => {
+                      if (!item.subcontractor_bill_amount) return '—';
+                      
+                      const partnerAmount = item.partner_billed_amount || 
+                        (item.subcontractor_bill_amount * (1 + (item.internal_markup_percentage || 30) / 100));
+                      
+                      const margin = partnerAmount - item.subcontractor_bill_amount;
+                      const marginPercent = (margin / partnerAmount) * 100;
+                      
+                      return `$${margin.toLocaleString()} (${marginPercent.toFixed(1)}%)`;
                     })()
                   }
                 ]}
