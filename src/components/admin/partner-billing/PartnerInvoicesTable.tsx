@@ -1,9 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -12,30 +9,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { 
-  Search, 
-  X, 
-  FileText, 
-  Eye, 
-  Download, 
-  Upload,
-  MoreVertical 
-} from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
+import { FileText, Eye } from 'lucide-react';
 import { ViewMode } from '@/hooks/useViewMode';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { SkeletonGroup } from '@/components/ui/enhanced-skeleton';
-import { InvoiceFilters } from './InvoiceFilters';
+import { TableToolbar } from '@/components/admin/shared/TableToolbar';
+import { Button } from '@/components/ui/button';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { PartnerInvoiceActions } from './PartnerInvoiceActions';
 import { formatCurrency } from '@/utils/formatting';
@@ -52,57 +34,52 @@ function MobilePullToRefresh({
   return <div>{children}</div>; // Simplified for now
 }
 
-// Simple export dropdown
-function ExportDropdown({ onExport }: { onExport: (format: 'csv' | 'excel') => void }) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-2" />
-          Export
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onExport('csv')}>
-          <FileText className="h-4 w-4 mr-2" />
-          Export as CSV
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onExport('excel')}>
-          <Upload className="h-4 w-4 mr-2" />
-          Export as Excel
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-interface InvoiceFiltersValue {
-  statusFilter: string;
-  organizationFilter: string;
-  dateRange: { from?: Date; to?: Date };
-}
 
 interface PartnerInvoicesTableProps {
+  // Data
   data: any[];
   isLoading: boolean;
   isError: any;
+  
+  // Search
   searchValue: string;
   onSearchChange: (value: string) => void;
+  
+  // View mode
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   allowedModes: ViewMode[];
-  filters: InvoiceFiltersValue;
-  onFiltersChange: (filters: InvoiceFiltersValue) => void;
-  onClearFilters: () => void;
-  filterCount: number;
-  onExport: (format: 'csv' | 'excel') => void;
-  onRefresh: () => void;
-  isMobile: boolean;
+  
+  // Filter component
+  filterComponent?: React.ReactNode;
+  
+  // Selection
   selectedInvoices: string[];
   onSelectInvoice: (id: string, selected: boolean) => void;
   onSelectAll: (selected: boolean) => void;
+  
+  // Actions
+  onExport: (format: 'csv' | 'excel') => void;
+  onRefresh: () => void;
   onInvoiceClick: (id: string) => void;
-  organizations: Array<{ id: string; name: string }>;
+  
+  // Column visibility
+  columnVisibilityColumns?: Array<{
+    id: string;
+    label: string;
+    description?: string;
+    visible: boolean;
+    canHide: boolean;
+  }>;
+  onToggleColumn?: (columnId: string) => void;
+  onResetColumns?: () => void;
+  
+  // Mobile
+  isMobile: boolean;
+  
+  // Metadata
+  title?: string;
+  subtitle?: string;
 }
 
 export function PartnerInvoicesTable({
@@ -114,18 +91,19 @@ export function PartnerInvoicesTable({
   viewMode,
   onViewModeChange,
   allowedModes,
-  filters,
-  onFiltersChange,
-  onClearFilters,
-  filterCount,
-  onExport,
-  onRefresh,
-  isMobile,
+  filterComponent,
   selectedInvoices,
   onSelectInvoice,
   onSelectAll,
+  onExport,
+  onRefresh,
   onInvoiceClick,
-  organizations,
+  columnVisibilityColumns,
+  onToggleColumn,
+  onResetColumns,
+  isMobile,
+  title = "Partner Invoices",
+  subtitle,
 }: PartnerInvoicesTableProps) {
   
   // Error state
@@ -150,44 +128,12 @@ export function PartnerInvoicesTable({
     return (
       <MobilePullToRefresh onRefresh={onRefresh}>
         <div className="space-y-4">
-          {/* Mobile toolbar */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Search invoices..."
-                value={searchValue}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10"
-              />
+          {/* Mobile filter component */}
+          {filterComponent && (
+            <div className="px-4">
+              {filterComponent}
             </div>
-            {searchValue && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onSearchChange('')}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-
-          {/* Mobile filters */}
-          <InvoiceFilters
-            searchTerm={searchValue}
-            onSearchChange={onSearchChange}
-            statusFilter={filters.statusFilter}
-            onStatusChange={(status) => 
-              onFiltersChange({ ...filters, statusFilter: status })}
-            organizationFilter={filters.organizationFilter}
-            onOrganizationChange={(org) => 
-              onFiltersChange({ ...filters, organizationFilter: org })}
-            dateRange={filters.dateRange}
-            onDateRangeChange={(range) => 
-              onFiltersChange({ ...filters, dateRange: range })}
-            organizations={organizations}
-            onClearFilters={onClearFilters}
-          />
+          )}
 
           {/* Loading state */}
           {isLoading ? (
@@ -200,22 +146,11 @@ export function PartnerInvoicesTable({
             <EmptyState
               icon={FileText}
               title="No partner invoices found"
-              description={
-                filterCount > 0
-                  ? "No invoices match your filters. Try adjusting your search."
-                  : "Create your first invoice to bill partner organizations"
-              }
-              action={
-                filterCount > 0
-                  ? {
-                      label: "Clear Filters",
-                      onClick: onClearFilters
-                    }
-                  : {
-                      label: "Create Invoice",
-                      onClick: () => console.log('Create invoice')
-                    }
-              }
+              description="Create your first invoice to bill partner organizations"
+              action={{
+                label: "Create Invoice",
+                onClick: () => console.log('Create invoice')
+              }}
               variant="card"
             />
           ) : (
@@ -253,78 +188,43 @@ export function PartnerInvoicesTable({
   return (
     <Card className="border-b">
       {/* Desktop toolbar */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-4">
-          <h2 className="text-lg font-semibold">Partner Invoices</h2>
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={onViewModeChange}
-            allowedModes={allowedModes}
-          />
+      <TableToolbar
+        title={title}
+        subtitle={subtitle}
+        searchValue={searchValue}
+        onSearchChange={onSearchChange}
+        searchPlaceholder="Search invoices..."
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+        allowedViewModes={allowedModes}
+        selectedCount={selectedInvoices.length}
+        onClearSelection={() => onSelectAll(false)}
+        onExport={onExport}
+        columnVisibilityColumns={columnVisibilityColumns}
+        onToggleColumn={onToggleColumn}
+        onResetColumns={onResetColumns}
+      />
+
+      {/* Filter component */}
+      {filterComponent && (
+        <div className="px-6 pb-4">
+          {filterComponent}
         </div>
-        <div className="flex items-center gap-4">
-          <InvoiceFilters
-            searchTerm={searchValue}
-            onSearchChange={onSearchChange}
-            statusFilter={filters.statusFilter}
-            onStatusChange={(status) => 
-              onFiltersChange({ ...filters, statusFilter: status })}
-            organizationFilter={filters.organizationFilter}
-            onOrganizationChange={(org) => 
-              onFiltersChange({ ...filters, organizationFilter: org })}
-            dateRange={filters.dateRange}
-            onDateRangeChange={(range) => 
-              onFiltersChange({ ...filters, dateRange: range })}
-            organizations={organizations}
-            onClearFilters={onClearFilters}
-          />
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search invoices..."
-              value={searchValue}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 w-64"
-            />
-            {searchValue && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onSearchChange('')}
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
-          <ExportDropdown onExport={onExport} />
-        </div>
-      </div>
+      )}
 
       {/* Table content */}
-      <div className="p-4">
+      <div className="p-6">
         {isLoading ? (
           <EnhancedTableSkeleton rows={8} columns={8} showHeader={true} />
         ) : !data?.length ? (
           <EmptyState
             icon={FileText}
             title="No partner invoices found"
-            description={
-              filterCount > 0
-                ? "No invoices match your filters. Try adjusting your search."
-                : "Create your first invoice to bill partner organizations"
-            }
-            action={
-              filterCount > 0
-                ? {
-                    label: "Clear Filters",
-                    onClick: onClearFilters
-                  }
-                : {
-                    label: "Create Invoice",
-                    onClick: () => console.log('Create invoice')
-                  }
-            }
+            description="Create your first invoice to bill partner organizations"
+            action={{
+              label: "Create Invoice",
+              onClick: () => console.log('Create invoice')
+            }}
           />
         ) : (
           <ResponsiveTableWrapper stickyFirstColumn minWidth="900px">

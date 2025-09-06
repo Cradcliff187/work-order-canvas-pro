@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { PartnerInvoicesTable } from '@/components/admin/partner-billing/PartnerInvoicesTable';
+import { CompactPartnerInvoiceFilters, usePartnerInvoiceFilterCount, type PartnerInvoiceFiltersValue } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
 import { useViewMode, ViewMode } from '@/hooks/useViewMode';
 import { formatCurrency } from '@/utils/formatting';
 
@@ -29,11 +30,24 @@ export default function PartnerInvoices() {
   
   // State for search and filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [organizationFilter, setOrganizationFilter] = useState('all');
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [filters, setFilters] = useState<PartnerInvoiceFiltersValue>({});
+  
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
+  
+  // Column visibility state
+  const [columnVisibility, setColumnVisibility] = useState({
+    invoice_number: true,
+    partner: true,
+    date: true,
+    due_date: true,
+    amount: true,
+    status: true,
+    actions: true,
+  });
+  
+  // Get filter count
+  const filterCount = usePartnerInvoiceFilterCount(filters);
   
   // Filtered invoices
   const filteredInvoices = useMemo(() => {
@@ -50,25 +64,32 @@ export default function PartnerInvoices() {
       }
       
       // Status filter
-      if (statusFilter !== 'all' && invoice.status !== statusFilter) {
+      if (filters.status?.length && !filters.status.includes(invoice.status)) {
         return false;
       }
       
       // Organization filter
-      if (organizationFilter !== 'all' && invoice.partner_organization_id !== organizationFilter) {
+      if (filters.partner_organization_id?.length && !filters.partner_organization_id.includes(invoice.partner_organization_id)) {
         return false;
       }
       
       // Date range filter
-      if (dateRange.from || dateRange.to) {
+      if (filters.date_from || filters.date_to) {
         const invoiceDate = new Date(invoice.invoice_date);
-        if (dateRange.from && invoiceDate < dateRange.from) return false;
-        if (dateRange.to && invoiceDate > dateRange.to) return false;
+        if (filters.date_from && invoiceDate < new Date(filters.date_from)) return false;
+        if (filters.date_to && invoiceDate > new Date(filters.date_to)) return false;
+      }
+      
+      // Amount range filter
+      if (filters.amount_min || filters.amount_max) {
+        const amount = invoice.total_amount || 0;
+        if (filters.amount_min && amount < parseFloat(filters.amount_min)) return false;
+        if (filters.amount_max && amount > parseFloat(filters.amount_max)) return false;
       }
       
       return true;
     });
-  }, [invoices, searchTerm, statusFilter, organizationFilter, dateRange]);
+  }, [invoices, searchTerm, filters]);
 
   
   // Selection handlers
@@ -93,30 +114,39 @@ export default function PartnerInvoices() {
   };
   
   // Filter helpers
-  const filters = {
-    statusFilter,
-    organizationFilter,
-    dateRange
-  };
-
-  const filterCount = [
-    searchTerm,
-    statusFilter !== 'all' ? statusFilter : '',
-    organizationFilter !== 'all' ? organizationFilter : '',
-    dateRange.from || dateRange.to,
-  ].filter(Boolean).length;
-
   const clearFilters = () => {
     setSearchTerm('');
-    setStatusFilter('all');
-    setOrganizationFilter('all');
-    setDateRange({});
+    setFilters({});
   };
 
-  const handleFiltersChange = (newFilters: typeof filters) => {
-    setStatusFilter(newFilters.statusFilter);
-    setOrganizationFilter(newFilters.organizationFilter);
-    setDateRange(newFilters.dateRange);
+  // Column visibility helpers
+  const columnVisibilityColumns = [
+    { id: 'invoice_number', label: 'Invoice #', visible: columnVisibility.invoice_number, canHide: false },
+    { id: 'partner', label: 'Partner', visible: columnVisibility.partner, canHide: true },
+    { id: 'date', label: 'Date', visible: columnVisibility.date, canHide: true },
+    { id: 'due_date', label: 'Due Date', visible: columnVisibility.due_date, canHide: true },
+    { id: 'amount', label: 'Amount', visible: columnVisibility.amount, canHide: false },
+    { id: 'status', label: 'Status', visible: columnVisibility.status, canHide: false },
+    { id: 'actions', label: 'Actions', visible: columnVisibility.actions, canHide: false },
+  ];
+
+  const handleToggleColumn = (columnId: string) => {
+    setColumnVisibility(prev => ({
+      ...prev,
+      [columnId]: !prev[columnId as keyof typeof prev]
+    }));
+  };
+
+  const handleResetColumns = () => {
+    setColumnVisibility({
+      invoice_number: true,
+      partner: true,
+      date: true,
+      due_date: true,
+      amount: true,
+      status: true,
+      actions: true,
+    });
   };
 
   const handleBatchAction = (action: string) => {
@@ -139,6 +169,15 @@ export default function PartnerInvoices() {
       name: org.name
     })) || [];
   }, [organizations]);
+  
+  // Create filter component
+  const filterComponent = (
+    <CompactPartnerInvoiceFilters
+      value={filters}
+      onChange={setFilters}
+      onClear={clearFilters}
+    />
+  );
   
   return (
     <div className="space-y-6">
@@ -216,10 +255,7 @@ export default function PartnerInvoices() {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         allowedModes={allowedModes}
-        filters={filters}
-        onFiltersChange={handleFiltersChange}
-        onClearFilters={clearFilters}
-        filterCount={filterCount}
+        filterComponent={filterComponent}
         onExport={handleExport}
         onRefresh={refetch}
         isMobile={isMobile}
@@ -227,7 +263,11 @@ export default function PartnerInvoices() {
         onSelectInvoice={handleSelectInvoice}
         onSelectAll={handleSelectAll}
         onInvoiceClick={handleInvoiceClick}
-        organizations={partnerOrganizations || []}
+        columnVisibilityColumns={columnVisibilityColumns}
+        onToggleColumn={handleToggleColumn}
+        onResetColumns={handleResetColumns}
+        title="Partner Invoices"
+        subtitle="Manage invoices sent to partner organizations"
       />
     </div>
   );
