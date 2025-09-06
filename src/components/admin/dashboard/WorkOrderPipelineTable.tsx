@@ -25,7 +25,8 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/h
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { ComputedFinancialStatusBadge, FinancialStatusBadge, ReportStatusBadge, StatusBadge } from '@/components/ui/status-badge';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
-import { ClipboardList, Copy } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ClipboardList, Copy, Info } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
 import { cn } from '@/lib/utils';
 import { TablePagination } from '@/components/admin/shared/TablePagination';
@@ -273,7 +274,19 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'subcontractor_bill',
-      header: 'Subcontractor Bill',
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>Subcontractor Bill</span>
+          <Tooltip>
+            <TooltipTrigger>
+              <Info className="h-3 w-3 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Amount billed by the subcontractor for this work order</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      ),
       cell: ({ row }) => {
         const item = row.original;
         const amount = item.subcontractor_bill_amount;
@@ -293,7 +306,19 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'partner_invoice',
-      header: 'Partner Invoice',
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>Partner Invoice</span>
+          <Tooltip>
+            <TooltipTrigger>
+              <Info className="h-3 w-3 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Amount to invoice the partner (includes markup)</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      ),
       cell: ({ row }) => {
         const item = row.original;
         
@@ -337,7 +362,19 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'profit_margin',
-      header: 'Margin',
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>Margin</span>
+          <Tooltip>
+            <TooltipTrigger>
+              <Info className="h-3 w-3 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Profit margin (partner invoice - subcontractor bill)</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      ),
       cell: ({ row }) => {
         const item = row.original;
         
