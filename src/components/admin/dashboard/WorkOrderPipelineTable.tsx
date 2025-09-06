@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { SortableHeader } from '@/components/admin/shared/SortableHeader';
 import {
   useReactTable,
   getCoreRowModel,
@@ -103,7 +104,8 @@ export function WorkOrderPipelineTable({
   const tableColumns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
     {
       id: 'work_order_number',
-      header: 'WO #',
+      accessorKey: 'work_order_number',
+      header: ({ column }) => <SortableHeader column={column} label="WO #" />,
       size: 150,
       cell: ({ row }) => {
         const item = row.original;
@@ -184,7 +186,8 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'partner',
-      header: 'Partner',
+      accessorKey: 'partner_organization_name',
+      header: ({ column }) => <SortableHeader column={column} label="Partner" />,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -196,7 +199,8 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'location',
-      header: 'Location',
+      accessorKey: 'store_location',
+      header: ({ column }) => <SortableHeader column={column} label="Location" />,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -208,7 +212,8 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'completed_by',
-      header: 'Completed By',
+      accessorKey: 'assigned_organization_name',
+      header: ({ column }) => <SortableHeader column={column} label="Completed By" />,
       cell: ({ row }) => {
         const { assigned_organization_type, assigned_organization_name } = row.original;
         
@@ -229,12 +234,14 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'operational_status',
-      header: 'Work Status',
+      accessorKey: 'status',
+      header: ({ column }) => <SortableHeader column={column} label="Work Status" />,
       cell: ({ row }) => <WorkOrderStatusBadge status={row.original.status} size="sm" showIcon />,
     },
     {
       id: 'report_status',
-      header: 'Report Status',
+      accessorKey: 'report_status',
+      header: ({ column }) => <SortableHeader column={column} label="Report Status" />,
       cell: ({ row }) => {
         const item = row.original;
         const reportStatus = item.report_status || 'not_submitted';
@@ -243,7 +250,8 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'subcontractor_invoice',
-      header: 'Subcontractor Bill',
+      accessorKey: 'invoice_status',
+      header: ({ column }) => <SortableHeader column={column} label="Subcontractor Bill" />,
       cell: ({ row }) => {
         const item = row.original;
         
@@ -269,14 +277,16 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'partner_invoicing',
-      header: 'Partner Invoicing Status',
+      accessorKey: 'partner_bill_status',
+      header: ({ column }) => <SortableHeader column={column} label="Partner Invoicing Status" />,
       cell: ({ row }) => <StatusBadge type="partnerBilling" status={getPartnerBillingStatus(row.original)} size="sm" showIcon />,
     },
     {
       id: 'subcontractor_bill',
-      header: () => (
+      accessorKey: 'subcontractor_bill_amount',
+      header: ({ column }) => (
         <div className="flex items-center gap-1">
-          <span>Subcontractor Bill</span>
+          <SortableHeader column={column} label="Sub Bill" />
           <Tooltip>
             <TooltipTrigger>
               <Info className="h-3 w-3 text-muted-foreground" />
@@ -306,9 +316,10 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'partner_invoice',
-      header: () => (
+      accessorKey: 'partner_billed_amount',
+      header: ({ column }) => (
         <div className="flex items-center gap-1">
-          <span>Partner Invoice</span>
+          <SortableHeader column={column} label="Partner Invoice" />
           <Tooltip>
             <TooltipTrigger>
               <Info className="h-3 w-3 text-muted-foreground" />
@@ -356,9 +367,15 @@ export function WorkOrderPipelineTable({
     },
     {
       id: 'profit_margin',
-      header: () => (
+      accessorFn: (row) => {
+        if (!row.subcontractor_bill_amount) return 0;
+        const partnerAmount = row.partner_billed_amount || 
+          (row.subcontractor_bill_amount * (1 + (row.internal_markup_percentage || 30) / 100));
+        return partnerAmount - row.subcontractor_bill_amount;
+      },
+      header: ({ column }) => (
         <div className="flex items-center gap-1">
-          <span>Gross Margin</span>
+          <SortableHeader column={column} label="Gross Margin" />
           <Tooltip>
             <TooltipTrigger>
               <Info className="h-3 w-3 text-muted-foreground" />
