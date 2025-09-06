@@ -11,6 +11,11 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { SubcontractorBill } from '@/hooks/useSubcontractorBills';
 
+/**
+ * Edit sheet for subcontractor BILLS (not partner invoices)
+ * Named "Invoice" for historical reasons - do not rename (would break imports)
+ */
+
 interface SubcontractorBillWorkOrder {
   id: string;
   work_order_id: string;

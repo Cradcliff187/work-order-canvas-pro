@@ -1,3 +1,8 @@
+/**
+ * Column definitions for subcontractor BILLS table
+ * File named "Invoice" for historical reasons
+ */
+
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';

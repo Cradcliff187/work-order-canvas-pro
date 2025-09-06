@@ -1,3 +1,8 @@
+/**
+ * Detail modal for subcontractor BILLS (not partner invoices)
+ * Component name kept for backward compatibility
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
