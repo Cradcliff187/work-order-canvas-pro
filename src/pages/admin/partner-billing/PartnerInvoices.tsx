@@ -8,6 +8,7 @@ import { formatCurrency } from '@/utils/formatting';
 import { format } from 'date-fns';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 
 export default function PartnerInvoices() {
   const navigate = useNavigate();
@@ -81,7 +82,12 @@ export default function PartnerInvoices() {
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-8 text-center">Loading invoices...</div>
+            <EnhancedTableSkeleton 
+              rows={5} 
+              columns={5} 
+              showHeader={false} 
+              showActions={false} 
+            />
           ) : !invoices?.length ? (
             <div className="p-8 text-center">
               <p>No partner invoices yet</p>
