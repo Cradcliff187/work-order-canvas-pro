@@ -5,7 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FinancialStatusBadge } from '@/components/ui/status-badge';
+import { InvoiceStatusBadge } from '@/components/admin/partner-billing/InvoiceStatusBadge';
+import { PartnerInvoiceActions } from '@/components/admin/partner-billing/PartnerInvoiceActions';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -25,6 +26,7 @@ interface PartnerInvoiceDetail {
   invoice_number: string;
   invoice_date: string;
   due_date?: string | null;
+  sent_at?: string | null;
   subtotal: number;
   markup_percentage: number;
   total_amount: number;
@@ -54,6 +56,7 @@ async function fetchPartnerInvoiceDetail(invoiceId: string): Promise<PartnerInvo
       invoice_number,
       invoice_date,
       due_date,
+      sent_at,
       subtotal,
       markup_percentage,
       total_amount,
@@ -262,7 +265,12 @@ export default function PartnerInvoiceDetail() {
         <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl">Partner Invoice</CardTitle>
-              <FinancialStatusBadge status={invoice.status} size="sm" showIcon />
+        <InvoiceStatusBadge 
+          status={invoice.status}
+          size="sm"
+          showIcon
+          sentAt={invoice.sent_at}
+        />
             </div>
         </CardHeader>
         <CardContent className="space-y-4">

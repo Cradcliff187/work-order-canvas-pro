@@ -12,6 +12,7 @@ import {
   PartnerReports,
   PartnerReportDetail,
   PartnerProfile,
+  PartnerInvoicesPage,
 } from '@/pages/LazyPages';
 import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
 
@@ -94,6 +95,16 @@ export const PartnerRoutes = () => (
         <PartnerLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <PartnerProfile />
+          </Suspense>
+        </PartnerLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/partner/invoices" element={
+      <ProtectedRoute requiredUserType="partner">
+        <PartnerLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <PartnerInvoicesPage />
           </Suspense>
         </PartnerLayout>
       </ProtectedRoute>

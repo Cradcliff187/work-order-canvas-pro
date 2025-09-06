@@ -30,7 +30,6 @@ export const SelectReports = lazy(() => import('@/pages/admin/partner-billing/Se
 export const PartnerInvoiceDetail = lazy(() => import('@/pages/admin/partner-billing/PartnerInvoiceDetail'));
 export const PartnerInvoices = lazy(() => import('@/pages/admin/partner-billing/PartnerInvoices'));
 
-
 // Partner Pages
 export const PartnerDashboard = lazy(() => import('@/pages/partner/PartnerDashboard'));
 export const SubmitWorkOrder = lazy(() => import('@/pages/partner/SubmitWorkOrder'));
@@ -38,6 +37,7 @@ export const WorkOrderList = lazy(() => import('@/pages/partner/WorkOrderList'))
 export const WorkOrderDetail = lazy(() => import('@/pages/partner/WorkOrderDetail'));
 export const PartnerLocations = lazy(() => import('@/pages/partner/PartnerLocations'));
 export const PartnerProfile = lazy(() => import('@/pages/partner/PartnerProfile'));
+export const PartnerInvoicesPage = lazy(() => import('@/pages/partner/PartnerInvoices'));
 
 // Subcontractor Pages
 export const SubcontractorDashboard = lazy(() => import('@/pages/subcontractor/SubcontractorDashboard'));
@@ -68,4 +68,3 @@ export const BillingDashboard = lazy(() => import('@/pages/admin/BillingDashboar
 export const SecurityAudit = lazy(() => import('@/pages/admin/SecurityAudit'));
 
 // Migration Pages - REMOVED (migration complete)
-

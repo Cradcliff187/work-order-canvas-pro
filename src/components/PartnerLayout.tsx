@@ -43,6 +43,7 @@ import {
   MapPin,
   MessageSquare,
   User,
+  CreditCard,
 } from 'lucide-react';
 import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
 
@@ -50,6 +51,7 @@ const sidebarItems = [
   { title: 'Dashboard', url: '/partner/dashboard', icon: BarChart3 },
   { title: 'New Service Request', url: '/partner/work-orders/new', icon: Plus },
   { title: 'View Work Orders', url: '/partner/work-orders', icon: FileText },
+  { title: 'Invoices', url: '/partner/invoices', icon: CreditCard },
   { title: 'Locations', url: '/partner/locations', icon: MapPin },
   { title: 'Reports', url: '/partner/reports', icon: ClipboardList },
 ];

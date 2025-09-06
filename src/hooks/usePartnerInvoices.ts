@@ -11,7 +11,8 @@ export function usePartnerInvoices() {
           *,
           partner_organization:organizations!partner_organization_id(
             id,
-            name
+            name,
+            contact_email
           )
         `)
         .order('created_at', { ascending: false });
