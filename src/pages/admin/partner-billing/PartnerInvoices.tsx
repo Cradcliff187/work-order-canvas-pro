@@ -1,40 +1,125 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
+import { useOrganizations } from '@/hooks/useOrganizations';
 import { formatCurrency } from '@/utils/formatting';
 import { format } from 'date-fns';
 import { InvoiceStatusBadge } from '@/components/admin/partner-billing/InvoiceStatusBadge';
 import { PartnerInvoiceActions } from '@/components/admin/partner-billing/PartnerInvoiceActions';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
-import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
+import { EnhancedLoadingState } from '@/components/admin/partner-billing/EnhancedLoadingState';
+import { BatchOperations } from '@/components/admin/partner-billing/BatchOperations';
+import { InvoiceFilters } from '@/components/admin/partner-billing/InvoiceFilters';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FileText } from 'lucide-react';
 
 export default function PartnerInvoices() {
   const navigate = useNavigate();
   const { data: invoices, isLoading } = usePartnerInvoices();
+  const { data: organizations } = useOrganizations();
   const isMobile = useIsMobile();
   
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [organizationFilter, setOrganizationFilter] = useState('all');
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+  
+  // Selection state
+  const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+  
+  // Filtered invoices
+  const filteredInvoices = useMemo(() => {
+    if (!invoices) return [];
+    
+    return invoices.filter(invoice => {
+      // Search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = 
+          invoice.invoice_number?.toLowerCase().includes(searchLower) ||
+          invoice.partner_organization?.name?.toLowerCase().includes(searchLower);
+        if (!matchesSearch) return false;
+      }
+      
+      // Status filter
+      if (statusFilter !== 'all' && invoice.status !== statusFilter) {
+        return false;
+      }
+      
+      // Organization filter
+      if (organizationFilter !== 'all' && invoice.partner_organization_id !== organizationFilter) {
+        return false;
+      }
+      
+      // Date range filter
+      if (dateRange.from || dateRange.to) {
+        const invoiceDate = new Date(invoice.invoice_date);
+        if (dateRange.from && invoiceDate < dateRange.from) return false;
+        if (dateRange.to && invoiceDate > dateRange.to) return false;
+      }
+      
+      return true;
+    });
+  }, [invoices, searchTerm, statusFilter, organizationFilter, dateRange]);
+
   const stats = useMemo(() => {
-    if (!invoices?.length) return { outstanding: 0, thisMonth: 0, overdue: 0 };
+    if (!filteredInvoices?.length) return { outstanding: 0, thisMonth: 0, overdue: 0 };
     
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     
     return {
-      outstanding: invoices
+      outstanding: filteredInvoices
         .filter(i => i.status !== 'paid')
         .reduce((sum, i) => sum + (i.total_amount || 0), 0),
-      thisMonth: invoices
+      thisMonth: filteredInvoices
         .filter(i => new Date(i.created_at) >= monthStart).length,
-      overdue: invoices
+      overdue: filteredInvoices
         .filter(i => i.status !== 'paid' && i.due_date && new Date(i.due_date) < now).length
     };
-  }, [invoices]);
+  }, [filteredInvoices]);
+  
+  // Selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedInvoices(filteredInvoices.map(inv => inv.id));
+    } else {
+      setSelectedInvoices([]);
+    }
+  };
+  
+  const handleSelectInvoice = (invoiceId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedInvoices(prev => [...prev, invoiceId]);
+    } else {
+      setSelectedInvoices(prev => prev.filter(id => id !== invoiceId));
+    }
+  };
+  
+  const clearSelection = () => {
+    setSelectedInvoices([]);
+  };
+  
+  // Filter handlers
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setOrganizationFilter('all');
+    setDateRange({});
+  };
+  
+  const partnerOrganizations = useMemo(() => {
+    return organizations?.filter(org => org.organization_type === 'partner').map(org => ({
+      id: org.id,
+      name: org.name
+    })) || [];
+  }, [organizations]);
   
   return (
     <div className="space-y-6">
@@ -84,16 +169,37 @@ export default function PartnerInvoices() {
         </Card>
       </div>
       
+      <InvoiceFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        organizationFilter={organizationFilter}
+        onOrganizationChange={setOrganizationFilter}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        organizations={partnerOrganizations}
+        onClearFilters={clearFilters}
+      />
+      
+      {selectedInvoices.length > 0 && (
+        <BatchOperations
+          selectedInvoices={selectedInvoices}
+          onClearSelection={clearSelection}
+        />
+      )}
+      
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <EnhancedTableSkeleton 
-              rows={5} 
-              columns={7} 
-              showHeader={false} 
-              showActions={false} 
-            />
-          ) : !invoices?.length ? (
+            <div className="p-8">
+              <EnhancedLoadingState 
+                type="general"
+                message="Loading partner invoices..."
+                subMessage="Fetching invoice data from the database"
+              />
+            </div>
+          ) : !filteredInvoices?.length ? (
             <EmptyState
               icon={FileText}
               title="No partner invoices yet"
@@ -105,7 +211,7 @@ export default function PartnerInvoices() {
             />
           ) : isMobile ? (
             <div className="space-y-3 p-4">
-              {invoices.map(invoice => (
+              {filteredInvoices.map(invoice => (
                 <Card 
                   key={invoice.id}
                   onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
@@ -137,9 +243,16 @@ export default function PartnerInvoices() {
             </div>
           ) : (
             <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <table className="w-full min-w-[800px]">
+              <table className="w-full min-w-[900px]">
                 <thead className="border-b">
                   <tr>
+                    <th className="w-12 p-4">
+                      <Checkbox
+                        checked={selectedInvoices.length === filteredInvoices.length && filteredInvoices.length > 0}
+                        onCheckedChange={(checked) => handleSelectAll(checked === true)}
+                        aria-label="Select all invoices"
+                      />
+                    </th>
                     <th className="text-left p-4 text-sm">Invoice #</th>
                     <th className="text-left p-4">Partner</th>
                     <th className="text-left p-4">Date</th>
@@ -150,27 +263,58 @@ export default function PartnerInvoices() {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map(invoice => (
+                  {filteredInvoices.map(invoice => (
                     <tr 
                       key={invoice.id} 
-                      className="border-b hover:bg-muted/50 cursor-pointer"
-                      onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                      className="border-b hover:bg-muted/50"
                     >
                       <td className="p-4">
+                        <Checkbox
+                          checked={selectedInvoices.includes(invoice.id)}
+                          onCheckedChange={(checked) => handleSelectInvoice(invoice.id, checked === true)}
+                          aria-label={`Select invoice ${invoice.invoice_number}`}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </td>
+                      <td 
+                        className="p-4 cursor-pointer"
+                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                      >
                         <span className="font-mono text-sm">
                           {invoice.invoice_number}
                         </span>
                       </td>
-                      <td className="p-4">{invoice.partner_organization?.name}</td>
-                      <td className="p-4">{format(new Date(invoice.invoice_date), 'MMM d, yyyy')}</td>
-                      <td className="p-4">
+                      <td 
+                        className="p-4 cursor-pointer"
+                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                      >
+                        {invoice.partner_organization?.name}
+                      </td>
+                      <td 
+                        className="p-4 cursor-pointer"
+                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                      >
+                        {format(new Date(invoice.invoice_date), 'MMM d, yyyy')}
+                      </td>
+                      <td 
+                        className="p-4 cursor-pointer"
+                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                      >
                         {invoice.due_date 
                           ? format(new Date(invoice.due_date), 'MMM d, yyyy')
                           : '-'
                         }
                       </td>
-                      <td className="p-4">{formatCurrency(invoice.total_amount)}</td>
-                      <td className="p-4">
+                      <td 
+                        className="p-4 cursor-pointer"
+                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                      >
+                        {formatCurrency(invoice.total_amount)}
+                      </td>
+                      <td 
+                        className="p-4 cursor-pointer"
+                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                      >
                         <InvoiceStatusBadge 
                           status={invoice.status}
                           size="sm"
