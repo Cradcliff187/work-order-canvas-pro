@@ -3,8 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Plus, DollarSign, Calendar, AlertTriangle, Clock } from 'lucide-react';
-import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
+import { Plus, CheckSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
@@ -34,6 +33,7 @@ export default function PartnerInvoices() {
   const [organizationFilter, setOrganizationFilter] = useState('all');
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+  const [bulkMode, setBulkMode] = useState(false);
   
   // Filtered invoices
   const filteredInvoices = useMemo(() => {
@@ -70,73 +70,6 @@ export default function PartnerInvoices() {
     });
   }, [invoices, searchTerm, statusFilter, organizationFilter, dateRange]);
 
-  const stats = useMemo(() => {
-    if (!filteredInvoices?.length) return { 
-      outstanding: 0, 
-      thisMonth: 0, 
-      overdueAmount: 0, 
-      avgPaymentTime: 0 
-    };
-    
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    const outstandingAmount = filteredInvoices
-      .filter(i => i.status !== 'paid')
-      .reduce((sum, i) => sum + (i.total_amount || 0), 0);
-    
-    const thisMonthCount = filteredInvoices
-      .filter(i => new Date(i.created_at) >= monthStart).length;
-    
-    const overdueAmount = filteredInvoices
-      .filter(i => i.status !== 'paid' && i.due_date && new Date(i.due_date) < now)
-      .reduce((sum, i) => sum + (i.total_amount || 0), 0);
-    
-    // Calculate average payment time for paid invoices
-    const paidInvoices = filteredInvoices.filter(i => i.status === 'paid' && i.payment_date && i.invoice_date);
-    const avgPaymentTime = paidInvoices.length > 0 
-      ? Math.round(paidInvoices.reduce((sum, i) => {
-          const paymentDate = new Date(i.payment_date!);
-          const invoiceDate = new Date(i.invoice_date);
-          const daysDiff = Math.floor((paymentDate.getTime() - invoiceDate.getTime()) / (1000 * 60 * 60 * 24));
-          return sum + daysDiff;
-        }, 0) / paidInvoices.length)
-      : 0;
-    
-    return {
-      outstanding: outstandingAmount,
-      thisMonth: thisMonthCount,
-      overdueAmount,
-      avgPaymentTime
-    };
-  }, [filteredInvoices]);
-
-  const statsCards: StatCard[] = [
-    {
-      icon: DollarSign,
-      label: "Total Outstanding",
-      value: formatCurrency(stats.outstanding),
-      variant: stats.outstanding > 0 ? 'destructive' : 'default'
-    },
-    {
-      icon: Calendar,
-      label: "This Month",
-      value: stats.thisMonth,
-      variant: 'default'
-    },
-    {
-      icon: AlertTriangle,
-      label: "Overdue Amount",
-      value: formatCurrency(stats.overdueAmount),
-      variant: stats.overdueAmount > 0 ? 'warning' : 'default'
-    },
-    {
-      icon: Clock,
-      label: "Avg Payment Time",
-      value: `${stats.avgPaymentTime} days`,
-      variant: 'success'
-    }
-  ];
   
   // Selection handlers
   const handleSelectAll = (checked: boolean) => {
@@ -209,24 +142,35 @@ export default function PartnerInvoices() {
   
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Partner Invoices</h1>
           <p className="text-muted-foreground">
             Manage invoices sent to partner organizations
           </p>
+          {bulkMode && (
+            <p className="text-sm text-primary mt-1">
+              Select invoices using checkboxes, then use the action bar below
+            </p>
+          )}
         </div>
-        <Button onClick={() => navigate('/admin/partner-billing/select-reports')}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Invoice
-        </Button>
-      </div>
-      
-      <StandardDashboardStats 
-        stats={statsCards}
-        loading={isLoading}
-        className="grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
-      />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant={bulkMode ? "default" : "outline"}
+            onClick={() => setBulkMode(!bulkMode)}
+            className="flex-1 sm:flex-initial h-9"
+          >
+            <CheckSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{bulkMode ? "Exit Bulk Mode" : "Select Multiple"}</span>
+            <span className="sm:hidden">{bulkMode ? "Exit Bulk" : "Select"}</span>
+          </Button>
+          <Button onClick={() => navigate('/admin/partner-billing/select-reports')} className="flex-1 sm:flex-initial h-9">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Create Invoice</span>
+            <span className="sm:hidden">Create</span>
+          </Button>
+        </div>
+      </header>
 
       {/* Batch Actions */}
       {selectedInvoices.length > 0 && (
