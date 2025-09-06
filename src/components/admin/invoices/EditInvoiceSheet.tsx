@@ -27,13 +27,22 @@ interface SubcontractorBillWorkOrder {
   };
 }
 
+/**
+ * Props for EditInvoiceSheet component
+ * @param invoice - Actually a subcontractor bill object (named "invoice" for historical reasons)
+ */
 interface EditInvoiceSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Subcontractor bill data - named "invoice" for historical compatibility */
   invoice: SubcontractorBill | null;
   onSaved?: () => void;
 }
 
+/**
+ * Edit sheet for subcontractor bills
+ * @param invoice - Actually a subcontractor bill object (named "invoice" for historical reasons)
+ */
 export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpenChange, invoice, onSaved }) => {
   const { toast } = useToast();
   const [externalBillNumber, setExternalBillNumber] = useState('');

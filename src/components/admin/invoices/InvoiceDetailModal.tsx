@@ -71,6 +71,7 @@ import { ImageLightbox } from '@/components/work-orders/shared/ImageLightbox';
 interface InvoiceDetailModalProps {
   /**
    * Subcontractor bill data - may be partial data from list view.
+   * Named "invoice" for historical reasons - actually contains subcontractor bill data.
    * The component will automatically fetch complete details including:
    * - Work orders (subcontractor_bill_work_orders)
    * - Attachments (subcontractor_bill_attachments) 
@@ -83,6 +84,10 @@ interface InvoiceDetailModalProps {
   onClose: () => void;
 }
 
+/**
+ * Detail modal for subcontractor bills
+ * @param invoice - Actually a subcontractor bill object (named "invoice" for historical reasons)
+ */
 export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailModalProps) {
   const { data: fullInvoice, isLoading } = useSubcontractorBill(invoice?.id || '');
   const invoiceData = fullInvoice || invoice;

@@ -17,6 +17,7 @@ import { BillingPipelineTable } from '@/components/admin/billing/BillingPipeline
 import { BillingFiltersValue } from '@/components/admin/billing/BillingFilters';
 
 export default function BillingDashboard() {
+  // Despite the name, this contains subcontractor bill data
   const [selectedInvoice, setSelectedInvoice] = useState<SubcontractorBill | null>(null);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const isMobile = useIsMobile();
