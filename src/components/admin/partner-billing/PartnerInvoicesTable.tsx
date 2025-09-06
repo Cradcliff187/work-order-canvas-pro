@@ -1,70 +1,63 @@
-import React, { useState, useMemo } from 'react';
-import { Card } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { FileText, Eye } from 'lucide-react';
-import { ViewMode } from '@/hooks/useViewMode';
-import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  useReactTable, 
+  getCoreRowModel, 
+  getPaginationRowModel, 
+  getSortedRowModel, 
+  getFilteredRowModel,
+  ColumnDef,
+  flexRender,
+  PaginationState,
+  SortingState,
+  VisibilityState,
+  RowSelectionState,
+} from '@tanstack/react-table';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { Plus, ClipboardList, Search, X } from 'lucide-react';
+import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
-import { SkeletonGroup } from '@/components/ui/enhanced-skeleton';
-import { TableToolbar } from '@/components/admin/shared/TableToolbar';
-import { Button } from '@/components/ui/button';
-import { InvoiceStatusBadge } from './InvoiceStatusBadge';
-import { PartnerInvoiceActions } from './PartnerInvoiceActions';
+// Simple type for partner invoice filters
+type PartnerInvoiceFiltersValue = {
+  status?: string[];
+  partner_organization_id?: string[];
+  date_from?: string;
+  date_to?: string;
+  amount_min?: string;
+  amount_max?: string;
+};
+import { InvoiceStatusBadge } from '@/components/admin/partner-billing/InvoiceStatusBadge';
 import { formatCurrency } from '@/utils/formatting';
 import { format } from 'date-fns';
-import { type PartnerInvoiceFiltersValue } from './CompactPartnerInvoiceFilters';
-
-// Simple mobile pull-to-refresh wrapper
-function MobilePullToRefresh({ 
-  onRefresh, 
-  children 
-}: { 
-  onRefresh: () => void; 
-  children: React.ReactNode; 
-}) {
-  return <div>{children}</div>; // Simplified for now
-}
-
 
 interface PartnerInvoicesTableProps {
   // Data
-  data: any[];
+  data: any[] | undefined;
+  totalCount?: number;
+  pageCount?: number;
   isLoading: boolean;
-  isError: any;
   
-  // Filters
-  filters: PartnerInvoiceFiltersValue;
-  onFiltersChange: (filters: PartnerInvoiceFiltersValue) => void;
-  
-  // View mode
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
-  allowedModes: ViewMode[];
-  
-  // Filter component
+  // Filter Component
   filterComponent?: React.ReactNode;
   
-  // Selection
-  selectedInvoices: string[];
-  onSelectInvoice: (id: string, selected: boolean) => void;
-  onSelectAll: (selected: boolean) => void;
-  
-  // Actions
-  onExport: (format: 'csv' | 'excel') => void;
-  onRefresh: () => void;
-  onInvoiceClick: (id: string) => void;
-  
-  // Column visibility
+  // Table Configuration
+  columns: ColumnDef<any>[];
+  pagination: PaginationState;
+  setPagination: (pagination: PaginationState) => void;
+  sorting: SortingState;
+  setSorting: (sorting: SortingState) => void;
+  rowSelection: RowSelectionState;
+  setRowSelection: (selection: RowSelectionState) => void;
+  columnVisibility?: VisibilityState;
+  setColumnVisibility?: (visibility: VisibilityState) => void;
   columnVisibilityColumns?: Array<{
     id: string;
     label: string;
@@ -75,42 +68,54 @@ interface PartnerInvoicesTableProps {
   onToggleColumn?: (columnId: string) => void;
   onResetColumns?: () => void;
   
-  // Mobile
-  isMobile: boolean;
+  // View Configuration
+  viewMode: 'table' | 'card' | 'list';
+  setViewMode: (mode: 'table' | 'card' | 'list') => void;
+  bulkMode: boolean;
   
-  // Metadata
-  title?: string;
-  subtitle?: string;
+  // Callbacks
+  onInvoiceClick: (invoice: any) => void;
+  onExportAll: (format: 'csv' | 'excel') => void;
+  onExport: (format: 'csv' | 'excel', ids: string[]) => void;
+  
+  // Mobile specific
+  isMobile: boolean;
+  onRefresh?: () => Promise<void>;
+  refreshThreshold?: number;
 }
 
 export function PartnerInvoicesTable({
   data,
+  totalCount,
+  pageCount,
   isLoading,
-  isError,
-  filters,
-  onFiltersChange,
-  viewMode,
-  onViewModeChange,
-  allowedModes,
   filterComponent,
-  selectedInvoices,
-  onSelectInvoice,
-  onSelectAll,
-  onExport,
-  onRefresh,
-  onInvoiceClick,
+  columns,
+  pagination,
+  setPagination,
+  sorting,
+  setSorting,
+  rowSelection,
+  setRowSelection,
+  columnVisibility,
+  setColumnVisibility,
   columnVisibilityColumns,
   onToggleColumn,
   onResetColumns,
+  viewMode,
+  setViewMode,
+  bulkMode,
+  onInvoiceClick,
+  onExportAll,
+  onExport,
   isMobile,
-  title = "Partner Invoices",
-  subtitle,
+  onRefresh,
+  refreshThreshold = 60,
 }: PartnerInvoicesTableProps) {
-  
   // Internal search state
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Filtered invoices
+
+  // Filtered and searchable data
   const filteredInvoices = useMemo(() => {
     if (!data) return [];
     
@@ -124,105 +129,144 @@ export function PartnerInvoicesTable({
         if (!matchesSearch) return false;
       }
       
-      // Status filter
-      if (filters.status?.length && !filters.status.includes(invoice.status)) {
-        return false;
-      }
-      
-      // Organization filter
-      if (filters.partner_organization_id?.length && !filters.partner_organization_id.includes(invoice.partner_organization_id)) {
-        return false;
-      }
-      
-      // Date range filter
-      if (filters.date_from || filters.date_to) {
-        const invoiceDate = new Date(invoice.invoice_date);
-        if (filters.date_from && invoiceDate < new Date(filters.date_from)) return false;
-        if (filters.date_to && invoiceDate > new Date(filters.date_to)) return false;
-      }
-      
-      // Amount range filter
-      if (filters.amount_min || filters.amount_max) {
-        const amount = invoice.total_amount || 0;
-        if (filters.amount_min && amount < parseFloat(filters.amount_min)) return false;
-        if (filters.amount_max && amount > parseFloat(filters.amount_max)) return false;
-      }
-      
       return true;
     });
-  }, [data, searchTerm, filters]);
-  
-  // Error state
-  if (isError) {
-    return (
-      <Card className="p-6">
-        <EmptyState
-          icon={FileText}
-          title="Error loading invoices"
-          description="There was an error loading partner invoices. Please try again."
-          action={{
-            label: "Retry",
-            onClick: onRefresh
-          }}
-        />
-      </Card>
-    );
-  }
+  }, [data, searchTerm]);
 
-  // Mobile view
+  // React Table configuration
+  const table = useReactTable({
+    data: filteredInvoices,
+    columns,
+    getRowId: (row) => row.id,
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    state: {
+      pagination,
+      sorting,
+      columnVisibility,
+      rowSelection,
+    },
+  });
+
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedIds = selectedRows.map(row => row.original.id);
+
+  // Render mobile view
   if (isMobile) {
     return (
-      <MobilePullToRefresh onRefresh={onRefresh}>
+      <MobilePullToRefresh onRefresh={onRefresh} threshold={refreshThreshold}>
         <div className="space-y-4">
-          {/* Mobile filter component */}
-          {filterComponent && (
-            <div className="px-4">
-              {filterComponent}
+          {/* Mobile Toolbar */}
+          <div className="bg-muted/30 border rounded-lg p-3 space-y-3">
+            {/* Search bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search invoices..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-10 h-9"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
-          )}
 
-          {/* Loading state */}
-          {isLoading ? (
-            <SkeletonGroup 
-              count={8} 
-              className="space-y-3" 
-              itemClassName="h-24 rounded-lg"
-            />
-          ) : !data?.length ? (
+            {/* Filter and bulk actions row */}
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {/* Filters - Make filter button full width on mobile */}
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                {filterComponent}
+              </div>
+
+              {/* Bulk mode actions */}
+              {bulkMode && selectedIds.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRowSelection({})}
+                  className="shrink-0 h-9 px-3 text-xs"
+                >
+                  Clear ({selectedIds.length})
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {!data?.length ? (
             <EmptyState
-              icon={FileText}
-              title="No partner invoices found"
-              description="Create your first invoice to bill partner organizations"
-              action={{
+              icon={ClipboardList}
+              title="No invoices found"
+              description={totalCount === 0 
+                ? "No invoices have been created yet. Create your first invoice to get started."
+                : "No invoices match your current filters. Try adjusting your search criteria."
+              }
+              action={totalCount === 0 ? {
                 label: "Create Invoice",
-                onClick: () => console.log('Create invoice')
-              }}
-              variant="card"
+                onClick: () => console.log('Create invoice'),
+                icon: Plus
+              } : undefined}
             />
-           ) : (
-            <div className="space-y-3">
-              {filteredInvoices.map((invoice) => (
-                <MobileTableCard
-                  key={invoice.id}
-                  title={invoice.invoice_number}
-                  subtitle={invoice.partner_organization?.name || 'Unknown Partner'}
-                  badge={<InvoiceStatusBadge status={invoice.status} />}
-                  selected={selectedInvoices.includes(invoice.id)}
-                  onSelect={(selected) => onSelectInvoice(invoice.id, selected)}
-                  onClick={() => onInvoiceClick(invoice.id)}
-                  metadata={[
-                    { label: 'Due', value: invoice.due_date ? format(new Date(invoice.due_date), 'MMM dd, yyyy') : 'No due date' },
-                    { label: 'Amount', value: formatCurrency(invoice.total_amount || 0) },
-                  ]}
-                  actions={[
-                    {
-                      label: 'View',
-                      icon: Eye,
-                      onClick: () => onInvoiceClick(invoice.id)
-                    }
-                  ]}
-                />
-              ))}
+          ) : (
+            <div className="space-y-4">
+              {table.getRowModel().rows.map((row) => {
+                const invoice = row.original;
+
+                if (bulkMode) {
+                  return (
+                    <div key={row.original.id} className="relative">
+                      <MobileTableCard
+                        title={invoice.invoice_number}
+                        subtitle={invoice.partner_organization?.name || 'Unknown Partner'}
+                        badge={<InvoiceStatusBadge status={invoice.status} />}
+                        onClick={() => onInvoiceClick(invoice)}
+                        metadata={[
+                          { label: 'Due', value: invoice.due_date ? format(new Date(invoice.due_date), 'MMM dd, yyyy') : 'No due date' },
+                          { label: 'Amount', value: formatCurrency(invoice.total_amount || 0) },
+                        ]}
+                      />
+                      <div className="absolute top-2 right-2">
+                        <input
+                          type="checkbox"
+                          checked={row.getIsSelected()}
+                          onChange={row.getToggleSelectedHandler()}
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded border-gray-300 scale-125"
+                          aria-label={`Select invoice ${invoice.invoice_number}`}
+                        />
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <MobileTableCard
+                    key={row.original.id}
+                    title={invoice.invoice_number}
+                    subtitle={invoice.partner_organization?.name || 'Unknown Partner'}
+                    badge={<InvoiceStatusBadge status={invoice.status} />}
+                    onClick={() => onInvoiceClick(invoice)}
+                    metadata={[
+                      { label: 'Due', value: invoice.due_date ? format(new Date(invoice.due_date), 'MMM dd, yyyy') : 'No due date' },
+                      { label: 'Amount', value: formatCurrency(invoice.total_amount || 0) },
+                    ]}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -230,133 +274,202 @@ export function PartnerInvoicesTable({
     );
   }
 
-  // Desktop view
+  // Render desktop view
   return (
-    <Card className="border-b">
-      {/* Desktop toolbar */}
-      <TableToolbar
-        title={title}
-        subtitle={subtitle}
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Search invoices..."
-        viewMode={viewMode}
-        onViewModeChange={onViewModeChange}
-        allowedViewModes={allowedModes}
-        selectedCount={selectedInvoices.length}
-        onClearSelection={() => onSelectAll(false)}
-        onExport={onExport}
-        columnVisibilityColumns={columnVisibilityColumns}
-        onToggleColumn={onToggleColumn}
-        onResetColumns={onResetColumns}
-      />
+    <Card className="overflow-hidden">
+      {/* Table toolbar with search and actions */}
+      <div className="border-b">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
+          {/* Left side - Title and view mode */}
+          <div className="flex items-center gap-4">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold leading-none tracking-tight">
+                Partner Invoices
+              </h2>
+            </div>
+            
+            {/* View mode switcher */}
+            <ViewModeSwitcher
+              value={viewMode}
+              onValueChange={setViewMode}
+              allowedModes={['table', 'card', 'list']}
+              className="shrink-0"
+            />
+          </div>
 
-      {/* Filter component */}
-      {filterComponent && (
-        <div className="px-6 pb-4">
-          {filterComponent}
+          {/* Right side - Search and Actions */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Selection clear */}
+            {selectedRows.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setRowSelection({})}
+                className="shrink-0"
+              >
+                Clear Selection ({selectedRows.length})
+              </Button>
+            )}
+
+            {/* Filters and Search */}
+            <div className="flex items-center gap-2">
+              {filterComponent}
+              <div className="relative flex-1 sm:flex-initial sm:w-80">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search invoices..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-10 h-10"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Column visibility */}
+            {columnVisibilityColumns && onToggleColumn && onResetColumns && (
+              <ColumnVisibilityDropdown
+                columns={columnVisibilityColumns}
+                onToggleColumn={onToggleColumn}
+                onResetToDefaults={onResetColumns}
+                variant="outline"
+                size="sm"
+              />
+            )}
+
+            {/* Export */}
+            <ExportDropdown
+              onExport={onExportAll}
+              variant="outline"
+              size="sm"
+              disabled={isLoading || !(data && data.length > 0)}
+              loading={isLoading}
+            />
+          </div>
         </div>
-      )}
-
-      {/* Table content */}
-      <div className="p-6">
+      </div>
+      <CardContent className="p-0 overflow-hidden">
         {isLoading ? (
-          <EnhancedTableSkeleton rows={8} columns={8} showHeader={true} />
-        ) : !filteredInvoices?.length ? (
+          <EnhancedTableSkeleton rows={5} columns={7} />
+        ) : data?.length === 0 ? (
           <EmptyState
-            icon={FileText}
-            title="No partner invoices found"
-            description="Create your first invoice to bill partner organizations"
+            icon={ClipboardList}
+            title="No invoices found"
+            description="Try adjusting your filters or search criteria"
             action={{
               label: "Create Invoice",
-              onClick: () => console.log('Create invoice')
+              onClick: () => console.log('Create invoice'),
+              icon: Plus
             }}
+            variant="card"
           />
         ) : (
-          <ResponsiveTableWrapper stickyFirstColumn minWidth="900px">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={
-                        filteredInvoices.length > 0 && selectedInvoices.length === filteredInvoices.length
-                      }
-                      onCheckedChange={onSelectAll}
-                      aria-label="Select all invoices"
-                    />
-                  </TableHead>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Partner</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-24">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredInvoices.map((invoice) => (
-                  <TableRow
-                    key={invoice.id}
-                    className={selectedInvoices.includes(invoice.id) ? 'bg-muted/50' : ''}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedInvoices.includes(invoice.id)}
-                        onCheckedChange={(checked) => 
-                          onSelectInvoice(invoice.id, !!checked)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={`Select invoice ${invoice.invoice_number}`}
-                      />
-                    </TableCell>
-                    <TableCell 
-                      className="font-mono cursor-pointer hover:text-primary"
-                      onClick={() => onInvoiceClick(invoice.id)}
-                    >
-                      {invoice.invoice_number}
-                    </TableCell>
-                    <TableCell 
-                      className="cursor-pointer hover:text-primary"
-                      onClick={() => onInvoiceClick(invoice.id)}
-                    >
-                      {invoice.partner_organization?.name || 'Unknown Partner'}
-                    </TableCell>
-                    <TableCell>
-                      {invoice.invoice_date 
-                        ? format(new Date(invoice.invoice_date), 'MMM dd, yyyy') 
-                        : 'No date'}
-                    </TableCell>
-                    <TableCell>
-                      {invoice.due_date 
-                        ? format(new Date(invoice.due_date), 'MMM dd, yyyy') 
-                        : 'No due date'}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(invoice.total_amount || 0)}
-                    </TableCell>
-                    <TableCell>
-                      <InvoiceStatusBadge status={invoice.status} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <PartnerInvoiceActions invoice={invoice} />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onInvoiceClick(invoice.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {bulkMode && (
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={table.getIsAllPageRowsSelected()}
+                          onChange={table.getToggleAllPageRowsSelectedHandler()}
+                          className="rounded border-gray-300"
+                          aria-label="Select all invoices"
+                        />
+                      </TableHead>
+                    )}
+                    <TableHead>Invoice #</TableHead>
+                    <TableHead>Partner</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-24">Actions</TableHead>
                   </TableRow>
                 ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => {
+                    const invoice = row.original;
+                    return (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() ? "selected" : undefined}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => onInvoiceClick(invoice)}
+                      >
+                        {bulkMode && (
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={row.getIsSelected()}
+                              onChange={row.getToggleSelectedHandler()}
+                              className="rounded border-gray-300"
+                              aria-label={`Select invoice ${invoice.invoice_number}`}
+                            />
+                          </TableCell>
+                        )}
+                        <TableCell className="font-mono">
+                          {invoice.invoice_number}
+                        </TableCell>
+                        <TableCell>
+                          {invoice.partner_organization?.name || 'Unknown Partner'}
+                        </TableCell>
+                        <TableCell>
+                          {invoice.invoice_date 
+                            ? format(new Date(invoice.invoice_date), 'MMM dd, yyyy') 
+                            : 'No date'}
+                        </TableCell>
+                        <TableCell>
+                          {invoice.due_date 
+                            ? format(new Date(invoice.due_date), 'MMM dd, yyyy') 
+                            : 'No due date'}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {formatCurrency(invoice.total_amount || 0)}
+                        </TableCell>
+                        <TableCell>
+                          <InvoiceStatusBadge status={invoice.status} />
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onInvoiceClick(invoice);
+                            }}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={bulkMode ? 8 : 7} className="h-24 text-center">
+                      No results.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
-          </ResponsiveTableWrapper>
+          </div>
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 }
