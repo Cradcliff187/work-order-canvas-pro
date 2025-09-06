@@ -91,7 +91,7 @@ export default function PartnerInvoices() {
               <table className="w-full">
                 <thead className="border-b">
                   <tr>
-                    <th className="text-left p-4">Invoice #</th>
+                    <th className="text-left p-4 text-sm">Invoice #</th>
                     <th className="text-left p-4">Partner</th>
                     <th className="text-left p-4">Date</th>
                     <th className="text-left p-4">Amount</th>
@@ -105,7 +105,11 @@ export default function PartnerInvoices() {
                       className="border-b hover:bg-muted/50 cursor-pointer"
                       onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
                     >
-                      <td className="p-4">{invoice.invoice_number}</td>
+                      <td className="p-4">
+                        <span className="font-mono text-sm">
+                          {invoice.invoice_number}
+                        </span>
+                      </td>
                       <td className="p-4">{invoice.partner_organization?.name}</td>
                       <td className="p-4">{format(new Date(invoice.invoice_date), 'MMM d, yyyy')}</td>
                       <td className="p-4">{formatCurrency(invoice.total_amount)}</td>
