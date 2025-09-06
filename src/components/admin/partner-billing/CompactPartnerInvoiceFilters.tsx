@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { Calendar } from '@/components/ui/calendar';
@@ -366,15 +367,11 @@ export const CompactPartnerInvoiceFilters: React.FC<CompactPartnerInvoiceFilters
         <Button
           variant="outline"
           onClick={() => setIsOpen(true)}
-          className="h-10"
+          className="relative"
         >
           <Filter className="h-4 w-4 mr-2" />
           Filters
-          {activeCount > 0 && (
-            <span className="ml-2 bg-primary text-primary-foreground text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">
-              {activeCount}
-            </span>
-          )}
+          {activeCount > 0 && <Badge className="ml-2">{activeCount}</Badge>}
         </Button>
         <MobileFilterOverlay />
       </>
@@ -384,14 +381,10 @@ export const CompactPartnerInvoiceFilters: React.FC<CompactPartnerInvoiceFilters
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="h-10">
+        <Button variant="outline" className="relative">
           <Filter className="h-4 w-4 mr-2" />
           Filters
-          {activeCount > 0 && (
-            <span className="ml-2 bg-primary text-primary-foreground text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">
-              {activeCount}
-            </span>
-          )}
+          {activeCount > 0 && <Badge className="ml-2">{activeCount}</Badge>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-96 p-4" align="start">
