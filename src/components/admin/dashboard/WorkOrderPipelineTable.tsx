@@ -131,7 +131,7 @@ export function WorkOrderPipelineTable({
                 </button>
               </div>
             </HoverCardTrigger>
-            <HoverCardContent className="w-80 z-[9999]">
+            <HoverCardContent className="z-[99999] relative bg-popover border shadow-lg w-80" align="start" side="bottom" sideOffset={5}>
               <div className="space-y-3">
                 <h4 className="text-sm font-semibold">{item.work_order_number}</h4>
                 <p className="text-sm font-medium">{item.title}</p>
@@ -191,7 +191,7 @@ export function WorkOrderPipelineTable({
                 {title}
               </div>
             </HoverCardTrigger>
-            <HoverCardContent className="z-[9999]">
+            <HoverCardContent className="z-[99999] relative bg-popover border shadow-lg" align="start" side="bottom" sideOffset={5}>
               <p className="text-sm">{title}</p>
             </HoverCardContent>
           </HoverCard>
