@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
@@ -12,6 +12,7 @@ import {
   getFilteredRowModel,
   ColumnDef,
   flexRender,
+  SortingState,
 } from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
@@ -64,6 +65,14 @@ export function WorkOrderPipelineTable({
 }: WorkOrderPipelineTableProps) {
   const navigate = useNavigate();
   const isMobileDevice = useIsMobile();
+
+  // Add state for sorting
+  const [sortingState, setSortingState] = useState<SortingState>([
+    {
+      id: 'work_order_number',
+      desc: true
+    }
+  ]);
 
   // Helper function to get partner billing status based on workflow
   const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
@@ -429,7 +438,17 @@ export function WorkOrderPipelineTable({
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: { pageSize: 20 },
+      sorting: [
+        {
+          id: 'work_order_number',
+          desc: true // Sort by newest work orders first
+        }
+      ]
     },
+    state: {
+      sorting: sortingState,
+    },
+    onSortingChange: setSortingState,
   });
 
   const handleRowClick = (item: WorkOrderPipelineItem) => {
