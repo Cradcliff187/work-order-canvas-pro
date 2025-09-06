@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
@@ -11,6 +11,23 @@ import { FinancialStatusBadge } from '@/components/ui/status-badge';
 export default function PartnerInvoices() {
   const navigate = useNavigate();
   const { data: invoices, isLoading } = usePartnerInvoices();
+  
+  const stats = useMemo(() => {
+    if (!invoices?.length) return { outstanding: 0, thisMonth: 0, overdue: 0 };
+    
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    return {
+      outstanding: invoices
+        .filter(i => i.status !== 'paid')
+        .reduce((sum, i) => sum + (i.total_amount || 0), 0),
+      thisMonth: invoices
+        .filter(i => new Date(i.created_at) >= monthStart).length,
+      overdue: invoices
+        .filter(i => i.status !== 'paid' && i.due_date && new Date(i.due_date) < now).length
+    };
+  }, [invoices]);
   
   return (
     <div className="space-y-6">
@@ -30,19 +47,19 @@ export default function PartnerInvoices() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
-            <div className="text-2xl font-bold">$0</div>
+            <div className="text-2xl font-bold">{formatCurrency(stats.outstanding)}</div>
             <p className="text-sm text-muted-foreground">Total Outstanding</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.thisMonth}</div>
             <p className="text-sm text-muted-foreground">This Month</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.overdue}</div>
             <p className="text-sm text-muted-foreground">Overdue</p>
           </CardContent>
         </Card>
