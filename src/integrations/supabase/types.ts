@@ -2316,6 +2316,10 @@ export type Database = {
         Args: { org_id: string }
         Returns: string
       }
+      generate_partner_invoice_number: {
+        Args: { partner_org_id: string }
+        Returns: string
+      }
       generate_work_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string

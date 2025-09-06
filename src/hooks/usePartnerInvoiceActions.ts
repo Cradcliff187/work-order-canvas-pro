@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLogPartnerInvoiceAction } from './usePartnerInvoiceAuditLogs';
+import { useRetry } from './useRetry';
 
 interface GeneratePdfParams {
   invoiceId: string;
@@ -24,23 +25,23 @@ export function usePartnerInvoiceActions() {
   const { toast } = useToast();
   const { logAction } = useLogPartnerInvoiceAction();
 
-  const generatePdfMutation = useMutation({
-    mutationFn: async ({ invoiceId }: GeneratePdfParams) => {
-      setIsGeneratingPdf(true);
-      
+  // Enhanced retry mechanism for PDF generation
+  const { executeWithRetry: retryPdfGeneration } = useRetry(
+    async (invoiceId: string) => {
       const { data, error } = await supabase.functions.invoke('generate-partner-invoice-pdf', {
         body: { invoiceId }
       });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || 'PDF generation failed');
-      }
-
+      if (error) throw new Error(error.message);
+      if (!data.success) throw new Error(data.error || 'PDF generation failed');
       return data;
+    },
+    { maxAttempts: 3, delay: 2000, backoff: true }
+  );
+
+  const generatePdfMutation = useMutation({
+    mutationFn: async ({ invoiceId }: GeneratePdfParams) => {
+      setIsGeneratingPdf(true);
+      return await retryPdfGeneration(invoiceId);
     },
     onSuccess: async (data, variables) => {
       // Log the PDF generation action
