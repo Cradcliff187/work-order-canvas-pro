@@ -7,6 +7,7 @@ import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { formatCurrency } from '@/utils/formatting';
 import { format } from 'date-fns';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
 
 export default function PartnerInvoices() {
   const navigate = useNavigate();
@@ -38,10 +39,16 @@ export default function PartnerInvoices() {
             Manage invoices sent to partner organizations
           </p>
         </div>
-        <Button onClick={() => navigate('/admin/partner-billing/select-reports')}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Invoice
-        </Button>
+        <div className="flex gap-2">
+          <ExportDropdown 
+            onExport={(format) => console.log('Export', format)}
+            disabled={!invoices?.length || isLoading}
+          />
+          <Button onClick={() => navigate('/admin/partner-billing/select-reports')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Invoice
+          </Button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
