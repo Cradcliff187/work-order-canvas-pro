@@ -47,6 +47,7 @@ interface PartnerInvoicesTableProps {
   
   // Filter Component
   filterComponent?: React.ReactNode;
+  filterCount?: number;
   
   // Table Configuration
   columns: ColumnDef<any>[];

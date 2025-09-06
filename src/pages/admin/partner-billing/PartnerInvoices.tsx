@@ -9,6 +9,8 @@ import { useOrganizations } from '@/hooks/useOrganizations';
 import { PartnerInvoicesTable } from '@/components/admin/partner-billing/PartnerInvoicesTable';
 import { CompactPartnerInvoiceFilters } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
 import type { PartnerInvoiceFiltersValue } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
+import { PartnerInvoicesBreadcrumb } from '@/components/admin/partner-billing/PartnerInvoicesBreadcrumb';
+import { usePartnerInvoiceFilterCount } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
 import { PartnerInvoiceBulkActionsBar } from '@/components/admin/partner-billing/PartnerInvoiceBulkActionsBar';
 import { PartnerInvoiceBulkEditModal } from '@/components/admin/partner-billing/PartnerInvoiceBulkEditModal';
 import { useViewMode } from '@/hooks/useViewMode';
@@ -208,17 +210,23 @@ export default function PartnerInvoices() {
     })) || [];
   }, [organizations]);
 
+  // Get filter count for the Filters button badge
+  const filterCount = usePartnerInvoiceFilterCount(filters);
+
   return (
     <div className="flex-1 space-y-4 overflow-x-hidden">
       <div className={`max-w-full p-4 md:p-6 space-y-6 ${bulkMode && Object.keys(rowSelection).length > 0 ? "pb-24 sm:pb-28" : ""}`}>
+        {/* Breadcrumb */}
+        <PartnerInvoicesBreadcrumb />
+        
         {/* Header */}
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold tracking-tight">
-              Partner Invoices
+              Partner Invoices Management
             </h1>
             <p className="text-muted-foreground">
-              Manage and track partner organization invoices ({invoices.length} total)
+              {invoices.length} total invoices
             </p>
             {bulkMode && (
               <p className="text-sm text-primary mt-1">
@@ -290,6 +298,8 @@ export default function PartnerInvoices() {
               onClear={clearFilters}
             />
           }
+          // Filter count for badge
+          filterCount={filterCount}
           // Pagination and sorting
           pagination={pagination}
           setPagination={setPagination}
