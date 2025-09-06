@@ -121,22 +121,49 @@ export function WorkOrderPipelineTable({
                 </span>
               </HoverCardTrigger>
               <HoverCardContent 
-                className="z-[99999] w-auto max-w-[300px] p-3 bg-popover border shadow-lg" 
+                className="z-[99999] w-[400px] max-w-[90vw] p-4 bg-popover border shadow-lg" 
                 align="start" 
                 side="right"
                 sideOffset={5}
               >
-                <div className="space-y-2">
-                  <div className="font-mono font-semibold">{item.work_order_number}</div>
+                <div className="space-y-3">
+                  {/* Work Order Number */}
+                  <div className="font-mono font-semibold text-primary">
+                    {item.work_order_number}
+                  </div>
+                  
+                  {/* Title */}
                   {item.title && (
-                    <div className="text-sm text-muted-foreground">{item.title}</div>
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Title</div>
+                      <div className="text-sm font-medium">{item.title}</div>
+                    </div>
                   )}
+                  
+                  {/* Description - the original issue */}
+                  {item.description && (
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Description</div>
+                      <div className="text-sm text-foreground whitespace-pre-wrap">
+                        {item.description}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* If no description or title */}
+                  {!item.title && !item.description && (
+                    <div className="text-sm text-muted-foreground italic">
+                      No details available
+                    </div>
+                  )}
+                  
+                  {/* Copy button */}
                   <button 
                     onClick={copyToClipboard}
-                    className="text-xs text-primary hover:underline flex items-center gap-1 mt-2"
+                    className="text-xs text-primary hover:underline flex items-center gap-1 pt-2 border-t"
                   >
                     <Copy className="h-3 w-3" />
-                    Copy to clipboard
+                    Copy WO# to clipboard
                   </button>
                 </div>
               </HoverCardContent>
