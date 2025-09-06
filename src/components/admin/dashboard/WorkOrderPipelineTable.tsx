@@ -322,49 +322,43 @@ export function WorkOrderPipelineTable({
       cell: ({ row }) => {
         const item = row.original;
         
-        // Calculate partner invoice amount with markup if not already set
-        const getPartnerInvoiceAmount = () => {
-          // If already billed to partner, use that amount
-          if (item.partner_billed_amount) {
-            return item.partner_billed_amount;
-          }
-          
-          // Otherwise calculate with markup
-          if (item.subcontractor_bill_amount) {
-            const markupPercent = item.internal_markup_percentage || 30;
-            return item.subcontractor_bill_amount * (1 + markupPercent / 100);
-          }
-          
-          return null;
-        };
-        
-        const amount = getPartnerInvoiceAmount();
-        
-        return (
-          <div className="text-right font-mono text-sm">
-            {amount ? (
-              <div>
-                <span className="font-medium">
-                  ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                {!item.partner_billed_amount && item.internal_markup_percentage && (
-                  <div className="text-xs text-muted-foreground">
-                    ({item.internal_markup_percentage}% markup)
-                  </div>
-                )}
+        // Use actual partner billed amount if available
+        if (item.partner_billed_amount) {
+          return (
+            <div className="text-right font-mono text-sm">
+              <span className="font-medium">
+                ${item.partner_billed_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <div className="text-xs text-muted-foreground">
+                (Invoiced)
               </div>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </div>
-        );
+            </div>
+          );
+        }
+        
+        // Calculate estimated amount using the work order's actual markup
+        if (item.subcontractor_bill_amount && item.internal_markup_percentage) {
+          const estimatedAmount = item.subcontractor_bill_amount * (1 + item.internal_markup_percentage / 100);
+          return (
+            <div className="text-right font-mono text-sm">
+              <span className="font-medium text-blue-600 dark:text-blue-400">
+                ${estimatedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <div className="text-xs text-muted-foreground">
+                (Est. {item.internal_markup_percentage}% markup)
+              </div>
+            </div>
+          );
+        }
+        
+        return <span className="text-muted-foreground text-sm">—</span>;
       },
     },
     {
       id: 'profit_margin',
       header: () => (
         <div className="flex items-center gap-1">
-          <span>Margin</span>
+          <span>Gross Margin</span>
           <Tooltip>
             <TooltipTrigger>
               <Info className="h-3 w-3 text-muted-foreground" />
@@ -382,19 +376,26 @@ export function WorkOrderPipelineTable({
           return <span className="text-muted-foreground text-sm">—</span>;
         }
         
+        // Use actual or calculated partner amount
         const partnerAmount = item.partner_billed_amount || 
           (item.subcontractor_bill_amount * (1 + (item.internal_markup_percentage || 30) / 100));
         
-        const margin = partnerAmount - item.subcontractor_bill_amount;
-        const marginPercent = (margin / partnerAmount) * 100;
+        const profit = partnerAmount - item.subcontractor_bill_amount;
+        const marginPercent = (profit / partnerAmount) * 100;
+        
+        // Show different colors based on margin health
+        const marginColor = marginPercent >= 25 ? 'text-green-600 dark:text-green-400' :
+                            marginPercent >= 15 ? 'text-blue-600 dark:text-blue-400' :
+                            marginPercent >= 10 ? 'text-yellow-600 dark:text-yellow-400' :
+                            'text-red-600 dark:text-red-400';
         
         return (
           <div className="text-right text-sm">
-            <div className="font-medium text-green-600 dark:text-green-400">
-              ${margin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className={`font-medium ${marginColor}`}>
+              ${profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs text-muted-foreground">
-              {marginPercent.toFixed(1)}%
+              {marginPercent.toFixed(1)}% margin
             </div>
           </div>
         );
@@ -594,12 +595,11 @@ export function WorkOrderPipelineTable({
                           label: 'Partner Invoice', 
                           value: (() => {
                             if (item.partner_billed_amount) {
-                              return `$${item.partner_billed_amount.toLocaleString()}`;
+                              return `$${item.partner_billed_amount.toLocaleString()} (Invoiced)`;
                             }
-                            if (item.subcontractor_bill_amount) {
-                              const markupPercent = item.internal_markup_percentage || 30;
-                              const amount = item.subcontractor_bill_amount * (1 + markupPercent / 100);
-                              return `$${amount.toLocaleString()}`;
+                            if (item.subcontractor_bill_amount && item.internal_markup_percentage) {
+                              const amount = item.subcontractor_bill_amount * (1 + item.internal_markup_percentage / 100);
+                              return `$${amount.toLocaleString()} (Est. ${item.internal_markup_percentage}% markup)`;
                             }
                             return '—';
                           })()
