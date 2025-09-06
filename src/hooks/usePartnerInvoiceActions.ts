@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useLogPartnerInvoiceAction } from './usePartnerInvoiceAuditLogs';
+
 import { useRetry } from './useRetry';
 
 interface GeneratePdfParams {
@@ -23,7 +23,6 @@ export function usePartnerInvoiceActions() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { logAction } = useLogPartnerInvoiceAction();
 
   // Enhanced retry mechanism for PDF generation
   const { executeWithRetry: retryPdfGeneration } = useRetry(
@@ -44,12 +43,6 @@ export function usePartnerInvoiceActions() {
       return await retryPdfGeneration(invoiceId);
     },
     onSuccess: async (data, variables) => {
-      // Log the PDF generation action
-      await logAction(variables.invoiceId, 'pdf_generated', {
-        pdf_url: data.pdfUrl,
-        generated_at: new Date().toISOString()
-      });
-
       toast({
         title: 'PDF Generated',
         description: 'Partner invoice PDF has been generated successfully.',
@@ -96,11 +89,6 @@ export function usePartnerInvoiceActions() {
       return { invoiceId };
     },
     onSuccess: async (data) => {
-      // Log the email sent action
-      await logAction(data.invoiceId, 'email_sent', {
-        sent_at: new Date().toISOString()
-      });
-
       toast({
         title: 'Invoice Sent',
         description: 'Invoice has been sent to partner organization.',
@@ -142,12 +130,6 @@ export function usePartnerInvoiceActions() {
       return { invoiceId, status };
     },
     onSuccess: async (data) => {
-      // Log the status change action
-      await logAction(data.invoiceId, 'status_changed', {
-        new_status: data.status,
-        changed_at: new Date().toISOString()
-      });
-
       toast({
         title: 'Status Updated',
         description: `Invoice status changed to ${data.status.replace('_', ' ')}.`,

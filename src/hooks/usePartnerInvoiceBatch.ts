@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useLogPartnerInvoiceAction } from './usePartnerInvoiceAuditLogs';
 
 interface BatchOperation {
   invoiceId: string;
@@ -13,7 +12,6 @@ interface BatchOperation {
 export const usePartnerInvoiceBatch = () => {
   const [operations, setOperations] = useState<BatchOperation[]>([]);
   const queryClient = useQueryClient();
-  const { logAction } = useLogPartnerInvoiceAction();
 
   const batchGeneratePdf = useMutation({
     mutationFn: async (invoiceIds: string[]) => {
@@ -35,9 +33,7 @@ export const usePartnerInvoiceBatch = () => {
 
           if (error) throw error;
 
-          await logAction(invoiceId, 'PDF_GENERATED_BATCH', { batchOperation: true });
-          
-          setOperations(prev => 
+          setOperations(prev =>
             prev.map(op => 
               op.invoiceId === invoiceId ? { ...op, status: 'completed' } : op
             )
@@ -104,9 +100,7 @@ export const usePartnerInvoiceBatch = () => {
 
           if (error) throw error;
 
-          await logAction(invoiceId, 'EMAIL_SENT_BATCH', { batchOperation: true });
-          
-          setOperations(prev => 
+          setOperations(prev =>
             prev.map(op => 
               op.invoiceId === invoiceId ? { ...op, status: 'completed' } : op
             )

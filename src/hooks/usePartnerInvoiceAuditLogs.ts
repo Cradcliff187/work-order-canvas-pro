@@ -49,30 +49,3 @@ export const usePartnerInvoiceAuditLogs = (invoiceId: string) => {
     enabled: !!invoiceId,
   });
 };
-
-export const useLogPartnerInvoiceAction = () => {
-  const logAction = async (
-    invoiceId: string, 
-    actionType: string, 
-    details?: Record<string, any>
-  ) => {
-    try {
-      const { error } = await supabase
-        .from('partner_invoice_audit_log')
-        .insert({
-          invoice_id: invoiceId,
-          action_type: actionType,
-          new_values: details || null,
-          user_agent: navigator.userAgent
-        });
-
-      if (error) {
-        console.error('Failed to log audit action:', error);
-      }
-    } catch (error) {
-      console.error('Failed to log audit action:', error);
-    }
-  };
-
-  return { logAction };
-};
