@@ -180,6 +180,25 @@ body {
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
+/* Floating UI Elements Z-Index Management */
+/* Ensure all floating UI elements appear above table content and sticky headers */
+
+/* Radix UI Popper Content (HoverCards, Tooltips, Dropdowns) */
+[data-radix-popper-content-wrapper] {
+  z-index: 99999 !important;
+}
+
+/* Specific fix for Radix UI elements in open state */
+[data-state="open"][data-side] {
+  z-index: 99999 !important;
+}
+
+/* Ensure hover cards and tooltips in tables appear above sticky headers */
+.hover-card-content,
+[role="tooltip"] {
+  z-index: 99999 !important;
+}
+
 /* Essential Keyframes */
 @keyframes fadeInUp {
   from {
