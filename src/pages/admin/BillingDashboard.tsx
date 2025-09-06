@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, TrendingUp, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatting';
+import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
 import { SubcontractorBill } from '@/hooks/useSubcontractorBills';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { BillingPipelineTable } from '@/components/admin/billing/BillingPipelineTable';
@@ -156,6 +157,34 @@ export default function BillingDashboard() {
     return count;
   }, [searchTerm, filters]);
 
+  // Prepare stats cards
+  const statsCards: StatCard[] = useMemo(() => [
+    {
+      icon: TrendingUp,
+      label: 'Total Items',
+      value: totalWorkOrders,
+      variant: 'default'
+    },
+    {
+      icon: CheckCircle,
+      label: 'Ready to Invoice',
+      value: readyToBill,
+      variant: 'success'
+    },
+    {
+      icon: Clock,
+      label: 'Pending Reports',
+      value: pendingReports,
+      variant: 'warning'
+    },
+    {
+      icon: AlertTriangle,
+      label: 'Total Value',
+      value: formatCurrency(totalValue),
+      variant: 'destructive'
+    }
+  ], [totalWorkOrders, readyToBill, pendingReports, totalValue]);
+
   // Refresh handler
   const handleRefresh = async () => {
     await refetchPipeline();
@@ -217,55 +246,10 @@ export default function BillingDashboard() {
         </header>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold">{totalWorkOrders}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Ready to Invoice</p>
-                <p className="text-2xl font-bold">{readyToBill}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-500/10 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending Reports</p>
-                <p className="text-2xl font-bold">{pendingReports}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-destructive/10 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-xl font-bold">{formatCurrency(totalValue)}</p>
-              </div>
-            </div>
-          </Card>
-        </div>
+        <StandardDashboardStats 
+          stats={statsCards}
+          loading={pipelineLoading}
+        />
 
         {/* Pipeline Table */}
         <BillingPipelineTable

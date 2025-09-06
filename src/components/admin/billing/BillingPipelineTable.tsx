@@ -9,7 +9,7 @@ import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { BillingFilters, BillingFiltersValue } from '@/components/admin/billing/BillingFilters';
 import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
-import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { ViewMode } from '@/hooks/useViewMode';
 
@@ -195,7 +195,7 @@ export function BillingPipelineTable({
       <CardContent className="p-0">
         {isLoading ? (
           <div className="p-6">
-            <TableSkeleton rows={10} columns={9} showHeader={true} />
+            <EnhancedTableSkeleton rows={8} columns={8} showHeader={true} />
           </div>
         ) : data.length === 0 ? (
           <EmptyState

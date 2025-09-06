@@ -34,6 +34,7 @@ import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { SkeletonGroup } from '@/components/ui/enhanced-skeleton';
 import { InvoiceFilters } from './InvoiceFilters';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { PartnerInvoiceActions } from './PartnerInvoiceActions';
@@ -190,11 +191,11 @@ export function PartnerInvoicesTable({
 
           {/* Loading state */}
           {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
-              ))}
-            </div>
+            <SkeletonGroup 
+              count={8} 
+              className="space-y-3" 
+              itemClassName="h-24 rounded-lg"
+            />
           ) : !data?.length ? (
             <EmptyState
               icon={FileText}
