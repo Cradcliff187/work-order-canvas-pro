@@ -21,7 +21,7 @@ export function CompactMobileCard({
   return (
     <Card 
       className={`transition-shadow duration-200 border-border ${
-        onClick ? 'cursor-pointer hover:shadow-md hover:border-primary/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background' : ''
+        onClick ? 'cursor-pointer hover:shadow-md hover:border-primary/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background active:scale-[0.98] transition-transform' : ''
       }`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}

@@ -56,7 +56,7 @@ export function MobileTableCard({
       className={cn(
         "transition-shadow duration-200 border-border",
         selected && "bg-muted ring-2 ring-primary",
-        onClick && "cursor-pointer hover:shadow-md hover:border-primary/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background",
+        onClick && "cursor-pointer hover:shadow-md hover:border-primary/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background active:scale-[0.98] transition-transform",
         className
       )}
       onClick={(e) => {
@@ -76,7 +76,7 @@ export function MobileTableCard({
         }
       }}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-4 min-h-[48px]">
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-3">
             {onSelect && (
@@ -92,7 +92,7 @@ export function MobileTableCard({
               <h3 className="font-semibold text-sm truncate">{displayTitle}</h3>
               <p className="text-sm text-muted-foreground truncate">{displaySubtitle}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {displayStatus && (
                 <div className="flex-shrink-0">
                   {displayStatus}
@@ -101,7 +101,7 @@ export function MobileTableCard({
               {actions && actions.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0 hover:bg-muted">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>

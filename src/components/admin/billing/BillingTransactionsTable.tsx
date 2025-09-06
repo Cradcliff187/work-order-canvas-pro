@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 
 interface TransactionRow {
   id: string;
@@ -16,9 +17,10 @@ interface TransactionRow {
 interface BillingTransactionsTableProps {
   rows: TransactionRow[];
   visibleColumns?: Array<keyof TransactionRow>;
+  isLoading?: boolean;
 }
 
-export function BillingTransactionsTable({ rows, visibleColumns }: BillingTransactionsTableProps) {
+export function BillingTransactionsTable({ rows, visibleColumns, isLoading }: BillingTransactionsTableProps) {
   const [sortKey, setSortKey] = React.useState<keyof TransactionRow>('date');
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('desc');
 
@@ -76,6 +78,19 @@ const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
     [visibleColumns]
   );
 
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Transactions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EnhancedTableSkeleton rows={8} columns={8} showHeader={true} />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -83,13 +98,13 @@ const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
       </CardHeader>
       <CardContent>
         {/* Mobile list */}
-        <div className="md:hidden space-y-4">
+        <div className="md:hidden space-y-3">
           {sortedRows.map((r) => (
             <MobileTableCard
               key={r.id}
               title={(r.reference || r.type.replace(/_/g, ' ')).toString()}
               subtitle={`${r.organization_name || '-' } • ${new Date(r.date).toLocaleDateString()}`}
-              status={<span className="text-sm font-semibold">{formatCurrency(r.amount)}</span>}
+              badge={<span className="text-sm font-semibold">{formatCurrency(r.amount)}</span>}
             />
           ))}
         </div>

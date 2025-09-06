@@ -164,65 +164,69 @@ const SubcontractorBills = () => {
           />
         ) : (
           bills.map((bill) => (
-            <Card key={bill.id}>
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-medium">{bill.internal_bill_number}</h4>
-                      {bill.external_bill_number && (
-                        <span className="text-sm text-muted-foreground">
-                          ({bill.external_bill_number})
-                        </span>
-                      )}
-                      {bill.workOrderCount && bill.workOrderCount > 0 && (
-                        <div className="flex items-center gap-1 text-blue-600">
-                          <FileText className="h-4 w-4" />
-                          <span className="text-xs">{bill.workOrderCount} WO</span>
-                        </div>
-                      )}
+            <Card 
+              key={bill.id}
+              className="transition-shadow duration-200 border-border cursor-pointer hover:shadow-md hover:border-primary/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  // Handle navigation to bill details
+                }
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm truncate">{bill.internal_bill_number}</h3>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {bill.external_bill_number ? `Invoice: ${bill.external_bill_number}` : 'No external invoice'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <FinancialStatusBadge 
                         status={bill.status === 'submitted' ? 'pending' : bill.status} 
                         size="sm"
                         showIcon 
                       />
-                      {bill.status === 'approved' && !bill.paid_at && (
-                        <Badge variant="outline">Awaiting Payment</Badge>
-                      )}
                     </div>
-                    
-                    <div className="text-lg font-semibold">
-                      ${(bill.total_amount || 0).toLocaleString()}
-                    </div>
-                    
-                    <div className="space-y-1 text-sm text-muted-foreground">
-                      {bill.submitted_at && (
-                        <p>Submitted: {format(new Date(bill.submitted_at), "MMM d, yyyy")}</p>
-                      )}
-                      {bill.approved_at && (
-                        <p>Approved: {format(new Date(bill.approved_at), "MMM d, yyyy")}</p>
-                      )}
-                      {bill.paid_at && (
-                        <p>Paid: {format(new Date(bill.paid_at), "MMM d, yyyy")}</p>
-                      )}
-                      {bill.payment_reference && (
-                        <p>Payment Ref: {bill.payment_reference}</p>
-                      )}
-                    </div>
-
-                    {/* Work Orders Count */}
-                    {bill.workOrderCount && bill.workOrderCount > 0 && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Work Orders: </span>
-                        <Badge variant="outline">{bill.workOrderCount}</Badge>
-                      </div>
-                    )}
                   </div>
                   
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
+                  <div className="pt-2 border-t border-border">
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Amount:</span>
+                        <span className="font-medium text-lg text-foreground">
+                          ${(bill.total_amount || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      {bill.workOrderCount && bill.workOrderCount > 0 && (
+                        <div className="flex justify-between">
+                          <span>Work Orders:</span>
+                          <span className="font-medium">{bill.workOrderCount}</span>
+                        </div>
+                      )}
+                      {bill.submitted_at && (
+                        <div className="flex justify-between">
+                          <span>Submitted:</span>
+                          <span className="font-medium">{format(new Date(bill.submitted_at), "MMM d")}</span>
+                        </div>
+                      )}
+                      {bill.approved_at && (
+                        <div className="flex justify-between">
+                          <span>Approved:</span>
+                          <span className="font-medium">{format(new Date(bill.approved_at), "MMM d")}</span>
+                        </div>
+                      )}
+                      {bill.paid_at && (
+                        <div className="flex justify-between">
+                          <span>Paid:</span>
+                          <span className="font-medium">{format(new Date(bill.paid_at), "MMM d")}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>

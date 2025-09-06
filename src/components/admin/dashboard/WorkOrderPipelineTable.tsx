@@ -17,7 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
@@ -486,11 +486,9 @@ export function WorkOrderPipelineTable({
     }
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {isLoading ? (
-          <div className="p-4">
-            <TableSkeleton rows={5} columns={1} />
-          </div>
+          <EnhancedTableSkeleton rows={8} columns={8} showHeader={true} />
         ) : data.length === 0 ? (
           <div className="p-4">
             <EmptyState
@@ -554,7 +552,7 @@ export function WorkOrderPipelineTable({
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
-          <TableSkeleton rows={5} columns={4} />
+          <EnhancedTableSkeleton rows={8} columns={8} showHeader={true} />
         ) : data.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
