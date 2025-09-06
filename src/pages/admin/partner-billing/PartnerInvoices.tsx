@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Plus } from 'lucide-react';
+import { Plus, DollarSign, Calendar, AlertTriangle, Clock } from 'lucide-react';
+import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
 import { useNavigate } from 'react-router-dom';
 import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
@@ -69,21 +70,72 @@ export default function PartnerInvoices() {
   }, [invoices, searchTerm, statusFilter, organizationFilter, dateRange]);
 
   const stats = useMemo(() => {
-    if (!filteredInvoices?.length) return { outstanding: 0, thisMonth: 0, overdue: 0 };
+    if (!filteredInvoices?.length) return { 
+      outstanding: 0, 
+      thisMonth: 0, 
+      overdueAmount: 0, 
+      avgPaymentTime: 0 
+    };
     
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     
+    const outstandingAmount = filteredInvoices
+      .filter(i => i.status !== 'paid')
+      .reduce((sum, i) => sum + (i.total_amount || 0), 0);
+    
+    const thisMonthCount = filteredInvoices
+      .filter(i => new Date(i.created_at) >= monthStart).length;
+    
+    const overdueAmount = filteredInvoices
+      .filter(i => i.status !== 'paid' && i.due_date && new Date(i.due_date) < now)
+      .reduce((sum, i) => sum + (i.total_amount || 0), 0);
+    
+    // Calculate average payment time for paid invoices
+    const paidInvoices = filteredInvoices.filter(i => i.status === 'paid' && i.payment_date && i.invoice_date);
+    const avgPaymentTime = paidInvoices.length > 0 
+      ? Math.round(paidInvoices.reduce((sum, i) => {
+          const paymentDate = new Date(i.payment_date!);
+          const invoiceDate = new Date(i.invoice_date);
+          const daysDiff = Math.floor((paymentDate.getTime() - invoiceDate.getTime()) / (1000 * 60 * 60 * 24));
+          return sum + daysDiff;
+        }, 0) / paidInvoices.length)
+      : 0;
+    
     return {
-      outstanding: filteredInvoices
-        .filter(i => i.status !== 'paid')
-        .reduce((sum, i) => sum + (i.total_amount || 0), 0),
-      thisMonth: filteredInvoices
-        .filter(i => new Date(i.created_at) >= monthStart).length,
-      overdue: filteredInvoices
-        .filter(i => i.status !== 'paid' && i.due_date && new Date(i.due_date) < now).length
+      outstanding: outstandingAmount,
+      thisMonth: thisMonthCount,
+      overdueAmount,
+      avgPaymentTime
     };
   }, [filteredInvoices]);
+
+  const statsCards: StatCard[] = [
+    {
+      icon: DollarSign,
+      label: "Total Outstanding",
+      value: formatCurrency(stats.outstanding),
+      variant: stats.outstanding > 0 ? 'destructive' : 'default'
+    },
+    {
+      icon: Calendar,
+      label: "This Month",
+      value: stats.thisMonth,
+      variant: 'default'
+    },
+    {
+      icon: AlertTriangle,
+      label: "Overdue Amount",
+      value: formatCurrency(stats.overdueAmount),
+      variant: stats.overdueAmount > 0 ? 'warning' : 'default'
+    },
+    {
+      icon: Clock,
+      label: "Avg Payment Time",
+      value: `${stats.avgPaymentTime} days`,
+      variant: 'success'
+    }
+  ];
   
   // Selection handlers
   const handleSelectAll = (checked: boolean) => {
@@ -142,32 +194,11 @@ export default function PartnerInvoices() {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">{formatCurrency(stats.outstanding)}</div>
-            <p className="text-sm text-muted-foreground">Total Outstanding</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">{stats.thisMonth}</div>
-            <p className="text-sm text-muted-foreground">This Month</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">{stats.overdue}</div>
-            <p className="text-sm text-muted-foreground">Overdue</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">0 days</div>
-            <p className="text-sm text-muted-foreground">Avg Payment Time</p>
-          </CardContent>
-        </Card>
-      </div>
+      <StandardDashboardStats 
+        stats={statsCards}
+        loading={isLoading}
+        className="grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+      />
       
       <InvoiceFilters
         searchTerm={searchTerm}
