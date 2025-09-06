@@ -8,30 +8,31 @@ import { StandardDashboardStats, StatCard } from '@/components/dashboard/Standar
 import { useNavigate } from 'react-router-dom';
 import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { PartnerInvoicesTable } from '@/components/admin/partner-billing/PartnerInvoicesTable';
+import { useViewMode, ViewMode } from '@/hooks/useViewMode';
 import { formatCurrency } from '@/utils/formatting';
-import { format } from 'date-fns';
-import { InvoiceStatusBadge } from '@/components/admin/partner-billing/InvoiceStatusBadge';
-import { PartnerInvoiceActions } from '@/components/admin/partner-billing/PartnerInvoiceActions';
-import { ExportDropdown } from '@/components/ui/export-dropdown';
-import { EnhancedLoadingState } from '@/components/admin/partner-billing/EnhancedLoadingState';
-import { BatchOperations } from '@/components/admin/partner-billing/BatchOperations';
-import { InvoiceFilters } from '@/components/admin/partner-billing/InvoiceFilters';
-import { EmptyState } from '@/components/ui/empty-state';
-import { FileText } from 'lucide-react';
 
 export default function PartnerInvoices() {
-  const navigate = useNavigate();
-  const { data: invoices, isLoading } = usePartnerInvoices();
+  const { data: invoices, isLoading, error, refetch } = usePartnerInvoices();
   const { data: organizations } = useOrganizations();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   
-  // Filter states
+  // View mode state
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'partner-invoices',
+    config: {
+      mobile: ['list'],
+      desktop: ['table', 'card']
+    },
+    defaultMode: 'table'
+  });
+  
+  // State for search and filters
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [organizationFilter, setOrganizationFilter] = useState('all');
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
-  
-  // Selection state
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   
   // Filtered invoices
@@ -158,12 +159,45 @@ export default function PartnerInvoices() {
     setSelectedInvoices([]);
   };
   
-  // Filter handlers
+  // Filter helpers
+  const filters = {
+    statusFilter,
+    organizationFilter,
+    dateRange
+  };
+
+  const filterCount = [
+    searchTerm,
+    statusFilter !== 'all' ? statusFilter : '',
+    organizationFilter !== 'all' ? organizationFilter : '',
+    dateRange.from || dateRange.to,
+  ].filter(Boolean).length;
+
   const clearFilters = () => {
     setSearchTerm('');
     setStatusFilter('all');
     setOrganizationFilter('all');
     setDateRange({});
+  };
+
+  const handleFiltersChange = (newFilters: typeof filters) => {
+    setStatusFilter(newFilters.statusFilter);
+    setOrganizationFilter(newFilters.organizationFilter);
+    setDateRange(newFilters.dateRange);
+  };
+
+  const handleBatchAction = (action: string) => {
+    console.log(`Batch ${action} for invoices:`, selectedInvoices);
+    // TODO: Implement batch actions
+  };
+
+  const handleExport = (format: 'csv' | 'excel') => {
+    console.log(`Export invoices as ${format}`);
+    // TODO: Implement export functionality
+  };
+
+  const handleInvoiceClick = (id: string) => {
+    navigate(`/admin/partner-billing/invoices/${id}`);
   };
   
   const partnerOrganizations = useMemo(() => {
@@ -182,16 +216,10 @@ export default function PartnerInvoices() {
             Manage invoices sent to partner organizations
           </p>
         </div>
-        <div className="flex gap-2">
-          <ExportDropdown 
-            onExport={(format) => console.log('Export', format)}
-            disabled={!invoices?.length || isLoading}
-          />
-          <Button onClick={() => navigate('/admin/partner-billing/select-reports')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Invoice
-          </Button>
-        </div>
+        <Button onClick={() => navigate('/admin/partner-billing/select-reports')}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Invoice
+        </Button>
       </div>
       
       <StandardDashboardStats 
@@ -199,186 +227,64 @@ export default function PartnerInvoices() {
         loading={isLoading}
         className="grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
       />
-      
-      <InvoiceFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
-        organizationFilter={organizationFilter}
-        onOrganizationChange={setOrganizationFilter}
-        dateRange={dateRange}
-        onDateRangeChange={setDateRange}
-        organizations={partnerOrganizations}
-        onClearFilters={clearFilters}
-      />
-      
+
+      {/* Batch Actions */}
       {selectedInvoices.length > 0 && (
-        <BatchOperations
-          selectedInvoices={selectedInvoices}
-          onClearSelection={clearSelection}
-        />
+        <Card className="p-4">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              {selectedInvoices.length} invoice{selectedInvoices.length !== 1 ? 's' : ''} selected
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBatchAction('send')}
+              >
+                Send Selected
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBatchAction('mark-paid')}
+              >
+                Mark as Paid
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedInvoices([])}
+              >
+                Clear Selection
+              </Button>
+            </div>
+          </div>
+        </Card>
       )}
-      
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-8">
-              <EnhancedLoadingState 
-                type="general"
-                message="Loading partner invoices..."
-                subMessage="Fetching invoice data from the database"
-              />
-            </div>
-          ) : !filteredInvoices?.length ? (
-            <EmptyState
-              icon={FileText}
-              title="No partner invoices yet"
-              description="Create your first invoice to bill partner organizations"
-              action={{
-                label: "Create Invoice",
-                onClick: () => navigate('/admin/partner-billing/select-reports')
-              }}
-            />
-          ) : isMobile ? (
-            <div className="space-y-3 p-4">
-              {filteredInvoices.map(invoice => (
-                <Card 
-                  key={invoice.id}
-                  onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-mono text-sm text-muted-foreground">
-                        {invoice.invoice_number}
-                      </span>
-                      <InvoiceStatusBadge 
-                        status={invoice.status}
-                        size="sm"
-                        sentAt={invoice.sent_at}
-                      />
-                    </div>
-                    <p className="font-medium text-base mb-2">
-                      {invoice.partner_organization?.name}
-                    </p>
-                    <p className="text-2xl font-bold mb-1">
-                      {formatCurrency(invoice.total_amount)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Due {format(new Date(invoice.due_date || invoice.invoice_date), 'MMM d, yyyy')}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <table className="w-full min-w-[900px]">
-                <thead className="border-b">
-                  <tr>
-                    <th className="w-12 p-4">
-                      <Checkbox
-                        checked={selectedInvoices.length === filteredInvoices.length && filteredInvoices.length > 0}
-                        onCheckedChange={(checked) => handleSelectAll(checked === true)}
-                        aria-label="Select all invoices"
-                      />
-                    </th>
-                    <th className="text-left p-4 text-sm">Invoice #</th>
-                    <th className="text-left p-4">Partner</th>
-                    <th className="text-left p-4">Date</th>
-                    <th className="text-left p-4">Due Date</th>
-                    <th className="text-left p-4">Amount</th>
-                    <th className="text-left p-4">Status</th>
-                    <th className="text-right p-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredInvoices.map(invoice => (
-                    <tr 
-                      key={invoice.id} 
-                      className="border-b hover:bg-muted/50"
-                    >
-                      <td className="p-4">
-                        <Checkbox
-                          checked={selectedInvoices.includes(invoice.id)}
-                          onCheckedChange={(checked) => handleSelectInvoice(invoice.id, checked === true)}
-                          aria-label={`Select invoice ${invoice.invoice_number}`}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </td>
-                      <td 
-                        className="p-4 cursor-pointer"
-                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
-                      >
-                        <span className="font-mono text-sm">
-                          {invoice.invoice_number}
-                        </span>
-                      </td>
-                      <td 
-                        className="p-4 cursor-pointer"
-                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
-                      >
-                        {invoice.partner_organization?.name}
-                      </td>
-                      <td 
-                        className="p-4 cursor-pointer"
-                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
-                      >
-                        {format(new Date(invoice.invoice_date), 'MMM d, yyyy')}
-                      </td>
-                      <td 
-                        className="p-4 cursor-pointer"
-                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
-                      >
-                        {invoice.due_date 
-                          ? format(new Date(invoice.due_date), 'MMM d, yyyy')
-                          : '-'
-                        }
-                      </td>
-                      <td 
-                        className="p-4 cursor-pointer"
-                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
-                      >
-                        {formatCurrency(invoice.total_amount)}
-                      </td>
-                      <td 
-                        className="p-4 cursor-pointer"
-                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
-                      >
-                        <InvoiceStatusBadge 
-                          status={invoice.status}
-                          size="sm"
-                          showIcon
-                          sentAt={invoice.sent_at}
-                        />
-                      </td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <PartnerInvoiceActions
-                            invoice={invoice}
-                            variant="buttons"
-                          />
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/admin/partner-billing/invoices/${invoice.id}`);
-                            }}
-                          >
-                            View
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+      {/* Partner Invoices Table */}
+      <PartnerInvoicesTable
+        data={filteredInvoices || []}
+        isLoading={isLoading}
+        isError={error}
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        allowedModes={allowedModes}
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        onClearFilters={clearFilters}
+        filterCount={filterCount}
+        onExport={handleExport}
+        onRefresh={refetch}
+        isMobile={isMobile}
+        selectedInvoices={selectedInvoices}
+        onSelectInvoice={handleSelectInvoice}
+        onSelectAll={handleSelectAll}
+        onInvoiceClick={handleInvoiceClick}
+        organizations={partnerOrganizations || []}
+      />
     </div>
   );
 }
