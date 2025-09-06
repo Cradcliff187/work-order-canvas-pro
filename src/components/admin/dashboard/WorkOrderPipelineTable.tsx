@@ -359,25 +359,17 @@ export function WorkOrderPipelineTable({
               <MobileTableCard
                 key={item.id}
                 title={item.work_order_number || 'No WO#'}
-                subtitle={`${item.partner_organization_name} • ${item.store_location || 'No location'}`}
+                subtitle={item.description 
+                  ? `${item.description.substring(0, 100)}${item.description.length > 100 ? '...' : ''}`
+                  : `${item.partner_organization_name} • ${item.store_location || 'No location'}`
+                }
                 badge={
                   <WorkOrderStatusBadge status={item.status} size="sm" />
                 }
                 metadata={[
-                  { label: 'Status', value: item.status },
+                  { label: 'Partner', value: item.partner_organization_name },
+                  { label: 'Location', value: item.store_location || 'No location' },
                   { label: 'Report', value: item.report_status || 'Not submitted' },
-                  { 
-                    label: 'Invoice', 
-                    value: (() => {
-                      if (!item.invoice_status) return 'Not Billed';
-                      switch (item.invoice_status) {
-                        case 'submitted': return 'Pending';
-                        case 'approved': return 'Approved';
-                        case 'paid': return 'Paid';
-                        default: return 'Pending';
-                      }
-                    })()
-                  },
                   { 
                     label: 'Amount', 
                     value: item.subcontractor_bill_amount ? `$${item.subcontractor_bill_amount.toLocaleString()}` : '—'
@@ -458,25 +450,17 @@ export function WorkOrderPipelineTable({
                     <MobileTableCard
                       key={row.id}
                       title={item.work_order_number || 'No WO#'}
-                      subtitle={`${item.partner_organization_name} • ${item.store_location || 'No location'}`}
+                      subtitle={item.description 
+                        ? `${item.description.substring(0, 100)}${item.description.length > 100 ? '...' : ''}`
+                        : `${item.partner_organization_name} • ${item.store_location || 'No location'}`
+                      }
                       badge={
                         <WorkOrderStatusBadge status={item.status} size="sm" />
                       }
                       metadata={[
-                        { label: 'Status', value: item.status },
+                        { label: 'Partner', value: item.partner_organization_name },
+                        { label: 'Location', value: item.store_location || 'No location' },
                         { label: 'Report', value: item.report_status || 'Not submitted' },
-                        { 
-                          label: 'Invoice', 
-                          value: (() => {
-                            if (!item.invoice_status) return 'Not Billed';
-                            switch (item.invoice_status) {
-                              case 'submitted': return 'Pending';
-                              case 'approved': return 'Approved';
-                              case 'paid': return 'Paid';
-                              default: return 'Pending';
-                            }
-                          })()
-                        },
                         { 
                           label: 'Amount', 
                           value: item.subcontractor_bill_amount ? `$${item.subcontractor_bill_amount.toLocaleString()}` : '—'
