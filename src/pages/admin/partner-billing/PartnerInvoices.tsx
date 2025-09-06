@@ -86,7 +86,7 @@ export default function PartnerInvoices() {
           {isLoading ? (
             <EnhancedTableSkeleton 
               rows={5} 
-              columns={6} 
+              columns={7} 
               showHeader={false} 
               showActions={false} 
             />
@@ -102,12 +102,13 @@ export default function PartnerInvoices() {
             />
           ) : (
             <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <table className="w-full min-w-[700px]">
+              <table className="w-full min-w-[800px]">
                 <thead className="border-b">
                   <tr>
                     <th className="text-left p-4 text-sm">Invoice #</th>
                     <th className="text-left p-4">Partner</th>
                     <th className="text-left p-4">Date</th>
+                    <th className="text-left p-4">Due Date</th>
                     <th className="text-left p-4">Amount</th>
                     <th className="text-left p-4">Status</th>
                     <th className="text-right p-4">Actions</th>
@@ -127,6 +128,12 @@ export default function PartnerInvoices() {
                       </td>
                       <td className="p-4">{invoice.partner_organization?.name}</td>
                       <td className="p-4">{format(new Date(invoice.invoice_date), 'MMM d, yyyy')}</td>
+                      <td className="p-4">
+                        {invoice.due_date 
+                          ? format(new Date(invoice.due_date), 'MMM d, yyyy')
+                          : '-'
+                        }
+                      </td>
                       <td className="p-4">{formatCurrency(invoice.total_amount)}</td>
                       <td className="p-4">
                         <FinancialStatusBadge status={invoice.status} size="sm" showIcon />
