@@ -13,7 +13,7 @@ import {
   VisibilityState,
   RowSelectionState,
 } from '@tanstack/react-table';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -277,28 +277,20 @@ export function PartnerInvoicesTable({
   // Render desktop view
   return (
     <Card className="overflow-hidden">
-      {/* Table toolbar with search and actions */}
-      <div className="border-b">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
-          {/* Left side - Title and view mode */}
-          <div className="flex items-center gap-4">
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold leading-none tracking-tight">
-                Partner Invoices
-              </h2>
-            </div>
-            
-            {/* View mode switcher */}
-            <ViewModeSwitcher
-              value={viewMode}
-              onValueChange={setViewMode}
-              allowedModes={['table', 'card', 'list']}
-              className="shrink-0"
-            />
-          </div>
-
-          {/* Right side - Search and Actions */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Partner Invoices</CardTitle>
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={['table', 'card', 'list']}
+          />
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {/* Filter row */}
+        <div className="p-6 border-b">
+          <div className="flex items-center gap-2">
             {/* Selection clear */}
             {selectedRows.length > 0 && (
               <Button 
@@ -311,28 +303,28 @@ export function PartnerInvoicesTable({
               </Button>
             )}
 
-            {/* Filters and Search */}
-            <div className="flex items-center gap-2">
-              {filterComponent}
-              <div className="relative flex-1 sm:flex-initial sm:w-80">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search invoices..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-10 h-10"
-                />
-                {searchTerm && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSearchTerm('')}
-                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+            {/* Filters */}
+            {filterComponent}
+
+            {/* Search */}
+            <div className="relative flex-1 max-w-80">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search invoices..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-10 h-10"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             {/* Column visibility */}
@@ -356,119 +348,121 @@ export function PartnerInvoicesTable({
             />
           </div>
         </div>
-      </div>
-      <CardContent className="p-0 overflow-hidden">
-        {isLoading ? (
-          <EnhancedTableSkeleton rows={5} columns={7} />
-        ) : data?.length === 0 ? (
-          <EmptyState
-            icon={ClipboardList}
-            title="No invoices found"
-            description="Try adjusting your filters or search criteria"
-            action={{
-              label: "Create Invoice",
-              onClick: () => console.log('Create invoice'),
-              icon: Plus
-            }}
-            variant="card"
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {bulkMode && (
-                      <TableHead className="w-12">
-                        <input
-                          type="checkbox"
-                          checked={table.getIsAllPageRowsSelected()}
-                          onChange={table.getToggleAllPageRowsSelectedHandler()}
-                          className="rounded border-gray-300"
-                          aria-label="Select all invoices"
-                        />
-                      </TableHead>
-                    )}
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Partner</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-24">Actions</TableHead>
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => {
-                    const invoice = row.original;
-                    return (
-                      <TableRow
-                        key={row.id}
-                        data-state={row.getIsSelected() ? "selected" : undefined}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => onInvoiceClick(invoice)}
-                      >
-                        {bulkMode && (
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              checked={row.getIsSelected()}
-                              onChange={row.getToggleSelectedHandler()}
-                              className="rounded border-gray-300"
-                              aria-label={`Select invoice ${invoice.invoice_number}`}
-                            />
+
+        {/* Table content */}
+        <div className="p-6">
+          {isLoading ? (
+            <EnhancedTableSkeleton rows={5} columns={7} />
+          ) : data?.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="No invoices found"
+              description="Try adjusting your filters or search criteria"
+              action={{
+                label: "Create Invoice",
+                onClick: () => console.log('Create invoice'),
+                icon: Plus
+              }}
+              variant="card"
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {bulkMode && (
+                        <TableHead className="w-12">
+                          <input
+                            type="checkbox"
+                            checked={table.getIsAllPageRowsSelected()}
+                            onChange={table.getToggleAllPageRowsSelectedHandler()}
+                            className="rounded border-gray-300"
+                            aria-label="Select all invoices"
+                          />
+                        </TableHead>
+                      )}
+                      <TableHead>Invoice #</TableHead>
+                      <TableHead>Partner</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-24">Actions</TableHead>
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row) => {
+                      const invoice = row.original;
+                      return (
+                        <TableRow
+                          key={row.id}
+                          data-state={row.getIsSelected() ? "selected" : undefined}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => onInvoiceClick(invoice)}
+                        >
+                          {bulkMode && (
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={row.getIsSelected()}
+                                onChange={row.getToggleSelectedHandler()}
+                                className="rounded border-gray-300"
+                                aria-label={`Select invoice ${invoice.invoice_number}`}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="font-mono">
+                            {invoice.invoice_number}
                           </TableCell>
-                        )}
-                        <TableCell className="font-mono">
-                          {invoice.invoice_number}
-                        </TableCell>
-                        <TableCell>
-                          {invoice.partner_organization?.name || 'Unknown Partner'}
-                        </TableCell>
-                        <TableCell>
-                          {invoice.invoice_date 
-                            ? format(new Date(invoice.invoice_date), 'MMM dd, yyyy') 
-                            : 'No date'}
-                        </TableCell>
-                        <TableCell>
-                          {invoice.due_date 
-                            ? format(new Date(invoice.due_date), 'MMM dd, yyyy') 
-                            : 'No due date'}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {formatCurrency(invoice.total_amount || 0)}
-                        </TableCell>
-                        <TableCell>
-                          <InvoiceStatusBadge status={invoice.status} />
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onInvoiceClick(invoice);
-                            }}
-                          >
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={bulkMode ? 8 : 7} className="h-24 text-center">
-                      No results.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                          <TableCell>
+                            {invoice.partner_organization?.name || 'Unknown Partner'}
+                          </TableCell>
+                          <TableCell>
+                            {invoice.invoice_date 
+                              ? format(new Date(invoice.invoice_date), 'MMM dd, yyyy') 
+                              : 'No date'}
+                          </TableCell>
+                          <TableCell>
+                            {invoice.due_date 
+                              ? format(new Date(invoice.due_date), 'MMM dd, yyyy') 
+                              : 'No due date'}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {formatCurrency(invoice.total_amount || 0)}
+                          </TableCell>
+                          <TableCell>
+                            <InvoiceStatusBadge status={invoice.status} />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onInvoiceClick(invoice);
+                              }}
+                            >
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={bulkMode ? 8 : 7} className="h-24 text-center">
+                        No results.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
