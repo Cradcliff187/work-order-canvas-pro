@@ -9,6 +9,8 @@ import { format } from 'date-fns';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { FileText } from 'lucide-react';
 
 export default function PartnerInvoices() {
   const navigate = useNavigate();
@@ -89,9 +91,15 @@ export default function PartnerInvoices() {
               showActions={false} 
             />
           ) : !invoices?.length ? (
-            <div className="p-8 text-center">
-              <p>No partner invoices yet</p>
-            </div>
+            <EmptyState
+              icon={FileText}
+              title="No partner invoices yet"
+              description="Create your first invoice to bill partner organizations"
+              action={{
+                label: "Create Invoice",
+                onClick: () => navigate('/admin/partner-billing/select-reports')
+              }}
+            />
           ) : (
             <div className="overflow-x-auto -mx-4 sm:mx-0">
               <table className="w-full min-w-[600px]">
