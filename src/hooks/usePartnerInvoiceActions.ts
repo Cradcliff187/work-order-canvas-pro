@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useLogPartnerInvoiceAction } from './usePartnerInvoiceAuditLogs';
 
 interface GeneratePdfParams {
   invoiceId: string;
@@ -21,6 +22,7 @@ export function usePartnerInvoiceActions() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { logAction } = useLogPartnerInvoiceAction();
 
   const generatePdfMutation = useMutation({
     mutationFn: async ({ invoiceId }: GeneratePdfParams) => {
@@ -40,7 +42,13 @@ export function usePartnerInvoiceActions() {
 
       return data;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: async (data, variables) => {
+      // Log the PDF generation action
+      await logAction(variables.invoiceId, 'pdf_generated', {
+        pdf_url: data.pdfUrl,
+        generated_at: new Date().toISOString()
+      });
+
       toast({
         title: 'PDF Generated',
         description: 'Partner invoice PDF has been generated successfully.',
@@ -49,6 +57,7 @@ export function usePartnerInvoiceActions() {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['partner-invoice', variables.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['partner-invoice-audit-logs', variables.invoiceId] });
 
       // Open PDF in new tab if URL provided
       if (data.pdfUrl) {
@@ -85,7 +94,12 @@ export function usePartnerInvoiceActions() {
 
       return { invoiceId };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Log the email sent action
+      await logAction(data.invoiceId, 'email_sent', {
+        sent_at: new Date().toISOString()
+      });
+
       toast({
         title: 'Invoice Sent',
         description: 'Invoice has been sent to partner organization.',
@@ -94,6 +108,7 @@ export function usePartnerInvoiceActions() {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['partner-invoice', data.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['partner-invoice-audit-logs', data.invoiceId] });
     },
     onError: (error: any) => {
       console.error('Send invoice error:', error);
@@ -125,7 +140,13 @@ export function usePartnerInvoiceActions() {
 
       return { invoiceId, status };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Log the status change action
+      await logAction(data.invoiceId, 'status_changed', {
+        new_status: data.status,
+        changed_at: new Date().toISOString()
+      });
+
       toast({
         title: 'Status Updated',
         description: `Invoice status changed to ${data.status.replace('_', ' ')}.`,
@@ -134,6 +155,7 @@ export function usePartnerInvoiceActions() {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['partner-invoice', data.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['partner-invoice-audit-logs', data.invoiceId] });
     },
     onError: (error: any) => {
       console.error('Status update error:', error);

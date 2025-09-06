@@ -20,6 +20,7 @@ import { exportToCSV, ExportColumn } from '@/lib/utils/export';
 import { toast } from 'sonner';
 import { EditPartnerInvoiceSheet } from '@/components/admin/partner-billing/EditPartnerInvoiceSheet';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { PartnerInvoiceAuditTrail } from '@/components/admin/partner-billing/PartnerInvoiceAuditTrail';
 
 interface PartnerInvoiceDetail {
   id: string;
@@ -352,6 +353,9 @@ export default function PartnerInvoiceDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Audit Trail Section */}
+      <PartnerInvoiceAuditTrail invoiceId={id!} />
       </main>
 
       <EditPartnerInvoiceSheet
