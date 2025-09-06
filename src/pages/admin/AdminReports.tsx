@@ -433,11 +433,11 @@ const table = useReactTable({
           )}
         </div>
         
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button
             variant={bulkMode ? "default" : "outline"}
             onClick={() => setBulkMode(!bulkMode)}
-            className="h-9 whitespace-nowrap"
+            className="flex-1 sm:flex-initial h-9"
           >
             <CheckSquare className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">{bulkMode ? "Exit Bulk Mode" : "Select Multiple"}</span>
@@ -446,7 +446,7 @@ const table = useReactTable({
           
           <Button 
             onClick={() => navigate('/admin/subcontractor-bills/create')}
-            className="h-9 whitespace-nowrap"
+            className="flex-1 sm:flex-initial h-9"
           >
             <Plus className="h-4 w-4 mr-2" />
             <span className="hidden lg:inline">Create Subcontractor Invoice</span>

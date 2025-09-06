@@ -383,7 +383,7 @@ export default function AdminUsers() {
           <Button
             variant={bulkMode ? "default" : "outline"}
             onClick={() => setBulkMode(!bulkMode)}
-            className="flex-1 sm:flex-initial"
+            className="flex-1 sm:flex-initial h-9"
           >
             <CheckSquare className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">{bulkMode ? "Exit Bulk Mode" : "Select Multiple"}</span>
@@ -393,7 +393,7 @@ export default function AdminUsers() {
           {/* Add user button */}
           <Button 
             onClick={() => setCreateUserModalOpen(true)} 
-            className="flex-1 sm:flex-initial"
+            className="flex-1 sm:flex-initial h-9"
           >
             <Plus className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Create User</span>

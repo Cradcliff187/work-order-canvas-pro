@@ -398,7 +398,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
           <Button
             variant={bulkMode ? "default" : "outline"}
             onClick={() => setBulkMode(!bulkMode)}
-            className="flex-1 sm:flex-initial"
+            className="flex-1 sm:flex-initial h-9"
           >
             <CheckSquare className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Select Multiple</span>
@@ -408,7 +408,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
           {/* Create button */}
           <Button 
             onClick={() => setShowCreateModal(true)} 
-            className="flex-1 sm:flex-initial"
+            className="flex-1 sm:flex-initial h-9"
           >
             <Plus className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Create Organization</span>
