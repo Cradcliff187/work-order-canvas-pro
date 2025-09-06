@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,6 +20,33 @@ export default function PartnerInvoices() {
           <Plus className="h-4 w-4 mr-2" />
           Create Invoice
         </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-2xl font-bold">$0</div>
+            <p className="text-sm text-muted-foreground">Total Outstanding</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-sm text-muted-foreground">This Month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-sm text-muted-foreground">Overdue</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-2xl font-bold">0 days</div>
+            <p className="text-sm text-muted-foreground">Avg Payment Time</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
