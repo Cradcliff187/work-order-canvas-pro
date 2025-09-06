@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileText } from 'lucide-react';
+import { Download, FileText, DollarSign, Calendar, Receipt } from 'lucide-react';
 import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { formatCurrency } from '@/utils/formatting';
 import { format } from 'date-fns';
@@ -10,6 +10,8 @@ import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
+import { StandardDashboardStats } from '@/components/dashboard/StandardDashboardStats';
+import { StatCard } from '@/components/dashboard/StandardDashboardStats';
 
 export default function PartnerInvoices() {
   const { data: invoices, isLoading } = usePartnerInvoices();
@@ -17,19 +19,40 @@ export default function PartnerInvoices() {
   const { toast } = useToast();
   
   const stats = useMemo(() => {
-    if (!invoices?.length) return { totalInvoiced: 0, unpaid: 0, thisMonth: 0 };
+    if (!invoices?.length) return [];
     
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    return {
-      totalInvoiced: invoices.reduce((sum, i) => sum + (i.total_amount || 0), 0),
-      unpaid: invoices
-        .filter(i => i.status !== 'paid')
-        .reduce((sum, i) => sum + (i.total_amount || 0), 0),
-      thisMonth: invoices
-        .filter(i => new Date(i.created_at) >= monthStart).length
-    };
+    const totalInvoiced = invoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
+    const unpaid = invoices
+      .filter(i => i.status !== 'paid')
+      .reduce((sum, i) => sum + (i.total_amount || 0), 0);
+    const thisMonth = invoices
+      .filter(i => new Date(i.created_at) >= monthStart).length;
+
+    const statsCards: StatCard[] = [
+      {
+        icon: DollarSign,
+        label: 'Total Invoiced',
+        value: formatCurrency(totalInvoiced),
+        variant: 'default'
+      },
+      {
+        icon: Receipt,
+        label: 'Unpaid Amount',
+        value: formatCurrency(unpaid),
+        variant: unpaid > 0 ? 'warning' : 'success'
+      },
+      {
+        icon: Calendar,
+        label: 'This Month',
+        value: thisMonth.toString(),
+        variant: 'default'
+      }
+    ];
+
+    return statsCards;
   }, [invoices]);
 
   const handleDownloadPdf = (invoice: any) => {
@@ -46,35 +69,16 @@ export default function PartnerInvoices() {
   
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Invoices</h1>
           <p className="text-muted-foreground">
             View invoices from your partner organization
           </p>
         </div>
-      </div>
+      </header>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalInvoiced)}</div>
-            <p className="text-sm text-muted-foreground">Total Invoiced</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">{formatCurrency(stats.unpaid)}</div>
-            <p className="text-sm text-muted-foreground">Unpaid Amount</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">{stats.thisMonth}</div>
-            <p className="text-sm text-muted-foreground">This Month</p>
-          </CardContent>
-        </Card>
-      </div>
+      <StandardDashboardStats stats={stats} loading={isLoading} />
       
       <Card>
         <CardContent className="p-0">

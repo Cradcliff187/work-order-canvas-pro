@@ -11,7 +11,9 @@ import { LoadingCard } from "@/components/ui/loading-states";
 import { QueryError, QueryErrorBoundary } from "@/components/ui/query-error-boundary";
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { TablePagination } from '@/components/admin/shared/TablePagination';
-import { Plus, Search, DollarSign, Paperclip, FileText, Filter } from "lucide-react";
+import { StandardDashboardStats } from '@/components/dashboard/StandardDashboardStats';
+import { StatCard } from '@/components/dashboard/StandardDashboardStats';
+import { Plus, Search, DollarSign, Paperclip, FileText, Filter, TrendingUp, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -40,6 +42,43 @@ const SubcontractorBills = () => {
 
   const hasFilters = filters.search || filters.status?.length || filters.subcontractor_organization_ids?.length || filters.date_range?.from || filters.date_range?.to || filters.overdue;
 
+  const stats = useMemo(() => {
+    if (!bills?.length) return [];
+    
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const totalAmount = bills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
+    const pendingAmount = bills
+      .filter(bill => bill.status === 'submitted')
+      .reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
+    const thisMonth = bills
+      .filter(bill => new Date(bill.submitted_at || bill.created_at) >= monthStart).length;
+
+    const statsCards: StatCard[] = [
+      {
+        icon: DollarSign,
+        label: 'Total Amount',
+        value: `$${totalAmount.toLocaleString()}`,
+        variant: 'default'
+      },
+      {
+        icon: Clock,
+        label: 'Pending Amount',
+        value: `$${pendingAmount.toLocaleString()}`,
+        variant: pendingAmount > 0 ? 'warning' : 'success'
+      },
+      {
+        icon: TrendingUp,
+        label: 'This Month',
+        value: thisMonth.toString(),
+        variant: 'default'
+      }
+    ];
+
+    return statsCards;
+  }, [bills]);
+
 
   if (isLoading) {
     return (
@@ -66,15 +105,20 @@ const SubcontractorBills = () => {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold">Bills</h1>
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Bills</h1>
+            <p className="text-muted-foreground">
+              Manage your submitted bills and track payment status
+            </p>
+          </div>
           <Link to="/subcontractor/submit-bill">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
               Create Bill
             </Button>
           </Link>
-        </div>
+        </header>
         <QueryError 
           error={error as Error}
           onRetry={refetch}
@@ -87,15 +131,22 @@ const SubcontractorBills = () => {
   return (
     <QueryErrorBoundary onRetry={refetch}>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold">Bills</h1>
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Bills</h1>
+            <p className="text-muted-foreground">
+              Manage your submitted bills and track payment status
+            </p>
+          </div>
           <Link to="/subcontractor/submit-bill">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
               Create Bill
             </Button>
           </Link>
-        </div>
+        </header>
+
+        <StandardDashboardStats stats={stats} loading={isLoading} />
 
       {/* Filters */}
       <Card>

@@ -79,24 +79,12 @@ const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
   );
 
   if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Transactions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EnhancedTableSkeleton rows={8} columns={8} showHeader={true} />
-        </CardContent>
-      </Card>
-    );
+    return <EnhancedTableSkeleton rows={8} columns={8} showHeader={true} />;
   }
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Transactions ({rows.length})</CardTitle>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         {/* Mobile list */}
         <div className="md:hidden space-y-3">
           {sortedRows.map((r) => (
