@@ -440,39 +440,26 @@ export function WorkOrderPipelineTable({
                   <WorkOrderStatusBadge status={item.status} size="sm" />
                 }
                 metadata={[
-                  { label: 'Partner', value: item.partner_organization_name },
-                  { label: 'Location', value: item.store_location || 'No location' },
+                  { label: 'Status', value: item.status },
                   { label: 'Report', value: item.report_status || 'Not submitted' },
                   { 
                     label: 'Sub Bill', 
-                    value: item.subcontractor_bill_amount ? `$${item.subcontractor_bill_amount.toLocaleString()}` : '—'
+                    value: item.subcontractor_bill_amount 
+                      ? `$${item.subcontractor_bill_amount.toLocaleString()}` 
+                      : 'Not billed'
                   },
                   { 
-                    label: 'Partner Invoice', 
+                    label: 'Partner Inv', 
                     value: (() => {
                       if (item.partner_billed_amount) {
                         return `$${item.partner_billed_amount.toLocaleString()}`;
                       }
                       if (item.subcontractor_bill_amount) {
-                        const markupPercent = item.internal_markup_percentage || 30;
-                        const amount = item.subcontractor_bill_amount * (1 + markupPercent / 100);
-                        return `$${amount.toLocaleString()}`;
+                        const markup = item.internal_markup_percentage || 30;
+                        const amount = item.subcontractor_bill_amount * (1 + markup / 100);
+                        return `$${amount.toLocaleString()} (est)`;
                       }
                       return '—';
-                    })()
-                  },
-                  { 
-                    label: 'Margin', 
-                    value: (() => {
-                      if (!item.subcontractor_bill_amount) return '—';
-                      
-                      const partnerAmount = item.partner_billed_amount || 
-                        (item.subcontractor_bill_amount * (1 + (item.internal_markup_percentage || 30) / 100));
-                      
-                      const margin = partnerAmount - item.subcontractor_bill_amount;
-                      const marginPercent = (margin / partnerAmount) * 100;
-                      
-                      return `$${margin.toLocaleString()} (${marginPercent.toFixed(1)}%)`;
                     })()
                   }
                 ]}
