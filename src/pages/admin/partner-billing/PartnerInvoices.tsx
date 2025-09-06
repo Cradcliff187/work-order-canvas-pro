@@ -87,8 +87,8 @@ export default function PartnerInvoices() {
               <p>No partner invoices yet</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full min-w-[600px]">
                 <thead className="border-b">
                   <tr>
                     <th className="text-left p-4 text-sm">Invoice #</th>
