@@ -4,6 +4,7 @@ import { SmartReceiptFlow } from '@/components/receipts/SmartReceiptFlow';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import PartnerInvoices from '@/pages/admin/partner-billing/PartnerInvoices';
 import {
   AdminDashboard,
   
@@ -296,7 +297,16 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
-    <Route path="/admin/partner-billing" element={<Navigate to="/admin/partner-billing/select-reports" replace />} />
+    <Route path="/admin/partner-billing" element={<Navigate to="/admin/partner-billing/invoices" replace />} />
+    <Route path="/admin/partner-billing/invoices" element={
+      <ProtectedRoute requiredUserType="admin">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <PartnerInvoices />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
     <Route path="/admin/partner-billing/select-reports" element={
       <ProtectedRoute requiredUserType="admin">
         <AdminLayout>
