@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PaginationState, SortingState, ColumnDef, RowSelectionState } from '@tanstack/react-table';
+import { PaginationState, SortingState, ColumnDef, RowSelectionState, VisibilityState } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, CheckSquare } from 'lucide-react';
@@ -8,6 +8,7 @@ import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { PartnerInvoicesTable } from '@/components/admin/partner-billing/PartnerInvoicesTable';
 import { CompactPartnerInvoiceFilters } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
+import type { PartnerInvoiceFiltersValue } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
 import { PartnerInvoiceBulkActionsBar } from '@/components/admin/partner-billing/PartnerInvoiceBulkActionsBar';
 import { PartnerInvoiceBulkEditModal } from '@/components/admin/partner-billing/PartnerInvoiceBulkEditModal';
 import { useViewMode } from '@/hooks/useViewMode';
@@ -36,7 +37,7 @@ export default function PartnerInvoices() {
   const [sorting, setSorting] = useState<SortingState>([]);
 
   // Define initial filters
-  const initialFilters = {
+  const initialFilters: PartnerInvoiceFiltersValue = {
     status: [],
     partner_organization_id: [],
     date_from: undefined,
@@ -69,7 +70,7 @@ export default function PartnerInvoices() {
   const { batchGeneratePdf, batchSendEmails, operations, isProcessing, clearOperations } = usePartnerInvoiceBatch();
 
   // Column visibility state
-  const [columnVisibility, setColumnVisibility] = useState({
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     invoice_number: true,
     partner: true,
     date: true,
@@ -105,7 +106,7 @@ export default function PartnerInvoices() {
       amount: true,
       status: true,
       actions: true,
-    });
+    } as VisibilityState);
   };
 
   // Selection handlers

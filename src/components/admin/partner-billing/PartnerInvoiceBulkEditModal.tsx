@@ -21,7 +21,6 @@ type PartnerInvoice = Database['public']['Tables']['partner_invoices']['Row'] & 
 const bulkEditSchema = z.object({
   status: z.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled']).optional(),
   due_date: z.string().optional(),
-  notes: z.string().optional(),
 });
 
 type BulkEditFormData = z.infer<typeof bulkEditSchema>;
@@ -42,7 +41,6 @@ export function PartnerInvoiceBulkEditModal({ isOpen, onClose, invoices, onSave 
     defaultValues: {
       status: undefined,
       due_date: undefined,
-      notes: undefined,
     },
   });
 
@@ -55,11 +53,9 @@ export function PartnerInvoiceBulkEditModal({ isOpen, onClose, invoices, onSave 
     // Check for conflicts in each field
     const statuses = [...new Set(invoices.map(inv => inv.status))];
     const dueDates = [...new Set(invoices.map(inv => inv.due_date))];
-    const notes = [...new Set(invoices.map(inv => inv.notes || ''))];
 
     conflicts.status = statuses.length > 1;
     conflicts.due_date = dueDates.length > 1;
-    conflicts.notes = notes.length > 1;
 
     setConflictAnalysis(conflicts);
 
@@ -67,7 +63,6 @@ export function PartnerInvoiceBulkEditModal({ isOpen, onClose, invoices, onSave 
     form.reset({
       status: undefined,
       due_date: undefined,
-      notes: undefined,
     });
   }, [invoices, form]);
 
@@ -94,7 +89,6 @@ export function PartnerInvoiceBulkEditModal({ isOpen, onClose, invoices, onSave 
     const fieldLabels: Record<string, string> = {
       status: 'Status',
       due_date: 'Due Date',
-      notes: 'Notes',
     };
     
     return `Multiple ${fieldLabels[field] || field} values detected in selection`;
@@ -206,32 +200,6 @@ export function PartnerInvoiceBulkEditModal({ isOpen, onClose, invoices, onSave 
                 )}
               />
 
-              {/* Notes */}
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
-                    {conflictAnalysis.notes && (
-                      <Alert>
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription className="text-xs">
-                          {getConflictMessage('notes')}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    <FormControl>
-                      <Input
-                        placeholder="Enter notes (no change)"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </form>
           </Form>
         </div>
