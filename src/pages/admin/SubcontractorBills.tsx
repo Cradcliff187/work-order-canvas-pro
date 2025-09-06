@@ -124,6 +124,7 @@ export default function SubcontractorBills() {
   });
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  // Despite the name, this is a subcontractor bill
   const [invoiceToEdit, setInvoiceToEdit] = useState<SubcontractorBill | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [billToDelete, setBillToDelete] = useState<SubcontractorBill | null>(null);
@@ -269,6 +270,7 @@ export default function SubcontractorBills() {
     { value: 'rejected', label: 'Rejected' },
   ];
 
+  // Named "INVOICE" for historical reasons - actually defines BILL columns
   const INVOICE_COLUMN_METADATA = {
     columns: [
       { id: 'internal_bill_number', label: 'Bill #', defaultVisible: true },
