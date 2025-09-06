@@ -305,6 +305,44 @@ Internal employee time tracking reports.
 - updated_at (timestamp)
 ```
 
+### Partner Invoice Audit System
+
+#### partner_invoice_audit_log
+Comprehensive audit trail for all partner invoice changes with automatic tracking.
+
+```sql
+- id (UUID, primary key)
+- invoice_id (UUID, references partner_invoices.id)
+- action_type (text) -- 'CREATE', 'UPDATE', 'STATUS_CHANGE', 'DELETE'
+- old_values (jsonb, nullable) -- Previous values before change
+- new_values (jsonb, nullable) -- New values after change
+- user_id (UUID, references profiles.id, nullable) -- User who made the change
+- user_agent (text, nullable) -- Browser/client information
+- ip_address (inet, nullable) -- IP address of the user (server-side capture)
+- created_at (timestamp, default now())
+```
+
+#### Automatic Audit Behavior
+The partner invoice audit system operates automatically through database triggers:
+
+**audit_partner_invoice_changes() Function:**
+- Triggers on all `INSERT`, `UPDATE`, and `DELETE` operations on `partner_invoices` table
+- Automatically captures user context via `auth_profile_id_safe()`
+- Records IP addresses using `inet_client_addr()` for security tracking
+- Stores complete before/after state in JSON format for full audit trail
+
+**Action Types:**
+- `CREATE` - New invoice creation
+- `UPDATE` - General invoice field updates  
+- `STATUS_CHANGE` - Special tracking for status field changes
+- `DELETE` - Invoice deletion (captures final state)
+
+**Security Features:**
+- Server-side IP address capture (not client-reported)
+- Automatic user identification through authentication context
+- Complete audit trail for compliance and debugging
+- Integration with existing RLS policies for secure access
+
 ## System Tables
 
 ### audit_logs
