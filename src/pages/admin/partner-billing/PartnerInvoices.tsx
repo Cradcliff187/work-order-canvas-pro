@@ -86,7 +86,7 @@ export default function PartnerInvoices() {
           {isLoading ? (
             <EnhancedTableSkeleton 
               rows={5} 
-              columns={5} 
+              columns={6} 
               showHeader={false} 
               showActions={false} 
             />
@@ -102,7 +102,7 @@ export default function PartnerInvoices() {
             />
           ) : (
             <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <table className="w-full min-w-[600px]">
+              <table className="w-full min-w-[700px]">
                 <thead className="border-b">
                   <tr>
                     <th className="text-left p-4 text-sm">Invoice #</th>
@@ -110,6 +110,7 @@ export default function PartnerInvoices() {
                     <th className="text-left p-4">Date</th>
                     <th className="text-left p-4">Amount</th>
                     <th className="text-left p-4">Status</th>
+                    <th className="text-right p-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -129,6 +130,18 @@ export default function PartnerInvoices() {
                       <td className="p-4">{formatCurrency(invoice.total_amount)}</td>
                       <td className="p-4">
                         <FinancialStatusBadge status={invoice.status} size="sm" showIcon />
+                      </td>
+                      <td className="p-4 text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/partner-billing/invoices/${invoice.id}`);
+                          }}
+                        >
+                          View
+                        </Button>
                       </td>
                     </tr>
                   ))}
