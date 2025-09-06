@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
@@ -15,6 +16,7 @@ import { FileText } from 'lucide-react';
 export default function PartnerInvoices() {
   const navigate = useNavigate();
   const { data: invoices, isLoading } = usePartnerInvoices();
+  const isMobile = useIsMobile();
   
   const stats = useMemo(() => {
     if (!invoices?.length) return { outstanding: 0, thisMonth: 0, overdue: 0 };
@@ -100,6 +102,34 @@ export default function PartnerInvoices() {
                 onClick: () => navigate('/admin/partner-billing/select-reports')
               }}
             />
+          ) : isMobile ? (
+            <div className="space-y-3 p-4">
+              {invoices.map(invoice => (
+                <Card 
+                  key={invoice.id}
+                  onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-mono text-sm text-muted-foreground">
+                        {invoice.invoice_number}
+                      </span>
+                      <FinancialStatusBadge status={invoice.status} size="sm" />
+                    </div>
+                    <p className="font-medium text-base mb-2">
+                      {invoice.partner_organization?.name}
+                    </p>
+                    <p className="text-2xl font-bold mb-1">
+                      {formatCurrency(invoice.total_amount)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Due {format(new Date(invoice.due_date || invoice.invoice_date), 'MMM d, yyyy')}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           ) : (
             <div className="overflow-x-auto -mx-4 sm:mx-0">
               <table className="w-full min-w-[800px]">
