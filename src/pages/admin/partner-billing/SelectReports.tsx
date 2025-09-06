@@ -335,11 +335,11 @@ export default function SelectBills() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Partner Invoices</BreadcrumbPage>
+              <BreadcrumbLink href="/admin/partner-billing/invoices">Partner Invoices</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Select Bills</BreadcrumbPage>
+              <BreadcrumbPage>Create Invoice</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
