@@ -75,7 +75,11 @@ export default function PartnerInvoices() {
                 </thead>
                 <tbody>
                   {invoices.map(invoice => (
-                    <tr key={invoice.id} className="border-b hover:bg-muted/50">
+                    <tr 
+                      key={invoice.id} 
+                      className="border-b hover:bg-muted/50 cursor-pointer"
+                      onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                    >
                       <td className="p-4">{invoice.invoice_number}</td>
                       <td className="p-4">{invoice.partner_organization?.name}</td>
                       <td className="p-4">{format(new Date(invoice.invoice_date), 'MMM d, yyyy')}</td>
