@@ -4,7 +4,6 @@ import { SmartReceiptFlow } from '@/components/receipts/SmartReceiptFlow';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import PartnerInvoices from '@/pages/admin/partner-billing/PartnerInvoices';
 import {
   AdminDashboard,
   
@@ -29,6 +28,7 @@ import {
   AdminUtilities,
   SelectReports,
   PartnerInvoiceDetail,
+  PartnerInvoices,
   BillingDashboard,
   SubmitBill,
   SecurityAudit,

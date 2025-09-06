@@ -28,6 +28,7 @@ export const AdminProjects = lazy(() => import('@/pages/admin/Projects'));
 // Partner Invoicing Pages
 export const SelectReports = lazy(() => import('@/pages/admin/partner-billing/SelectReports'));
 export const PartnerInvoiceDetail = lazy(() => import('@/pages/admin/partner-billing/PartnerInvoiceDetail'));
+export const PartnerInvoices = lazy(() => import('@/pages/admin/partner-billing/PartnerInvoices'));
 
 
 // Partner Pages
