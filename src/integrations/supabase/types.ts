@@ -717,7 +717,11 @@ export type Database = {
           invoice_number: string
           markup_percentage: number | null
           partner_organization_id: string
+          payment_date: string | null
+          payment_reference: string | null
+          pdf_url: string | null
           quickbooks_export_date: string | null
+          sent_at: string | null
           status: string
           subtotal: number
           total_amount: number
@@ -732,7 +736,11 @@ export type Database = {
           invoice_number: string
           markup_percentage?: number | null
           partner_organization_id: string
+          payment_date?: string | null
+          payment_reference?: string | null
+          pdf_url?: string | null
           quickbooks_export_date?: string | null
+          sent_at?: string | null
           status?: string
           subtotal: number
           total_amount: number
@@ -747,7 +755,11 @@ export type Database = {
           invoice_number?: string
           markup_percentage?: number | null
           partner_organization_id?: string
+          payment_date?: string | null
+          payment_reference?: string | null
+          pdf_url?: string | null
           quickbooks_export_date?: string | null
+          sent_at?: string | null
           status?: string
           subtotal?: number
           total_amount?: number
