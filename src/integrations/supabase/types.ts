@@ -2513,6 +2513,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      queue_partner_invoice_email: {
+        Args: { invoice_id: string }
+        Returns: Json
+      }
       refresh_analytics_views: {
         Args: Record<PropertyKey, never>
         Returns: undefined

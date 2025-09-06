@@ -403,6 +403,18 @@ Deno.serve(async (req) => {
             .single();
           email = profile?.email;
         }
+      } else if (record_type === 'partner_invoice') {
+        // For partner invoice emails, get partner organization contact email
+        const { data: partnerInvoice } = await supabase
+          .from('partner_invoices')
+          .select(`
+            partner_organization:organizations!partner_organization_id(
+              contact_email
+            )
+          `)
+          .eq('id', record_id)
+          .single();
+        email = partnerInvoice?.partner_organization?.contact_email;
       } else if (record_type === 'password_reset' || record_type === 'auth_confirmation') {
         // For auth emails, email is provided in custom_data
         email = custom_data.email;
@@ -599,22 +611,81 @@ Deno.serve(async (req) => {
         confirmation_link: custom_data.confirmation_link || '',
         reset_link: custom_data.reset_link || ''
       };
-    } else if (template_name.includes('invoice')) {
-      const { data: invoice } = await supabase
-        .from('invoices')
-        .select('*, organizations!inner(name)')
-        .eq('id', record_id)
-        .single();
+      } else if (template_name === 'partner_invoice_ready' || record_type === 'partner_invoice') {
+        // Enhanced partner invoice data fetching with PDF attachment support
+        const { data: partnerInvoice } = await supabase
+          .from('partner_invoices')
+          .select(`
+            *,
+            partner_organization:organizations!partner_organization_id(
+              id,
+              name,
+              contact_email,
+              initials
+            )
+          `)
+          .eq('id', record_id)
+          .single();
 
-      if (invoice) {
-        const dashboard_url = generateUrl(`/admin/invoices/${invoice.id}`);
-        variables = { 
-          ...invoice, 
-          dashboard_url,
-          organizationName: invoice.organizations?.name || 'N/A'
-        };
+        if (partnerInvoice) {
+          // Format dates for display
+          const formatInvoiceDate = (dateString: string | null): string => {
+            if (!dateString) return 'Not specified';
+            return new Date(dateString).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+          };
+
+          // Format currency
+          const formatCurrency = (amount: number | null): string => {
+            if (!amount) return '$0.00';
+            return new Intl.NumberFormat('en-US', {
+              style: 'currency',
+              currency: 'USD'
+            }).format(amount);
+          };
+
+          // Build PDF download URL if available
+          let pdfDownloadUrl = '';
+          if (partnerInvoice.pdf_url) {
+            pdfDownloadUrl = partnerInvoice.pdf_url;
+          }
+
+          const partnerDashboardUrl = generateUrl(`/partner/invoices/${partnerInvoice.id}`);
+          
+          variables = { 
+            ...partnerInvoice,
+            invoice_id: partnerInvoice.id,
+            invoice_number: partnerInvoice.invoice_number,
+            partner_organization_name: partnerInvoice.partner_organization?.name || 'N/A',
+            partner_organization_contact: partnerInvoice.partner_organization?.contact_email || '',
+            invoice_date: formatInvoiceDate(partnerInvoice.invoice_date),
+            due_date: formatInvoiceDate(partnerInvoice.due_date),
+            subtotal: formatCurrency(partnerInvoice.subtotal),
+            total_amount: formatCurrency(partnerInvoice.total_amount),
+            markup_percentage: partnerInvoice.markup_percentage || 0,
+            pdf_download_url: pdfDownloadUrl,
+            partner_dashboard_url: partnerDashboardUrl
+          };
+        }
+      } else if (template_name.includes('invoice')) {
+        const { data: invoice } = await supabase
+          .from('invoices')
+          .select('*, organizations!inner(name)')
+          .eq('id', record_id)
+          .single();
+
+        if (invoice) {
+          const dashboard_url = generateUrl(`/admin/invoices/${invoice.id}`);
+          variables = { 
+            ...invoice, 
+            dashboard_url,
+            organizationName: invoice.organizations?.name || 'N/A'
+          };
+        }
       }
-    }
 
     // Merge variables with branding
     const allVariables = {
@@ -643,12 +714,44 @@ Deno.serve(async (req) => {
     // Send email via Resend
     console.log(`📤 Sending email from ${fromEmail} to: ${recipient}`);
     
-    const emailData = {
+    // Build email data with potential PDF attachment
+    const emailData: any = {
       from: `${fromName} <${fromEmail}>`,
       to: [recipient],
       subject: processedSubject,
       html: processedHtml,
     };
+
+    // Add PDF attachment for partner invoice emails if PDF URL exists
+    if (template_name === 'partner_invoice_ready' && variables.pdf_download_url) {
+      try {
+        console.log('📎 Adding PDF attachment:', variables.pdf_download_url);
+        
+        // Fetch PDF from Supabase Storage
+        const { data: pdfData, error: pdfError } = await supabase.storage
+          .from('partner-invoices')
+          .download(variables.pdf_download_url.split('/').pop() || '');
+          
+        if (pdfData && !pdfError) {
+          const pdfBuffer = await pdfData.arrayBuffer();
+          const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
+          
+          emailData.attachments = [{
+            filename: `Invoice_${variables.invoice_number}.pdf`,
+            content: pdfBase64,
+            type: 'application/pdf',
+            disposition: 'attachment'
+          }];
+          
+          console.log('✅ PDF attachment added successfully');
+        } else {
+          console.warn('⚠️ Could not fetch PDF for attachment:', pdfError);
+        }
+      } catch (error) {
+        console.warn('⚠️ Error adding PDF attachment:', error);
+        // Continue without attachment - email is still valuable
+      }
+    }
 
     // Check if Resend API key is configured
     if (!resendApiKey) {
