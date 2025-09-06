@@ -165,7 +165,7 @@ export default function PartnerInvoiceDetail() {
 
       toast.success('Partner invoice deleted');
       queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
-      navigate('/admin/partner-billing/select-reports');
+      navigate('/admin/partner-billing/invoices');
     } catch (e) {
       console.error('Failed to delete partner invoice', e);
       toast.error('Failed to delete invoice');
@@ -194,7 +194,7 @@ export default function PartnerInvoiceDetail() {
         <EmptyState
           title="Invoice Not Found"
           description="The requested partner invoice could not be found."
-          action={{ label: 'Back to Invoices', onClick: () => navigate('/admin/partner-billing/select-reports') }}
+          action={{ label: 'Back to Invoices', onClick: () => navigate('/admin/partner-billing/invoices') }}
         />
       </div>
     );
@@ -210,7 +210,7 @@ export default function PartnerInvoiceDetail() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/admin/partner-billing/select-reports">Partner Invoices</BreadcrumbLink>
+            <BreadcrumbLink href="/admin/partner-billing/invoices">Partner Invoices</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -228,7 +228,7 @@ export default function PartnerInvoiceDetail() {
       <div className="flex items-center justify-between">
         <Button 
           variant="outline" 
-          onClick={() => navigate('/admin/partner-billing/select-reports')}
+          onClick={() => navigate('/admin/partner-billing/invoices')}
           className="flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
