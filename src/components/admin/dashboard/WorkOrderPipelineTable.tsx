@@ -272,19 +272,64 @@ export function WorkOrderPipelineTable({
       cell: ({ row }) => <StatusBadge type="partnerBilling" status={getPartnerBillingStatus(row.original)} size="sm" showIcon />,
     },
     {
-      id: 'amount',
-      header: 'Amount',
+      id: 'subcontractor_bill',
+      header: 'Subcontractor Bill',
+      cell: ({ row }) => {
+        const item = row.original;
+        const amount = item.subcontractor_bill_amount;
+        
+        return (
+          <div className="text-right font-mono text-sm">
+            {amount ? (
+              <span className="font-medium">
+                ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'partner_invoice',
+      header: 'Partner Invoice',
       cell: ({ row }) => {
         const item = row.original;
         
+        // Calculate partner invoice amount with markup if not already set
+        const getPartnerInvoiceAmount = () => {
+          // If already billed to partner, use that amount
+          if (item.partner_billed_amount) {
+            return item.partner_billed_amount;
+          }
+          
+          // Otherwise calculate with markup
+          if (item.subcontractor_bill_amount) {
+            const markupPercent = item.internal_markup_percentage || 30;
+            return item.subcontractor_bill_amount * (1 + markupPercent / 100);
+          }
+          
+          return null;
+        };
+        
+        const amount = getPartnerInvoiceAmount();
+        
         return (
-          <div className="text-right">
-            {item.subcontractor_bill_amount ? (
-              <span className="font-medium">
-                ${item.subcontractor_bill_amount.toLocaleString()}
-              </span>
+          <div className="text-right font-mono text-sm">
+            {amount ? (
+              <div>
+                <span className="font-medium">
+                  ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                {!item.partner_billed_amount && item.internal_markup_percentage && (
+                  <div className="text-xs text-muted-foreground">
+                    ({item.internal_markup_percentage}% markup)
+                  </div>
+                )}
+              </div>
             ) : (
-              <span className="text-muted-foreground text-sm">—</span>
+              <span className="text-muted-foreground">—</span>
             )}
           </div>
         );
@@ -371,8 +416,22 @@ export function WorkOrderPipelineTable({
                   { label: 'Location', value: item.store_location || 'No location' },
                   { label: 'Report', value: item.report_status || 'Not submitted' },
                   { 
-                    label: 'Amount', 
+                    label: 'Sub Bill', 
                     value: item.subcontractor_bill_amount ? `$${item.subcontractor_bill_amount.toLocaleString()}` : '—'
+                  },
+                  { 
+                    label: 'Partner Invoice', 
+                    value: (() => {
+                      if (item.partner_billed_amount) {
+                        return `$${item.partner_billed_amount.toLocaleString()}`;
+                      }
+                      if (item.subcontractor_bill_amount) {
+                        const markupPercent = item.internal_markup_percentage || 30;
+                        const amount = item.subcontractor_bill_amount * (1 + markupPercent / 100);
+                        return `$${amount.toLocaleString()}`;
+                      }
+                      return '—';
+                    })()
                   }
                 ]}
                 onClick={() => handleRowClick(item)}
@@ -462,8 +521,22 @@ export function WorkOrderPipelineTable({
                         { label: 'Location', value: item.store_location || 'No location' },
                         { label: 'Report', value: item.report_status || 'Not submitted' },
                         { 
-                          label: 'Amount', 
+                          label: 'Sub Bill', 
                           value: item.subcontractor_bill_amount ? `$${item.subcontractor_bill_amount.toLocaleString()}` : '—'
+                        },
+                        { 
+                          label: 'Partner Invoice', 
+                          value: (() => {
+                            if (item.partner_billed_amount) {
+                              return `$${item.partner_billed_amount.toLocaleString()}`;
+                            }
+                            if (item.subcontractor_bill_amount) {
+                              const markupPercent = item.internal_markup_percentage || 30;
+                              const amount = item.subcontractor_bill_amount * (1 + markupPercent / 100);
+                              return `$${amount.toLocaleString()}`;
+                            }
+                            return '—';
+                          })()
                         }
                       ]}
                       onClick={() => handleRowClick(item)}
