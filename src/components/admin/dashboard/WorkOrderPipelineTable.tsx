@@ -182,30 +182,6 @@ export function WorkOrderPipelineTable({
       }
     },
     {
-      id: 'title',
-      header: 'Title',
-      cell: ({ row }) => {
-        const item = row.original;
-        const title = item.title || 'No title';
-        const isLong = title.length > 40;
-        
-        return isLong ? (
-          <HoverCard>
-            <HoverCardTrigger asChild>
-              <div className="max-w-[200px] truncate cursor-pointer hover:text-primary">
-                {title}
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent className="z-[99999] relative bg-popover border shadow-lg" align="start" side="bottom" sideOffset={5}>
-              <p className="text-sm">{title}</p>
-            </HoverCardContent>
-          </HoverCard>
-        ) : (
-          <div className="max-w-[200px]">{title}</div>
-        );
-      },
-    },
-    {
       id: 'partner',
       header: 'Partner',
       cell: ({ row }) => {
