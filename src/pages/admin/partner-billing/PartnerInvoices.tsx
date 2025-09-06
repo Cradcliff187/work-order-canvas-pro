@@ -28,8 +28,7 @@ export default function PartnerInvoices() {
     defaultMode: 'table'
   });
   
-  // State for search and filters
-  const [searchTerm, setSearchTerm] = useState('');
+  // Filter state (managed by table)
   const [filters, setFilters] = useState<PartnerInvoiceFiltersValue>({});
   
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
@@ -45,57 +44,12 @@ export default function PartnerInvoices() {
     status: true,
     actions: true,
   });
-  
-  // Get filter count
-  const filterCount = usePartnerInvoiceFilterCount(filters);
-  
-  // Filtered invoices
-  const filteredInvoices = useMemo(() => {
-    if (!invoices) return [];
-    
-    return invoices.filter(invoice => {
-      // Search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const matchesSearch = 
-          invoice.invoice_number?.toLowerCase().includes(searchLower) ||
-          invoice.partner_organization?.name?.toLowerCase().includes(searchLower);
-        if (!matchesSearch) return false;
-      }
-      
-      // Status filter
-      if (filters.status?.length && !filters.status.includes(invoice.status)) {
-        return false;
-      }
-      
-      // Organization filter
-      if (filters.partner_organization_id?.length && !filters.partner_organization_id.includes(invoice.partner_organization_id)) {
-        return false;
-      }
-      
-      // Date range filter
-      if (filters.date_from || filters.date_to) {
-        const invoiceDate = new Date(invoice.invoice_date);
-        if (filters.date_from && invoiceDate < new Date(filters.date_from)) return false;
-        if (filters.date_to && invoiceDate > new Date(filters.date_to)) return false;
-      }
-      
-      // Amount range filter
-      if (filters.amount_min || filters.amount_max) {
-        const amount = invoice.total_amount || 0;
-        if (filters.amount_min && amount < parseFloat(filters.amount_min)) return false;
-        if (filters.amount_max && amount > parseFloat(filters.amount_max)) return false;
-      }
-      
-      return true;
-    });
-  }, [invoices, searchTerm, filters]);
 
   
   // Selection handlers
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedInvoices(filteredInvoices.map(inv => inv.id));
+      setSelectedInvoices(invoices?.map(inv => inv.id) || []);
     } else {
       setSelectedInvoices([]);
     }
@@ -115,7 +69,6 @@ export default function PartnerInvoices() {
   
   // Filter helpers
   const clearFilters = () => {
-    setSearchTerm('');
     setFilters({});
   };
 
@@ -169,15 +122,6 @@ export default function PartnerInvoices() {
       name: org.name
     })) || [];
   }, [organizations]);
-  
-  // Create filter component
-  const filterComponent = (
-    <CompactPartnerInvoiceFilters
-      value={filters}
-      onChange={setFilters}
-      onClear={clearFilters}
-    />
-  );
   
   return (
     <div className="space-y-6">
@@ -247,15 +191,21 @@ export default function PartnerInvoices() {
 
       {/* Partner Invoices Table */}
       <PartnerInvoicesTable
-        data={filteredInvoices || []}
+        data={invoices || []}
         isLoading={isLoading}
         isError={error}
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
+        filters={filters}
+        onFiltersChange={setFilters}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         allowedModes={allowedModes}
-        filterComponent={filterComponent}
+        filterComponent={
+          <CompactPartnerInvoiceFilters
+            value={filters}
+            onChange={setFilters}
+            onClear={clearFilters}
+          />
+        }
         onExport={handleExport}
         onRefresh={refetch}
         isMobile={isMobile}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -22,6 +22,7 @@ import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { PartnerInvoiceActions } from './PartnerInvoiceActions';
 import { formatCurrency } from '@/utils/formatting';
 import { format } from 'date-fns';
+import { type PartnerInvoiceFiltersValue } from './CompactPartnerInvoiceFilters';
 
 // Simple mobile pull-to-refresh wrapper
 function MobilePullToRefresh({ 
@@ -41,9 +42,9 @@ interface PartnerInvoicesTableProps {
   isLoading: boolean;
   isError: any;
   
-  // Search
-  searchValue: string;
-  onSearchChange: (value: string) => void;
+  // Filters
+  filters: PartnerInvoiceFiltersValue;
+  onFiltersChange: (filters: PartnerInvoiceFiltersValue) => void;
   
   // View mode
   viewMode: ViewMode;
@@ -86,8 +87,8 @@ export function PartnerInvoicesTable({
   data,
   isLoading,
   isError,
-  searchValue,
-  onSearchChange,
+  filters,
+  onFiltersChange,
   viewMode,
   onViewModeChange,
   allowedModes,
@@ -105,6 +106,51 @@ export function PartnerInvoicesTable({
   title = "Partner Invoices",
   subtitle,
 }: PartnerInvoicesTableProps) {
+  
+  // Internal search state
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Filtered invoices
+  const filteredInvoices = useMemo(() => {
+    if (!data) return [];
+    
+    return data.filter(invoice => {
+      // Search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = 
+          invoice.invoice_number?.toLowerCase().includes(searchLower) ||
+          invoice.partner_organization?.name?.toLowerCase().includes(searchLower);
+        if (!matchesSearch) return false;
+      }
+      
+      // Status filter
+      if (filters.status?.length && !filters.status.includes(invoice.status)) {
+        return false;
+      }
+      
+      // Organization filter
+      if (filters.partner_organization_id?.length && !filters.partner_organization_id.includes(invoice.partner_organization_id)) {
+        return false;
+      }
+      
+      // Date range filter
+      if (filters.date_from || filters.date_to) {
+        const invoiceDate = new Date(invoice.invoice_date);
+        if (filters.date_from && invoiceDate < new Date(filters.date_from)) return false;
+        if (filters.date_to && invoiceDate > new Date(filters.date_to)) return false;
+      }
+      
+      // Amount range filter
+      if (filters.amount_min || filters.amount_max) {
+        const amount = invoice.total_amount || 0;
+        if (filters.amount_min && amount < parseFloat(filters.amount_min)) return false;
+        if (filters.amount_max && amount > parseFloat(filters.amount_max)) return false;
+      }
+      
+      return true;
+    });
+  }, [data, searchTerm, filters]);
   
   // Error state
   if (isError) {
@@ -153,9 +199,9 @@ export function PartnerInvoicesTable({
               }}
               variant="card"
             />
-          ) : (
+           ) : (
             <div className="space-y-3">
-              {data.map((invoice) => (
+              {filteredInvoices.map((invoice) => (
                 <MobileTableCard
                   key={invoice.id}
                   title={invoice.invoice_number}
@@ -191,8 +237,8 @@ export function PartnerInvoicesTable({
       <TableToolbar
         title={title}
         subtitle={subtitle}
-        searchValue={searchValue}
-        onSearchChange={onSearchChange}
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
         searchPlaceholder="Search invoices..."
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
@@ -216,7 +262,7 @@ export function PartnerInvoicesTable({
       <div className="p-6">
         {isLoading ? (
           <EnhancedTableSkeleton rows={8} columns={8} showHeader={true} />
-        ) : !data?.length ? (
+        ) : !filteredInvoices?.length ? (
           <EmptyState
             icon={FileText}
             title="No partner invoices found"
@@ -234,7 +280,7 @@ export function PartnerInvoicesTable({
                   <TableHead className="w-12">
                     <Checkbox
                       checked={
-                        data.length > 0 && selectedInvoices.length === data.length
+                        filteredInvoices.length > 0 && selectedInvoices.length === filteredInvoices.length
                       }
                       onCheckedChange={onSelectAll}
                       aria-label="Select all invoices"
@@ -250,7 +296,7 @@ export function PartnerInvoicesTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.map((invoice) => (
+                {filteredInvoices.map((invoice) => (
                   <TableRow
                     key={invoice.id}
                     className={selectedInvoices.includes(invoice.id) ? 'bg-muted/50' : ''}
