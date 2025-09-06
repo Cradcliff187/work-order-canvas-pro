@@ -109,7 +109,9 @@ export default function PartnerInvoices() {
                       <td className="p-4">{invoice.partner_organization?.name}</td>
                       <td className="p-4">{format(new Date(invoice.invoice_date), 'MMM d, yyyy')}</td>
                       <td className="p-4">{formatCurrency(invoice.total_amount)}</td>
-                      <td className="p-4"><FinancialStatusBadge status={invoice.status} size="sm" /></td>
+                      <td className="p-4">
+                        <FinancialStatusBadge status={invoice.status} size="sm" showIcon />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
