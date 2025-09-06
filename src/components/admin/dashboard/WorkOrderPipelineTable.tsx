@@ -102,51 +102,27 @@ export function WorkOrderPipelineTable({
   const tableColumns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
     {
       id: 'work_order_number',
-      header: 'Work Order #',
+      header: 'WO #',
+      size: 150, // Fixed width
       cell: ({ row }) => {
         const item = row.original;
         
-        const copyToClipboard = () => {
-          navigator.clipboard.writeText(item.work_order_number || '');
-        };
-
         return (
-          <div className="flex items-center gap-2 min-w-[140px]">
-            <HoverCard>
-              <HoverCardTrigger asChild>
-                <button 
-                  className="font-mono font-medium text-sm text-foreground hover:text-primary transition-colors cursor-pointer text-left"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {item.work_order_number}
-                </button>
-              </HoverCardTrigger>
-              <HoverCardContent className="z-[99999] w-auto max-w-[300px] p-3" align="start" sideOffset={5}>
-                <div className="space-y-2">
-                  <div className="font-semibold">{item.work_order_number}</div>
-                  <div className="text-sm text-muted-foreground">{item.title || 'No title'}</div>
-                  <button 
-                    onClick={copyToClipboard}
-                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                  >
-                    <Copy className="h-3 w-3" />
-                    Copy to clipboard
-                  </button>
-                </div>
-              </HoverCardContent>
-            </HoverCard>
-            
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-sm font-medium tracking-tight">
+              {item.work_order_number}
+            </span>
             {item.age_days !== undefined && (
               <Badge 
-                variant={item.is_overdue ? 'destructive' : 'secondary'} 
-                className="text-xs px-1.5 py-0 h-5 tabular-nums"
+                variant={item.is_overdue ? 'destructive' : 'outline'} 
+                className="h-4 text-[10px] px-1 tabular-nums shrink-0"
               >
                 {item.age_days}d
               </Badge>
             )}
           </div>
         );
-      },
+      }
     },
     {
       id: 'title',
