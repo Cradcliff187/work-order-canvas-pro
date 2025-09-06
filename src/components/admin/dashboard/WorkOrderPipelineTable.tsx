@@ -106,73 +106,45 @@ export function WorkOrderPipelineTable({
       cell: ({ row }) => {
         const item = row.original;
         
-        const copyToClipboard = (e: React.MouseEvent) => {
-          e.stopPropagation();
+        const copyToClipboard = () => {
           navigator.clipboard.writeText(item.work_order_number || '');
         };
 
         return (
-          <HoverCard>
-            <HoverCardTrigger asChild>
-              <div className="flex items-center gap-2 cursor-pointer">
-                <span className="font-medium text-foreground hover:text-primary">
-                  {item.work_order_number}
-                </span>
-                {item.age_days !== undefined && (
-                  <Badge variant={item.is_overdue ? "destructive" : "secondary"} className="text-xs">
-                    {item.age_days}d
-                  </Badge>
-                )}
+          <div className="flex items-center gap-2 min-w-[140px]">
+            <HoverCard>
+              <HoverCardTrigger asChild>
                 <button 
-                  onClick={copyToClipboard}
-                  className="opacity-0 group-hover:opacity-100 hover:text-primary"
+                  className="font-mono font-medium text-sm text-foreground hover:text-primary transition-colors cursor-pointer text-left"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <Copy className="h-3 w-3" />
+                  {item.work_order_number}
                 </button>
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent className="z-[99999] relative bg-popover border shadow-lg w-80" align="start" side="bottom" sideOffset={5}>
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold">{item.work_order_number}</h4>
-                <p className="text-sm font-medium">{item.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  {item.partner_organization_name} • {item.store_location || 'No location'}
-                </p>
-                {item.description && (
-                  <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded-sm">
-                    {item.description}
-                  </p>
-                )}
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    {item.status?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </Badge>
-                  <Badge variant={item.is_overdue ? "destructive" : "secondary"} className="text-xs">
-                    {item.age_days || 0} days old
-                  </Badge>
-                  {item.priority && item.priority !== 'low' && (
-                    <Badge variant={item.priority === 'urgent' ? 'destructive' : 'default'} className="text-xs">
-                      {item.priority.toUpperCase()}
-                    </Badge>
-                  )}
+              </HoverCardTrigger>
+              <HoverCardContent className="z-[99999] w-auto max-w-[300px] p-3" align="start" sideOffset={5}>
+                <div className="space-y-2">
+                  <div className="font-semibold">{item.work_order_number}</div>
+                  <div className="text-sm text-muted-foreground">{item.title || 'No title'}</div>
+                  <button 
+                    onClick={copyToClipboard}
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Copy className="h-3 w-3" />
+                    Copy to clipboard
+                  </button>
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Submitted:</span>
-                  <span>{item.date_submitted ? formatDate(item.date_submitted) : 'N/A'}</span>
-                </div>
-                {item.due_date && (
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Due Date:</span>
-                    <span>{formatDate(item.due_date)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Status:</span>
-                  <span className="capitalize">{item.status}</span>
-                </div>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
+              </HoverCardContent>
+            </HoverCard>
+            
+            {item.age_days !== undefined && (
+              <Badge 
+                variant={item.is_overdue ? 'destructive' : 'secondary'} 
+                className="text-xs px-1.5 py-0 h-5 tabular-nums"
+              >
+                {item.age_days}d
+              </Badge>
+            )}
+          </div>
         );
       },
     },
