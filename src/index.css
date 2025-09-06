@@ -199,6 +199,28 @@ body {
   z-index: 99999 !important;
 }
 
+/* Additional Radix UI Portal fixes */
+[data-radix-portal] {
+  position: relative;
+  z-index: 99999;
+}
+
+/* Ensure HoverCard portal is always on top */
+[data-radix-hover-card-content] {
+  z-index: 99999 !important;
+}
+
+/* Fix for overlapping table elements */
+.hover\:bg-muted\/50:hover {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure table cells don't block hovercards */
+td {
+  position: relative;
+}
+
 /* Essential Keyframes */
 @keyframes fadeInUp {
   from {
