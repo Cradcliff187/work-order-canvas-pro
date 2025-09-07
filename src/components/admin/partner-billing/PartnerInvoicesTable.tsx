@@ -400,7 +400,7 @@ export function PartnerInvoicesTable({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() ? "selected" : undefined}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className="group cursor-pointer hover:bg-muted/50 border-0"
                       onClick={() => onInvoiceClick(row.original)}
                     >
                       {row.getVisibleCells().map((cell) => (
