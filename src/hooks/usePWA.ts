@@ -93,24 +93,33 @@ export function usePWA(): PWAState & PWAActions {
   const skipWaiting = (): void => {
     if (wb) {
       wb.messageSkipWaiting();
-      // Clear states after triggering update
-      setTimeout(() => {
-        setState(prev => ({ 
-          ...prev, 
-          updateAvailable: false, 
-          needsRefresh: false 
-        }));
-      }, 1000);
+      // Clear states immediately and mark update as processing
+      setState(prev => ({ 
+        ...prev, 
+        updateAvailable: false, 
+        needsRefresh: false 
+      }));
+      
+      // Update version tracking
+      const newVersion = Date.now().toString(); // Simple version tracking
+      localStorage.setItem('pwa-current-version', newVersion);
+      localStorage.removeItem('pwa-update-dismissed'); // Allow new notifications for future updates
     }
   };
 
   const refresh = (): void => {
-    // Clear states before refresh
+    // Clear states and update version tracking before refresh
     setState(prev => ({ 
       ...prev, 
       updateAvailable: false, 
       needsRefresh: false 
     }));
+    
+    // Update version tracking
+    const newVersion = Date.now().toString();
+    localStorage.setItem('pwa-current-version', newVersion);
+    localStorage.removeItem('pwa-update-dismissed');
+    
     window.location.reload();
   };
 

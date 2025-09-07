@@ -9,15 +9,23 @@ export function PWAUpdateNotification() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Check if notification was recently dismissed
+    // Check if notification was recently dismissed or update already applied
     const dismissedUntil = localStorage.getItem('pwa-update-dismissed');
+    const lastAppliedVersion = localStorage.getItem('pwa-last-applied-version');
+    const currentVersion = localStorage.getItem('pwa-current-version') || '1.0.0';
+    
     if (dismissedUntil) {
       const dismissedTime = new Date(dismissedUntil).getTime();
       const now = new Date().getTime();
-      // Keep dismissed for 10 minutes
-      if (now - dismissedTime < 10 * 60 * 1000) {
+      // Keep dismissed for 24 hours for PWA updates
+      if (now - dismissedTime < 24 * 60 * 60 * 1000) {
         setDismissed(true);
       }
+    }
+    
+    // Don't show if this version was already applied
+    if (lastAppliedVersion === currentVersion) {
+      setDismissed(true);
     }
   }, []);
 
@@ -27,7 +35,11 @@ export function PWAUpdateNotification() {
 
   const handleUpdate = () => {
     setDismissed(true);
+    const currentVersion = localStorage.getItem('pwa-current-version') || '1.0.0';
+    
+    // Mark this version as applied and set dismissal
     localStorage.setItem('pwa-update-dismissed', new Date().toISOString());
+    localStorage.setItem('pwa-last-applied-version', currentVersion);
     
     if (updateAvailable) {
       skipWaiting();
