@@ -24,7 +24,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
-import { Plus, ClipboardList, Search, X } from 'lucide-react';
+import { Plus, ClipboardList, Search, X, Eye, Download, Send } from 'lucide-react';
 import { PartnerInvoiceBulkActionsBar } from '@/components/admin/partner-billing/PartnerInvoiceBulkActionsBar';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
@@ -377,60 +377,112 @@ export function PartnerInvoicesTable({
             }
           />
         ) : (
-          <ResponsiveTableContainer>
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                       <TableHead 
-                        key={header.id}
-                        style={{
-                          width: header.getSize() !== 150 ? header.getSize() : undefined,
-                        }}
-                       >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
+          <>
+            {/* Table View */}
+            {viewMode === 'table' && (
+              <ResponsiveTableContainer>
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                           <TableHead 
+                            key={header.id}
+                            style={{
+                              width: header.getSize() !== 150 ? header.getSize() : undefined,
+                            }}
+                           >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
                     ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() ? "selected" : undefined}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => onInvoiceClick(row.original)}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell 
-                          key={cell.id}
-                          style={{
-                            textAlign: (cell.column.columnDef.meta as any)?.align || 'left',
-                          }}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          data-state={row.getIsSelected() ? "selected" : undefined}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => onInvoiceClick(row.original)}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell 
+                              key={cell.id}
+                              style={{
+                                textAlign: (cell.column.columnDef.meta as any)?.align || 'left',
+                              }}
+                            >
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                          No results.
                         </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </ResponsiveTableContainer>
+            )}
+
+            {/* Card View */}
+            {viewMode === 'card' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => {
+                    const invoice = row.original;
+                    return (
+                      <MobileTableCard
+                        key={invoice.id}
+                        title={invoice.invoice_number}
+                        subtitle={invoice.partner_organization?.name || 'Unknown Partner'}
+                        badge={<InvoiceStatusBadge status={invoice.status} />}
+                        onClick={() => onInvoiceClick(invoice)}
+                        metadata={[
+                          { label: 'Date', value: invoice.invoice_date ? format(new Date(invoice.invoice_date), 'MMM dd, yyyy') : 'No date' },
+                          { label: 'Due Date', value: invoice.due_date ? format(new Date(invoice.due_date), 'MMM dd, yyyy') : 'No due date' },
+                          { label: 'Amount', value: formatCurrency(invoice.total_amount || 0) }
+                        ]}
+                        actions={[
+                          { label: 'View', icon: Eye, onClick: () => onInvoiceClick(invoice) },
+                          ...(onDownloadPdf ? [{ label: 'Download PDF', icon: Download, onClick: () => onDownloadPdf(invoice) }] : []),
+                          ...(onSendInvoice ? [{ label: 'Send', icon: Send, onClick: () => onSendInvoice(invoice) }] : [])
+                        ]}
+                        selected={bulkMode ? row.getIsSelected() : undefined}
+                        onSelect={bulkMode ? (selected) => row.toggleSelected(selected) : undefined}
+                      />
+                    );
+                  })
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No results.
-                    </TableCell>
-                  </TableRow>
+                  <div className="col-span-full">
+                    <EmptyState
+                      icon={ClipboardList}
+                      title="No invoices found"
+                      description="There are no partner invoices to display."
+                      action={
+                        showCreateButton && onCreateNew ? {
+                          label: "Create Invoice",
+                          onClick: onCreateNew,
+                          icon: Plus
+                        } : undefined
+                      }
+                    />
+                  </div>
                 )}
-              </TableBody>
-            </Table>
-          </ResponsiveTableContainer>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
