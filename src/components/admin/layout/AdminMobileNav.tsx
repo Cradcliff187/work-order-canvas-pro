@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Gauge, ClipboardList, FileBarChart, Building2, MoreHorizontal } from 'lucide-react';
+import { Gauge, ClipboardList, FileBarChart, FolderKanban, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { AdminMoreSheet } from './AdminMoreSheet';
@@ -20,7 +20,7 @@ export function AdminMobileNav({ className }: AdminMobileNavProps) {
     { id: 'dashboard', label: 'Dashboard', icon: Gauge, path: '/admin/dashboard' },
     { id: 'work-orders', label: 'Work Orders', icon: ClipboardList, path: '/admin/work-orders' },
     { id: 'reports', label: 'Reports', icon: FileBarChart, path: '/admin/reports' },
-    { id: 'organizations', label: 'Organizations', icon: Building2, path: '/admin/organizations' },
+    { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/admin/projects' },
   ];
 
   const handleNavigation = (path: string) => {

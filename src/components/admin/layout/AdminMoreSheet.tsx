@@ -23,7 +23,7 @@ export function AdminMoreSheet({ open, onOpenChange }: AdminMoreSheetProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Priority items that are already in bottom nav (excluding these from More sheet)
-  const priorityPaths = ['/admin/dashboard', '/admin/work-orders', '/admin/reports', '/admin/organizations'];
+  const priorityPaths = ['/admin/dashboard', '/admin/work-orders', '/admin/reports', '/admin/projects'];
 
   // Filter admin-only items and exclude priority items
   const adminItems = sidebarItems.filter(item => 
