@@ -14,6 +14,7 @@ import {
   RowSelectionState,
 } from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ResponsiveTableContainer } from '@/components/ui/responsive-table-container';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -371,7 +372,7 @@ export function PartnerInvoicesTable({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
+          <ResponsiveTableContainer>
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -400,7 +401,7 @@ export function PartnerInvoicesTable({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() ? "selected" : undefined}
-                      className="group cursor-pointer hover:bg-muted/50 border-0"
+                      className="cursor-pointer hover:bg-muted/50"
                       onClick={() => onInvoiceClick(row.original)}
                     >
                       {row.getVisibleCells().map((cell) => (
@@ -424,7 +425,7 @@ export function PartnerInvoicesTable({
                 )}
               </TableBody>
             </Table>
-          </div>
+          </ResponsiveTableContainer>
         )}
       </CardContent>
     </Card>
