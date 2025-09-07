@@ -279,6 +279,7 @@ export default function PartnerInvoices() {
           isLoading={isLoading}
           viewMode={viewMode}
           setViewMode={setViewMode}
+          allowedModes={['table', 'card']}
           bulkMode={bulkMode}
           rowSelection={rowSelection}
           setRowSelection={setRowSelection}
