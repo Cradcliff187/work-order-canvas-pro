@@ -86,11 +86,12 @@ serve(async (req) => {
     
     const filePath = `reports/${fileName}`;
     
+    // Try to upload with overwrite enabled to handle existing files
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('work-order-attachments')
       .upload(filePath, pdfBlob, {
         contentType: 'application/pdf',
-        upsert: false
+        upsert: true  // Allow overwriting existing files
       });
 
     if (uploadError) {
@@ -123,24 +124,71 @@ serve(async (req) => {
       );
     }
 
-    // Create internal attachment record for the generated PDF
-    const { error: attachmentError } = await supabase
-      .from('work_order_attachments')
-      .insert({
-        work_order_id: reportData.work_orders.id,
-        work_order_report_id: reportId,
-        file_name: fileName,
-        file_url: filePath,
-        file_type: 'document',
-        file_size: pdfBlob.size,
-        uploaded_by_user_id: reportData.subcontractor_user_id,
-        is_internal: false  // Visible to all parties
-      });
+    // Create internal attachment record for the generated PDF with fallback user ID logic
+    console.log('Creating attachment record for PDF...');
+    
+    // Determine the uploader user ID with fallbacks
+    let uploaderUserId = reportData.subcontractor_user_id;
+    
+    if (!uploaderUserId) {
+      // Try using the report creator
+      uploaderUserId = reportData.created_by;
+      console.log('Using report creator as uploader:', uploaderUserId);
+    }
+    
+    if (!uploaderUserId) {
+      // Final fallback: find an admin user
+      const { data: adminUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .join('organization_members', 'profiles.id', 'organization_members.user_id')
+        .join('organizations', 'organization_members.organization_id', 'organizations.id')
+        .eq('organizations.organization_type', 'internal')
+        .eq('organization_members.role', 'admin')
+        .limit(1)
+        .maybeSingle();
+        
+      if (adminUser) {
+        uploaderUserId = adminUser.id;
+        console.log('Using admin user as fallback uploader:', uploaderUserId);
+      }
+    }
 
-    if (attachmentError) {
-      console.error('Failed to create attachment record for PDF:', attachmentError);
+    if (!uploaderUserId) {
+      console.error('No valid uploader user ID found, skipping attachment creation');
     } else {
-      console.log('Internal attachment record created successfully for PDF:', fileName);
+      // Check if attachment already exists to prevent duplicates
+      const { data: existingAttachment } = await supabase
+        .from('work_order_attachments')
+        .select('id')
+        .eq('work_order_id', reportData.work_orders.id)
+        .eq('work_order_report_id', reportId)
+        .eq('file_name', fileName)
+        .maybeSingle();
+
+      if (existingAttachment) {
+        console.log('Attachment record already exists, skipping creation');
+      } else {
+        const { error: attachmentError } = await supabase
+          .from('work_order_attachments')
+          .insert({
+            work_order_id: reportData.work_orders.id,
+            work_order_report_id: reportId,
+            file_name: fileName,
+            file_url: filePath,
+            file_type: 'document',
+            file_size: pdfBlob.size,
+            uploaded_by_user_id: uploaderUserId,
+            is_internal: false  // Visible to all parties
+          });
+
+        if (attachmentError) {
+          console.error('Failed to create attachment record for PDF:', attachmentError);
+          // Don't fail the whole operation, just log the error
+        } else {
+          console.log('Attachment record created successfully for PDF:', fileName);
+        }
+      }
     }
 
     console.log('PDF generated successfully:', urlData.publicUrl);
