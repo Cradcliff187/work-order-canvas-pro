@@ -123,6 +123,75 @@ serve(async (req) => {
       );
     }
 
+    // Create attachments for all related work orders
+    console.log('Creating work order attachments for partner invoice PDF...');
+    
+    // Get all work order reports linked to this invoice
+    const { data: lineItems } = await supabase
+      .from('partner_invoice_line_items')
+      .select('work_order_report_id')
+      .eq('partner_invoice_id', invoiceId)
+      .not('work_order_report_id', 'is', null);
+
+    if (lineItems && lineItems.length > 0) {
+      // Get the work order IDs from those reports
+      const { data: reports } = await supabase
+        .from('work_order_reports')
+        .select('work_order_id')
+        .in('id', lineItems.map(li => li.work_order_report_id));
+
+      if (reports && reports.length > 0) {
+        // Get unique work order IDs (avoid duplicates)
+        const uniqueWorkOrderIds = [...new Set(reports.map(r => r.work_order_id))];
+        
+        let attachmentsCreated = 0;
+        let attachmentErrors = 0;
+
+        for (const workOrderId of uniqueWorkOrderIds) {
+          try {
+            // Check if attachment already exists to prevent duplicates
+            const { data: existing } = await supabase
+              .from('work_order_attachments')
+              .select('id')
+              .eq('work_order_id', workOrderId)
+              .eq('file_url', urlData.publicUrl)
+              .maybeSingle();
+
+            if (!existing) {
+              const { error: attachmentError } = await supabase
+                .from('work_order_attachments')
+                .insert({
+                  work_order_id: workOrderId,
+                  file_name: `Partner_Invoice_${invoiceData.invoice_number}.pdf`,
+                  file_url: urlData.publicUrl,
+                  file_type: 'document',
+                  file_size: pdfBlob.size,
+                  uploaded_by_user_id: invoiceData.created_by,
+                  is_internal: false  // Visible to all parties
+                });
+
+              if (attachmentError) {
+                console.error(`Failed to create attachment for work order ${workOrderId}:`, attachmentError);
+                attachmentErrors++;
+              } else {
+                attachmentsCreated++;
+              }
+            }
+          } catch (error) {
+            console.error(`Error processing attachment for work order ${workOrderId}:`, error);
+            attachmentErrors++;
+          }
+        }
+
+        console.log(`Partner invoice PDF attachments created: ${attachmentsCreated} work orders, ${attachmentErrors} errors`);
+        console.log(`Related work orders: ${uniqueWorkOrderIds.length} total`);
+      } else {
+        console.log('No work order reports found for invoice line items');
+      }
+    } else {
+      console.log('No line items with work order reports found');
+    }
+
     console.log('Partner invoice PDF generated successfully:', urlData.publicUrl);
 
     return new Response(
