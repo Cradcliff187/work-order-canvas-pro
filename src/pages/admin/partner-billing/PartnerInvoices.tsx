@@ -9,7 +9,7 @@ import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { PartnerInvoicesTable } from '@/components/admin/partner-billing/PartnerInvoicesTable';
 import { CompactPartnerInvoiceFilters } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
-import { createPartnerInvoiceColumns } from '@/components/admin/partner-billing/PartnerInvoiceColumns';
+import { createPartnerInvoiceColumns, PARTNER_INVOICE_COLUMN_METADATA } from '@/components/admin/partner-billing/PartnerInvoiceColumns';
 import type { PartnerInvoiceFiltersValue } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
 import { PartnerInvoicesBreadcrumb } from '@/components/admin/partner-billing/PartnerInvoicesBreadcrumb';
 import { usePartnerInvoiceFilterCount } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
@@ -77,45 +77,13 @@ export default function PartnerInvoices() {
   // Partner invoice actions hook
   const { generatePdf, sendInvoice, updateStatus } = usePartnerInvoiceActions();
 
-  // Column visibility state
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    invoice_number: true,
-    partner: true,
-    date: true,
-    due_date: true,
-    amount: true,
-    status: true,
-    actions: true
+  // Column visibility using the proper hook
+  const columnVisibilityHook = useColumnVisibility({
+    storageKey: 'partner-invoices-columns-v1',
+    columnMetadata: PARTNER_INVOICE_COLUMN_METADATA,
+    defaultVisible: {},
+    legacyKeys: []
   });
-  
-  const getAllColumns = () => [
-    { id: 'invoice_number', label: 'Invoice #', visible: columnVisibility.invoice_number, canHide: false },
-    { id: 'partner', label: 'Partner', visible: columnVisibility.partner, canHide: true },
-    { id: 'date', label: 'Date', visible: columnVisibility.date, canHide: true },
-    { id: 'due_date', label: 'Due Date', visible: columnVisibility.due_date, canHide: true },
-    { id: 'amount', label: 'Amount', visible: columnVisibility.amount, canHide: false },
-    { id: 'status', label: 'Status', visible: columnVisibility.status, canHide: false },
-    { id: 'actions', label: 'Actions', visible: columnVisibility.actions, canHide: false },
-  ];
-  
-  const toggleColumn = (columnId: string) => {
-    setColumnVisibility(prev => ({
-      ...prev,
-      [columnId]: !prev[columnId as keyof typeof prev]
-    }));
-  };
-  
-  const resetToDefaults = () => {
-    setColumnVisibility({
-      invoice_number: true,
-      partner: true,
-      date: true,
-      due_date: true,
-      amount: true,
-      status: true,
-      actions: true,
-    } as VisibilityState);
-  };
 
   // Selection handlers
   const selectedIds = Object.keys(rowSelection);
@@ -328,11 +296,11 @@ export default function PartnerInvoices() {
           onDownloadPdf={handleDownloadPdf}
           onUpdateStatus={handleUpdateStatus}
           // Column visibility props
-          columnVisibility={columnVisibility}
-          setColumnVisibility={setColumnVisibility}
-          allColumns={getAllColumns()}
-          onToggleColumn={toggleColumn}
-          onResetColumns={resetToDefaults}
+          columnVisibility={columnVisibilityHook.columnVisibility}
+          setColumnVisibility={columnVisibilityHook.setColumnVisibility}
+          allColumns={columnVisibilityHook.getAllColumns()}
+          onToggleColumn={columnVisibilityHook.toggleColumn}
+          onResetColumns={columnVisibilityHook.resetToDefaults}
           // Pagination and sorting
           pagination={pagination}
           setPagination={setPagination}
@@ -342,6 +310,14 @@ export default function PartnerInvoices() {
           columns={columns}
           // Mobile
           isMobile={isMobile}
+          // Filters
+          filterComponent={
+            <CompactPartnerInvoiceFilters
+              value={filters}
+              onChange={setFilters}
+              onClear={clearFilters}
+            />
+          }
         />
       </div>
 

@@ -31,6 +31,11 @@ export type PartnerInvoice = {
 
 // Column metadata for visibility management
 export const PARTNER_INVOICE_COLUMN_METADATA: Record<string, ColumnMetadata> = {
+  select: { 
+    label: 'Select', 
+    description: 'Row selection checkbox',
+    defaultVisible: true 
+  },
   invoice_number: { 
     label: 'Invoice #', 
     description: 'Invoice number and details',
@@ -59,6 +64,11 @@ export const PARTNER_INVOICE_COLUMN_METADATA: Record<string, ColumnMetadata> = {
   status: { 
     label: 'Status', 
     description: 'Current invoice status',
+    defaultVisible: true 
+  },
+  actions: { 
+    label: 'Actions', 
+    description: 'Row action buttons',
     defaultVisible: true 
   }
 };

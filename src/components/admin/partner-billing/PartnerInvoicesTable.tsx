@@ -82,6 +82,7 @@ interface PartnerInvoicesTableProps {
   showCreateButton?: boolean;
   onCreateNew?: () => void;
   isMobile?: boolean;
+  filterComponent?: React.ReactNode;
 }
 
 export function PartnerInvoicesTable({
@@ -121,7 +122,8 @@ export function PartnerInvoicesTable({
   subtitle,
   showCreateButton = true,
   onCreateNew,
-  isMobile = false
+  isMobile = false,
+  filterComponent
 }: PartnerInvoicesTableProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -225,6 +227,13 @@ export function PartnerInvoicesTable({
                 </Button>
               )}
             </div>
+
+            {/* Mobile filters */}
+            {filterComponent && (
+              <div className="w-full">
+                {filterComponent}
+              </div>
+            )}
 
             {/* Mobile bulk actions */}
             {bulkMode && hasSelection && (
