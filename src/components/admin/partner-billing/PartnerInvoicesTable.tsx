@@ -22,7 +22,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
-import { Plus, ClipboardList, Search, X } from 'lucide-react';
+import { Plus, ClipboardList, Search, X, Eye, FileText, Send, Download, Mail, DollarSign } from 'lucide-react';
+import { TableActionsDropdown, TableAction } from '@/components/ui/table-actions-dropdown';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 // Simple type for partner invoice filters
@@ -79,6 +80,10 @@ interface PartnerInvoicesTableProps {
   onInvoiceClick: (invoice: any) => void;
   onExportAll: (format: 'csv' | 'excel') => void;
   onExport: (format: 'csv' | 'excel', ids: string[]) => void;
+  onGeneratePdf?: (invoice: any) => void;
+  onSendInvoice?: (invoice: any) => void;
+  onDownloadPdf?: (invoice: any) => void;
+  onUpdateStatus?: (invoice: any, status: string) => void;
   
   // Mobile specific
   isMobile: boolean;
@@ -111,6 +116,10 @@ export function PartnerInvoicesTable({
   onInvoiceClick,
   onExportAll,
   onExport,
+  onGeneratePdf,
+  onSendInvoice,
+  onDownloadPdf,
+  onUpdateStatus,
   isMobile,
   onRefresh,
   refreshThreshold = 60,
@@ -440,17 +449,49 @@ export function PartnerInvoicesTable({
                         <TableCell>
                           <InvoiceStatusBadge status={invoice.status} />
                         </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onInvoiceClick(invoice);
-                            }}
-                          >
-                            View
-                          </Button>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <TableActionsDropdown
+                            actions={[
+                              {
+                                label: 'View Details',
+                                icon: Eye,
+                                onClick: () => onInvoiceClick(invoice),
+                                show: true
+                              },
+                              {
+                                label: 'Generate PDF',
+                                icon: FileText,
+                                onClick: () => onGeneratePdf?.(invoice),
+                                show: invoice.status !== 'draft' && !!onGeneratePdf
+                              },
+                              {
+                                label: 'Send Invoice',
+                                icon: Send,
+                                onClick: () => onSendInvoice?.(invoice),
+                                show: invoice.status === 'draft' && !!invoice.pdf_url && !!onSendInvoice
+                              },
+                              {
+                                label: 'Download PDF',
+                                icon: Download,
+                                onClick: () => onDownloadPdf?.(invoice),
+                                show: !!invoice.pdf_url && !!onDownloadPdf
+                              },
+                              {
+                                label: 'Mark as Sent',
+                                icon: Mail,
+                                onClick: () => onUpdateStatus?.(invoice, 'sent'),
+                                show: invoice.status === 'draft' && !!onUpdateStatus
+                              },
+                              {
+                                label: 'Mark as Paid',
+                                icon: DollarSign,
+                                onClick: () => onUpdateStatus?.(invoice, 'paid'),
+                                show: invoice.status === 'sent' && !!onUpdateStatus
+                              }
+                            ]}
+                            align="end"
+                            itemName={invoice.invoice_number}
+                          />
                         </TableCell>
                       </TableRow>
                     );

@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { usePartnerInvoiceBatch } from '@/hooks/usePartnerInvoiceBatch';
+import { usePartnerInvoiceActions } from '@/hooks/usePartnerInvoiceActions';
 import { Database } from '@/integrations/supabase/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -71,6 +72,9 @@ export default function PartnerInvoices() {
 
   // Batch operations hook
   const { batchGeneratePdf, batchSendEmails, operations, isProcessing, clearOperations } = usePartnerInvoiceBatch();
+
+  // Partner invoice actions hook
+  const { generatePdf, sendInvoice, updateStatus } = usePartnerInvoiceActions();
 
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
@@ -154,6 +158,31 @@ export default function PartnerInvoices() {
     setShowBulkEditModal(false);
     setBulkEditInvoices([]);
     clearSelection();
+  };
+
+  // Individual action handlers
+  const handleGeneratePdf = (invoice: any) => {
+    generatePdf({ invoiceId: invoice.id });
+  };
+
+  const handleSendInvoice = (invoice: any) => {
+    sendInvoice({ invoiceId: invoice.id });
+  };
+
+  const handleDownloadPdf = (invoice: any) => {
+    if (invoice.pdf_url) {
+      window.open(invoice.pdf_url, '_blank');
+    } else {
+      toast({
+        title: 'PDF not available',
+        description: 'Please generate the PDF first.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdateStatus = (invoice: any, status: string) => {
+    updateStatus({ invoiceId: invoice.id, status });
   };
 
   // Export handlers
@@ -286,6 +315,10 @@ export default function PartnerInvoices() {
           onInvoiceClick={handleInvoiceClick}
           onExportAll={handleExportAll}
           onExport={handleExport}
+          onGeneratePdf={handleGeneratePdf}
+          onSendInvoice={handleSendInvoice}
+          onDownloadPdf={handleDownloadPdf}
+          onUpdateStatus={handleUpdateStatus}
           // Column visibility props
           columnVisibility={columnVisibility}
           setColumnVisibility={setColumnVisibility}
