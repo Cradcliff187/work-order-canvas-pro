@@ -9,6 +9,7 @@ import { useTodayHours } from '@/hooks/useTodayHours';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useClockWidget } from '@/contexts/ClockWidgetContext';
 import { useRecentlyClockedWorkOrders } from '@/hooks/useRecentlyClockedWorkOrders';
+import { useWorkItemSearch } from '@/hooks/useWorkItemSearch';
 import { formatElapsedTime as formatTimeUtil } from '@/lib/utils/time';
 import { ClockSelector } from './ClockSelector';
 import type { ClockOption } from './types';
@@ -20,21 +21,12 @@ export const ClockInactive: React.FC = () => {
   const { data: recentlyClockedWorkOrders = [] } = useRecentlyClockedWorkOrders();
   const isMobile = useIsMobile();
   const { openClockWidget } = useClockWidget();
+  
+  // Use work item search hook for consistent data handling
+  const { filteredOptions } = useWorkItemSearch();
 
   // Sheet state
   const [showSelector, setShowSelector] = useState(false);
-
-  // Transform allWorkItems into ClockOption format
-  const clockOptions: ClockOption[] = allWorkItems.map(item => ({
-    id: item.id,
-    type: item.type,
-    title: item.title,
-    number: item.number,
-    section: item.isAssignedToMe ? 'assigned' : 'available',
-    assigneeName: item.assigneeName,
-    hoursToday: 0,
-    isWorkedToday: false,
-  }));
 
   // Filter to get recent work orders (not projects) for horizontal scroll
   const recentWorkOrders = allWorkItems
@@ -158,7 +150,7 @@ export const ClockInactive: React.FC = () => {
       <ClockSelector
         isOpen={showSelector}
         onOpenChange={setShowSelector}
-        options={clockOptions}
+        options={filteredOptions}
         isLoading={isClockingIn}
         onClockIn={handleSelectorClockIn}
       />

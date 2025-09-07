@@ -2,8 +2,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Button } from '@/components/ui/button';
 import { Clock, MapPin } from 'lucide-react';
 import { useClockTimer } from '@/hooks/useClockTimer';
-import { SearchBar } from './SearchBar';
-import { WorkSelector } from './WorkSelector';
+import { WorkItemList } from '../work-items/WorkItemList';
 import { ClockSheetProps } from './types';
 
 export function ClockSheet({
@@ -14,10 +13,7 @@ export function ClockSheet({
   workOrderId,
   projectId,
   selectedOption,
-  searchQuery,
-  filteredOptions,
   isLoading,
-  onSearchChange,
   onOptionSelect,
   onCancel,
   onClockAction,
@@ -68,20 +64,11 @@ export function ClockSheet({
             </div>
           ) : (
             // Show work item selection
-            <div className="flex-1 overflow-hidden flex flex-col">
-              <SearchBar 
-                searchQuery={searchQuery}
-                onSearchChange={onSearchChange}
-              />
-              
-              <div className="flex-1 overflow-y-auto">
-                <WorkSelector
-                  options={filteredOptions}
-                  selectedOption={selectedOption}
-                  onOptionSelect={onOptionSelect}
-                />
-              </div>
-            </div>
+            <WorkItemList
+              selectedOption={selectedOption}
+              onOptionSelect={onOptionSelect}
+              isLoading={isLoading}
+            />
           )}
         </div>
 

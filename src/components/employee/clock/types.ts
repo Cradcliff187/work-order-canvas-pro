@@ -38,10 +38,7 @@ export interface ClockSheetProps {
   workOrderId: string | null;
   projectId: string | null;
   selectedOption: ClockOption | null;
-  searchQuery: string;
-  filteredOptions: ClockOption[];
   isLoading: boolean;
-  onSearchChange: (query: string) => void;
   onOptionSelect: (option: ClockOption) => void;
   onCancel: () => void;
   onClockAction: () => void;

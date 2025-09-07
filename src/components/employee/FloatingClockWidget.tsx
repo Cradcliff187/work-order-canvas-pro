@@ -1,8 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useClockState } from '@/hooks/useClockState';
 import { useClockTimer } from '@/hooks/useClockTimer';
-import { useClockOptions } from '@/hooks/useClockOptions';
 import { useToast } from '@/hooks/use-toast';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { useClockWidget } from '@/contexts/ClockWidgetContext';
@@ -22,23 +21,10 @@ export function FloatingClockWidget() {
   const { onFieldSave, onSubmitSuccess, onError } = useHapticFeedback();
   const { isOpen, setIsOpen } = useClockWidget();
   const [selectedOption, setSelectedOption] = useState<ClockOption | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const clockData = useClockState();
   const { clockIn, clockOut, isClockingIn, isClockingOut } = clockData;
   const { elapsedTime, formatElapsedTimeDetailed } = useClockTimer();
-  const clockOptions = useClockOptions();
-
-  // Filter options based on search query
-  const filteredOptions = useMemo(() => {
-    if (!searchQuery.trim()) return clockOptions;
-    const query = searchQuery.toLowerCase();
-    return clockOptions.filter(option => 
-      option.number.toLowerCase().includes(query) ||
-      option.title.toLowerCase().includes(query) ||
-      option.assigneeName?.toLowerCase().includes(query)
-    );
-  }, [clockOptions, searchQuery]);
 
   const handleFabClick = useCallback(() => {
     onFieldSave();
@@ -78,7 +64,6 @@ export function FloatingClockWidget() {
   const handleCancel = () => {
     setIsOpen(false);
     setSelectedOption(null);
-    setSearchQuery('');
   };
 
   return (
@@ -98,10 +83,7 @@ export function FloatingClockWidget() {
         workOrderId={clockData.workOrderId}
         projectId={clockData.projectId}
         selectedOption={selectedOption}
-        searchQuery={searchQuery}
-        filteredOptions={filteredOptions}
         isLoading={isClockingIn || isClockingOut}
-        onSearchChange={setSearchQuery}
         onOptionSelect={setSelectedOption}
         onCancel={handleCancel}
         onClockAction={handleClockAction}
