@@ -318,12 +318,10 @@ export default function PartnerInvoices() {
           isLoading={isLoading}
           viewMode={viewMode}
           setViewMode={setViewMode}
-          allowedModes={['table', 'card']}
           bulkMode={bulkMode}
           rowSelection={rowSelection}
           setRowSelection={setRowSelection}
           onInvoiceClick={handleInvoiceClick}
-          onExportAll={handleExportAll}
           onExport={handleExport}
           onGeneratePdf={handleGeneratePdf}
           onSendInvoice={handleSendInvoice}
@@ -332,19 +330,9 @@ export default function PartnerInvoices() {
           // Column visibility props
           columnVisibility={columnVisibility}
           setColumnVisibility={setColumnVisibility}
-          columnVisibilityColumns={getAllColumns()}
+          allColumns={getAllColumns()}
           onToggleColumn={toggleColumn}
           onResetColumns={resetToDefaults}
-          // Filter component
-          filterComponent={
-            <CompactPartnerInvoiceFilters
-              value={filters}
-              onChange={setFilters}
-              onClear={clearFilters}
-            />
-          }
-          // Filter count for badge
-          filterCount={filterCount}
           // Pagination and sorting
           pagination={pagination}
           setPagination={setPagination}

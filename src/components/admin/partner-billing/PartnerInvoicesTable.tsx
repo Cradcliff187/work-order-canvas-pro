@@ -172,13 +172,12 @@ export function PartnerInvoicesTable({
             icon={ClipboardList}
             title="Unable to load invoices"
             description="There was an error loading the invoice data. Please try again."
-                    action={
-                      showCreateButton && onCreateNew && (
-                        <Button onClick={onCreateNew} variant="outline">
-                          Try Again
-                        </Button>
-                      )
-                    }
+            action={
+              showCreateButton && onCreateNew ? {
+                label: "Try Again",
+                onClick: onCreateNew
+              } : undefined
+            }
           />
         </CardContent>
       </Card>
@@ -242,14 +241,13 @@ export function PartnerInvoicesTable({
               icon={ClipboardList}
               title="No invoices found"
               description="There are no partner invoices to display."
-            action={
-              showCreateButton && onCreateNew ? (
-                <Button onClick={onCreateNew}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Invoice
-                </Button>
-              ) : null
-            }
+              action={
+                showCreateButton && onCreateNew ? {
+                  label: "Create Invoice",
+                  onClick: onCreateNew,
+                  icon: Plus
+                } : undefined
+              }
             />
           ) : (
             <div className="space-y-2 p-4">
@@ -291,9 +289,9 @@ export function PartnerInvoicesTable({
           <div className="flex items-center gap-2">
             {setViewMode && (
               <ViewModeSwitcher 
-                viewMode={viewMode} 
-                setViewMode={setViewMode}
-                options={['table', 'card']}
+                value={viewMode} 
+                onValueChange={setViewMode}
+                allowedModes={['table', 'card']}
               />
             )}
             
@@ -345,10 +343,11 @@ export function PartnerInvoicesTable({
         {bulkMode && hasSelection && (
           <PartnerInvoiceBulkActionsBar
             selectedCount={selectedIds.length}
-            onGeneratePdf={() => onBulkGeneratePdf?.(selectedIds)}
+            selectedIds={selectedIds}
+            onGeneratePDFs={() => onBulkGeneratePdf?.(selectedIds)}
             onSendEmails={() => onBulkSendInvoice?.(selectedIds)}
-            onMarkSent={() => onBulkUpdateStatus?.(selectedIds, 'sent')}
-            onMarkPaid={() => onBulkUpdateStatus?.(selectedIds, 'paid')}
+            onUpdateStatus={() => onBulkUpdateStatus?.(selectedIds, 'sent')}
+            onBulkEdit={() => {/* TODO: Implement bulk edit */}}
             onExport={(format) => onExport?.(format, selectedIds)}
             onClearSelection={() => setRowSelection({})}
           />
@@ -364,12 +363,11 @@ export function PartnerInvoicesTable({
             title="No invoices found"
             description="There are no partner invoices to display."
             action={
-              showCreateButton && onCreateNew ? (
-                <Button onClick={onCreateNew}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Invoice
-                </Button>
-              ) : undefined
+              showCreateButton && onCreateNew ? {
+                label: "Create Invoice",
+                onClick: onCreateNew,
+                icon: Plus
+              } : undefined
             }
           />
         ) : (
@@ -379,13 +377,12 @@ export function PartnerInvoicesTable({
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
-                      <TableHead 
+                       <TableHead 
                         key={header.id}
-                      className={header.column.columnDef.meta?.className || ''}
-                      style={{
-                        width: header.getSize() !== 150 ? header.getSize() : undefined,
-                      }}
-                      >
+                        style={{
+                          width: header.getSize() !== 150 ? header.getSize() : undefined,
+                        }}
+                       >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -409,10 +406,9 @@ export function PartnerInvoicesTable({
                       {row.getVisibleCells().map((cell) => (
                         <TableCell 
                           key={cell.id}
-                        className={cell.column.columnDef.meta?.className || ''}
-                        style={{
-                          textAlign: (cell.column.columnDef.meta as any)?.align || 'left',
-                        }}
+                          style={{
+                            textAlign: (cell.column.columnDef.meta as any)?.align || 'left',
+                          }}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
