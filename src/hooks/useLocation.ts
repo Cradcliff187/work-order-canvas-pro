@@ -1,21 +1,16 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  getCurrentLocation as getLocation,
+  getAddressComponents as reverseGeocode,
+  calculateDistance as calcDistance,
+  openDirections as openMaps,
+  type LocationData,
+  type AddressComponents
+} from '@/services/locationService';
 
-export interface LocationData {
-  latitude: number;
-  longitude: number;
-  accuracy: number;
-  address?: string;
-  timestamp: number;
-}
-
-export interface AddressComponents {
-  street?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  country?: string;
-}
+// Re-export types for backward compatibility
+export type { LocationData, AddressComponents } from '@/services/locationService';
 
 export function useLocation() {
   const [isSupported] = useState(() => 'geolocation' in navigator);
@@ -42,18 +37,10 @@ export function useLocation() {
     setIsLoading(true);
 
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, options);
-      });
-
-      const locationData: LocationData = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-        timestamp: position.timestamp
-      };
-
-      setCurrentLocation(locationData);
+      const locationData = await getLocation(options);
+      if (locationData) {
+        setCurrentLocation(locationData);
+      }
       return locationData;
     } catch (error) {
       console.error('Location error:', error);
@@ -85,33 +72,11 @@ export function useLocation() {
     }
   }, [isSupported, toast]);
 
-  const reverseGeocode = useCallback(async (
+  const reverseGeocodeWrapper = useCallback(async (
     latitude: number,
     longitude: number
   ): Promise<AddressComponents | null> => {
-    try {
-      // Using a free geocoding service (you might want to use a more robust solution)
-      const response = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Geocoding failed');
-      }
-
-      const data = await response.json();
-      
-      return {
-        street: data.locality || '',
-        city: data.city || data.principalSubdivision || '',
-        state: data.principalSubdivisionCode || '',
-        zipCode: data.postcode || '',
-        country: data.countryName || ''
-      };
-    } catch (error) {
-      console.error('Reverse geocoding error:', error);
-      return null;
-    }
+    return reverseGeocode(latitude, longitude);
   }, []);
 
   const getAddressFromLocation = useCallback(async (
@@ -120,8 +85,8 @@ export function useLocation() {
     const loc = location || currentLocation;
     if (!loc) return null;
 
-    return reverseGeocode(loc.latitude, loc.longitude);
-  }, [currentLocation, reverseGeocode]);
+    return reverseGeocodeWrapper(loc.latitude, loc.longitude);
+  }, [currentLocation, reverseGeocodeWrapper]);
 
   const calculateDistance = useCallback((
     lat1: number,
@@ -129,24 +94,8 @@ export function useLocation() {
     lat2: number,
     lon2: number
   ): number => {
-    const R = 6371; // Earth's radius in kilometers
-    const dLat = toRadians(lat2 - lat1);
-    const dLon = toRadians(lon2 - lon1);
-    
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-    
-    return distance;
+    return calcDistance(lat1, lon1, lat2, lon2);
   }, []);
-
-  const toRadians = (degrees: number): number => {
-    return degrees * (Math.PI / 180);
-  };
 
   const getDistanceToWorkSite = useCallback(async (
     workSiteAddress: string
@@ -172,25 +121,7 @@ export function useLocation() {
     latitude?: number,
     longitude?: number
   ) => {
-    const destination = latitude && longitude 
-      ? `${latitude},${longitude}`
-      : encodeURIComponent(destinationAddress);
-    
-    // Detect platform and open appropriate maps app
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isAndroid = /Android/.test(navigator.userAgent);
-    
-    let url: string;
-    
-    if (isIOS) {
-      url = `maps://maps.google.com/maps?daddr=${destination}`;
-    } else if (isAndroid) {
-      url = `google.navigation:q=${destination}`;
-    } else {
-      url = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-    }
-    
-    window.open(url, '_blank');
+    openMaps(destinationAddress, latitude, longitude);
   }, []);
 
   return {
@@ -198,7 +129,7 @@ export function useLocation() {
     currentLocation,
     isLoading,
     getCurrentLocation,
-    reverseGeocode,
+    reverseGeocode: reverseGeocodeWrapper,
     getAddressFromLocation,
     calculateDistance,
     getDistanceToWorkSite,

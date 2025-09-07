@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useLocationTracking } from './useLocationTracking';
-import type { SimpleLocationData, ClockInParams, ClockInResult, ClockOutResult, ClockStateData, ClockOutLocationData } from './types';
+import { getCurrentLocationCached, getAddressFromLocationCached, formatLocationForClockIn, formatLocationForClockOut } from '@/services/locationService';
+import type { ClockInParams, ClockInResult, ClockOutResult, ClockStateData, ClockOutLocationData } from './types';
 
 interface ClockActionsReturn {
   clockIn: UseMutationResult<ClockInResult | null, Error, ClockInParams>;
@@ -18,7 +18,7 @@ export function useClockActions(): ClockActionsReturn {
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { getCurrentLocationCached, getAddressFromLocationCached } = useLocationTracking();
+  
   
   const [isClockingIn, setIsClockingIn] = useState(false);
   const [isClockingOut, setIsClockingOut] = useState(false);
@@ -63,11 +63,7 @@ export function useClockActions(): ClockActionsReturn {
           const location = await getCurrentLocationCached();
           if (location) {
             const address = await getAddressFromLocationCached(location);
-            locationData = {
-              location_lat: location.latitude,
-              location_lng: location.longitude,
-              location_address: address || 'Location captured'
-            };
+            locationData = formatLocationForClockIn(location, address || 'Location captured');
           }
         } catch {
           // Location capture is optional, continue without it
@@ -177,11 +173,7 @@ export function useClockActions(): ClockActionsReturn {
           const location = await getCurrentLocationCached();
           if (location) {
             const address = await getAddressFromLocationCached(location);
-            locationData = {
-              clock_out_location_lat: location.latitude,
-              clock_out_location_lng: location.longitude,
-              clock_out_location_address: address || 'Location captured'
-            };
+            locationData = formatLocationForClockOut(location, address || 'Location captured');
           }
         } catch {
           // Location capture is optional, continue without it
