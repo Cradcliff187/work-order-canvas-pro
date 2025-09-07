@@ -54,9 +54,9 @@ export const sidebarItems: SidebarItem[] = [
 ];
 
 export const sidebarSections = {
-  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Messages', 'Reports', 'Time Reports'],
+  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Messages', 'Reports', 'Time Reports', 'Projects'],
   FINANCIAL: ['Billing Dashboard', 'Receipts', 'Finance Receipts', 'Subcontractor Bills', 'Partner Invoices'],
-  MANAGEMENT: ['Users', 'Organizations', 'Partner Locations', 'Employees', 'Projects'],
+  MANAGEMENT: ['Users', 'Organizations', 'Partner Locations', 'Employees'],
   INSIGHTS: ['Analytics', 'Email Templates'],
   SYSTEM: ['Settings', 'System Health', 'Email Testing']
 };
