@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { PaginationState, SortingState, ColumnDef, RowSelectionState, VisibilityState } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -215,12 +216,12 @@ export default function PartnerInvoices() {
 
   return (
     <div className="flex-1 space-y-4 overflow-x-hidden">
-      <div className={`max-w-full p-4 md:p-6 space-y-6 ${bulkMode && Object.keys(rowSelection).length > 0 ? "pb-24 sm:pb-28" : ""}`}>
+      <div className={cn("max-w-full p-4 md:p-6 space-y-6", bulkMode && Object.keys(rowSelection).length > 0 && "pb-24 sm:pb-28")}>
         {/* Breadcrumb */}
         <PartnerInvoicesBreadcrumb />
         
         {/* Header */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6" role="banner" aria-label="Partner invoices management header">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold tracking-tight">
               Partner Invoices Management
