@@ -123,6 +123,26 @@ serve(async (req) => {
       );
     }
 
+    // Create internal attachment record for the generated PDF
+    const { error: attachmentError } = await supabase
+      .from('work_order_attachments')
+      .insert({
+        work_order_id: reportData.work_orders.id,
+        work_order_report_id: reportId,
+        file_name: fileName,
+        file_url: filePath,
+        file_type: 'document',
+        file_size: pdfBlob.size,
+        uploaded_by_user_id: reportData.subcontractor_user_id,
+        is_internal: false  // Visible to all parties
+      });
+
+    if (attachmentError) {
+      console.error('Failed to create attachment record for PDF:', attachmentError);
+    } else {
+      console.log('Internal attachment record created successfully for PDF:', fileName);
+    }
+
     console.log('PDF generated successfully:', urlData.publicUrl);
 
     return new Response(
