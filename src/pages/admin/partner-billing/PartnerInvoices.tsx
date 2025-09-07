@@ -9,6 +9,7 @@ import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { PartnerInvoicesTable } from '@/components/admin/partner-billing/PartnerInvoicesTable';
 import { CompactPartnerInvoiceFilters } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
+import { createPartnerInvoiceColumns } from '@/components/admin/partner-billing/PartnerInvoiceColumns';
 import type { PartnerInvoiceFiltersValue } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
 import { PartnerInvoicesBreadcrumb } from '@/components/admin/partner-billing/PartnerInvoicesBreadcrumb';
 import { usePartnerInvoiceFilterCount } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
@@ -227,11 +228,20 @@ export default function PartnerInvoices() {
   };
 
   // Create columns
-  const columns = useMemo(() => {
-    // This would typically call createPartnerInvoiceColumns with appropriate handlers
-    // For now, return empty array as the columns are managed in the table
-    return [] as ColumnDef<any>[];
-  }, []);
+  const columns = useMemo(() => 
+    createPartnerInvoiceColumns({
+      onView: handleInvoiceClick,
+      onGeneratePdf: (invoice) => generatePdf({ invoiceId: invoice.id }),
+      onSendInvoice: (invoice) => sendInvoice({ invoiceId: invoice.id }),
+      onDownloadPdf: (invoice) => {
+        if (invoice.pdf_url) {
+          window.open(invoice.pdf_url, '_blank');
+        }
+      },
+      onUpdateStatus: (invoice, status) => updateStatus({ invoiceId: invoice.id, status })
+    }), 
+    [generatePdf, sendInvoice, updateStatus]
+  );
 
   const partnerOrganizations = useMemo(() => {
     return organizations?.filter(org => org.organization_type === 'partner').map(org => ({
