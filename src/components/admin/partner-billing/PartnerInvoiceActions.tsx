@@ -35,13 +35,11 @@ interface PartnerInvoice {
 
 interface PartnerInvoiceActionsProps {
   invoice: PartnerInvoice;
-  variant?: 'dropdown' | 'buttons';
   onStatusChange?: () => void;
 }
 
 export function PartnerInvoiceActions({ 
   invoice, 
-  variant = 'dropdown',
   onStatusChange 
 }: PartnerInvoiceActionsProps) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -183,45 +181,6 @@ export function PartnerInvoiceActions({
   const canSendEmail = invoice.status === 'draft' && invoice.pdf_url;
   const canMarkSent = invoice.status === 'draft';
   const canMarkPaid = invoice.status === 'sent';
-
-  if (variant === 'buttons') {
-    return (
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleGeneratePdf}
-          disabled={isGeneratingPdf || !canGeneratePdf}
-        >
-          <FileText className="h-4 w-4 mr-1" />
-          {isGeneratingPdf ? 'Generating...' : 'PDF'}
-        </Button>
-
-        {canSendEmail && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSendEmail}
-            disabled={isSendingEmail}
-          >
-            <Send className="h-4 w-4 mr-1" />
-            {isSendingEmail ? 'Sending...' : 'Send'}
-          </Button>
-        )}
-
-        {invoice.pdf_url && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.open(invoice.pdf_url!, '_blank')}
-          >
-            <Download className="h-4 w-4 mr-1" />
-            Download
-          </Button>
-        )}
-      </div>
-    );
-  }
 
   return (
     <DropdownMenu>
