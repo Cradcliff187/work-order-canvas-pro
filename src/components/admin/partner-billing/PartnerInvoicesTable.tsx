@@ -280,38 +280,37 @@ export function PartnerInvoicesTable({
   // Render desktop view
   return (
     <Card>
-      <div className="p-6 border-b">
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-4">
-            <h3 className="text-lg font-semibold">Partner Invoices</h3>
-            <ViewModeSwitcher
-              value={viewMode}
-              onValueChange={setViewMode}
-              allowedModes={allowedModes}
-            />
-          </div>
-        </div>
-        
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 border-b">
+        {/* Left side - Title and View Mode */}
         <div className="flex items-center gap-4">
-          {/* Left side - Selection clear */}
+          <h3 className="text-lg font-semibold">Partner Invoices</h3>
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+            className="shrink-0"
+          />
+        </div>
+
+        {/* Right side - Controls */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Clear selection (when visible) */}
           {selectedRows.length > 0 && (
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => setRowSelection({})}
-              className="h-10"
+              className="h-10 shrink-0"
             >
               Clear Selection ({selectedRows.length})
             </Button>
           )}
           
-          <div className="flex-1" />
-          
-          {/* Right side - Filters and controls */}
-          <div className="flex items-center gap-4">
+          {/* Filters and Search group */}
+          <div className="flex items-center gap-2">
             {filterComponent}
             
-            <div className="relative w-80">
+            <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search invoices..."
@@ -330,27 +329,27 @@ export function PartnerInvoicesTable({
                 </Button>
               )}
             </div>
+          </div>
 
-            {/* Column visibility */}
-            {columnVisibilityColumns && onToggleColumn && onResetColumns && (
-              <ColumnVisibilityDropdown
-                columns={columnVisibilityColumns}
-                onToggleColumn={onToggleColumn}
-                onResetToDefaults={onResetColumns}
-                variant="outline"
-                size="sm"
-              />
-            )}
-
-            {/* Export */}
-            <ExportDropdown
-              onExport={onExportAll}
+          {/* Column visibility */}
+          {columnVisibilityColumns && onToggleColumn && onResetColumns && (
+            <ColumnVisibilityDropdown
+              columns={columnVisibilityColumns}
+              onToggleColumn={onToggleColumn}
+              onResetToDefaults={onResetColumns}
               variant="outline"
               size="sm"
-              disabled={isLoading || !(data && data.length > 0)}
-              loading={isLoading}
             />
-          </div>
+          )}
+
+          {/* Export */}
+          <ExportDropdown
+            onExport={onExportAll}
+            variant="outline"
+            size="sm"
+            disabled={isLoading || !(data && data.length > 0)}
+            loading={isLoading}
+          />
         </div>
       </div>
 
