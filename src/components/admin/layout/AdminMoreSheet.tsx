@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { sidebarItems, sidebarSections, adminOnlyItems } from './sidebarConfig';
+import { UserProfileDropdown } from '@/components/admin/layout/UserProfileDropdown';
 
 interface AdminMoreSheetProps {
   open: boolean;
@@ -119,6 +120,14 @@ export function AdminMoreSheet({ open, onOpenChange }: AdminMoreSheetProps) {
               ))}
             </div>
           )}
+          
+          {/* Profile & Account Section */}
+          <div className="mt-8 pt-6 border-t border-border">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              Profile & Account
+            </h3>
+            <UserProfileDropdown collapsed={true} />
+          </div>
         </div>
       </SheetContent>
     </Sheet>
