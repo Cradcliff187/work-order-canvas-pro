@@ -1,6 +1,7 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Clock, MapPin } from 'lucide-react';
+import { useClockTimer } from '@/hooks/useClockTimer';
 import { SearchBar } from './SearchBar';
 import { WorkSelector } from './WorkSelector';
 import { ClockSheetProps } from './types';
@@ -22,8 +23,8 @@ export function ClockSheet({
   onClockAction,
   formatElapsedTime
 }: ClockSheetProps) {
-  // Calculate elapsed time for current session display
-  const elapsedTime = clockInTime ? Date.now() - clockInTime.getTime() : 0;
+  // Get elapsed time from timer hook
+  const { elapsedTime } = useClockTimer();
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>

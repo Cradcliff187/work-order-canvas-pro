@@ -7,7 +7,7 @@ import { useBranding } from '@/hooks/useBranding';
 import { StandardHeader } from '@/components/layout/StandardHeader';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { UserProfileDropdown } from '@/components/admin/layout/UserProfileDropdown';
-import FloatingClockWidget from '@/components/employee/FloatingClockWidget';
+import { FloatingClockWidget } from '@/components/employee/FloatingClockWidget';
 import { QuickActionSheet } from '@/components/employee/QuickActionSheet';
 import { ClockWidgetProvider } from '@/contexts/ClockWidgetContext';
 import {
