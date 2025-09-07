@@ -239,7 +239,7 @@ export default function PartnerInvoices() {
             <Button
               variant={bulkMode ? "default" : "outline"}
               onClick={() => setBulkMode(!bulkMode)}
-              className="flex-1 sm:flex-initial"
+              className="flex-1 sm:flex-initial h-9"
             >
               <CheckSquare className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{bulkMode ? "Exit Bulk Mode" : "Select Multiple"}</span>
@@ -248,7 +248,7 @@ export default function PartnerInvoices() {
             
             <Button 
               onClick={() => console.log('Create new invoice')} 
-              className="flex-1 sm:flex-initial"
+              className="flex-1 sm:flex-initial h-9"
             >
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Create Invoice</span>
