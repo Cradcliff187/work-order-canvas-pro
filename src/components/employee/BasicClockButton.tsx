@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Loader2, MapPin } from 'lucide-react';
 import { useClockState } from '@/hooks/useClockState';
 import { useLocation } from '@/hooks/useLocation';
+import { formatElapsedTime } from '@/utils/timeFormatters';
 import { cn } from '@/lib/utils';
 
 interface BasicClockButtonProps {
@@ -11,20 +12,6 @@ interface BasicClockButtonProps {
   loading?: boolean;
   className?: string;
 }
-
-// Format elapsed time from milliseconds to "Xh Ym" format
-const formatElapsedTime = (milliseconds: number): string => {
-  if (milliseconds < 60000) return '< 1m'; // Less than 1 minute
-  
-  const totalMinutes = Math.floor(milliseconds / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  return `${minutes}m`;
-};
 
 export function BasicClockButton({ onClick, loading = false, className }: BasicClockButtonProps) {
   const { isClocked, elapsedTime, locationLat, locationLng } = useClockState();

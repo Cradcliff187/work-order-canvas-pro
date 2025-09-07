@@ -6,23 +6,12 @@ import { Clock, MapPin, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { useClockState } from '@/hooks/useClockState';
 import { useClockTimer } from '@/hooks/useClockTimer';
+import { calculateEarnings } from '@/utils/timeFormatters';
 
 interface ClockActiveProps {
   onClockOut: () => void;
   isClockingOut: boolean;
 }
-
-// Helper function to calculate current earnings
-const calculateEarnings = (elapsedTime: number, hourlyRate: number): string => {
-  const hoursWorked = elapsedTime / (1000 * 60 * 60);
-  const earnings = hoursWorked * hourlyRate;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(earnings);
-};
 
 export const ClockActive: React.FC<ClockActiveProps> = ({
   onClockOut,

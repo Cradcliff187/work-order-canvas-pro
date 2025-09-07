@@ -5,7 +5,7 @@ import { Clock, Loader2 } from 'lucide-react';
 import { useClockState } from '@/hooks/useClockState';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { formatElapsedTime } from '@/lib/utils/time';
+import { formatElapsedTime } from '@/utils/timeFormatters';
 import { cn } from '@/lib/utils';
 
 export const ActiveTimerBar: React.FC = () => {

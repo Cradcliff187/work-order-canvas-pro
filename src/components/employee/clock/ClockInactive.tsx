@@ -10,7 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useClockWidget } from '@/contexts/ClockWidgetContext';
 import { useRecentlyClockedWorkOrders } from '@/hooks/useRecentlyClockedWorkOrders';
 import { useWorkItemSearch } from '@/hooks/useWorkItemSearch';
-import { formatElapsedTime as formatTimeUtil } from '@/lib/utils/time';
+import { formatElapsedTime as formatTimeUtil } from '@/utils/timeFormatters';
 import { ClockSelector } from './ClockSelector';
 import type { ClockOption } from './types';
 
