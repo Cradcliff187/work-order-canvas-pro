@@ -281,21 +281,26 @@ export function PartnerInvoicesTable({
   return (
     <Card className="w-full">
       <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <CardTitle className="text-xl">{title}</CardTitle>
-            {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
-          </div>
-          
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {/* Left side - Title and view mode */}
+          <div className="flex items-center gap-4">
+            <div className="min-w-0">
+              <CardTitle className="text-lg font-semibold leading-none tracking-tight">{title}</CardTitle>
+              {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+            </div>
+            
             {setViewMode && (
-              <ViewModeSwitcher 
-                value={viewMode} 
+              <ViewModeSwitcher
+                value={viewMode}
                 onValueChange={setViewMode}
                 allowedModes={['table', 'card']}
+                className="shrink-0"
               />
             )}
-            
+          </div>
+
+          {/* Right side - Search and Actions */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
