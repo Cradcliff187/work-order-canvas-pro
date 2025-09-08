@@ -209,7 +209,16 @@ export default function AssignmentDetail() {
             </div>
             
             <BasicClockButton 
-              onClick={() => {}}
+              onClick={() => {
+                if (isClocked && workOrderId === workOrder?.id) {
+                  // Already clocked into this work order, this will clock out
+                } else if (isClocked && workOrderId !== workOrder?.id) {
+                  // Clocked into different work order, this will clock out and clock into this one
+                } else {
+                  // Not clocked in, this will clock into this work order
+                }
+                // The BasicClockButton handles the actual clock in/out logic
+              }}
               className="w-full"
             />
           </div>
