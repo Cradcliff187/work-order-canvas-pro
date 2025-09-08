@@ -14,6 +14,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { MobileBottomSheet } from './mobile/MobileBottomSheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useClockState } from '@/hooks/useClockState';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { toast } from '@/hooks/use-toast';
@@ -35,6 +37,7 @@ interface QuickActionSheetProps {
 
 export function QuickActionSheet({ isOpen, onClose }: QuickActionSheetProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { clockOut, isClockingOut, isClocked } = useClockState();
   const { triggerHaptic, onError, onSubmitSuccess } = useHapticFeedback();
 
@@ -166,7 +169,61 @@ export function QuickActionSheet({ isOpen, onClose }: QuickActionSheetProps) {
     }
   };
 
-  return (
+  const renderContent = () => (
+    <div className="space-y-2">
+      {actions.map((action) => {
+        const Icon = action.icon;
+        const isLoading = (action.id === 'take-break' || action.id === 'end-day') && isClockingOut;
+        
+        return (
+          <button
+            key={action.id}
+            onClick={action.action}
+            disabled={isLoading}
+            className={cn(
+              "w-full flex items-center gap-4 p-4 rounded-xl transition-colors",
+              isMobile ? "min-h-[56px]" : "min-h-[48px]",
+              "border border-border/50 bg-background",
+              "touch-manipulation",
+              isLoading ? 'opacity-50 cursor-not-allowed' : getActionStyles(action.variant)
+            )}
+          >
+            <div className="flex-shrink-0">
+              <Icon className="h-6 w-6" />
+            </div>
+            <span className="text-left font-medium">
+              {isLoading ? 'Processing...' : action.label}
+            </span>
+          </button>
+        );
+      })}
+      
+      <button
+        onClick={onClose}
+        className={cn(
+          "w-full flex items-center justify-center gap-2 p-4 rounded-xl transition-colors mt-4 bg-muted hover:bg-muted/80",
+          isMobile ? "min-h-[56px]" : "min-h-[48px]",
+          "touch-manipulation"
+        )}
+      >
+        <X className="h-5 w-5" />
+        <span className="font-medium">Cancel</span>
+      </button>
+    </div>
+  );
+
+  return isMobile ? (
+    <MobileBottomSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Quick Actions"
+      swipeToClose={true}
+      backdropTapToClose={true}
+      hapticFeedback={true}
+    >
+      {renderContent()}
+    </MobileBottomSheet>
+  ) : (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side="bottom" 
@@ -181,39 +238,8 @@ export function QuickActionSheet({ isOpen, onClose }: QuickActionSheetProps) {
           </SheetHeader>
         </div>
 
-        <div className="px-6 pb-8 space-y-2">
-          {actions.map((action) => {
-            const Icon = action.icon;
-            const isLoading = (action.id === 'take-break' || action.id === 'end-day') && isClockingOut;
-            
-            return (
-              <button
-                key={action.id}
-                onClick={action.action}
-                disabled={isLoading}
-                className={cn(
-                  "w-full flex items-center gap-4 p-4 rounded-xl transition-colors min-h-[56px]",
-                  "border border-border/50 bg-background",
-                  isLoading ? 'opacity-50 cursor-not-allowed' : getActionStyles(action.variant)
-                )}
-              >
-                <div className="flex-shrink-0">
-                  <Icon className="h-6 w-6" />
-                </div>
-                <span className="text-left font-medium">
-                  {isLoading ? 'Processing...' : action.label}
-                </span>
-              </button>
-            );
-          })}
-          
-          <button
-            onClick={onClose}
-            className="w-full flex items-center justify-center gap-2 p-4 rounded-xl transition-colors min-h-[56px] mt-4 bg-muted hover:bg-muted/80"
-          >
-            <X className="h-5 w-5" />
-            <span className="font-medium">Cancel</span>
-          </button>
+        <div className="px-6 pb-8">
+          {renderContent()}
         </div>
       </SheetContent>
     </Sheet>
