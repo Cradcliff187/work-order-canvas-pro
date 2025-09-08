@@ -5,12 +5,15 @@ import { useClockTimer } from '@/hooks/useClockTimer';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { useClockWidget } from '@/contexts/ClockWidgetContext';
 import { useClockWidgetActions } from '@/hooks/useClockWidgetActions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ClockFAB } from './clock/ClockFAB';
+import { MobileClockFAB } from './mobile/MobileClockFAB';
 import { ClockSheet } from './clock/ClockSheet';
 import type { ClockOption } from './clock/types';
 
 export function FloatingClockWidget() {
   const location = useLocation();
+  const isMobile = useIsMobile();
   
   // Hide on dashboard page to avoid redundancy with hero clock
   if (location.pathname === '/employee/dashboard') {
@@ -45,12 +48,21 @@ export function FloatingClockWidget() {
 
   return (
     <>
-      <ClockFAB
-        isClocked={clockData.isClocked}
-        elapsedTime={elapsedTime}
-        onFabClick={handleFabClick}
-        formatElapsedTime={formatElapsedTimeDetailed}
-      />
+      {isMobile ? (
+        <MobileClockFAB
+          isClocked={clockData.isClocked}
+          elapsedTime={elapsedTime}
+          onFabClick={handleFabClick}
+          formatElapsedTime={formatElapsedTimeDetailed}
+        />
+      ) : (
+        <ClockFAB
+          isClocked={clockData.isClocked}
+          elapsedTime={elapsedTime}
+          onFabClick={handleFabClick}
+          formatElapsedTime={formatElapsedTimeDetailed}
+        />
+      )}
       
       <ClockSheet
         isOpen={isOpen}
