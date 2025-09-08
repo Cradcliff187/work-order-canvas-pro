@@ -8,6 +8,7 @@ import { StandardHeader } from '@/components/layout/StandardHeader';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { UserProfileDropdown } from '@/components/admin/layout/UserProfileDropdown';
 import { FloatingClockWidget } from '@/components/employee/FloatingClockWidget';
+import { ClockErrorBoundary } from '@/components/employee/clock/ClockErrorBoundary';
 import { QuickActionSheet } from '@/components/employee/QuickActionSheet';
 import { ClockWidgetProvider } from '@/contexts/ClockWidgetContext';
 import {
@@ -152,7 +153,9 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({ children }) => {
               <MobileBottomNav navItems={employeeNavItems} />
             )}
             
-            <FloatingClockWidget />
+            <ClockErrorBoundary>
+              <FloatingClockWidget />
+            </ClockErrorBoundary>
             
             <QuickActionSheet 
               isOpen={isQuickActionSheetOpen} 
