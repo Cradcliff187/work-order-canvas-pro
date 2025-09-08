@@ -175,18 +175,18 @@ body {
   }
 }
 
-/* Shadow utilities for tours and floating elements */
-.shadow-glow {
-  box-shadow: 0 0 40px hsl(var(--primary) / 0.4);
-}
-
-.shadow-elegant {
-  box-shadow: 0 10px 30px -10px hsl(var(--primary) / 0.3);
-}
-
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  
+  /* Shadow utilities for tours and floating elements */
+  .shadow-glow {
+    box-shadow: 0 0 40px hsl(var(--primary) / 0.4);
+  }
+
+  .shadow-elegant {
+    box-shadow: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+  }
 }
 
 /* Floating UI Elements Z-Index Management */
