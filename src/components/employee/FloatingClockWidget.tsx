@@ -28,12 +28,8 @@ export function FloatingClockWidget() {
       setIsOpen(false);
     },
   });
-  
-  // Hide on dashboard page to avoid redundancy with hero clock
-  if (location.pathname === '/employee/dashboard') {
-    return null;
-  }
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL LOGIC
   const handleFabClick = useCallback(() => {
     onFieldSave();
     setIsOpen(true);
@@ -43,6 +39,11 @@ export function FloatingClockWidget() {
     setIsOpen(false);
     setSelectedOption(null);
   }, [setIsOpen]);
+  
+  // Hide on dashboard page to avoid redundancy with hero clock
+  if (location.pathname === '/employee/dashboard') {
+    return null;
+  }
 
 
   return (
