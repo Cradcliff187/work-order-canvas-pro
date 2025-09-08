@@ -456,7 +456,7 @@ const PartnerLocations: React.FC = () => {
           <CardContent className="p-0">
             <Table aria-busy={isLoading} aria-label="Partner locations table">
             <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
+              {table?.getHeaderGroups()?.map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <TableHead key={header.id}>
@@ -493,8 +493,8 @@ const PartnerLocations: React.FC = () => {
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
+              {table?.getRowModel()?.rows?.length ? (
+                table?.getRowModel()?.rows?.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
