@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { FileUpload } from "@/components/FileUpload";
+import { TimeReportReceipts } from "./TimeReportReceipts";
 import { Clock, CalendarIcon, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -231,21 +231,10 @@ export function TimeReportForm({
             </div>
 
             {/* Receipt Upload */}
-            <div className="space-y-4">
-              <div>
-                <FormLabel>Receipt Attachments</FormLabel>
-                <p className="text-sm text-muted-foreground">
-                  Upload receipts for materials or expenses (up to 10 files, max 10MB each)
-                </p>
-              </div>
-              
-              <FileUpload
-                onFilesSelected={handleFilesSelected}
-                maxFiles={10}
-                maxSizeBytes={10 * 1024 * 1024}
-                disabled={isSubmitting}
-              />
-            </div>
+            <TimeReportReceipts
+              onFilesSelected={handleFilesSelected}
+              disabled={isSubmitting}
+            />
 
             {/* Additional Notes */}
             <FormField
