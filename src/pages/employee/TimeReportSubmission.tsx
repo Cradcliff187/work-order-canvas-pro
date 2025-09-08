@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useEmployeeReports } from "@/hooks/useEmployeeReports";
 import { TimeReportForm, type TimeReportFormData } from "@/components/employee/time-reports/TimeReportForm";
+import { TimeReportErrorBoundary } from "@/components/employee/time-reports/TimeReportErrorBoundary";
 import { ArrowLeft, Edit, AlertCircle } from "lucide-react";
 
 export default function TimeReportSubmission() {
@@ -109,81 +110,83 @@ export default function TimeReportSubmission() {
   const workOrder = workOrderQuery.data;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/employee/time-reports">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold">
-            {editingReport ? "Edit Time Report" : "Submit Time Report"}
-          </h1>
-          <p className="text-muted-foreground">
-            {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`} - {workOrder.title}
-          </p>
-        </div>
-      </div>
-
-      {/* Work Order Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Work Order Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <h4 className="font-medium text-sm text-muted-foreground mb-1">Location</h4>
-              <p className="text-sm">{workOrder.store_location}</p>
-            </div>
-            <div>
-              <h4 className="font-medium text-sm text-muted-foreground mb-1">Trade</h4>
-              <p className="text-sm">{workOrder.trades?.name}</p>
-            </div>
-            <div className="sm:col-span-2">
-              <h4 className="font-medium text-sm text-muted-foreground mb-1">Description</h4>
-              <p className="text-sm">{workOrder.description}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Existing Report Alert */}
-      {existingReport && !editingReport && currentDate && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between w-full">
-            <span>
-              A time report already exists for {format(currentDate, "PPP")}. 
-              Hours: {existingReport.hours_worked}, Labor Cost: ${existingReport.total_labor_cost?.toFixed(2) || '0.00'}
-            </span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleEditExisting}
-              className="ml-4"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Report
+    <TimeReportErrorBoundary workOrderId={workOrderId}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Link to="/employee/time-reports">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
             </Button>
-          </AlertDescription>
-        </Alert>
-      )}
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {editingReport ? "Edit Time Report" : "Submit Time Report"}
+            </h1>
+            <p className="text-muted-foreground">
+              {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`} - {workOrder.title}
+            </p>
+          </div>
+        </div>
 
-      {/* Time Report Form */}
-      <TimeReportForm
-        workOrderId={workOrderId!}
-        hourlyRate={hourlyRate}
-        existingReport={existingReport}
-        editingReport={editingReport}
-        isSubmitting={submitTimeReport.isPending}
-        onSubmit={onSubmit}
-        onCancel={editingReport ? handleCancelEdit : handleCancel}
-        onDateChange={handleDateChange}
-      />
-    </div>
+        {/* Work Order Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Work Order Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <h4 className="font-medium text-sm text-muted-foreground mb-1">Location</h4>
+                <p className="text-sm">{workOrder.store_location}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-sm text-muted-foreground mb-1">Trade</h4>
+                <p className="text-sm">{workOrder.trades?.name}</p>
+              </div>
+              <div className="sm:col-span-2">
+                <h4 className="font-medium text-sm text-muted-foreground mb-1">Description</h4>
+                <p className="text-sm">{workOrder.description}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Existing Report Alert */}
+        {existingReport && !editingReport && currentDate && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between w-full">
+              <span>
+                A time report already exists for {format(currentDate, "PPP")}. 
+                Hours: {existingReport.hours_worked}, Labor Cost: ${existingReport.total_labor_cost?.toFixed(2) || '0.00'}
+              </span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleEditExisting}
+                className="ml-4"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Report
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Time Report Form */}
+        <TimeReportForm
+          workOrderId={workOrderId!}
+          hourlyRate={hourlyRate}
+          existingReport={existingReport}
+          editingReport={editingReport}
+          isSubmitting={submitTimeReport.isPending}
+          onSubmit={onSubmit}
+          onCancel={editingReport ? handleCancelEdit : handleCancel}
+          onDateChange={handleDateChange}
+        />
+      </div>
+    </TimeReportErrorBoundary>
   );
 }
