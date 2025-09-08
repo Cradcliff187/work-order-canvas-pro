@@ -609,7 +609,8 @@ export function LocationTable({
           previousPage: () => {},
           nextPage: () => {},
           setPageSize: (size: number) => {},
-          getRowModel: () => ({ rows: data })
+          getRowModel: () => ({ rows: data }),
+          getFilteredRowModel: () => ({ rows: data })
         } as any}
         totalCount={data.length}
         itemName="locations"
