@@ -147,45 +147,23 @@ export const ReceiptTour: React.FC<ReceiptTourProps> = ({
 
   const getStepPosition = useCallback(() => {
     if (currentTourStep.position === 'center') {
-      return 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
+      return 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2';
     }
 
     const target = currentTourStep.target ? document.querySelector(currentTourStep.target) : null;
     if (!target) {
-      return 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
+      return 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2';
     }
 
     const rect = target.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const cardWidth = 320; // Approximate tour card width
-
-    // Calculate safe positions
     const positions = {
-      top: {
-        top: Math.max(20, rect.top - 120),
-        left: Math.max(20, Math.min(viewportWidth - cardWidth - 20, rect.left + rect.width / 2 - cardWidth / 2)),
-        transform: 'none'
-      },
-      bottom: {
-        top: Math.min(viewportHeight - 200, rect.bottom + 20),
-        left: Math.max(20, Math.min(viewportWidth - cardWidth - 20, rect.left + rect.width / 2 - cardWidth / 2)),
-        transform: 'none'
-      },
-      left: {
-        top: Math.max(20, Math.min(viewportHeight - 200, rect.top + rect.height / 2 - 100)),
-        left: Math.max(20, rect.left - cardWidth - 20),
-        transform: 'none'
-      },
-      right: {
-        top: Math.max(20, Math.min(viewportHeight - 200, rect.top + rect.height / 2 - 100)),
-        left: Math.min(viewportWidth - cardWidth - 20, rect.right + 20),
-        transform: 'none'
-      }
+      top: `top-${Math.max(20, rect.top - 100)}px left-${rect.left + rect.width / 2}px transform -translate-x-1/2`,
+      bottom: `top-${rect.bottom + 20}px left-${rect.left + rect.width / 2}px transform -translate-x-1/2`,
+      left: `top-${rect.top + rect.height / 2}px left-${Math.max(20, rect.left - 320)}px transform -translate-y-1/2`,
+      right: `top-${rect.top + rect.height / 2}px left-${rect.right + 20}px transform -translate-y-1/2`
     };
 
-    const pos = positions[currentTourStep.position] || positions.top;
-    return `fixed ${Object.entries(pos).map(([key, value]) => `${key}: ${typeof value === 'number' ? value + 'px' : value}`).join('; ')}`;
+    return positions[currentTourStep.position] || 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2';
   }, [currentTourStep]);
 
   if (!isVisible) return null;
@@ -227,22 +205,9 @@ export const ReceiptTour: React.FC<ReceiptTourProps> = ({
           exit={{ opacity: 0, scale: 0.9, y: -20 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
           className={cn(
-            "z-[60] w-80 max-w-[90vw]",
-            isMobile ? "fixed bottom-4 left-4 right-4 w-auto" : ""
+            "fixed z-[60] w-80 max-w-[90vw]",
+            isMobile ? "bottom-4 left-4 right-4 w-auto" : getStepPosition()
           )}
-          style={!isMobile ? (() => {
-            const styleString = getStepPosition();
-            const styles: React.CSSProperties = {};
-            styleString.split(';').forEach(rule => {
-              const [prop, value] = rule.split(':').map(s => s.trim());
-              if (prop && value && prop !== 'fixed') {
-                // Convert kebab-case to camelCase for React styles
-                const camelProp = prop.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-                (styles as any)[camelProp] = value;
-              }
-            });
-            return styles;
-          })() : {}}
         >
           <Card className="border-primary/20 shadow-elegant bg-card/95 backdrop-blur-sm">
             <CardContent className="p-4">

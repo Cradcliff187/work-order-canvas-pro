@@ -1,32 +1,34 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  /* Global Horizontal Scroll Prevention */
-  html, body, #root {
+/* Global Horizontal Scroll Prevention */
+html, body, #root {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Prevent overflow escape at body level */
+body { 
+  overflow-x: hidden !important; 
+}
+
+/* Mobile-specific container constraints */
+@media (max-width: 1024px) {
+  * {
     max-width: 100vw;
+  }
+  
+  .container, [class*="container"] {
+    max-width: 100vw !important;
     overflow-x: hidden;
   }
+}
 
-  /* Prevent overflow escape at body level */
-  body { 
-    overflow-x: hidden !important; 
-  }
+/* AKC Construction Services Design System - Professional Construction Management */
 
-  /* Mobile-specific container constraints */
-  @media (max-width: 1024px) {
-    * {
-      max-width: 100vw;
-    }
-    
-    .container, [class*="container"] {
-      max-width: 100vw !important;
-      overflow-x: hidden;
-    }
-  }
-
-  /* AKC Construction Services Design System - Professional Construction Management */
+@layer base {
   :root {
     /* Essential Brand Colors */
     --primary: 211 96% 45%;
@@ -57,131 +59,169 @@
     --radius: 0.5rem;
     --gradient-primary: linear-gradient(135deg, hsl(211 96% 45%), hsl(211 96% 55%));
     --shadow-card: 0 2px 4px -1px hsl(222 47% 11% / 0.06), 0 1px 2px -1px hsl(222 47% 11% / 0.03);
-    --shadow-lg: 0 10px 15px -3px hsl(222 47% 11% / 0.1), 0 4px 6px -2px hsl(222 47% 11% / 0.05);
-    --sidebar: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-accent: 158 64% 92%;
-    --sidebar-border: 214 32% 85%;
+    --transition-smooth: all 0.2s ease;
+    
+    /* Sidebar Colors */
+    --sidebar: 220 14% 95%;
+    --sidebar-foreground: 220 9% 8%;
+    --sidebar-accent: 220 14% 90%;
+    --sidebar-border: 220 13% 91%;
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 20% 98%;
-    --card: 222 47% 10%;
-    --card-foreground: 210 20% 98%;
-    --popover: 222 47% 7%;
-    --popover-foreground: 210 20% 98%;
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
     --primary: 211 96% 55%;
     --primary-foreground: 222 47% 11%;
-    --secondary: 215 20% 65%;
+    --secondary: 215 16% 70%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 215 25% 27%;
-    --muted-foreground: 217 19% 64%;
-    --accent: 158 64% 32%;
-    --accent-foreground: 210 20% 98%;
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 215 25% 27%;
-    --input: 215 25% 27%;
+    --muted: 217 32% 15%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 158 64% 15%;
+    --accent-foreground: 158 64% 80%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 32% 20%;
+    --input: 217 32% 17.5%;
     --ring: 211 96% 55%;
-    --success: 158 64% 52%;
-    --success-foreground: 222 47% 11%;
-    --warning: 45 93% 57%;
-    --warning-foreground: 222 47% 11%;
-    --project: 271 91% 75%;
-    --project-foreground: 222 47% 11%;
-    --sidebar: 222 47% 10%;
-    --sidebar-foreground: 210 20% 98%;
-    --sidebar-accent: 158 64% 32%;
-    --sidebar-border: 220 13% 20%;
+    
+    /* Sidebar Colors - Dark Theme */
+    --sidebar: 220 14% 5%;
+    --sidebar-foreground: 220 9% 98%;
+    --sidebar-accent: 220 14% 10%;
+    --sidebar-border: 220 13% 9%;
   }
+}
 
-  /* Base element styles */
+@layer base {
   * {
     @apply border-border;
   }
-  
-  body {
-    @apply bg-background text-foreground;
+
+  html {
+    /* iOS viewport fix for 100vh issues */
+    height: 100%;
+    height: -webkit-fill-available;
+    width: 100%;
+    max-width: 100vw;
   }
 
-  /* Touch and interaction styles */
-  .touch-action-pan-y { touch-action: pan-y; }
-  .tap-highlight-transparent { -webkit-tap-highlight-color: transparent; }
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  body {
+    @apply bg-background text-foreground;
+    /* Prevent input zoom on iOS */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    /* Support for safe area insets */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    width: 100%;
+    max-width: 100vw;
+    overscroll-behavior-x: contain;
+    position: relative;
+  }
+
+  /* Clamp app root to viewport to prevent global horizontal scroll */
+  #root, #app {
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  /* Prevent input zoom on iOS by ensuring minimum font size */
+  input, textarea, select {
+    font-size: 16px;
+  }
+
+  /* Touch action optimizations */
+  .touch-action-pan-y {
+    touch-action: pan-y;
+  }
+
+  .touch-action-manipulation {
+    touch-action: manipulation;
+  }
 }
 
 @layer components {
-  .card-shadow { 
-    box-shadow: var(--shadow-card);
+  .smooth-transition {
+    transition: all 200ms ease-in-out;
   }
-  .card-hover { 
-    box-shadow: var(--shadow-lg);
-    transition: box-shadow 200ms;
+  
+  .fade-in-up {
+    animation: fadeInUp 0.4s ease-out;
   }
-  .btn-primary { 
-    @apply bg-primary text-primary-foreground hover:bg-primary/90; 
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
   }
-  .btn-secondary { 
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80; 
+
+  .scale-in {
+    animation: scaleIn 0.2s ease-out;
   }
-  .form-input { 
-    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm; 
-  }
-  .status-badge-pending { 
-    @apply bg-warning/10 text-warning border-warning/20; 
-  }
-  .status-badge-active { 
-    @apply bg-primary/10 text-primary border-primary/20; 
-  }
-  .status-badge-completed { 
-    @apply bg-success/10 text-success border-success/20; 
+
+  @media (prefers-reduced-motion: reduce) {
+    .smooth-transition,
+    .fade-in-up,
+    .fade-in,
+    .scale-in {
+      animation: none !important;
+      transition: none !important;
+    }
   }
 }
 
 @layer utilities {
-  /* Print utilities */
-  @media print {
-    .no-print { display: none !important; }
-    .print-only { display: block !important; }
-  }
-  
-  /* Accessibility */
-  .focus-ring { @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2; }
-  
-  /* Safe area padding for mobile */
-  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
-/* Non-layer styles (must come AFTER all @layer blocks) */
+/* Floating UI Elements Z-Index Management */
+/* Ensure all floating UI elements appear above table content and sticky headers */
 
-/* Z-index system */
-.z-dropdown { z-index: 1000; }
-.z-modal { z-index: 9999; }
-.z-popover { z-index: 99999; }
+/* Radix UI Popper Content (HoverCards, Tooltips, Dropdowns) */
+[data-radix-popper-content-wrapper] {
+  z-index: 99999 !important;
+}
 
-/* Radix UI Portal fixes */
+/* Specific fix for Radix UI elements in open state */
+[data-state="open"][data-side] {
+  z-index: 99999 !important;
+}
+
+/* Ensure hover cards and tooltips in tables appear above sticky headers */
+.hover-card-content,
+[role="tooltip"] {
+  z-index: 99999 !important;
+}
+
+/* Additional Radix UI Portal fixes */
 [data-radix-portal] {
   position: relative;
   z-index: 99999;
 }
 
+/* Ensure HoverCard portal is always on top */
 [data-radix-hover-card-content] {
   z-index: 99999 !important;
 }
 
-/* Table hover fix */
+/* Fix for overlapping table elements */
 .hover\:bg-muted\/50:hover {
   position: relative;
   z-index: 1;
 }
 
+/* Ensure table cells don't block hovercards */
 td {
   position: relative;
 }
 
-/* Keyframe Animations */
+/* Essential Keyframes */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -194,8 +234,12 @@ td {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleIn {
@@ -209,7 +253,7 @@ td {
   }
 }
 
-/* Upload Trigger Styles */
+/* Essential Upload Trigger Styles */
 .upload-trigger-enhanced {
   position: relative;
   min-height: 48px;
@@ -244,3 +288,4 @@ td {
     box-shadow: 0 2px 8px hsl(var(--primary) / 0.1);
   }
 }
+
