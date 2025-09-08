@@ -10,7 +10,6 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  getFilteredRowModel,
   ColumnDef,
   flexRender,
   PaginationState,
@@ -177,7 +176,6 @@ export default function AdminPartnerLocations() {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const handleRefresh = async () => {
