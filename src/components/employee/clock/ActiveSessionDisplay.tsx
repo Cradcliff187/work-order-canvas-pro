@@ -1,17 +1,16 @@
 import { Clock, MapPin } from 'lucide-react';
+import { ElapsedTimeDisplay } from './ElapsedTimeDisplay';
 
 interface ActiveSessionDisplayProps {
   workOrderId: string | null;
   projectId: string | null;
   elapsedTime: number;
-  formatElapsedTime: (time: number) => string;
 }
 
 export function ActiveSessionDisplay({
   workOrderId,
   projectId,
-  elapsedTime,
-  formatElapsedTime
+  elapsedTime
 }: ActiveSessionDisplayProps) {
   return (
     <div className="bg-muted/50 rounded-lg p-4 mb-6">
@@ -20,9 +19,12 @@ export function ActiveSessionDisplay({
           <Clock className="h-4 w-4 text-green-600" />
           <span className="text-sm font-medium">Active Session</span>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {formatElapsedTime(elapsedTime)}
-        </div>
+        <ElapsedTimeDisplay 
+          timeMs={elapsedTime} 
+          format="compact" 
+          variant="default" 
+          className="text-sm text-muted-foreground"
+        />
       </div>
       
       {(workOrderId || projectId) && (

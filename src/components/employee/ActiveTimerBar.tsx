@@ -5,7 +5,7 @@ import { Clock, Loader2 } from 'lucide-react';
 import { useClockState } from '@/hooks/useClockState';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { formatElapsedTime } from '@/utils/timeFormatters';
+import { ElapsedTimeDisplay } from './clock/ElapsedTimeDisplay';
 import { cn } from '@/lib/utils';
 
 export const ActiveTimerBar: React.FC = () => {
@@ -64,9 +64,12 @@ export const ActiveTimerBar: React.FC = () => {
               <Clock className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">
-                {formatElapsedTime(elapsedTime)}
-              </p>
+              <ElapsedTimeDisplay 
+                timeMs={elapsedTime} 
+                format="compact" 
+                variant="default" 
+                className="text-foreground"
+              />
               <p className="text-xs text-muted-foreground">Active</p>
             </div>
           </div>

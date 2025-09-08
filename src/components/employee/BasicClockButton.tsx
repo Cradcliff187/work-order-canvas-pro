@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Loader2, MapPin } from 'lucide-react';
 import { useClockState } from '@/hooks/useClockState';
 import { useLocation } from '@/hooks/useLocation';
-import { formatElapsedTime } from '@/utils/timeFormatters';
+import { ElapsedTimeDisplay } from './clock/ElapsedTimeDisplay';
 import { cn } from '@/lib/utils';
 
 interface BasicClockButtonProps {
@@ -68,7 +68,11 @@ export function BasicClockButton({ onClick, loading = false, className }: BasicC
             variant="outline" 
             className="text-sm font-medium px-3 py-1 bg-background/80 backdrop-blur-sm"
           >
-            {formatElapsedTime(elapsedTime)}
+            <ElapsedTimeDisplay 
+              timeMs={elapsedTime} 
+              format="compact" 
+              variant="badge" 
+            />
           </Badge>
           
           {distanceText && (

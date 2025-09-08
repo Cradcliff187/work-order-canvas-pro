@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Play } from 'lucide-react';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { ClockFABProps } from '../clock/types';
+import { ElapsedTimeDisplay } from '../clock/ElapsedTimeDisplay';
 import { cn } from '@/lib/utils';
 
 export function MobileClockFAB({ 
   isClocked, 
   elapsedTime, 
-  onFabClick, 
-  formatElapsedTime 
-}: ClockFABProps) {
+  onFabClick
+}: Omit<ClockFABProps, 'formatElapsedTime'>) {
   const [isPressed, setIsPressed] = useState(false);
   const { onFieldSave, onSubmitSuccess } = useHapticFeedback();
 
@@ -75,9 +75,12 @@ export function MobileClockFAB({
         <div className="relative z-10 flex items-center justify-center h-full">
           {isClocked ? (
             <div className="text-center px-1">
-              <div className="text-xs font-semibold leading-tight whitespace-nowrap">
-                {formatElapsedTime(elapsedTime)}
-              </div>
+              <ElapsedTimeDisplay 
+                timeMs={elapsedTime} 
+                format="detailed" 
+                variant="fab" 
+                className="text-xs whitespace-nowrap"
+              />
             </div>
           ) : (
             <Play size={20} className="fill-current ml-0.5" />

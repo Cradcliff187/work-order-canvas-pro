@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { useClockState } from '@/hooks/useClockState';
 import { useClockTimer } from '@/hooks/useClockTimer';
 import { calculateEarnings } from '@/utils/timeFormatters';
+import { ElapsedTimeDisplay } from './ElapsedTimeDisplay';
 
 interface ClockActiveProps {
   onClockOut: () => void;
@@ -18,7 +19,7 @@ export const ClockActive: React.FC<ClockActiveProps> = ({
   isClockingOut
 }) => {
   const { clockInTime, workOrderId, locationAddress, hourlyRate } = useClockState();
-  const { elapsedTime, formatElapsedTimeDetailed } = useClockTimer();
+  const { elapsedTime } = useClockTimer();
 
   return (
     <Card className="bg-gradient-to-br from-success/10 to-success/5 border-success/30 shadow-lg">
@@ -37,9 +38,12 @@ export const ClockActive: React.FC<ClockActiveProps> = ({
               </div>
               
               {/* Timer Display */}
-              <div className="text-2xl sm:text-3xl font-mono font-bold text-success mb-2 tabular-nums">
-                {formatElapsedTimeDetailed(elapsedTime)}
-              </div>
+              <ElapsedTimeDisplay 
+                timeMs={elapsedTime} 
+                format="detailed" 
+                variant="large" 
+                className="mb-2"
+              />
               
               {/* Earnings */}
               {hourlyRate && (

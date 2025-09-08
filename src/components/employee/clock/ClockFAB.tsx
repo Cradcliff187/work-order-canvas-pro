@@ -1,7 +1,8 @@
 import { Play } from 'lucide-react';
 import { ClockFABProps } from './types';
+import { ElapsedTimeDisplay } from './ElapsedTimeDisplay';
 
-export function ClockFAB({ isClocked, elapsedTime, onFabClick, formatElapsedTime }: ClockFABProps) {
+export function ClockFAB({ isClocked, elapsedTime, onFabClick }: Omit<ClockFABProps, 'formatElapsedTime'>) {
   return (
     <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-[60]">
       <button
@@ -30,11 +31,11 @@ export function ClockFAB({ isClocked, elapsedTime, onFabClick, formatElapsedTime
         {/* Content */}
         <div className="relative z-10 flex items-center justify-center">
           {isClocked ? (
-            <div className="text-center">
-              <div className="text-sm font-medium leading-tight">
-                {formatElapsedTime(elapsedTime)}
-              </div>
-            </div>
+            <ElapsedTimeDisplay 
+              timeMs={elapsedTime} 
+              format="detailed" 
+              variant="fab" 
+            />
           ) : (
             <Play size={24} className="fill-current" />
           )}

@@ -19,8 +19,7 @@ export function ClockSheet({
   isLoading,
   onOptionSelect,
   onCancel,
-  onClockAction,
-  formatElapsedTime
+  onClockAction
 }: ClockSheetProps) {
   const isMobile = useIsMobile();
   // Get elapsed time from timer hook
@@ -38,7 +37,6 @@ export function ClockSheet({
             workOrderId={workOrderId}
             projectId={projectId}
             elapsedTime={elapsedTime}
-            formatElapsedTime={formatElapsedTime}
           />
         ) : (
           <WorkItemList

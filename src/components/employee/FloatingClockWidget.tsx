@@ -25,7 +25,7 @@ export function FloatingClockWidget() {
   const [selectedOption, setSelectedOption] = useState<ClockOption | null>(null);
 
   const clockData = useClockState();
-  const { elapsedTime, formatElapsedTimeDetailed } = useClockTimer();
+  const { elapsedTime } = useClockTimer();
   
   const { handleClockAction, isProcessing } = useClockWidgetActions({
     selectedOption,
@@ -53,14 +53,12 @@ export function FloatingClockWidget() {
           isClocked={clockData.isClocked}
           elapsedTime={elapsedTime}
           onFabClick={handleFabClick}
-          formatElapsedTime={formatElapsedTimeDetailed}
         />
       ) : (
         <ClockFAB
           isClocked={clockData.isClocked}
           elapsedTime={elapsedTime}
           onFabClick={handleFabClick}
-          formatElapsedTime={formatElapsedTimeDetailed}
         />
       )}
       
@@ -76,7 +74,6 @@ export function FloatingClockWidget() {
         onOptionSelect={setSelectedOption}
         onCancel={handleCancel}
         onClockAction={handleClockAction}
-        formatElapsedTime={formatElapsedTimeDetailed}
       />
     </>
   );

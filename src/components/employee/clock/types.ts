@@ -16,7 +16,6 @@ export interface ClockFABProps {
   isClocked: boolean;
   elapsedTime: number;
   onFabClick: () => void;
-  formatElapsedTime: (time: number) => string;
 }
 
 export interface SearchBarProps {
@@ -42,5 +41,4 @@ export interface ClockSheetProps {
   onOptionSelect: (option: ClockOption) => void;
   onCancel: () => void;
   onClockAction: () => void;
-  formatElapsedTime: (time: number) => string;
 }
