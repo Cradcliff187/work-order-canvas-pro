@@ -294,7 +294,7 @@ export function ReceiptOCRSection({
   }, [cancelOCRProcessor, actions, toast]);
 
   return (
-    <>
+    <div data-tour="ocr-section">
       {/* File Upload Section */}
       <FileUploadSection
         onFileSelect={handleFileSelect}
@@ -375,6 +375,6 @@ export function ReceiptOCRSection({
         onCancel={cancelOCR}
         showCancel={isProcessingLocked && progressStage !== 'complete' && progressStage !== 'error'}
       />
-    </>
+    </div>
   );
 }

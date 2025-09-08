@@ -54,13 +54,16 @@ const FloatingActionBarComponent: React.FC<FloatingActionBarProps> = ({
   }, [onSubmitSuccess, onSubmit]);
 
   return (
-    <div className={cn(
-      "fixed bottom-0 left-0 right-0 z-50 animate-slide-in-bottom",
-      "bg-background/80 backdrop-blur-lg border-t border-border",
-      "safe-area-pb", // For mobile safe area
-      isMobile && "rounded-t-xl border-x", // Mobile bottom sheet style
-      className
-    )}>
+    <div
+      data-tour="submit-section"
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-50 animate-slide-in-bottom",
+        "bg-background/80 backdrop-blur-lg border-t border-border", 
+        "safe-area-pb", // For mobile safe area
+        isMobile && "rounded-t-xl border-x", // Mobile bottom sheet style
+        className
+      )}
+    >
       {/* Mobile drag handle */}
       {isMobile && (
         <div className="flex justify-center pt-2 pb-1">
