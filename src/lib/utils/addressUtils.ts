@@ -128,6 +128,25 @@ export function generateMapUrl(address: StructuredAddress): string | null {
 }
 
 /**
+ * Generates Google Maps Static API URL for map thumbnail
+ */
+export function generateStaticMapUrl(
+  address: StructuredAddress, 
+  width: number = 150, 
+  height: number = 100,
+  zoom: number = 15
+): string | null {
+  const formattedAddress = formatAddress(address);
+  if (!formattedAddress) return null;
+  
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return null;
+  
+  const encodedAddress = encodeURIComponent(formattedAddress);
+  return `https://maps.googleapis.com/maps/api/staticmap?center=${encodedAddress}&zoom=${zoom}&size=${width}x${height}&markers=${encodedAddress}&key=${apiKey}`;
+}
+
+/**
  * Formats location tooltip content with full address details
  */
 export function formatLocationTooltip(location: LocationDisplay & StructuredAddress): string {

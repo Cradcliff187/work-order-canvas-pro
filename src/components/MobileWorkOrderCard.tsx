@@ -2,12 +2,13 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User, Building2, AlertCircle, Paperclip, Check, Trash2 } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User, Building2, AlertCircle, Paperclip, Check, Trash2, Navigation } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { formatLocationDisplay, formatAddress, generateMapUrl } from '@/lib/utils/addressUtils';
+import { StaticMapThumbnail } from '@/components/ui/StaticMapThumbnail';
 import { MobileQuickActions, createMapAction, createMessageAction, createViewDetailsAction, createSubmitReportAction, createPhoneAction } from '@/components/work-orders/MobileQuickActions';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
@@ -248,29 +249,39 @@ export function MobileWorkOrderCard({
             </h3>
           </div>
           <div className="flex items-center gap-1 ml-2 shrink-0">
-            {mapUrl && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 flex-shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(mapUrl, '_blank');
-                }}
-              >
-                <MapPin className="h-4 w-4" />
-              </Button>
-            )}
             <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
           </div>
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm min-w-0">
-            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <span className="truncate">
-              {getLocationDisplay()}
-            </span>
+          <div className="flex items-start gap-3 text-sm min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="truncate">
+                {getLocationDisplay()}
+              </span>
+            </div>
+            {formatAddress(workOrder) && formatAddress(workOrder) !== 'N/A' && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <StaticMapThumbnail 
+                  address={workOrder}
+                  size="sm"
+                  onClick={() => mapUrl && window.open(mapUrl, '_blank')}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (mapUrl) window.open(mapUrl, '_blank');
+                  }}
+                >
+                  <Navigation className="h-3 w-3 mr-1" />
+                  Directions
+                </Button>
+              </div>
+            )}
           </div>
 
           {shouldShowField('trade') && workOrder.trades && (
