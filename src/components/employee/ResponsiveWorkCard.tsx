@@ -2,7 +2,7 @@ import React from 'react';
 import { WorkItem } from '@/hooks/useAllWorkItems';
 import { useWorkItemMetrics } from '@/hooks/useWorkItemMetrics';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MobileWorkCard } from './MobileWorkCard';
+import { MobileWorkCard } from './mobile/MobileWorkCard';
 import { DesktopWorkCard } from './DesktopWorkCard';
 
 interface ResponsiveWorkCardProps {
