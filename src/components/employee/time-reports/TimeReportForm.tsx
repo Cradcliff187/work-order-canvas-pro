@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TimeReportReceipts } from "./TimeReportReceipts";
+import { TimeReportMaterials } from "./TimeReportMaterials";
 import { Clock, CalendarIcon, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -170,23 +171,7 @@ export function TimeReportForm({
             />
 
             {/* Materials Used */}
-            <FormField
-              control={form.control}
-              name="materialsUsed"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Materials Used</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="List any materials or parts used..."
-                      className="min-h-[80px] resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <TimeReportMaterials disabled={isSubmitting} />
 
             {/* Hours and Labor Cost */}
             <div className="grid gap-4 sm:grid-cols-3">
