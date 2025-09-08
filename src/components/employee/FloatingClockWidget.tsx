@@ -14,12 +14,6 @@ import type { ClockOption } from './clock/types';
 export function FloatingClockWidget() {
   const location = useLocation();
   const isMobile = useIsMobile();
-  
-  // Hide on dashboard page to avoid redundancy with hero clock
-  if (location.pathname === '/employee/dashboard') {
-    return null;
-  }
-
   const { onFieldSave } = useHapticFeedback();
   const { isOpen, setIsOpen } = useClockWidget();
   const [selectedOption, setSelectedOption] = useState<ClockOption | null>(null);
@@ -34,6 +28,11 @@ export function FloatingClockWidget() {
       setIsOpen(false);
     },
   });
+  
+  // Hide on dashboard page to avoid redundancy with hero clock
+  if (location.pathname === '/employee/dashboard') {
+    return null;
+  }
 
   const handleFabClick = useCallback(() => {
     onFieldSave();
