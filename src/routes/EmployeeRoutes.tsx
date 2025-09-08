@@ -6,10 +6,10 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
   EmployeeDashboardEmployee as EmployeeDashboard,
   EmployeeTimeReportsPage as EmployeeTimeReports,
+  TimeReportSubmission,
+  SmartReceiptFlow,
 } from '@/pages/LazyPages';
-import { SmartReceiptFlow } from '@/components/receipts/SmartReceiptFlow';
 import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
-import TimeReportSubmission from '@/pages/employee/TimeReportSubmission';
 import AssignmentDetail from '@/pages/employee/AssignmentDetail';
 
 export const EmployeeRoutes = () => (
@@ -39,7 +39,9 @@ export const EmployeeRoutes = () => (
     <Route path="/employee/receipts" element={
       <ProtectedRoute requiredUserType="employee">
         <EmployeeLayout>
-          <SmartReceiptFlow />
+          <Suspense fallback={<LoadingSpinner />}>
+            <SmartReceiptFlow />
+          </Suspense>
         </EmployeeLayout>
       </ProtectedRoute>
     } />

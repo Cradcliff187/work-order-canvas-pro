@@ -1,6 +1,5 @@
 import React, { Suspense, lazy } from 'react';
 import { Route, Navigate } from 'react-router-dom';
-import { SmartReceiptFlow } from '@/components/receipts/SmartReceiptFlow';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -34,6 +33,7 @@ import {
   SecurityAudit,
   AdminReceipts,
   AdminProjects,
+  SmartReceiptFlow
 } from '@/pages/LazyPages';
 import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
 

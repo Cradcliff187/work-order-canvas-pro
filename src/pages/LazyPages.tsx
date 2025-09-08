@@ -6,6 +6,7 @@ export const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'))
 // Employee Pages
 export const EmployeeDashboardEmployee = lazy(() => import('@/pages/employee/Dashboard'));
 export const EmployeeTimeReportsPage = lazy(() => import('@/pages/employee/TimeReports'));
+export const TimeReportSubmission = lazy(() => import('@/pages/employee/TimeReportSubmission'));
 // EmployeeReceiptsPage removed - replaced with SmartReceiptFlow
 export const PipelineDashboard = lazy(() => import('@/pages/admin/PipelineDashboard'));
 export const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
@@ -66,5 +67,12 @@ export const SystemHealthCheck = lazy(() => import('@/pages/admin/SystemHealthCh
 export const TestEmailPage = lazy(() => import('@/pages/admin/TestEmailPage'));
 export const BillingDashboard = lazy(() => import('@/pages/admin/BillingDashboard'));
 export const SecurityAudit = lazy(() => import('@/pages/admin/SecurityAudit'));
+
+// Component-level lazy loading  
+export const SmartReceiptFlow = lazy(() => import('@/components/receipts/SmartReceiptFlow').then(module => ({ default: module.SmartReceiptFlow })));
+export const FileUpload = lazy(() => import('@/components/FileUpload').then(module => ({ default: module.FileUpload })));
+
+// Future modal components (currently unused but ready for implementation)
+// export const RetroactiveTimeModal = lazy(() => import('@/components/employee/retroactive/RetroactiveTimeModal').then(module => ({ default: module.RetroactiveTimeModal })));
 
 // Migration Pages - REMOVED (migration complete)
