@@ -11,6 +11,7 @@ import { useClockWidget } from '@/contexts/ClockWidgetContext';
 import { useRecentlyClockedWorkOrders } from '@/hooks/useRecentlyClockedWorkOrders';
 import { useWorkItemSearch } from '@/hooks/useWorkItemSearch';
 import { formatElapsedTime as formatTimeUtil } from '@/utils/timeFormatters';
+import { filterRecentWorkOrders } from '@/utils/workItemFilters';
 import { ClockSelector } from './ClockSelector';
 import type { ClockOption } from './types';
 
@@ -28,10 +29,8 @@ export const ClockInactive: React.FC = () => {
   // Sheet state
   const [showSelector, setShowSelector] = useState(false);
 
-  // Filter to get recent work orders (not projects) for horizontal scroll
-  const recentWorkOrders = allWorkItems
-    .filter(item => item.type === 'work_order')
-    .slice(0, 3);
+  // Get recent work orders (not projects) for horizontal scroll
+  const recentWorkOrders = filterRecentWorkOrders(allWorkItems, 3);
 
   const handleQuickClockIn = (workOrderId?: string, projectId?: string) => {
     clockIn.mutate({ workOrderId, projectId });
