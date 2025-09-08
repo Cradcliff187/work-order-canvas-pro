@@ -113,21 +113,31 @@
 }
 
 @layer components {
-  /* Card variations */
-  .card-shadow { @apply shadow-[var(--shadow-card)]; }
-  .card-hover { @apply hover:shadow-[var(--shadow-lg)] transition-shadow duration-200; }
-  
-  /* Button variations */
-  .btn-primary { @apply bg-primary text-primary-foreground hover:bg-primary/90; }
-  .btn-secondary { @apply bg-secondary text-secondary-foreground hover:bg-secondary/80; }
-  
-  /* Form elements */
-  .form-input { @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm; }
-  
-  /* Work order status badges */
-  .status-badge-pending { @apply bg-warning/10 text-warning border-warning/20; }
-  .status-badge-active { @apply bg-primary/10 text-primary border-primary/20; }
-  .status-badge-completed { @apply bg-success/10 text-success border-success/20; }
+  .card-shadow { 
+    box-shadow: var(--shadow-card);
+  }
+  .card-hover { 
+    box-shadow: var(--shadow-lg);
+    transition: box-shadow 200ms;
+  }
+  .btn-primary { 
+    @apply bg-primary text-primary-foreground hover:bg-primary/90; 
+  }
+  .btn-secondary { 
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80; 
+  }
+  .form-input { 
+    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm; 
+  }
+  .status-badge-pending { 
+    @apply bg-warning/10 text-warning border-warning/20; 
+  }
+  .status-badge-active { 
+    @apply bg-primary/10 text-primary border-primary/20; 
+  }
+  .status-badge-completed { 
+    @apply bg-success/10 text-success border-success/20; 
+  }
 }
 
 @layer utilities {
