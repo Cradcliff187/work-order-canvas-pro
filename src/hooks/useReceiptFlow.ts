@@ -7,28 +7,7 @@ import {
   FlowStage,
   ProgressStage 
 } from '@/reducers/receiptFlowReducer';
-// OCR Result interface
-interface LineItem {
-  description: string;
-  quantity?: number;
-  unit_price?: number;
-  total_price?: number;
-}
-
-interface OCRResult {
-  vendor: string;
-  total: number;
-  date: string;
-  confidence: {
-    vendor: number;
-    total: number;
-    lineItems: number;
-    date: number;
-  };
-  subtotal?: number;
-  tax?: number;
-  lineItems: LineItem[];
-}
+import type { OCRResult, LineItem } from '@/types/ocr';
 
 // Storage key for persistence
 const STORAGE_KEY = 'receipt-flow-state';

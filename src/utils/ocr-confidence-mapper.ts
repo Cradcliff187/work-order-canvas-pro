@@ -5,18 +5,10 @@
  * (vendor_name, amount, receipt_date) to ensure confidence scores display correctly.
  */
 
-export interface OCRConfidence {
-  vendor?: number;
-  total?: number;
-  date?: number;
-}
+import type { OCRConfidence, FormConfidence } from '@/types/ocr';
 
-export interface FormConfidence {
-  vendor_name?: number;
-  amount?: number;
-  receipt_date?: number;
-  [key: string]: number | undefined;
-}
+// Re-export types for backward compatibility
+export type { OCRConfidence, FormConfidence } from '@/types/ocr';
 
 /**
  * Maps OCR confidence field names to form field names

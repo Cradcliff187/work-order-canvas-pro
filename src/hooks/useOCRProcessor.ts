@@ -4,21 +4,7 @@ import { mapOCRConfidenceToForm } from '@/utils/ocr-confidence-mapper';
 import { logConfidenceDebug } from '@/utils/confidence-display';
 import { getErrorForToast } from '@/components/receipts/ErrorDisplay';
 import { supabase } from '@/integrations/supabase/client';
-
-export interface OCRResult {
-  vendor?: string;
-  total?: number;
-  date?: string;
-  line_items?: Array<{
-    description: string;
-    amount: number;
-  }>;
-  confidence?: {
-    vendor?: number;
-    total?: number;
-    date?: number;
-  };
-}
+import type { OCRResult } from '@/types/ocr';
 
 interface UseOCRProcessorProps {
   onOCRStart: () => void;
@@ -141,6 +127,7 @@ export function useOCRProcessor({
         vendor: ocrData?.vendor || '',
         total: ocrData?.total || 0,
         date: ocrData?.date || '',
+        lineItems: ocrData?.line_items || [],
         line_items: ocrData?.line_items || [],
         confidence: ocrData?.confidence || {}
       };

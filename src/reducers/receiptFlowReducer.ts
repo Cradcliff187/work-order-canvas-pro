@@ -1,31 +1,7 @@
-// OCR Result interface
-interface LineItem {
-  description: string;
-  quantity?: number;
-  unit_price?: number;
-  total_price?: number;
-}
-
-interface OCRResult {
-  vendor: string;
-  total: number;
-  date: string;
-  confidence: {
-    vendor: number;
-    total: number;
-    lineItems: number;
-    date: number;
-  };
-  subtotal?: number;
-  tax?: number;
-  lineItems: LineItem[];
-}
+import type { OCRResult, LineItem, ProgressStage } from '@/types/ocr';
 
 // Flow stage definitions
 export type FlowStage = 'idle' | 'capture' | 'processing' | 'review' | 'manual-entry' | 'submitting' | 'complete';
-
-// Progress stage definitions
-export type ProgressStage = 'uploading' | 'processing' | 'extracting' | 'complete' | 'error';
 
 // Allocation interface
 export interface WorkOrderAllocation {
@@ -638,3 +614,6 @@ export const getValidTransitions = (currentStage: FlowStage): FlowStage[] => {
 export const isValidTransition = (from: FlowStage, to: FlowStage): boolean => {
   return getValidTransitions(from).includes(to);
 };
+
+// Export ProgressStage from centralized types
+export type { ProgressStage } from '@/types/ocr';
