@@ -12,7 +12,7 @@ import { SlimHeader } from '@/components/employee/SlimHeader';
 import { SimpleFilterChips } from '@/components/employee/SimpleFilterChips';
 import { ClockStatusCard } from '@/components/employee/ClockStatusCard';
 import { SlimStatsBar } from '@/components/employee/SlimStatsBar';
-import { WorkProjectCard } from '@/components/employee/WorkProjectCard';
+import { ActiveWorkCard } from '@/components/employee/ActiveWorkCard';
 import { useNavigate } from 'react-router-dom';
 import { useAssignmentCounts } from '@/hooks/useAssignmentCounts';
 import { ActiveTimerBar } from '@/components/employee/ActiveTimerBar';
@@ -28,7 +28,7 @@ const EmployeeDashboard = () => {
     isError
   } = useEmployeeDashboard();
 
-  const { clockOut, isClockingIn, isClockingOut } = useClockState();
+  const { clockIn, clockOut, isClockingIn, isClockingOut } = useClockState();
   const { data: allWorkItems, isLoading: workItemsLoading } = useAllWorkItems();
   const { data: todayHours, isLoading: todayHoursLoading } = useTodayHours();
   const { filters, updateFilter } = useDashboardFilters();
@@ -81,6 +81,10 @@ const EmployeeDashboard = () => {
   const handleViewDetails = (id: string) => {
     // Navigate to assignment details
     navigate(`/employee/assignments/${id}`);
+  };
+
+  const handleClockIn = (workOrderId?: string, projectId?: string) => {
+    clockIn.mutate({ workOrderId, projectId });
   };
 
   if (isError) {
@@ -139,10 +143,12 @@ const EmployeeDashboard = () => {
       ) : filteredWorkItems.length > 0 ? (
         <div className="flex flex-col gap-3">
           {filteredWorkItems.map((workItem) => (
-            <WorkProjectCard
+            <ActiveWorkCard
               key={workItem.id}
               workItem={workItem}
+              onClockIn={handleClockIn}
               onViewDetails={handleViewDetails}
+              isDisabled={isClockingIn}
             />
           ))}
         </div>
