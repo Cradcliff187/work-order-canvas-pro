@@ -19,7 +19,22 @@ export default function AssignmentDetail() {
   const { data: assignment, isLoading, error } = useQuery({
     queryKey: ['assignment', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!id) throw new Error('No ID provided');
+
+      // Get current user first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile) throw new Error('Profile not found');
+
+      // First try as assignment ID
+      const { data: assignmentData, error: assignmentError } = await supabase
         .from('work_order_assignments')
         .select(`
           *,
@@ -41,10 +56,44 @@ export default function AssignmentDetail() {
           )
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      return data;
+      if (assignmentData) {
+        return assignmentData;
+      }
+
+      // If not found, try as work order ID and find user's assignment
+      const { data: workOrderAssignment, error: workOrderError } = await supabase
+        .from('work_order_assignments')
+        .select(`
+          *,
+          work_orders (
+            id,
+            title,
+            work_order_number,
+            description,
+            status,
+            priority,
+            due_date,
+            created_at
+          ),
+          assignee:profiles!work_order_assignments_assigned_to_fkey (
+            id,
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('work_order_id', id)
+        .eq('assigned_to', profile.id)
+        .maybeSingle();
+
+      if (workOrderAssignment) {
+        return workOrderAssignment;
+      }
+
+      // If neither found, throw specific error
+      throw new Error('Assignment not found - you may not be assigned to this work order');
     },
     enabled: !!id
   });
