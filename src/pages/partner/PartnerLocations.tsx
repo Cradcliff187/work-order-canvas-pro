@@ -2,10 +2,8 @@ import React, { useState, useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getFilteredRowModel,
   getSortedRowModel,
   type ColumnDef,
-  type ColumnFiltersState,
   type SortingState,
 } from '@tanstack/react-table';
 import { Input } from '@/components/ui/input';
@@ -52,7 +50,6 @@ type PartnerLocation = Tables<'partner_locations'>;
 
 const PartnerLocations: React.FC = () => {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<PartnerLocation | null>(null);
@@ -236,13 +233,10 @@ const PartnerLocations: React.FC = () => {
     data: filteredAndSortedLocations,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     state: {
       sorting,
-      columnFilters,
     },
   });
 
