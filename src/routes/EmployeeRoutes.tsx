@@ -8,6 +8,7 @@ import {
   EmployeeTimeReportsPage as EmployeeTimeReports,
   TimeReportSubmission,
   SmartReceiptFlow,
+  DailyRoute,
 } from '@/pages/LazyPages';
 import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
 import AssignmentDetail from '@/pages/employee/AssignmentDetail';
@@ -41,6 +42,16 @@ export const EmployeeRoutes = () => (
         <EmployeeLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <SmartReceiptFlow />
+          </Suspense>
+        </EmployeeLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/employee/daily-route" element={
+      <ProtectedRoute requiredUserType="employee">
+        <EmployeeLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <DailyRoute />
           </Suspense>
         </EmployeeLayout>
       </ProtectedRoute>
