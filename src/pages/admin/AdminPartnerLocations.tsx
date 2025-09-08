@@ -5,17 +5,7 @@ import { useOrganizations } from '@/hooks/useOrganizations';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useViewMode } from '@/hooks/useViewMode';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
-import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  ColumnDef,
-  flexRender,
-  PaginationState,
-  SortingState,
-  RowSelectionState,
-} from '@tanstack/react-table';
+import { RowSelectionState } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
@@ -40,11 +30,6 @@ export default function AdminPartnerLocations() {
   const isMobile = useIsMobile();
   const [bulkMode, setBulkMode] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 25,
-  });
-  const [sorting, setSorting] = useState<SortingState>([]);
 
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'admin-partner-locations',
@@ -160,23 +145,6 @@ export default function AdminPartnerLocations() {
     })).filter(item => item.count > 0)
   };
 
-  // React Table setup
-  const table = useReactTable({
-    data: filteredLocations,
-    columns: [], // Will be defined by LocationTable component
-    state: {
-      sorting,
-      pagination,
-      rowSelection,
-    },
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onPaginationChange: setPagination,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
 
   const handleRefresh = async () => {
     try {
