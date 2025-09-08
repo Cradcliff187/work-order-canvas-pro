@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocr-confidence-mapper';
+import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocrUtils';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useReceipts } from '@/hooks/useReceipts';

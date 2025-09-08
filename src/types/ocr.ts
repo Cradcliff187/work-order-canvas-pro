@@ -83,18 +83,5 @@ export interface OCRStatus {
   retryCount: number;
 }
 
-/**
- * Type guard to check if confidence is OCRConfidence
- */
-export function isOCRConfidence(confidence: any): confidence is OCRConfidence {
-  return confidence && typeof confidence === 'object' &&
-    (confidence.vendor !== undefined || confidence.total !== undefined || confidence.date !== undefined);
-}
-
-/**
- * Type guard to check if confidence is FormConfidence
- */
-export function isFormConfidence(confidence: any): confidence is FormConfidence {
-  return confidence && typeof confidence === 'object' &&
-    (confidence.vendor_name !== undefined || confidence.amount !== undefined || confidence.receipt_date !== undefined);
-}
+// Type guards moved to src/utils/ocrUtils.ts for better organization
+// Import them from there: import { isOCRConfidence, isFormConfidence } from '@/utils/ocrUtils';

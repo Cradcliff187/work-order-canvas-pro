@@ -19,7 +19,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocr-confidence-mapper';
+import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocrUtils';
 import { 
   Loader2, 
   Upload, 

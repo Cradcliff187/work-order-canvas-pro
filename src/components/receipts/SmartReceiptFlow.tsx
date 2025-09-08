@@ -10,7 +10,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useAnalytics } from "@/utils/analytics";
 import { validateField } from "@/utils/receiptValidation";
 import { AllocationWorkflowValidator, type WorkflowAllocation } from "@/utils/allocationWorkflow";
-import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocr-confidence-mapper';
+import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocrUtils';
 import { cn } from "@/lib/utils";
 import { DebugPanel } from "./DebugPanel";
 import { FloatingActionBar } from "./FloatingActionBar";

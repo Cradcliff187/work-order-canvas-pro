@@ -1,7 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { mapOCRConfidenceToForm } from '@/utils/ocr-confidence-mapper';
-import { logConfidenceDebug } from '@/utils/confidence-display';
+import { mapOCRConfidenceToForm, logConfidenceDebug } from '@/utils/ocrUtils';
 import { getErrorForToast } from '@/components/receipts/ErrorDisplay';
 import { supabase } from '@/integrations/supabase/client';
 import type { OCRResult } from '@/types/ocr';

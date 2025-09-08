@@ -21,8 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { FieldGroup } from './FieldGroup';
-import { getFieldConfidence } from '@/utils/confidence-display';
-import type { ConfidenceValues } from '@/utils/confidence-display';
+import { getFieldConfidence, type ConfidenceValues } from '@/utils/ocrUtils';
 
 // Quick amount constants
 const QUICK_AMOUNTS = [5, 10, 25, 50, 100, 200];

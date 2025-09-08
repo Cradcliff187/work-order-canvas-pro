@@ -14,7 +14,7 @@ import { useOCRProcessor } from '@/hooks/useOCRProcessor';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorForToast } from '../ErrorDisplay';
 import { compressImage } from "@/utils/imageCompression";
-import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocr-confidence-mapper';
+import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocrUtils';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { useAnalytics } from "@/utils/analytics";
 import type { ReceiptFlowState, UseReceiptFlowReturn } from "@/hooks/useReceiptFlow";

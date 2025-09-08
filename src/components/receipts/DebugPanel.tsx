@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Copy, Eye, EyeOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { formatConfidencePercent, ConfidenceValues, logConfidenceDebug } from "@/utils/confidence-display";
+import { formatConfidencePercent, ConfidenceValues, logConfidenceDebug } from "@/utils/ocrUtils";
 
 interface DebugPanelProps {
   ocrResult?: any;

@@ -5,7 +5,7 @@ import { Form } from "@/components/ui/form";
 import { ReceiptFormFields } from "../ReceiptFormFields";
 import { LineItemsDisplay } from "../LineItemsDisplay";
 import type { OCRResult, SmartReceiptFormData } from '@/types/receipt';
-import type { FormConfidence } from '@/utils/ocr-confidence-mapper';
+import type { FormConfidence } from '@/utils/ocrUtils';
 import type { UseReceiptFlowReturn } from "@/hooks/useReceiptFlow";
 
 interface ReceiptFormSectionProps {

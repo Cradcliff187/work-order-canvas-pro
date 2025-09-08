@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { formatFileSize } from "@/utils/fileUtils";
-import { getFieldConfidence } from "@/utils/confidence-display";
+import { getFieldConfidence } from "@/utils/ocrUtils";
 import { FileText, X } from "lucide-react";
 
 interface FilePreviewProps {
