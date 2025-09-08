@@ -1,4 +1,5 @@
 import { Archive } from 'lucide-react';
+import { useMemo, useCallback } from 'react';
 import { SearchBar } from '../clock/SearchBar';
 import { WorkSelector } from '../clock/WorkSelector';
 import { useWorkItemSearch, WorkItemSearchOptions } from '@/hooks/useWorkItemSearch';
@@ -53,26 +54,34 @@ export function WorkItemList({
     isSearching,
   } = useWorkItemSearch(searchOptions);
 
-  // Use external state if provided, otherwise use internal state
-  const currentSelectedOption = externalSelectedOption !== undefined ? externalSelectedOption : internalSelectedOption;
-  const currentSearchQuery = externalSearchQuery !== undefined ? externalSearchQuery : searchQuery;
+  // Memoize derived state to prevent unnecessary re-renders
+  const currentSelectedOption = useMemo(() => 
+    externalSelectedOption !== undefined ? externalSelectedOption : internalSelectedOption,
+    [externalSelectedOption, internalSelectedOption]
+  );
   
-  const handleOptionSelect = (option: ClockOption) => {
+  const currentSearchQuery = useMemo(() => 
+    externalSearchQuery !== undefined ? externalSearchQuery : searchQuery,
+    [externalSearchQuery, searchQuery]
+  );
+  
+  // Memoize handlers to prevent child re-renders
+  const handleOptionSelect = useCallback((option: ClockOption) => {
     if (onOptionSelect) {
       onOptionSelect(option);
     } else if (externalSelectedOption === undefined) {
       // Only use internal state if no external state is provided
       setInternalSelectedOption(option);
     }
-  };
+  }, [onOptionSelect, externalSelectedOption, setInternalSelectedOption]);
 
-  const handleSearchChange = (query: string) => {
+  const handleSearchChange = useCallback((query: string) => {
     if (onExternalSearchChange) {
       onExternalSearchChange(query);
     } else {
       setSearchQuery(query);
     }
-  };
+  }, [onExternalSearchChange, setSearchQuery]);
 
   // Loading state
   if (isLoading) {

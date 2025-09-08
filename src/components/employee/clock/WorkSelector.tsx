@@ -1,23 +1,37 @@
 import { Users, Clock, Archive, Play } from 'lucide-react';
+import { useMemo, useCallback } from 'react';
 import { WorkItemCard } from '../WorkItemCard';
 import { WorkSelectorProps } from './types';
 
 export function WorkSelector({ options, selectedOption, onOptionSelect }: WorkSelectorProps) {
-  // Group options by section with smart sorting
-  const todayOptions = options.filter(opt => opt.section === 'today' || opt.isWorkedToday)
-    .sort((a, b) => (b.lastWorkedAt?.getTime() || 0) - (a.lastWorkedAt?.getTime() || 0));
+  // Memoize expensive section filtering and sorting operations
+  const todayOptions = useMemo(() => 
+    options.filter(opt => opt.section === 'today' || opt.isWorkedToday)
+      .sort((a, b) => (b.lastWorkedAt?.getTime() || 0) - (a.lastWorkedAt?.getTime() || 0)),
+    [options]
+  );
   
-  const assignedOptions = options.filter(opt => opt.section === 'assigned' && !opt.isWorkedToday)
-    .sort((a, b) => {
-      // Prioritize items worked today, then by work frequency
-      if (a.isWorkedToday !== b.isWorkedToday) {
-        return (b.isWorkedToday ? 1 : 0) - (a.isWorkedToday ? 1 : 0);
-      }
-      return (b.sessionCount || 0) - (a.sessionCount || 0);
-    });
+  const assignedOptions = useMemo(() => 
+    options.filter(opt => opt.section === 'assigned' && !opt.isWorkedToday)
+      .sort((a, b) => {
+        // Prioritize items worked today, then by work frequency
+        if (a.isWorkedToday !== b.isWorkedToday) {
+          return (b.isWorkedToday ? 1 : 0) - (a.isWorkedToday ? 1 : 0);
+        }
+        return (b.sessionCount || 0) - (a.sessionCount || 0);
+      }),
+    [options]
+  );
   
-  const recentOptions = options.filter(opt => opt.section === 'recent' && !opt.isWorkedToday);
-  const availableOptions = options.filter(opt => opt.section === 'available' && !opt.isWorkedToday);
+  const recentOptions = useMemo(() => 
+    options.filter(opt => opt.section === 'recent' && !opt.isWorkedToday),
+    [options]
+  );
+  
+  const availableOptions = useMemo(() => 
+    options.filter(opt => opt.section === 'available' && !opt.isWorkedToday),
+    [options]
+  );
 
   const getSectionIcon = (section: string) => {
     switch (section) {
@@ -39,7 +53,8 @@ export function WorkSelector({ options, selectedOption, onOptionSelect }: WorkSe
     }
   };
 
-  const renderSection = (sectionOptions: typeof options, sectionKey: string) => {
+  // Memoize render function to prevent recreation on every render
+  const renderSection = useCallback((sectionOptions: typeof options, sectionKey: string) => {
     if (sectionOptions.length === 0) return null;
 
     const Icon = getSectionIcon(sectionKey);
@@ -65,7 +80,7 @@ export function WorkSelector({ options, selectedOption, onOptionSelect }: WorkSe
         </div>
       </div>
     );
-  };
+  }, [selectedOption, onOptionSelect]);
 
   // Show message if no options available
   if (options.length === 0) {
