@@ -40,10 +40,6 @@ export function FloatingClockWidget() {
     setSelectedOption(null);
   }, [setIsOpen]);
   
-  // Hide on dashboard page to avoid redundancy with hero clock
-  if (location.pathname === '/employee/dashboard') {
-    return null;
-  }
 
 
   return (
