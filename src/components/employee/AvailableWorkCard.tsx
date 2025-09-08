@@ -1,10 +1,9 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Clock, User, MapPin } from 'lucide-react';
 import { WorkItem } from '@/hooks/useAllWorkItems';
-import { AssignmentBadge } from './AssignmentBadge';
+import { AssignmentBadge, TypeBadge } from './badges';
 
 interface AvailableWorkCardProps {
   workItem: WorkItem;
@@ -36,9 +35,7 @@ export const AvailableWorkCard: React.FC<AvailableWorkCardProps> = ({
                 assigneeName={workItem.assigneeName}
                 className="text-xs"
               />
-              <Badge variant="secondary" className="text-xs">
-                {workItem.type === 'work_order' ? 'WO' : 'PRJ'}
-              </Badge>
+              <TypeBadge type={workItem.type} variant="compact" />
             </div>
             <h4 className="font-medium text-sm leading-tight mb-1 truncate">
               [{workItem.number}] {workItem.title}

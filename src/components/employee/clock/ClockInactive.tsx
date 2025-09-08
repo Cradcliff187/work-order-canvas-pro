@@ -12,6 +12,7 @@ import { useRecentlyClockedWorkOrders } from '@/hooks/useRecentlyClockedWorkOrde
 import { useWorkItemSearch } from '@/hooks/useWorkItemSearch';
 import { formatElapsedTime as formatTimeUtil } from '@/utils/timeFormatters';
 import { filterRecentWorkOrders } from '@/utils/workItemFilters';
+import { TypeBadge } from '../badges';
 import { ClockSelector } from './ClockSelector';
 import type { ClockOption } from './types';
 
@@ -121,7 +122,7 @@ export const ClockInactive: React.FC = () => {
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline" className="text-xs">WO</Badge>
+                          <TypeBadge type="work_order" variant="compact" />
                           {item.assigneeName && (
                             <Badge variant="secondary" className="text-xs truncate">
                               {item.assigneeName}

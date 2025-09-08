@@ -1,9 +1,9 @@
 import React from 'react';
 import { CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, BarChart, Briefcase, FileText } from 'lucide-react';
+import { MapPin, Clock, BarChart } from 'lucide-react';
 import { WorkItem } from '@/hooks/useAllWorkItems';
-import { AssignmentBadge } from './AssignmentBadge';
+import { AssignmentBadge, TypeBadge } from './badges';
 import { StatusDot } from './StatusDot';
 import { WorkItemMetrics } from '@/hooks/useWorkItemMetrics';
 import { cn } from '@/lib/utils';
@@ -61,17 +61,7 @@ export const DesktopWorkCard: React.FC<DesktopWorkCardProps> = ({
               
               {/* Type badge - desktop optimized */}
               <div className="shrink-0">
-                {workItem.type === 'work_order' ? (
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-medium px-1 py-0.5">
-                    <FileText className="h-2 w-2" />
-                    <span>WORK ORDER</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-medium px-1 py-0.5">
-                    <Briefcase className="h-2 w-2" />
-                    <span>PROJECT</span>
-                  </span>
-                )}
+                <TypeBadge type={workItem.type} showIcon />
               </div>
             </div>
 

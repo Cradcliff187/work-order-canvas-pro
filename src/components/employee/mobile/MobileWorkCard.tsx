@@ -2,7 +2,7 @@ import React from 'react';
 import { CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { WorkItem } from '@/hooks/useAllWorkItems';
-import { AssignmentBadge } from '../AssignmentBadge';
+import { AssignmentBadge, TypeBadge } from '../badges';
 import { StatusDot } from '../StatusDot';
 import { WorkItemMetrics } from '@/hooks/useWorkItemMetrics';
 import { cn } from '@/lib/utils';
@@ -30,10 +30,6 @@ export const MobileWorkCard: React.FC<MobileWorkCardProps> = ({
     return 'available';
   };
 
-  const typeLabel = workItem.type === 'work_order' ? 'WO' : 'PRJ';
-  const typeStyles = workItem.type === 'work_order' 
-    ? 'bg-blue-100 text-blue-800' 
-    : 'bg-purple-100 text-purple-800';
 
   return (
     <div className={cn(
@@ -59,12 +55,7 @@ export const MobileWorkCard: React.FC<MobileWorkCardProps> = ({
                 className="shrink-0"
               />
               
-              <span className={cn(
-                "inline-flex items-center gap-0.5 rounded-full text-[10px] font-medium px-1 py-0.5",
-                typeStyles
-              )}>
-                {typeLabel}
-              </span>
+              <TypeBadge type={workItem.type} variant="compact" />
             </div>
 
             <div className="min-w-0 flex-1">
