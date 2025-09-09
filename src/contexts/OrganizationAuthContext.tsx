@@ -138,6 +138,11 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         return;
       }
 
+      console.log('AuthContext Profile Set:', {
+        user_id: user.id,
+        profile_data: profileData,
+        email: user.email
+      });
       setProfile(profileData);
 
       // Resilient organization members query with proper error handling

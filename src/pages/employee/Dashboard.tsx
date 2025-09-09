@@ -16,6 +16,7 @@ import { ActiveWorkCard } from '@/components/employee/ActiveWorkCard';
 import { useNavigate } from 'react-router-dom';
 import { useAssignmentCounts } from '@/hooks/useAssignmentCounts';
 import { ActiveTimerBar } from '@/components/employee/ActiveTimerBar';
+import { DebugProfile } from '@/components/employee/DebugProfile';
 import { Receipt, Plus, Star } from 'lucide-react';
 
 const EmployeeDashboard = () => {
@@ -106,6 +107,9 @@ const EmployeeDashboard = () => {
     <div className="space-y-2">
       {/* Slim Header */}
       <SlimHeader firstName={profile?.first_name} />
+
+      {/* Debug Profile Info */}
+      <DebugProfile />
 
       {/* Hero Clock Card */}
       <ClockStatusCard 

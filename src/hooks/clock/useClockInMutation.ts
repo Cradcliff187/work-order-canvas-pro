@@ -19,6 +19,13 @@ export function useClockInMutation(): ClockInMutationReturn {
 
   const clockIn = useMutation({
     mutationFn: async ({ workOrderId, projectId }: ClockInParams = {}): Promise<ClockInResult | null> => {
+      console.log('=== CLOCK IN DIAGNOSTIC ===');
+      console.log('Auth Profile:', { 
+        id: profile?.id, 
+        email: profile?.email,
+        has_profile: !!profile 
+      });
+      
       if (!profile?.id) {
         throw new Error('No profile found');
       }
@@ -65,6 +72,13 @@ export function useClockInMutation(): ClockInMutationReturn {
           .select('hourly_cost_rate')
           .eq('id', profile.id)
           .single();
+
+        console.log('Database Query Result:', {
+          query_success: !profileError,
+          profile_found: !!userProfile,
+          hourly_rate: userProfile?.hourly_cost_rate,
+          full_profile: userProfile
+        });
 
         if (profileError) {
           throw profileError;
