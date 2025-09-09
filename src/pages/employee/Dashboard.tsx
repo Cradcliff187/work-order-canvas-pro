@@ -28,7 +28,7 @@ const EmployeeDashboard = () => {
     isError
   } = useEmployeeDashboard();
 
-  const { clockIn, clockOut, isClockingIn, isClockingOut } = useClockState();
+  const { clockIn, clockOut, isClockingIn, isClockingOut, isClocked } = useClockState();
   const { data: allWorkItems, isLoading: workItemsLoading } = useAllWorkItems();
   const { data: todayHours, isLoading: todayHoursLoading } = useTodayHours();
   const { filters, updateFilter } = useDashboardFilters();
@@ -108,10 +108,12 @@ const EmployeeDashboard = () => {
       <SlimHeader firstName={profile?.first_name} />
 
       {/* Hero Clock Card */}
-      <ClockStatusCard 
-        onClockOut={handleClockOut}
-        isClockingOut={isClockingOut}
-      />
+      {!isClocked && (
+        <ClockStatusCard 
+          onClockOut={handleClockOut}
+          isClockingOut={isClockingOut}
+        />
+      )}
 
       {/* Active Timer Bar */}
       <ActiveTimerBar />
