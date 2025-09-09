@@ -26,8 +26,7 @@ export type PartnerLocationColumnId =
 export interface ColumnMeta {
   label: string;
   description?: string;
-  visible: boolean;
-  locked?: boolean; // locked columns cannot be hidden
+  defaultVisible?: boolean;
 }
 
 export const LOCATION_COLUMN_METADATA = {
