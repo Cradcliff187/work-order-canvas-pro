@@ -51,7 +51,7 @@ interface WorkOrderFormProps {
 export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: WorkOrderFormProps) {
   const { data: organizations, isLoading: orgsLoading } = useOrganizationsForWorkOrders();
   const { data: trades, isLoading: tradesLoading } = useTrades();
-  const [isManualMode, setIsManualMode] = useState(false);
+  const [isManualMode, setIsManualMode] = useState(!workOrder?.partner_location_number);
   const [locationSyncAction, setLocationSyncAction] = useState<'work_order_only' | 'update_partner' | 'create_new'>('work_order_only');
 
   const form = useForm<WorkOrderFormData>({
@@ -81,17 +81,15 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
   const partnerLocationNumber = form.watch('partner_location_number');
   
   useEffect(() => {
-    if (partnerLocationNumber && partnerLocationNumber !== 'manual' && partnerLocations) {
+    if (partnerLocationNumber && partnerLocations) {
       const selectedLocation = partnerLocations.find(loc => loc.location_number === partnerLocationNumber);
       if (selectedLocation) {
         form.setValue('location_street_address', selectedLocation.street_address || '');
         form.setValue('location_city', selectedLocation.city || '');
         form.setValue('location_state', selectedLocation.state || '');
         form.setValue('location_zip_code', selectedLocation.zip_code || '');
+        setIsManualMode(false);
       }
-    } else if (partnerLocationNumber === 'manual') {
-      // Clear partner location number when manual is selected
-      form.setValue('partner_location_number', '');
     }
   }, [partnerLocationNumber, partnerLocations, form]);
 
@@ -306,7 +304,18 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Partner Location</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select 
+                  onValueChange={(value) => {
+                    if (value === 'manual') {
+                      field.onChange('');
+                      setIsManualMode(true);
+                    } else {
+                      field.onChange(value);
+                      setIsManualMode(false);
+                    }
+                  }} 
+                  value={isManualMode ? 'manual' : field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select partner location or manual entry" />
