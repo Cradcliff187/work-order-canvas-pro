@@ -414,7 +414,7 @@ export function LocationTableWithSorting({
           </div>
           
           <ViewModeSwitcher
-            value={viewMode === 'list' ? 'card' : viewMode}
+            value={viewMode}
             onValueChange={onViewModeChange}
             allowedModes={['table', 'card']}
             className="shrink-0"
@@ -482,77 +482,224 @@ export function LocationTableWithSorting({
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="p-6">
-          <TableSkeleton 
-            rows={10} 
-            columns={getVisibleColumnCount() + (bulkMode ? 1 : 0) + 1}
-          />
+      {hasFilters && (
+        <div className="flex items-center gap-2 px-6 pb-4 text-sm text-muted-foreground">
+          <span>
+            {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} applied
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearFilters}
+            className="h-7 px-2 text-muted-foreground hover:text-foreground"
+          >
+            Clear all
+          </Button>
         </div>
-      ) : filteredData.length === 0 ? (
-        <div className="p-12">
-          <EmptyState
-            icon={MapPin}
-            title="No locations found"
-            description={hasFilters 
-              ? "No locations match your current filters. Try adjusting your search criteria."
-              : "No partner locations have been added yet."
-            }
-            action={!hasFilters && onAddLocation ? {
-              label: "Add Location",
-              onClick: onAddLocation,
-              icon: Plus
-            } : undefined}
-            variant="full"
-          />
+      )}
+
+      {viewMode === 'card' ? (
+        // Desktop Card View
+        <div className="p-6">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="border rounded-lg p-4 space-y-3">
+                  <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                  <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
+                  <div className="space-y-2">
+                    <div className="h-3 bg-muted animate-pulse rounded" />
+                    <div className="h-3 bg-muted animate-pulse rounded w-5/6" />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <div className="h-8 bg-muted animate-pulse rounded w-16" />
+                    <div className="h-8 bg-muted animate-pulse rounded w-16" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredData.length === 0 ? (
+            <EmptyState
+              icon={MapPin}
+              title="No locations found"
+              description={hasFilters 
+                ? "No locations match your current filters. Try adjusting your search criteria."
+                : "No partner locations have been added yet."
+              }
+              action={!hasFilters && onAddLocation ? {
+                label: "Add Location",
+                onClick: onAddLocation,
+                icon: Plus
+              } : undefined}
+              variant="full"
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredData.map(location => {
+                const woCounts = workOrderCounts[location.id];
+                return (
+                  <div
+                    key={location.id}
+                    className={cn(
+                      "border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow",
+                      bulkMode && rowSelection[location.id] && "ring-2 ring-primary"
+                    )}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold truncate">{location.location_name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          #{location.location_number} • {organizationMap[location.organization_id]?.name || 'Unknown Org'}
+                        </p>
+                      </div>
+                      {bulkMode && (
+                        <Checkbox
+                          checked={!!rowSelection[location.id]}
+                          onCheckedChange={() => {
+                            setRowSelection?.({
+                              ...rowSelection,
+                              [location.id]: !rowSelection[location.id]
+                            });
+                          }}
+                          className="ml-2 mt-1"
+                        />
+                      )}
+                      {!bulkMode && (
+                        <Badge variant={location.is_active ? 'default' : 'secondary'}>
+                          {location.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Address: </span>
+                        {formatAddress(location) || 'No address'}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Contact: </span>
+                        {location.contact_name || 'No contact'}
+                      </div>
+                      
+                      {woCounts && (
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">Work Orders:</div>
+                          <div className="grid grid-cols-2 gap-1 text-xs">
+                            <div>Received: <span className="font-medium">{woCounts.received}</span></div>
+                            <div>Assigned: <span className="font-medium">{woCounts.assigned}</span></div>
+                            <div>In Progress: <span className="font-medium">{woCounts.in_progress}</span></div>
+                            <div>Completed: <span className="font-medium">{woCounts.completed}</span></div>
+                            <div>Cancelled: <span className="font-medium">{woCounts.cancelled}</span></div>
+                            <div className="col-span-2 pt-1 border-t">
+                              Total: <Badge variant="outline" className="font-medium">{woCounts.total}</Badge>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onEdit(location)}
+                        className="flex-1"
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDelete(location)}
+                        className="flex-1 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : (
-        <div className="overflow-hidden">
-          <ResponsiveTableContainer>
-            <Table className="admin-table">
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                     {headerGroup.headers.map((header) => (
-                       <TableHead key={header.id} style={{ width: header.getSize() }}>
-                         {header.isPlaceholder
-                           ? null
-                           : flexRender(
-                               header.column.columnDef.header,
-                               header.getContext()
-                             )}
-                       </TableHead>
+        // Desktop Table View
+        <>
+          {isLoading ? (
+            <div className="p-6">
+              <TableSkeleton 
+                rows={10} 
+                columns={getVisibleColumnCount() + (bulkMode ? 1 : 0) + 1}
+              />
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="p-12">
+              <EmptyState
+                icon={MapPin}
+                title="No locations found"
+                description={hasFilters 
+                  ? "No locations match your current filters. Try adjusting your search criteria."
+                  : "No partner locations have been added yet."
+                }
+                action={!hasFilters && onAddLocation ? {
+                  label: "Add Location",
+                  onClick: onAddLocation,
+                  icon: Plus
+                } : undefined}
+                variant="full"
+              />
+            </div>
+          ) : (
+            <div className="overflow-hidden">
+              <ResponsiveTableContainer>
+                <Table className="admin-table">
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                         {headerGroup.headers.map((header) => (
+                           <TableHead key={header.id} style={{ width: header.getSize() }}>
+                             {header.isPlaceholder
+                               ? null
+                               : flexRender(
+                                   header.column.columnDef.header,
+                                   header.getContext()
+                                 )}
+                           </TableHead>
+                         ))}
+                       </TableRow>
                      ))}
-                   </TableRow>
-                 ))}
-               </TableHeader>
-               <TableBody>
-                 {table.getRowModel().rows.map((row) => (
-                   <TableRow 
-                     key={row.id}
-                     data-state={row.getIsSelected() && "selected"}
-                   >
-                     {row.getVisibleCells().map((cell) => (
-                       <td key={cell.id} className="px-3 py-4 align-top">
-                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                       </td>
+                   </TableHeader>
+                   <TableBody>
+                     {table.getRowModel().rows.map((row) => (
+                       <TableRow 
+                         key={row.id}
+                         data-state={row.getIsSelected() && "selected"}
+                       >
+                         {row.getVisibleCells().map((cell) => (
+                           <td key={cell.id} className="px-3 py-4 align-top">
+                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                           </td>
+                         ))}
+                       </TableRow>
                      ))}
-                   </TableRow>
-                 ))}
-               </TableBody>
-            </Table>
-          </ResponsiveTableContainer>
-          
-          {/* Pagination */}
-          <div className="border-t bg-background px-6 py-4">
-            <TablePagination
-              table={table}
-              totalCount={data.length}
-              isMobile={false}
-              itemName="location"
-            />
-          </div>
-        </div>
+                   </TableBody>
+                 </Table>
+               </ResponsiveTableContainer>
+               
+               {/* Pagination */}
+               <div className="border-t bg-background px-6 py-4">
+                 <TablePagination
+                   table={table}
+                   totalCount={data.length}
+                   isMobile={false}
+                   itemName="location"
+                 />
+               </div>
+             </div>
+          )}
+        </>
       )}
     </Card>
   );

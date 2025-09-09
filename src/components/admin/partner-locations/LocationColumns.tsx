@@ -88,21 +88,31 @@ export function createLocationColumns({
   // Location Number - sortable
   columns.push({
     accessorKey: 'location_number',
+    id: 'location_number',
     header: ({ column }) => <SortableHeader column={column} label="Location #" />,
     cell: ({ getValue }) => (
       <span className="font-mono text-sm">{getValue() as string}</span>
     ),
     size: 120,
+    meta: {
+      label: 'Location #',
+      defaultVisible: true
+    }
   });
 
   // Location Name - sortable
   columns.push({
     accessorKey: 'location_name',
+    id: 'location_name',
     header: ({ column }) => <SortableHeader column={column} label="Location Name" />,
     cell: ({ getValue }) => (
       <span className="font-medium">{getValue() as string}</span>
     ),
     minSize: 150,
+    meta: {
+      label: 'Location Name',
+      defaultVisible: true
+    }
   });
 
   // Organization - sortable
@@ -119,6 +129,10 @@ export function createLocationColumns({
       return orgA.localeCompare(orgB);
     },
     minSize: 150,
+    meta: {
+      label: 'Organization',
+      defaultVisible: true
+    }
   });
 
   // Address
@@ -156,6 +170,10 @@ export function createLocationColumns({
     },
     enableSorting: false,
     minSize: 200,
+    meta: {
+      label: 'Address',
+      defaultVisible: true
+    }
   });
 
   // Work Order Status Columns - all sortable
@@ -172,6 +190,10 @@ export function createLocationColumns({
       );
     },
     size: 80,
+    meta: {
+      label: 'WO Received',
+      defaultVisible: true
+    }
   });
 
   columns.push({
@@ -187,6 +209,10 @@ export function createLocationColumns({
       );
     },
     size: 80,
+    meta: {
+      label: 'WO Assigned',
+      defaultVisible: true
+    }
   });
 
   columns.push({
@@ -202,6 +228,10 @@ export function createLocationColumns({
       );
     },
     size: 90,
+    meta: {
+      label: 'WO In Progress',
+      defaultVisible: true
+    }
   });
 
   columns.push({
@@ -217,6 +247,10 @@ export function createLocationColumns({
       );
     },
     size: 90,
+    meta: {
+      label: 'WO Estimate Needed',
+      defaultVisible: true
+    }
   });
 
   columns.push({
@@ -232,6 +266,10 @@ export function createLocationColumns({
       );
     },
     size: 90,
+    meta: {
+      label: 'WO Estimate Pending',
+      defaultVisible: true
+    }
   });
 
   columns.push({
@@ -247,6 +285,10 @@ export function createLocationColumns({
       );
     },
     size: 80,
+    meta: {
+      label: 'WO Completed',
+      defaultVisible: true
+    }
   });
 
   columns.push({
@@ -262,6 +304,10 @@ export function createLocationColumns({
       );
     },
     size: 80,
+    meta: {
+      label: 'WO Cancelled',
+      defaultVisible: true
+    }
   });
 
   // Total Work Orders - sortable
@@ -280,6 +326,10 @@ export function createLocationColumns({
       );
     },
     size: 80,
+    meta: {
+      label: 'WO Total',
+      defaultVisible: true
+    }
   });
 
   // Status - sortable
@@ -298,55 +348,80 @@ export function createLocationColumns({
       return statusA - statusB;
     },
     size: 100,
+    meta: {
+      label: 'Status',
+      defaultVisible: true
+    }
   });
 
   // City (optional)
   columns.push({
     accessorKey: 'city',
+    id: 'city',
     header: 'City',
     cell: ({ getValue }) => (
       <span>{getValue() as string || ''}</span>
     ),
     enableSorting: false,
     size: 100,
+    meta: {
+      label: 'City',
+      defaultVisible: false
+    }
   });
 
   // State (optional)
   columns.push({
     accessorKey: 'state',
+    id: 'state',
     header: 'State',
     cell: ({ getValue }) => (
       <span>{getValue() as string || ''}</span>
     ),
     enableSorting: false,
     size: 80,
+    meta: {
+      label: 'State',
+      defaultVisible: false
+    }
   });
 
   // ZIP (optional)
   columns.push({
     accessorKey: 'zip_code',
+    id: 'zip_code',
     header: 'ZIP',
     cell: ({ getValue }) => (
       <span>{getValue() as string || ''}</span>
     ),
     enableSorting: false,
     size: 80,
+    meta: {
+      label: 'ZIP',
+      defaultVisible: false
+    }
   });
 
   // Contact (optional)
   columns.push({
     accessorKey: 'contact_name',
+    id: 'contact_name',
     header: 'Contact',
     cell: ({ getValue }) => (
       <span>{getValue() as string || ''}</span>
     ),
     enableSorting: false,
     size: 120,
+    meta: {
+      label: 'Contact',
+      defaultVisible: false
+    }
   });
 
   // Created Date - sortable
   columns.push({
     accessorKey: 'created_at',
+    id: 'created_at',
     header: ({ column }) => <SortableHeader column={column} label="Created" />,
     cell: ({ getValue }) => (
       <span className="text-sm text-muted-foreground">
@@ -354,6 +429,10 @@ export function createLocationColumns({
       </span>
     ),
     size: 100,
+    meta: {
+      label: 'Created',
+      defaultVisible: false
+    }
   });
 
   // Actions
