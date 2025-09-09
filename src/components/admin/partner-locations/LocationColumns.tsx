@@ -191,7 +191,7 @@ export function createLocationColumns({
     },
     size: 80,
     meta: {
-      label: 'WO Received',
+      label: 'Received',
       defaultVisible: true
     }
   });
@@ -210,7 +210,7 @@ export function createLocationColumns({
     },
     size: 80,
     meta: {
-      label: 'WO Assigned',
+      label: 'Assigned',
       defaultVisible: true
     }
   });
@@ -229,7 +229,7 @@ export function createLocationColumns({
     },
     size: 90,
     meta: {
-      label: 'WO In Progress',
+      label: 'In Progress',
       defaultVisible: true
     }
   });
@@ -248,7 +248,7 @@ export function createLocationColumns({
     },
     size: 90,
     meta: {
-      label: 'WO Estimate Needed',
+      label: 'Est. Needed',
       defaultVisible: true
     }
   });
@@ -267,7 +267,7 @@ export function createLocationColumns({
     },
     size: 90,
     meta: {
-      label: 'WO Estimate Pending',
+      label: 'Est. Pending',
       defaultVisible: true
     }
   });
@@ -286,7 +286,7 @@ export function createLocationColumns({
     },
     size: 80,
     meta: {
-      label: 'WO Completed',
+      label: 'Completed',
       defaultVisible: true
     }
   });
@@ -305,7 +305,7 @@ export function createLocationColumns({
     },
     size: 80,
     meta: {
-      label: 'WO Cancelled',
+      label: 'Cancelled',
       defaultVisible: true
     }
   });
@@ -327,7 +327,7 @@ export function createLocationColumns({
     },
     size: 80,
     meta: {
-      label: 'WO Total',
+      label: 'Total',
       defaultVisible: true
     }
   });

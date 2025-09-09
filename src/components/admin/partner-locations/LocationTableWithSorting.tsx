@@ -162,7 +162,7 @@ export function LocationTableWithSorting({
     getAllColumns,
     getVisibleColumnCount 
   } = useColumnVisibility({
-    storageKey: 'admin-partner-locations-columns-v1',
+    storageKey: 'admin-partner-locations-columns-v2', // Clear cache with new version
     columnMetadata: LOCATION_COLUMN_METADATA,
   });
 
