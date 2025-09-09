@@ -1,7 +1,7 @@
 import React from 'react';
 import { useClockState } from '@/hooks/useClockState';
 import { ClockInactive } from './clock/ClockInactive';
-import { ClockActive } from './clock/ClockActive';
+import { Card } from '@/components/ui/card';
 
 interface ClockStatusCardProps {
   onClockOut: () => void;
@@ -15,7 +15,9 @@ export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
   const { isClocked } = useClockState();
 
   return isClocked ? (
-    <ClockActive onClockOut={onClockOut} isClockingOut={isClockingOut} />
+    <Card className="p-6 text-center">
+      <p className="text-muted-foreground">View active session below</p>
+    </Card>
   ) : (
     <ClockInactive />
   );
