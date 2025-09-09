@@ -21,8 +21,8 @@ interface LocationSyncCardProps {
   organizationId?: string;
   workOrderData: LocationData;
   onLocationSync: (partnerLocationId: string, syncAction: 'work_order_only' | 'update_partner' | 'create_new') => void;
-  onManualModeChange: (isManual: boolean) => void;
-  isManualMode: boolean;
+  onManualModeChange?: (isManual: boolean) => void;
+  isManualMode?: boolean;
 }
 
 export function LocationSyncCard({ 
@@ -30,7 +30,7 @@ export function LocationSyncCard({
   workOrderData, 
   onLocationSync, 
   onManualModeChange,
-  isManualMode 
+  isManualMode = false
 }: LocationSyncCardProps) {
   const { data: partnerLocations, isLoading } = usePartnerLocationsForOrganization(organizationId);
   const [selectedAction, setSelectedAction] = useState<'work_order_only' | 'update_partner' | 'create_new'>('work_order_only');
@@ -49,27 +49,29 @@ export function LocationSyncCard({
     matchingLocation.location_name !== workOrderData.store_location
   );
 
-  if (isLoading || !organizationId || isManualMode) {
+  if (isLoading || !organizationId || (isManualMode && !workOrderData.partner_location_number)) {
     return null;
   }
 
   return (
     <Card className="border-primary/20">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            Location Sync
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Label htmlFor="manual-mode" className="text-sm">Manual Mode</Label>
-            <Switch
-              id="manual-mode"
-              checked={isManualMode}
-              onCheckedChange={onManualModeChange}
-            />
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Location Sync
+            </CardTitle>
+            {onManualModeChange && (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="manual-mode" className="text-sm">Manual Mode</Label>
+                <Switch
+                  id="manual-mode"
+                  checked={isManualMode}
+                  onCheckedChange={onManualModeChange}
+                />
+              </div>
+            )}
           </div>
-        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {matchingLocation ? (

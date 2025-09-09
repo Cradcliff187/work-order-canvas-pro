@@ -51,7 +51,6 @@ interface WorkOrderFormProps {
 export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: WorkOrderFormProps) {
   const { data: organizations, isLoading: orgsLoading } = useOrganizationsForWorkOrders();
   const { data: trades, isLoading: tradesLoading } = useTrades();
-  const [isManualMode, setIsManualMode] = useState(!workOrder?.partner_location_number);
   const [locationSyncAction, setLocationSyncAction] = useState<'work_order_only' | 'update_partner' | 'create_new'>('work_order_only');
 
   const form = useForm<WorkOrderFormData>({
@@ -88,7 +87,6 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
         form.setValue('location_city', selectedLocation.city || '');
         form.setValue('location_state', selectedLocation.state || '');
         form.setValue('location_zip_code', selectedLocation.zip_code || '');
-        setIsManualMode(false);
       }
     }
   }, [partnerLocationNumber, partnerLocations, form]);
@@ -124,8 +122,6 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
             partner_location_number: form.watch('partner_location_number'),
           }}
           onLocationSync={handleLocationSync}
-          onManualModeChange={setIsManualMode}
-          isManualMode={isManualMode}
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -308,13 +304,11 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
                   onValueChange={(value) => {
                     if (value === 'manual') {
                       field.onChange('');
-                      setIsManualMode(true);
                     } else {
                       field.onChange(value);
-                      setIsManualMode(false);
                     }
                   }} 
-                  value={isManualMode ? 'manual' : field.value}
+                  value={field.value || 'manual'}
                 >
                   <FormControl>
                     <SelectTrigger>
