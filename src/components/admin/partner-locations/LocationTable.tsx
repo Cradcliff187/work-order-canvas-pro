@@ -419,7 +419,7 @@ export function LocationTable({
         </div>
       </div>
 
-      {/* Table content */}
+      {/* Content based on view mode */}
       {isLoading ? (
         <div className="p-6">
           <TableSkeleton 
@@ -428,61 +428,81 @@ export function LocationTable({
           />
         </div>
       ) : data.length === 0 ? (
-        <div className="p-0">
-          <ResponsiveTableContainer>
-            <Table className="admin-table">
-              <TableHeader>
-                <TableRow>
-                  {bulkMode && (
-                    <TableHead className="w-[40px]">
-                      <Checkbox
-                        disabled
-                        aria-label="Select all locations"
-                      />
-                    </TableHead>
-                  )}
-                  {columnOptions.find(col => col.id === 'organization')?.visible && <TableHead>Organization</TableHead>}
-                  {columnOptions.find(col => col.id === 'location_number')?.visible && <TableHead>Location #</TableHead>}
-                  {columnOptions.find(col => col.id === 'location_name')?.visible && <TableHead>Location Name</TableHead>}
-                  {columnOptions.find(col => col.id === 'address')?.visible && <TableHead>Address</TableHead>}
-                  {columnOptions.find(col => col.id === 'city')?.visible && <TableHead>City</TableHead>}
-                  {columnOptions.find(col => col.id === 'state')?.visible && <TableHead>State</TableHead>}
-                  {columnOptions.find(col => col.id === 'zip_code')?.visible && <TableHead>ZIP</TableHead>}
-                  {columnOptions.find(col => col.id === 'contact_name')?.visible && <TableHead>Contact</TableHead>}
-                  {columnOptions.find(col => col.id === 'wo_received')?.visible && <TableHead className="text-center">Received</TableHead>}
-                  {columnOptions.find(col => col.id === 'wo_assigned')?.visible && <TableHead className="text-center">Assigned</TableHead>}
-                  {columnOptions.find(col => col.id === 'wo_in_progress')?.visible && <TableHead className="text-center">In Progress</TableHead>}
-                  {columnOptions.find(col => col.id === 'wo_completed')?.visible && <TableHead className="text-center">Completed</TableHead>}
-                  {columnOptions.find(col => col.id === 'wo_cancelled')?.visible && <TableHead className="text-center">Cancelled</TableHead>}
-                  {columnOptions.find(col => col.id === 'wo_estimate_needed')?.visible && <TableHead className="text-center">Est. Needed</TableHead>}
-                   {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && <TableHead className="text-center">Est. Pending</TableHead>}
-                   {columnOptions.find(col => col.id === 'wo_total')?.visible && <TableHead className="text-center font-semibold">Total</TableHead>}
-                   {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
-                  {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <EmptyTableState
-                  icon={MapPin}
-                  title="No partner locations"
-                  description={
-                    activeFilterCount > 0 
-                      ? "No locations match your current filters."
-                      : "Start by adding your first partner location."
-                  }
-                  action={activeFilterCount === 0 && onAddLocation ? {
-                    label: "Add Location",
-                    onClick: onAddLocation,
-                    icon: Plus
-                  } : undefined}
-                  colSpan={getVisibleColumnCount() + (bulkMode ? 1 : 0) + 1}
-                />
-              </TableBody>
-            </Table>
-          </ResponsiveTableContainer>
-        </div>
-      ) : (
+        viewMode === 'table' ? (
+          <div className="p-0">
+            <ResponsiveTableContainer>
+              <Table className="admin-table">
+                <TableHeader>
+                  <TableRow>
+                    {bulkMode && (
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          disabled
+                          aria-label="Select all locations"
+                        />
+                      </TableHead>
+                    )}
+                    {columnOptions.find(col => col.id === 'organization')?.visible && <TableHead>Organization</TableHead>}
+                    {columnOptions.find(col => col.id === 'location_number')?.visible && <TableHead>Location #</TableHead>}
+                    {columnOptions.find(col => col.id === 'location_name')?.visible && <TableHead>Location Name</TableHead>}
+                    {columnOptions.find(col => col.id === 'address')?.visible && <TableHead>Address</TableHead>}
+                    {columnOptions.find(col => col.id === 'city')?.visible && <TableHead>City</TableHead>}
+                    {columnOptions.find(col => col.id === 'state')?.visible && <TableHead>State</TableHead>}
+                    {columnOptions.find(col => col.id === 'zip_code')?.visible && <TableHead>ZIP</TableHead>}
+                    {columnOptions.find(col => col.id === 'contact_name')?.visible && <TableHead>Contact</TableHead>}
+                    {columnOptions.find(col => col.id === 'wo_received')?.visible && <TableHead className="text-center">Received</TableHead>}
+                    {columnOptions.find(col => col.id === 'wo_assigned')?.visible && <TableHead className="text-center">Assigned</TableHead>}
+                    {columnOptions.find(col => col.id === 'wo_in_progress')?.visible && <TableHead className="text-center">In Progress</TableHead>}
+                    {columnOptions.find(col => col.id === 'wo_completed')?.visible && <TableHead className="text-center">Completed</TableHead>}
+                    {columnOptions.find(col => col.id === 'wo_cancelled')?.visible && <TableHead className="text-center">Cancelled</TableHead>}
+                    {columnOptions.find(col => col.id === 'wo_estimate_needed')?.visible && <TableHead className="text-center">Est. Needed</TableHead>}
+                     {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && <TableHead className="text-center">Est. Pending</TableHead>}
+                     {columnOptions.find(col => col.id === 'wo_total')?.visible && <TableHead className="text-center font-semibold">Total</TableHead>}
+                     {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
+                    {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <EmptyTableState
+                    icon={MapPin}
+                    title="No partner locations"
+                    description={
+                      activeFilterCount > 0 
+                        ? "No locations match your current filters."
+                        : "Start by adding your first partner location."
+                    }
+                    action={activeFilterCount === 0 && onAddLocation ? {
+                      label: "Add Location",
+                      onClick: onAddLocation,
+                      icon: Plus
+                    } : undefined}
+                    colSpan={getVisibleColumnCount() + (bulkMode ? 1 : 0) + 1}
+                  />
+                </TableBody>
+              </Table>
+            </ResponsiveTableContainer>
+          </div>
+        ) : (
+          <div className="p-6">
+            <EmptyState
+              icon={MapPin}
+              title="No partner locations"
+              description={
+                activeFilterCount > 0 
+                  ? "No locations match your current filters."
+                  : "Start by adding your first partner location."
+              }
+              action={activeFilterCount === 0 && onAddLocation ? {
+                label: "Add Location",
+                onClick: onAddLocation,
+                icon: Plus
+              } : undefined}
+              variant="full"
+            />
+          </div>
+        )
+      ) : viewMode === 'table' ? (
         <div className="p-0 overflow-x-auto">
           <ResponsiveTableContainer>
             <Table className="admin-table">
@@ -688,6 +708,61 @@ export function LocationTable({
               </TableBody>
             </Table>
           </ResponsiveTableContainer>
+        </div>
+      ) : (
+        /* Card view for desktop */
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {data.map(location => {
+              const org = organizationMap[location.organization_id];
+              const woCounts = workOrderCounts[location.id];
+              
+              return (
+                <MobileTableCard
+                  key={location.id}
+                  title={location.location_name}
+                  subtitle={`#${location.location_number} - ${org?.name || 'Unknown Org'}`}
+                  badge={
+                    <Badge variant={location.is_active ? 'default' : 'secondary'}>
+                      {location.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  }
+                  metadata={[
+                    { 
+                      label: 'Address', 
+                      value: formatAddress(location)
+                    },
+                    { 
+                      label: 'Contact', 
+                      value: location.contact_name || 'No contact' 
+                    },
+                    {
+                      label: 'Work Orders',
+                      value: woCounts 
+                        ? `${(woCounts.in_progress || 0) + (woCounts.assigned || 0)} active, ${woCounts.completed || 0} completed`
+                        : '0 active, 0 completed'
+                    }
+                  ]}
+                  actions={[
+                    { 
+                      label: 'Edit', 
+                      icon: Edit,
+                      onClick: () => onEdit(location) 
+                    },
+                    { 
+                      label: 'Delete', 
+                      icon: Trash2,
+                      onClick: () => onDelete(location), 
+                      variant: 'destructive' 
+                    }
+                  ]}
+                  selected={bulkMode && !!rowSelection[location.id]}
+                  onSelect={bulkMode ? () => toggleRowSelection(location.id) : undefined}
+                  onClick={() => !bulkMode && console.log('Location clicked:', location)}
+                />
+              );
+            })}
+          </div>
         </div>
       )}
       
