@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,15 @@ import { TablePagination } from '@/components/admin/shared/TablePagination';
 import { generateMapUrl } from '@/lib/utils/addressUtils';
 import { useToast } from '@/hooks/use-toast';
 import { ViewMode } from '@/hooks/useViewMode';
+import { 
+  useReactTable, 
+  getCoreRowModel, 
+  getSortedRowModel,
+  flexRender,
+  ColumnDef,
+  SortingState 
+} from '@tanstack/react-table';
+import { createLocationColumns } from './LocationColumns';
 
 interface LocationFilters {
   search?: string;
@@ -117,6 +126,9 @@ export function LocationTable({
 }: LocationTableProps) {
   const { toast } = useToast();
   
+  // Sorting state
+  const [sorting, setSorting] = useState<SortingState>([]);
+  
   // Column visibility setup
   const { 
     columnVisibility, 
@@ -133,6 +145,32 @@ export function LocationTable({
     ...c,
     canHide: true, // All columns in this table can be hidden
   }));
+
+  // Create table columns using the existing column definitions
+  const columns = useMemo(() => createLocationColumns({
+    organizationMap,
+    workOrderCounts,
+    onEdit,
+    onDelete,
+    bulkMode
+  }), [organizationMap, workOrderCounts, onEdit, onDelete, bulkMode]);
+
+  // Initialize table
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      sorting,
+      rowSelection,
+      columnVisibility,
+    },
+    onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    enableRowSelection: bulkMode,
+    getRowId: (row) => row.id,
+  });
 
   // Export functionality
   const handleExport = (format: 'csv' | 'excel') => {
@@ -424,7 +462,7 @@ export function LocationTable({
         <div className="p-6">
           <TableSkeleton 
             rows={10} 
-            columns={getVisibleColumnCount() + (bulkMode ? 1 : 0) + 1}
+            columns={table.getVisibleFlatColumns().length}
           />
         </div>
       ) : data.length === 0 ? (
@@ -433,35 +471,20 @@ export function LocationTable({
             <ResponsiveTableContainer>
               <Table className="admin-table">
                 <TableHeader>
-                  <TableRow>
-                    {bulkMode && (
-                      <TableHead className="w-[40px]">
-                        <Checkbox
-                          disabled
-                          aria-label="Select all locations"
-                        />
-                      </TableHead>
-                    )}
-                    {columnOptions.find(col => col.id === 'organization')?.visible && <TableHead>Organization</TableHead>}
-                    {columnOptions.find(col => col.id === 'location_number')?.visible && <TableHead>Location #</TableHead>}
-                    {columnOptions.find(col => col.id === 'location_name')?.visible && <TableHead>Location Name</TableHead>}
-                    {columnOptions.find(col => col.id === 'address')?.visible && <TableHead>Address</TableHead>}
-                    {columnOptions.find(col => col.id === 'city')?.visible && <TableHead>City</TableHead>}
-                    {columnOptions.find(col => col.id === 'state')?.visible && <TableHead>State</TableHead>}
-                    {columnOptions.find(col => col.id === 'zip_code')?.visible && <TableHead>ZIP</TableHead>}
-                    {columnOptions.find(col => col.id === 'contact_name')?.visible && <TableHead>Contact</TableHead>}
-                    {columnOptions.find(col => col.id === 'wo_received')?.visible && <TableHead className="text-center">Received</TableHead>}
-                    {columnOptions.find(col => col.id === 'wo_assigned')?.visible && <TableHead className="text-center">Assigned</TableHead>}
-                    {columnOptions.find(col => col.id === 'wo_in_progress')?.visible && <TableHead className="text-center">In Progress</TableHead>}
-                    {columnOptions.find(col => col.id === 'wo_completed')?.visible && <TableHead className="text-center">Completed</TableHead>}
-                    {columnOptions.find(col => col.id === 'wo_cancelled')?.visible && <TableHead className="text-center">Cancelled</TableHead>}
-                    {columnOptions.find(col => col.id === 'wo_estimate_needed')?.visible && <TableHead className="text-center">Est. Needed</TableHead>}
-                     {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && <TableHead className="text-center">Est. Pending</TableHead>}
-                     {columnOptions.find(col => col.id === 'wo_total')?.visible && <TableHead className="text-center font-semibold">Total</TableHead>}
-                     {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
-                    {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                   ))}
                 </TableHeader>
                 <TableBody>
                   <EmptyTableState
@@ -507,204 +530,38 @@ export function LocationTable({
           <ResponsiveTableContainer>
             <Table className="admin-table">
               <TableHeader>
-                <TableRow>
-                  {bulkMode && (
-                    <TableHead className="w-[40px]">
-                      <Checkbox
-                        checked={data.length > 0 && data.every(item => rowSelection[item.id])}
-                        onCheckedChange={(checked) => {
-                          if (!setRowSelection) return;
-                          if (checked) {
-                            const newSelection: Record<string, boolean> = {};
-                            data.forEach(item => {
-                              newSelection[item.id] = true;
-                            });
-                            setRowSelection(newSelection);
-                          } else {
-                            setRowSelection({});
-                          }
-                        }}
-                        aria-label="Select all locations"
-                      />
-                    </TableHead>
-                  )}
-                   {columnOptions.find(col => col.id === 'organization')?.visible && <TableHead>Organization</TableHead>}
-                   {columnOptions.find(col => col.id === 'location_number')?.visible && <TableHead>Location #</TableHead>}
-                   {columnOptions.find(col => col.id === 'location_name')?.visible && <TableHead>Location Name</TableHead>}
-                   {columnOptions.find(col => col.id === 'address')?.visible && <TableHead>Address</TableHead>}
-                   {columnOptions.find(col => col.id === 'city')?.visible && <TableHead>City</TableHead>}
-                   {columnOptions.find(col => col.id === 'state')?.visible && <TableHead>State</TableHead>}
-                   {columnOptions.find(col => col.id === 'zip_code')?.visible && <TableHead>ZIP</TableHead>}
-                   {columnOptions.find(col => col.id === 'contact_name')?.visible && <TableHead>Contact</TableHead>}
-                   {columnOptions.find(col => col.id === 'wo_received')?.visible && <TableHead className="text-center">Received</TableHead>}
-                   {columnOptions.find(col => col.id === 'wo_assigned')?.visible && <TableHead className="text-center">Assigned</TableHead>}
-                   {columnOptions.find(col => col.id === 'wo_in_progress')?.visible && <TableHead className="text-center">In Progress</TableHead>}
-                   {columnOptions.find(col => col.id === 'wo_completed')?.visible && <TableHead className="text-center">Completed</TableHead>}
-                   {columnOptions.find(col => col.id === 'wo_cancelled')?.visible && <TableHead className="text-center">Cancelled</TableHead>}
-                   {columnOptions.find(col => col.id === 'wo_estimate_needed')?.visible && <TableHead className="text-center">Est. Needed</TableHead>}
-                    {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && <TableHead className="text-center">Est. Pending</TableHead>}
-                    {columnOptions.find(col => col.id === 'wo_total')?.visible && <TableHead className="text-center font-semibold">Total</TableHead>}
-                    {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
-                   {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                     {headerGroup.headers.map((header) => (
+                       <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
               </TableHeader>
               <TableBody>
-                {data.map((location) => {
-                  const org = organizationMap[location.organization_id];
-                  const woCounts = workOrderCounts[location.id];
-                  
-                  return (
-                    <TableRow
-                      key={location.id}
-                      className={cn(
-                        "cursor-pointer hover:bg-muted/50",
-                        rowSelection[location.id] && "bg-muted"
-                      )}
-                      onClick={() => !bulkMode && console.log('Location clicked:', location)}
-                    >
-                      {bulkMode && (
-                        <TableCell>
-                          <Checkbox
-                            checked={!!rowSelection[location.id]}
-                            onCheckedChange={() => toggleRowSelection(location.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'organization')?.visible && (
-                        <TableCell className="max-w-[200px] truncate">
-                          {org?.name || 'Unknown'}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'location_number')?.visible && (
-                        <TableCell className="font-mono text-sm max-w-[120px] truncate">
-                          #{location.location_number}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'location_name')?.visible && (
-                        <TableCell className="font-medium max-w-[250px] truncate">
-                          {location.location_name}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'address')?.visible && (
-                        <TableCell className="max-w-[300px] truncate">
-                          {location.street_address && (
-                            <a
-                              href={generateMapUrl(location) || '#'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline"
-                            >
-                              {location.street_address}
-                            </a>
-                          )}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'city')?.visible && (
-                        <TableCell className="max-w-[150px] truncate">
-                          {location.city || '-'}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'state')?.visible && (
-                        <TableCell className="max-w-[100px] truncate">
-                          {location.state || '-'}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'zip_code')?.visible && (
-                        <TableCell className="max-w-[100px] truncate">
-                          {location.zip_code || '-'}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'contact_name')?.visible && (
-                        <TableCell className="max-w-[200px] truncate">
-                          {location.contact_name || '-'}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'wo_received')?.visible && (
-                        <TableCell className="text-center tabular-nums">
-                          {isLoadingWorkOrders ? '-' : (woCounts?.received || 0)}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'wo_assigned')?.visible && (
-                        <TableCell className="text-center tabular-nums font-medium">
-                          {isLoadingWorkOrders ? '-' : (woCounts?.assigned || 0)}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'wo_in_progress')?.visible && (
-                        <TableCell className="text-center tabular-nums font-medium text-blue-600">
-                          {isLoadingWorkOrders ? '-' : (woCounts?.in_progress || 0)}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'wo_completed')?.visible && (
-                        <TableCell className="text-center tabular-nums text-green-600">
-                          {isLoadingWorkOrders ? '-' : (woCounts?.completed || 0)}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'wo_cancelled')?.visible && (
-                        <TableCell className="text-center tabular-nums text-red-600">
-                          {isLoadingWorkOrders ? '-' : (woCounts?.cancelled || 0)}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'wo_estimate_needed')?.visible && (
-                        <TableCell className="text-center tabular-nums text-orange-600">
-                          {isLoadingWorkOrders ? '-' : (woCounts?.estimate_needed || 0)}
-                        </TableCell>
-                      )}
-                       {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && (
-                         <TableCell className="text-center tabular-nums text-yellow-600">
-                           {isLoadingWorkOrders ? '-' : (woCounts?.estimate_pending_approval || 0)}
-                         </TableCell>
-                       )}
-                       {columnOptions.find(col => col.id === 'wo_total')?.visible && (
-                         <TableCell className="text-center tabular-nums font-semibold">
-                           {isLoadingWorkOrders ? '-' : (woCounts?.total || 0)}
-                         </TableCell>
-                       )}
-                       {columnOptions.find(col => col.id === 'status')?.visible && (
-                        <TableCell>
-                          <Badge variant={location.is_active ? 'default' : 'secondary'}>
-                            {location.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'created_at')?.visible && (
-                        <TableCell className="max-w-[120px] truncate">
-                          {new Date(location.created_at).toLocaleDateString()}
-                        </TableCell>
-                      )}
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              ⋮
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="z-50 bg-popover">
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              onEdit(location);
-                            }}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete(location);
-                              }}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className={cn(
+                      "cursor-pointer hover:bg-muted/50",
+                      row.getIsSelected() && "bg-muted"
+                    )}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
-                    </TableRow>
-                  );
-                })}
+                    ))}
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </ResponsiveTableContainer>
