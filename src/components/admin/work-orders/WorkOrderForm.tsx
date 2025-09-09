@@ -1,4 +1,3 @@
-
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -76,6 +75,25 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
   });
 
   const organizationId = form.watch('organization_id');
+  const { data: partnerLocations } = usePartnerLocationsForOrganization(organizationId);
+  
+  // Watch partner location number changes to auto-populate address
+  const partnerLocationNumber = form.watch('partner_location_number');
+  
+  useEffect(() => {
+    if (partnerLocationNumber && partnerLocationNumber !== 'manual' && partnerLocations) {
+      const selectedLocation = partnerLocations.find(loc => loc.location_number === partnerLocationNumber);
+      if (selectedLocation) {
+        form.setValue('location_street_address', selectedLocation.street_address || '');
+        form.setValue('location_city', selectedLocation.city || '');
+        form.setValue('location_state', selectedLocation.state || '');
+        form.setValue('location_zip_code', selectedLocation.zip_code || '');
+      }
+    } else if (partnerLocationNumber === 'manual') {
+      // Clear partner location number when manual is selected
+      form.setValue('partner_location_number', '');
+    }
+  }, [partnerLocationNumber, partnerLocations, form]);
 
   const handleFormSubmit = (data: WorkOrderFormData) => {
     onSubmit({ ...data, locationSyncAction });
@@ -280,7 +298,34 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
         />
 
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Address Details</h3>
+          <h3 className="text-lg font-medium">Location Details</h3>
+          
+          <FormField
+            control={form.control}
+            name="partner_location_number"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Partner Location</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select partner location or manual entry" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual Entry</SelectItem>
+                    {partnerLocations?.map((location) => (
+                      <SelectItem key={location.id} value={location.location_number}>
+                        {location.location_number} - {location.location_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
           <div className="space-y-4">
             <FormField
               control={form.control}
