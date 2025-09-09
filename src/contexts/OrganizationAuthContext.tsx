@@ -139,9 +139,9 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       }
 
       console.log('AuthContext Profile Set:', {
-        user_id: user.id,
+        user_id: userId,
         profile_data: profileData,
-        email: user.email
+        email: user?.email
       });
       setProfile(profileData);
 
