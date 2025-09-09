@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkOrderStatusTransitions } from "@/hooks/useWorkOrderStatusTransitions";
+import { useUpdatePartnerLocation } from "@/hooks/usePartnerLocations";
 import type { Database } from "@/integrations/supabase/types";
 
 type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
@@ -11,16 +12,18 @@ interface WorkOrderUpdateData extends Omit<WorkOrderUpdate, 'status'> {
   id: string;
   status?: WorkOrderStatus;
   originalStatus?: WorkOrderStatus;
+  locationSyncAction?: 'work_order_only' | 'update_partner' | 'create_new';
 }
 
 export const useAdminWorkOrderEdit = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { transitionStatus } = useWorkOrderStatusTransitions();
+  const updatePartnerLocation = useUpdatePartnerLocation();
 
   const updateWorkOrder = useMutation({
     mutationFn: async (data: WorkOrderUpdateData) => {
-      const { id, status, originalStatus, ...updateData } = data;
+      const { id, status, originalStatus, locationSyncAction, ...updateData } = data;
 
       // Transform empty date strings to null
       const cleanedData = {
@@ -40,6 +43,33 @@ export const useAdminWorkOrderEdit = () => {
         .single();
 
       if (error) throw error;
+
+      // Handle partner location sync if needed
+      if (locationSyncAction === 'update_partner' && updateData.partner_location_number) {
+        try {
+          // Find partner location by number and organization
+          const { data: partnerLocation } = await supabase
+            .from('partner_locations')
+            .select('id')
+            .eq('location_number', updateData.partner_location_number)
+            .eq('organization_id', workOrder.organization_id)
+            .single();
+
+          if (partnerLocation) {
+            await updatePartnerLocation.mutateAsync({
+              id: partnerLocation.id,
+              street_address: cleanedData.location_street_address,
+              city: cleanedData.location_city,
+              state: cleanedData.location_state,
+              zip_code: cleanedData.location_zip_code,
+              location_name: cleanedData.store_location,
+            });
+          }
+        } catch (syncError) {
+          console.warn('Partner location sync failed:', syncError);
+          // Don't fail the work order update if location sync fails
+        }
+      }
 
       // If status changed, use the proper transition function
       if (status && status !== originalStatus) {

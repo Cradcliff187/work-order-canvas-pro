@@ -2,6 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +15,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { WorkOrder } from '@/hooks/useWorkOrders';
 import { US_STATES } from '@/constants/states';
+import { LocationSyncCard } from './LocationSyncCard';
+import { usePartnerLocationsForOrganization } from '@/hooks/usePartnerLocationsForOrganization';
 
 const workOrderSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -34,13 +37,14 @@ const workOrderSchema = z.object({
   partner_location_number: z.string().optional(),
   estimated_hours: z.string().optional(),
   due_date: z.string().optional().transform((val) => val === '' ? undefined : val),
+  locationSyncAction: z.enum(['work_order_only', 'update_partner', 'create_new']).optional(),
 });
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
 
 interface WorkOrderFormProps {
   workOrder?: WorkOrder;
-  onSubmit: (data: WorkOrderFormData) => void;
+  onSubmit: (data: WorkOrderFormData & { locationSyncAction?: string }) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -48,6 +52,8 @@ interface WorkOrderFormProps {
 export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: WorkOrderFormProps) {
   const { data: organizations, isLoading: orgsLoading } = useOrganizationsForWorkOrders();
   const { data: trades, isLoading: tradesLoading } = useTrades();
+  const [isManualMode, setIsManualMode] = useState(false);
+  const [locationSyncAction, setLocationSyncAction] = useState<'work_order_only' | 'update_partner' | 'create_new'>('work_order_only');
 
   const form = useForm<WorkOrderFormData>({
     resolver: zodResolver(workOrderSchema),
@@ -69,6 +75,16 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
     },
   });
 
+  const organizationId = form.watch('organization_id');
+
+  const handleFormSubmit = (data: WorkOrderFormData) => {
+    onSubmit({ ...data, locationSyncAction });
+  };
+
+  const handleLocationSync = (partnerLocationId: string, syncAction: 'work_order_only' | 'update_partner' | 'create_new') => {
+    setLocationSyncAction(syncAction);
+  };
+
   if (orgsLoading || tradesLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -79,7 +95,22 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+        
+        <LocationSyncCard
+          organizationId={organizationId}
+          workOrderData={{
+            street_address: form.watch('location_street_address'),
+            city: form.watch('location_city'),
+            state: form.watch('location_state'),
+            zip_code: form.watch('location_zip_code'),
+            store_location: form.watch('store_location'),
+            partner_location_number: form.watch('partner_location_number'),
+          }}
+          onLocationSync={handleLocationSync}
+          onManualModeChange={setIsManualMode}
+          isManualMode={isManualMode}
+        />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
