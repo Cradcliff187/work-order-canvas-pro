@@ -8,7 +8,6 @@ import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { formatLocationDisplay, formatAddress, generateMapUrl } from '@/lib/utils/addressUtils';
-import { StaticMapThumbnail } from '@/components/ui/StaticMapThumbnail';
 import { MobileQuickActions, createMapAction, createMessageAction, createViewDetailsAction, createSubmitReportAction, createPhoneAction } from '@/components/work-orders/MobileQuickActions';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
@@ -262,25 +261,18 @@ export function MobileWorkOrderCard({
               </span>
             </div>
             {formatAddress(workOrder) && formatAddress(workOrder) !== 'N/A' && (
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <StaticMapThumbnail 
-                  address={workOrder}
-                  size="sm"
-                  onClick={() => mapUrl && window.open(mapUrl, '_blank')}
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (mapUrl) window.open(mapUrl, '_blank');
-                  }}
-                >
-                  <Navigation className="h-3 w-3 mr-1" />
-                  Directions
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-xs flex-shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (mapUrl) window.open(mapUrl, '_blank');
+                }}
+              >
+                <Navigation className="h-3 w-3 mr-1" />
+                Directions
+              </Button>
             )}
           </div>
 
