@@ -115,28 +115,6 @@ export default function AdminPartnerLocations() {
     return options;
   }, [allLocations, organizationMap]);
 
-  // Filter locations based on search term, organization, status, and selected locations
-  const filteredLocations = allLocations.filter(location => {
-    const org = organizationMap[location.organization_id];
-    const matchesSearch = searchTerm === '' || 
-      location.location_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      location.location_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (org?.name && org.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (location.city && location.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (location.state && location.state.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesOrganization = selectedOrganization === 'all' || 
-      location.organization_id === selectedOrganization;
-
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && location.is_active) ||
-      (statusFilter === 'inactive' && !location.is_active);
-
-    const matchesSelectedLocations = selectedLocations.length === 0 || 
-      selectedLocations.includes(location.id);
-
-    return matchesSearch && matchesOrganization && matchesStatus && matchesSelectedLocations;
-  });
 
   // Get statistics
   const stats = {
@@ -204,12 +182,12 @@ export default function AdminPartnerLocations() {
   };
 
   const handleBulkExport = (format: 'csv' | 'excel', ids: string[]) => {
-    const selectedLocations = filteredLocations.filter(location => ids.includes(location.id));
+    const selectedLocationData = allLocations.filter(location => ids.includes(location.id));
     // Export selected locations using existing export logic
-    console.log('Bulk export:', { format, selectedLocations });
+    console.log('Bulk export:', { format, selectedLocations: selectedLocationData });
     toast({
       title: "Export Complete",
-      description: `Exported ${selectedLocations.length} selected locations`
+      description: `Exported ${selectedLocationData.length} selected locations`
     });
   };
 
@@ -350,7 +328,7 @@ export default function AdminPartnerLocations() {
 
       {/* Main Content */}
       <LocationTable
-        data={filteredLocations}
+        data={allLocations}
         workOrderCounts={workOrderCounts}
         isLoading={isLoading}
         isLoadingWorkOrders={workOrdersLoading}

@@ -128,6 +128,31 @@ export function LocationTableWithSorting({
   
   // Sorting state
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  // Filter all locations based on filters
+  const filteredData = useMemo(() => {
+    return data.filter(location => {
+      const org = organizationMap[location.organization_id];
+      const matchesSearch = !filters.search || 
+        location.location_name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        location.location_number.toLowerCase().includes(filters.search.toLowerCase()) ||
+        (org?.name && org.name.toLowerCase().includes(filters.search.toLowerCase())) ||
+        (location.city && location.city.toLowerCase().includes(filters.search.toLowerCase())) ||
+        (location.state && location.state.toLowerCase().includes(filters.search.toLowerCase()));
+
+      const matchesOrganization = !filters.organization_id || filters.organization_id === 'all' || 
+        location.organization_id === filters.organization_id;
+
+      const matchesStatus = !filters.status || filters.status === 'all' || 
+        (filters.status === 'active' && location.is_active) ||
+        (filters.status === 'inactive' && !location.is_active);
+
+      const matchesSelectedLocations = !filters.location_ids?.length || 
+        filters.location_ids.includes(location.id);
+
+      return matchesSearch && matchesOrganization && matchesStatus && matchesSelectedLocations;
+    });
+  }, [data, filters, organizationMap]);
   
   // Column visibility setup
   const { 
@@ -162,7 +187,7 @@ export function LocationTableWithSorting({
 
   // Create table instance
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     state: {
       sorting,
@@ -187,7 +212,7 @@ export function LocationTableWithSorting({
 
   // Export functionality
   const handleExport = (format: 'csv' | 'excel') => {
-    const exportData = data.map(location => {
+    const exportData = filteredData.map(location => {
       const woCounts = workOrderCounts[location.id];
       return {
         'Organization': organizationMap[location.organization_id]?.name || '',
@@ -303,7 +328,7 @@ export function LocationTableWithSorting({
             <div className="space-y-4 mt-4">
               <LoadingCard count={5} showHeader={false} />
             </div>
-          ) : data.length === 0 ? (
+      ) : filteredData.length === 0 ? (
             <div className="mt-4">
               <EmptyState
                 icon={MapPin}
@@ -322,7 +347,7 @@ export function LocationTableWithSorting({
             </div>
           ) : (
             <div className="space-y-3 mt-4">
-              {data.map(location => (
+              {filteredData.map(location => (
                 <MobileTableCard
                   key={location.id}
                   title={location.location_name}
@@ -464,7 +489,7 @@ export function LocationTableWithSorting({
             columns={getVisibleColumnCount() + (bulkMode ? 1 : 0) + 1}
           />
         </div>
-      ) : data.length === 0 ? (
+      ) : filteredData.length === 0 ? (
         <div className="p-12">
           <EmptyState
             icon={MapPin}
