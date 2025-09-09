@@ -19,6 +19,7 @@ export type PartnerLocationColumnId =
   | "wo_cancelled"
   | "wo_estimate_needed"
   | "wo_estimate_pending"
+  | "wo_total"
   | "created_at"
   | "actions";
 
@@ -46,6 +47,7 @@ export const LOCATION_COLUMN_METADATA = {
   wo_cancelled: { label: "Cancelled", defaultVisible: true, description: "Work orders cancelled" },
   wo_estimate_needed: { label: "Est. Needed", defaultVisible: true, description: "Work orders needing estimates" },
   wo_estimate_pending: { label: "Est. Pending", defaultVisible: true, description: "Work orders with pending estimates" },
+  wo_total: { label: "Total", defaultVisible: true, description: "Total work orders" },
   created_at: { label: "Created", defaultVisible: false },
 };
 
@@ -62,6 +64,7 @@ export const PARTNER_LOCATION_DEFAULT_VISIBLE_ORDER: PartnerLocationColumnId[] =
   "wo_estimate_pending",
   "wo_completed",
   "wo_cancelled",
+  "wo_total",
   "status",
   "created_at",
   "actions",

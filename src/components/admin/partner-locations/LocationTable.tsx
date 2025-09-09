@@ -156,7 +156,7 @@ export function LocationTable({
         'WO Completed': woCounts?.completed || 0,
         'WO Cancelled': woCounts?.cancelled || 0,
         'WO Est. Needed': woCounts?.estimate_needed || 0,
-        'WO Est. Pending': woCounts?.estimate_pending_approval || 0,
+        'WO Total': woCounts?.total || 0,
         'Created': new Date(location.created_at).toLocaleDateString(),
       };
     });
@@ -180,6 +180,7 @@ export function LocationTable({
       { key: 'WO Cancelled', label: 'WO Cancelled', type: 'number' },
       { key: 'WO Est. Needed', label: 'WO Est. Needed', type: 'number' },
       { key: 'WO Est. Pending', label: 'WO Est. Pending', type: 'number' },
+      { key: 'WO Total', label: 'WO Total', type: 'number' },
       { key: 'Created', label: 'Created', type: 'string' },
     ];
     

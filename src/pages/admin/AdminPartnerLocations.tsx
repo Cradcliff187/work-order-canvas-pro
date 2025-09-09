@@ -13,7 +13,7 @@ import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbS
 import { AddLocationModal } from '@/components/admin/partner-locations/AddLocationModal';
 import { EditLocationModal } from '@/components/admin/partner-locations/EditLocationModal';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
-import { LocationTable } from '@/components/admin/partner-locations/LocationTable';
+import { LocationTableWithSorting as LocationTable } from '@/components/admin/partner-locations/LocationTableWithSorting';
 import { BulkActionsBar } from '@/components/admin/partner-locations/BulkActionsBar';
 import { usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
 import { useToast } from '@/hooks/use-toast';
