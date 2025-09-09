@@ -154,16 +154,44 @@ export function LocationTableWithSorting({
     });
   }, [data, filters, organizationMap]);
   
-  // Column visibility setup
+  // Column visibility setup with work order column protection
   const { 
     columnVisibility, 
     toggleColumn, 
     resetToDefaults,
     getAllColumns,
-    getVisibleColumnCount 
+    getVisibleColumnCount,
+    setColumnVisibility
   } = useColumnVisibility({
-    storageKey: 'admin-partner-locations-columns-v2', // Clear cache with new version
+    storageKey: 'admin-partner-locations-columns-v3', // Clear cache with new version
     columnMetadata: LOCATION_COLUMN_METADATA,
+  });
+
+  // Force work order columns to be visible (critical business data)
+  const protectedColumnVisibility = useMemo(() => {
+    const workOrderColumnIds = [
+      'wo_received', 'wo_assigned', 'wo_in_progress', 'wo_completed', 
+      'wo_cancelled', 'wo_estimate_needed', 'wo_estimate_pending', 'wo_total'
+    ];
+    
+    const correctedVisibility = { ...columnVisibility };
+    
+    // Force all work order columns to be visible
+    workOrderColumnIds.forEach(columnId => {
+      correctedVisibility[columnId] = true;
+    });
+    
+    return correctedVisibility;
+  }, [columnVisibility]);
+
+  // DEBUG: Log column visibility state and work order data
+  console.log('🔍 DEBUG Column Visibility:', {
+    originalColumnVisibility: columnVisibility,
+    protectedColumnVisibility,
+    allColumns: getAllColumns(),
+    visibleCount: getVisibleColumnCount(),
+    workOrderCounts: Object.keys(workOrderCounts).length > 0 ? 'Has data' : 'No data',
+    sampleWorkOrderData: Object.keys(workOrderCounts)[0] ? workOrderCounts[Object.keys(workOrderCounts)[0]] : 'none'
   });
 
   const columnOptions = getAllColumns().map((c) => ({
@@ -173,15 +201,27 @@ export function LocationTableWithSorting({
 
   // Create column definitions
   const columns = useMemo(
-    () => createLocationColumns({
-      workOrderCounts,
-      organizationMap,
-      onEdit,
-      onDelete,
-      rowSelection,
-      setRowSelection,
-      bulkMode,
-    }),
+    () => {
+      const cols = createLocationColumns({
+        workOrderCounts,
+        organizationMap,
+        onEdit,
+        onDelete,
+        rowSelection,
+        setRowSelection,
+        bulkMode,
+      });
+      
+      // DEBUG: Log columns being created
+      console.log('🔍 DEBUG Created Columns:', {
+        totalColumns: cols.length,
+        columnIds: cols.map(col => col.id),
+        workOrderColumnIds: cols.filter(col => col.id?.includes('wo_')).map(col => col.id),
+        hasWorkOrderData: Object.keys(workOrderCounts).length > 0
+      });
+      
+      return cols;
+    },
     [workOrderCounts, organizationMap, onEdit, onDelete, rowSelection, setRowSelection, bulkMode]
   );
 
@@ -192,7 +232,7 @@ export function LocationTableWithSorting({
     state: {
       sorting,
       rowSelection: rowSelection as RowSelectionState,
-      columnVisibility,
+      columnVisibility: protectedColumnVisibility, // Use protected visibility
     },
     onSortingChange: setSorting,
     onRowSelectionChange: (selection) => {
@@ -208,6 +248,14 @@ export function LocationTableWithSorting({
     getPaginationRowModel: getPaginationRowModel(),
     enableRowSelection: bulkMode,
     enableMultiRowSelection: bulkMode,
+  });
+
+  // DEBUG: Log table state
+  console.log('🔍 DEBUG Table State:', {
+    visibleColumns: table.getVisibleFlatColumns().map(col => ({ id: col.id, header: col.columnDef.header })),
+    hiddenColumns: table.getAllFlatColumns().filter(col => !col.getIsVisible()).map(col => col.id),
+    columnVisibilityState: protectedColumnVisibility,
+    totalColumns: table.getAllFlatColumns().length
   });
 
   // Export functionality
