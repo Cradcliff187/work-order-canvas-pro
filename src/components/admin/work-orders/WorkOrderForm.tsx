@@ -83,6 +83,7 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
     if (partnerLocationNumber && partnerLocations) {
       const selectedLocation = partnerLocations.find(loc => loc.location_number === partnerLocationNumber);
       if (selectedLocation) {
+        form.setValue('store_location', selectedLocation.location_name || '');
         form.setValue('location_street_address', selectedLocation.street_address || '');
         form.setValue('location_city', selectedLocation.city || '');
         form.setValue('location_state', selectedLocation.state || '');
@@ -118,7 +119,6 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
             city: form.watch('location_city'),
             state: form.watch('location_state'),
             zip_code: form.watch('location_zip_code'),
-            store_location: form.watch('store_location'),
             partner_location_number: form.watch('partner_location_number'),
           }}
           onLocationSync={handleLocationSync}
@@ -220,19 +220,6 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="store_location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Store Location</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           <FormField
             control={form.control}
