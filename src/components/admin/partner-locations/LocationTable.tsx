@@ -301,8 +301,8 @@ export function LocationTable({
                     {
                       label: 'Work Orders',
                       value: workOrderCounts[location.id] 
-                        ? `${workOrderCounts[location.id].in_progress + workOrderCounts[location.id].assigned} active`
-                        : '0 active'
+                        ? `${workOrderCounts[location.id].in_progress + workOrderCounts[location.id].assigned} active, ${workOrderCounts[location.id].completed} completed`
+                        : '0 active, 0 completed'
                     }
                   ]}
                   actions={[
