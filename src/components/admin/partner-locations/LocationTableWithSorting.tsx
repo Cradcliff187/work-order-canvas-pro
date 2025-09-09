@@ -99,6 +99,13 @@ export interface LocationTableProps {
   onAddLocation?: () => void;
   onBulkStatusChange?: (status: 'active' | 'inactive', ids: string[]) => void;
   onBulkDelete?: (ids: string[]) => void;
+  
+  // Column visibility
+  columnVisibility: Record<string, boolean>;
+  toggleColumn: (columnId: string) => void;
+  resetToDefaults: () => void;
+  getAllColumns: () => Array<{ id: string; visible: boolean; label: string; description?: string; canHide: boolean }>;
+  getVisibleColumnCount: () => number;
 }
 
 export function LocationTableWithSorting({
@@ -122,7 +129,12 @@ export function LocationTableWithSorting({
   onRefresh,
   onAddLocation,
   onBulkStatusChange,
-  onBulkDelete
+  onBulkDelete,
+  columnVisibility,
+  toggleColumn,
+  resetToDefaults,
+  getAllColumns,
+  getVisibleColumnCount,
 }: LocationTableProps) {
   const { toast } = useToast();
   
@@ -154,74 +166,24 @@ export function LocationTableWithSorting({
     });
   }, [data, filters, organizationMap]);
   
-  // Column visibility setup with work order column protection
-  const { 
-    columnVisibility, 
-    toggleColumn, 
-    resetToDefaults,
-    getAllColumns,
-    getVisibleColumnCount,
-    setColumnVisibility
-  } = useColumnVisibility({
-    storageKey: 'admin-partner-locations-columns-v3', // Clear cache with new version
-    columnMetadata: LOCATION_COLUMN_METADATA,
-  });
-
-  // Force work order columns to be visible (critical business data)
-  const protectedColumnVisibility = useMemo(() => {
-    const workOrderColumnIds = [
-      'wo_received', 'wo_assigned', 'wo_in_progress', 'wo_completed', 
-      'wo_cancelled', 'wo_estimate_needed', 'wo_estimate_pending', 'wo_total'
-    ];
-    
-    const correctedVisibility = { ...columnVisibility };
-    
-    // Force all work order columns to be visible
-    workOrderColumnIds.forEach(columnId => {
-      correctedVisibility[columnId] = true;
-    });
-    
-    return correctedVisibility;
-  }, [columnVisibility]);
-
-  // DEBUG: Log column visibility state and work order data
-  console.log('🔍 DEBUG Column Visibility:', {
-    originalColumnVisibility: columnVisibility,
-    protectedColumnVisibility,
-    allColumns: getAllColumns(),
-    visibleCount: getVisibleColumnCount(),
-    workOrderCounts: Object.keys(workOrderCounts).length > 0 ? 'Has data' : 'No data',
-    sampleWorkOrderData: Object.keys(workOrderCounts)[0] ? workOrderCounts[Object.keys(workOrderCounts)[0]] : 'none'
-  });
+  // Column visibility is now passed as props from parent component
 
   const columnOptions = getAllColumns().map((c) => ({
     ...c,
-    canHide: true,
+    // No need to modify, already has the correct structure
   }));
 
   // Create column definitions
   const columns = useMemo(
-    () => {
-      const cols = createLocationColumns({
-        workOrderCounts,
-        organizationMap,
-        onEdit,
-        onDelete,
-        rowSelection,
-        setRowSelection,
-        bulkMode,
-      });
-      
-      // DEBUG: Log columns being created
-      console.log('🔍 DEBUG Created Columns:', {
-        totalColumns: cols.length,
-        columnIds: cols.map(col => col.id),
-        workOrderColumnIds: cols.filter(col => col.id?.includes('wo_')).map(col => col.id),
-        hasWorkOrderData: Object.keys(workOrderCounts).length > 0
-      });
-      
-      return cols;
-    },
+    () => createLocationColumns({
+      workOrderCounts,
+      organizationMap,
+      onEdit,
+      onDelete,
+      rowSelection,
+      setRowSelection,
+      bulkMode,
+    }),
     [workOrderCounts, organizationMap, onEdit, onDelete, rowSelection, setRowSelection, bulkMode]
   );
 
@@ -232,7 +194,7 @@ export function LocationTableWithSorting({
     state: {
       sorting,
       rowSelection: rowSelection as RowSelectionState,
-      columnVisibility: protectedColumnVisibility, // Use protected visibility
+      columnVisibility, // Use passed column visibility
     },
     onSortingChange: setSorting,
     onRowSelectionChange: (selection) => {
@@ -248,14 +210,6 @@ export function LocationTableWithSorting({
     getPaginationRowModel: getPaginationRowModel(),
     enableRowSelection: bulkMode,
     enableMultiRowSelection: bulkMode,
-  });
-
-  // DEBUG: Log table state
-  console.log('🔍 DEBUG Table State:', {
-    visibleColumns: table.getVisibleFlatColumns().map(col => ({ id: col.id, header: col.columnDef.header })),
-    hiddenColumns: table.getAllFlatColumns().filter(col => !col.getIsVisible()).map(col => col.id),
-    columnVisibilityState: protectedColumnVisibility,
-    totalColumns: table.getAllFlatColumns().length
   });
 
   // Export functionality

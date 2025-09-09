@@ -6,6 +6,8 @@ import { useWorkOrdersByLocation } from '@/hooks/useWorkOrdersByLocation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useViewMode } from '@/hooks/useViewMode';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { LOCATION_COLUMN_METADATA } from '@/components/admin/partner-locations/PartnerLocationColumns';
 import { RowSelectionState } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -81,6 +83,18 @@ export default function AdminPartnerLocations() {
   
   // Import work orders hook
   const { data: workOrderCounts = {}, isLoading: workOrdersLoading } = useWorkOrdersByLocation();
+
+  // Column visibility management
+  const { 
+    columnVisibility, 
+    toggleColumn, 
+    resetToDefaults,
+    getAllColumns,
+    getVisibleColumnCount 
+  } = useColumnVisibility({
+    storageKey: 'admin-partner-locations-columns-v4', // New version to clear cache
+    columnMetadata: LOCATION_COLUMN_METADATA,
+  });
 
   const isLoading = locationsLoading || orgsLoading;
   const loadError = locationsError || orgsError;
@@ -359,6 +373,11 @@ export default function AdminPartnerLocations() {
         onAddLocation={() => setIsAddModalOpen(true)}
         onBulkStatusChange={handleBulkStatusChange}
         onBulkDelete={handleBulkDelete}
+        columnVisibility={columnVisibility}
+        toggleColumn={toggleColumn}
+        resetToDefaults={resetToDefaults}
+        getAllColumns={getAllColumns}
+        getVisibleColumnCount={getVisibleColumnCount}
       />
 
       {/* Bulk Actions Bar */}
