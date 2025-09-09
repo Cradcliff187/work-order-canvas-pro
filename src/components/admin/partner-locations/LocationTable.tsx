@@ -455,8 +455,9 @@ export function LocationTable({
                   {columnOptions.find(col => col.id === 'wo_completed')?.visible && <TableHead className="text-center">Completed</TableHead>}
                   {columnOptions.find(col => col.id === 'wo_cancelled')?.visible && <TableHead className="text-center">Cancelled</TableHead>}
                   {columnOptions.find(col => col.id === 'wo_estimate_needed')?.visible && <TableHead className="text-center">Est. Needed</TableHead>}
-                  {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && <TableHead className="text-center">Est. Pending</TableHead>}
-                  {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
+                   {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && <TableHead className="text-center">Est. Pending</TableHead>}
+                   {columnOptions.find(col => col.id === 'wo_total')?.visible && <TableHead className="text-center font-semibold">Total</TableHead>}
+                   {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
                   {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -521,8 +522,9 @@ export function LocationTable({
                    {columnOptions.find(col => col.id === 'wo_completed')?.visible && <TableHead className="text-center">Completed</TableHead>}
                    {columnOptions.find(col => col.id === 'wo_cancelled')?.visible && <TableHead className="text-center">Cancelled</TableHead>}
                    {columnOptions.find(col => col.id === 'wo_estimate_needed')?.visible && <TableHead className="text-center">Est. Needed</TableHead>}
-                   {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && <TableHead className="text-center">Est. Pending</TableHead>}
-                   {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
+                    {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && <TableHead className="text-center">Est. Pending</TableHead>}
+                    {columnOptions.find(col => col.id === 'wo_total')?.visible && <TableHead className="text-center font-semibold">Total</TableHead>}
+                    {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
                    {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -629,12 +631,17 @@ export function LocationTable({
                           {isLoadingWorkOrders ? '-' : (woCounts?.estimate_needed || 0)}
                         </TableCell>
                       )}
-                      {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && (
-                        <TableCell className="text-center tabular-nums text-yellow-600">
-                          {isLoadingWorkOrders ? '-' : (woCounts?.estimate_pending_approval || 0)}
-                        </TableCell>
-                      )}
-                      {columnOptions.find(col => col.id === 'status')?.visible && (
+                       {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && (
+                         <TableCell className="text-center tabular-nums text-yellow-600">
+                           {isLoadingWorkOrders ? '-' : (woCounts?.estimate_pending_approval || 0)}
+                         </TableCell>
+                       )}
+                       {columnOptions.find(col => col.id === 'wo_total')?.visible && (
+                         <TableCell className="text-center tabular-nums font-semibold">
+                           {isLoadingWorkOrders ? '-' : (woCounts?.total || 0)}
+                         </TableCell>
+                       )}
+                       {columnOptions.find(col => col.id === 'status')?.visible && (
                         <TableCell>
                           <Badge variant={location.is_active ? 'default' : 'secondary'}>
                             {location.is_active ? 'Active' : 'Inactive'}
