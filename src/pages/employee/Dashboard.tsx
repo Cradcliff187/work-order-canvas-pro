@@ -85,7 +85,14 @@ const EmployeeDashboard = () => {
   };
 
   const handleClockIn = (workOrderId?: string, projectId?: string) => {
-    clockIn.mutate({ workOrderId, projectId });
+    console.log('Dashboard clock-in:', { workOrderId, projectId });
+    if (workOrderId) {
+      clockIn.mutate({ workOrderId });
+    } else if (projectId) {
+      clockIn.mutate({ projectId });
+    } else {
+      console.error('No workOrderId or projectId provided to clock-in');
+    }
   };
 
   if (isError) {
