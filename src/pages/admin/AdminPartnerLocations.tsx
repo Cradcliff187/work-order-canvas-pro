@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, MapPin, Building2, CheckSquare, RotateCcw } from 'lucide-react';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { useWorkOrdersByLocation } from '@/hooks/useWorkOrdersByLocation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useViewMode } from '@/hooks/useViewMode';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -77,6 +78,9 @@ export default function AdminPartnerLocations() {
   const { data: allLocations = [], isLoading: locationsLoading, error: locationsError, refetch: refetchLocations } = usePartnerLocations();
   const { data: organizations = [], isLoading: orgsLoading, error: orgsError, refetch: refetchOrgs } = useOrganizations();
   const { deleteLocation } = usePartnerLocationMutations();
+  
+  // Import work orders hook
+  const { data: workOrderCounts = {}, isLoading: workOrdersLoading } = useWorkOrdersByLocation();
 
   const isLoading = locationsLoading || orgsLoading;
   const loadError = locationsError || orgsError;
@@ -347,7 +351,9 @@ export default function AdminPartnerLocations() {
       {/* Main Content */}
       <LocationTable
         data={filteredLocations}
+        workOrderCounts={workOrderCounts}
         isLoading={isLoading}
+        isLoadingWorkOrders={workOrdersLoading}
         filters={{
           search: searchTerm,
           organization_id: selectedOrganization,

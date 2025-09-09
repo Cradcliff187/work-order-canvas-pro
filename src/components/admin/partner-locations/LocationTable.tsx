@@ -51,9 +51,22 @@ interface PartnerLocation {
   created_at: string;
 }
 
+interface WorkOrderCounts {
+  received: number;
+  assigned: number;
+  in_progress: number;
+  completed: number;
+  cancelled: number;
+  estimate_needed: number;
+  estimate_pending_approval: number;
+  total: number;
+}
+
 export interface LocationTableProps {
   data: PartnerLocation[];
+  workOrderCounts?: Record<string, WorkOrderCounts>;
   isLoading: boolean;
+  isLoadingWorkOrders?: boolean;
   filters: LocationFilters;
   onFiltersChange: (filters: LocationFilters) => void;
   onClearFilters: () => void;
@@ -81,7 +94,9 @@ export interface LocationTableProps {
 
 export function LocationTable({
   data,
+  workOrderCounts = {},
   isLoading,
+  isLoadingWorkOrders = false,
   filters,
   onFiltersChange,
   onClearFilters,
@@ -121,20 +136,30 @@ export function LocationTable({
 
   // Export functionality
   const handleExport = (format: 'csv' | 'excel') => {
-    const exportData = data.map(location => ({
-      'Organization': organizationMap[location.organization_id]?.name || '',
-      'Location #': location.location_number,
-      'Location Name': location.location_name,
-      'Address': formatAddress(location),
-      'City': location.city || '',
-      'State': location.state || '',
-      'ZIP': location.zip_code || '',
-      'Contact': location.contact_name || '',
-      'Email': location.contact_email || '',
-      'Phone': location.contact_phone || '',
-      'Status': location.is_active ? 'Active' : 'Inactive',
-      'Created': new Date(location.created_at).toLocaleDateString(),
-    }));
+    const exportData = data.map(location => {
+      const woCounts = workOrderCounts[location.id];
+      return {
+        'Organization': organizationMap[location.organization_id]?.name || '',
+        'Location #': location.location_number,
+        'Location Name': location.location_name,
+        'Address': formatAddress(location),
+        'City': location.city || '',
+        'State': location.state || '',
+        'ZIP': location.zip_code || '',
+        'Contact': location.contact_name || '',
+        'Email': location.contact_email || '',
+        'Phone': location.contact_phone || '',
+        'Status': location.is_active ? 'Active' : 'Inactive',
+        'WO Received': woCounts?.received || 0,
+        'WO Assigned': woCounts?.assigned || 0,
+        'WO In Progress': woCounts?.in_progress || 0,
+        'WO Completed': woCounts?.completed || 0,
+        'WO Cancelled': woCounts?.cancelled || 0,
+        'WO Est. Needed': woCounts?.estimate_needed || 0,
+        'WO Est. Pending': woCounts?.estimate_pending_approval || 0,
+        'Created': new Date(location.created_at).toLocaleDateString(),
+      };
+    });
 
     const columns: ExportColumn[] = [
       { key: 'Organization', label: 'Organization', type: 'string' },
@@ -148,6 +173,13 @@ export function LocationTable({
       { key: 'Email', label: 'Email', type: 'string' },
       { key: 'Phone', label: 'Phone', type: 'string' },
       { key: 'Status', label: 'Status', type: 'string' },
+      { key: 'WO Received', label: 'WO Received', type: 'number' },
+      { key: 'WO Assigned', label: 'WO Assigned', type: 'number' },
+      { key: 'WO In Progress', label: 'WO In Progress', type: 'number' },
+      { key: 'WO Completed', label: 'WO Completed', type: 'number' },
+      { key: 'WO Cancelled', label: 'WO Cancelled', type: 'number' },
+      { key: 'WO Est. Needed', label: 'WO Est. Needed', type: 'number' },
+      { key: 'WO Est. Pending', label: 'WO Est. Pending', type: 'number' },
       { key: 'Created', label: 'Created', type: 'string' },
     ];
     
@@ -265,6 +297,12 @@ export function LocationTable({
                     { 
                       label: 'Contact', 
                       value: location.contact_name || 'No contact' 
+                    },
+                    {
+                      label: 'Work Orders',
+                      value: workOrderCounts[location.id] 
+                        ? `${workOrderCounts[location.id].in_progress + workOrderCounts[location.id].assigned} active`
+                        : '0 active'
                     }
                   ]}
                   actions={[
@@ -410,6 +448,13 @@ export function LocationTable({
                   {columnOptions.find(col => col.id === 'state')?.visible && <TableHead>State</TableHead>}
                   {columnOptions.find(col => col.id === 'zip_code')?.visible && <TableHead>ZIP</TableHead>}
                   {columnOptions.find(col => col.id === 'contact_name')?.visible && <TableHead>Contact</TableHead>}
+                  {columnOptions.find(col => col.id === 'wo_received')?.visible && <TableHead className="text-center">Received</TableHead>}
+                  {columnOptions.find(col => col.id === 'wo_assigned')?.visible && <TableHead className="text-center">Assigned</TableHead>}
+                  {columnOptions.find(col => col.id === 'wo_in_progress')?.visible && <TableHead className="text-center">In Progress</TableHead>}
+                  {columnOptions.find(col => col.id === 'wo_completed')?.visible && <TableHead className="text-center">Completed</TableHead>}
+                  {columnOptions.find(col => col.id === 'wo_cancelled')?.visible && <TableHead className="text-center">Cancelled</TableHead>}
+                  {columnOptions.find(col => col.id === 'wo_estimate_needed')?.visible && <TableHead className="text-center">Est. Needed</TableHead>}
+                  {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && <TableHead className="text-center">Est. Pending</TableHead>}
                   {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
                   {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
@@ -461,22 +506,31 @@ export function LocationTable({
                       />
                     </TableHead>
                   )}
-                  {columnOptions.find(col => col.id === 'organization')?.visible && <TableHead>Organization</TableHead>}
-                  {columnOptions.find(col => col.id === 'location_number')?.visible && <TableHead>Location #</TableHead>}
-                  {columnOptions.find(col => col.id === 'location_name')?.visible && <TableHead>Location Name</TableHead>}
-                  {columnOptions.find(col => col.id === 'address')?.visible && <TableHead>Address</TableHead>}
-                  {columnOptions.find(col => col.id === 'city')?.visible && <TableHead>City</TableHead>}
-                  {columnOptions.find(col => col.id === 'state')?.visible && <TableHead>State</TableHead>}
-                  {columnOptions.find(col => col.id === 'zip_code')?.visible && <TableHead>ZIP</TableHead>}
-                  {columnOptions.find(col => col.id === 'contact_name')?.visible && <TableHead>Contact</TableHead>}
-                  {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
-                  {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
+                   {columnOptions.find(col => col.id === 'organization')?.visible && <TableHead>Organization</TableHead>}
+                   {columnOptions.find(col => col.id === 'location_number')?.visible && <TableHead>Location #</TableHead>}
+                   {columnOptions.find(col => col.id === 'location_name')?.visible && <TableHead>Location Name</TableHead>}
+                   {columnOptions.find(col => col.id === 'address')?.visible && <TableHead>Address</TableHead>}
+                   {columnOptions.find(col => col.id === 'city')?.visible && <TableHead>City</TableHead>}
+                   {columnOptions.find(col => col.id === 'state')?.visible && <TableHead>State</TableHead>}
+                   {columnOptions.find(col => col.id === 'zip_code')?.visible && <TableHead>ZIP</TableHead>}
+                   {columnOptions.find(col => col.id === 'contact_name')?.visible && <TableHead>Contact</TableHead>}
+                   {columnOptions.find(col => col.id === 'wo_received')?.visible && <TableHead className="text-center">Received</TableHead>}
+                   {columnOptions.find(col => col.id === 'wo_assigned')?.visible && <TableHead className="text-center">Assigned</TableHead>}
+                   {columnOptions.find(col => col.id === 'wo_in_progress')?.visible && <TableHead className="text-center">In Progress</TableHead>}
+                   {columnOptions.find(col => col.id === 'wo_completed')?.visible && <TableHead className="text-center">Completed</TableHead>}
+                   {columnOptions.find(col => col.id === 'wo_cancelled')?.visible && <TableHead className="text-center">Cancelled</TableHead>}
+                   {columnOptions.find(col => col.id === 'wo_estimate_needed')?.visible && <TableHead className="text-center">Est. Needed</TableHead>}
+                   {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && <TableHead className="text-center">Est. Pending</TableHead>}
+                   {columnOptions.find(col => col.id === 'status')?.visible && <TableHead>Status</TableHead>}
+                   {columnOptions.find(col => col.id === 'created_at')?.visible && <TableHead>Created</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.map((location) => {
                   const org = organizationMap[location.organization_id];
+                  const woCounts = workOrderCounts[location.id];
+                  
                   return (
                     <TableRow
                       key={location.id}
@@ -542,6 +596,41 @@ export function LocationTable({
                       {columnOptions.find(col => col.id === 'contact_name')?.visible && (
                         <TableCell className="max-w-[200px] truncate">
                           {location.contact_name || '-'}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'wo_received')?.visible && (
+                        <TableCell className="text-center tabular-nums">
+                          {isLoadingWorkOrders ? '-' : (woCounts?.received || 0)}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'wo_assigned')?.visible && (
+                        <TableCell className="text-center tabular-nums font-medium">
+                          {isLoadingWorkOrders ? '-' : (woCounts?.assigned || 0)}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'wo_in_progress')?.visible && (
+                        <TableCell className="text-center tabular-nums font-medium text-blue-600">
+                          {isLoadingWorkOrders ? '-' : (woCounts?.in_progress || 0)}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'wo_completed')?.visible && (
+                        <TableCell className="text-center tabular-nums text-green-600">
+                          {isLoadingWorkOrders ? '-' : (woCounts?.completed || 0)}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'wo_cancelled')?.visible && (
+                        <TableCell className="text-center tabular-nums text-red-600">
+                          {isLoadingWorkOrders ? '-' : (woCounts?.cancelled || 0)}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'wo_estimate_needed')?.visible && (
+                        <TableCell className="text-center tabular-nums text-orange-600">
+                          {isLoadingWorkOrders ? '-' : (woCounts?.estimate_needed || 0)}
+                        </TableCell>
+                      )}
+                      {columnOptions.find(col => col.id === 'wo_estimate_pending')?.visible && (
+                        <TableCell className="text-center tabular-nums text-yellow-600">
+                          {isLoadingWorkOrders ? '-' : (woCounts?.estimate_pending_approval || 0)}
                         </TableCell>
                       )}
                       {columnOptions.find(col => col.id === 'status')?.visible && (
