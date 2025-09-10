@@ -68,7 +68,8 @@ export function useClockStatus(): ClockStatusReturn {
       };
     },
     enabled: !!profile?.id,
-    refetchInterval: 30000, // 30 seconds
+    refetchInterval: (data) => data ? 30000 : 120000, // 30s when clocked in, 2min when not
+    refetchIntervalInBackground: false, // Stop polling when tab inactive
     staleTime: 15000, // 15 seconds
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
