@@ -40,6 +40,11 @@ export function FloatingClockWidget() {
     setSelectedOption(null);
   }, [setIsOpen]);
   
+  // Hide FAB on dashboard when not clocked (dashboard shows hero card instead)
+  if (location.pathname === '/employee/dashboard' && !clockData.isClocked) {
+    return null;
+  }
+  
 
 
   return (

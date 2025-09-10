@@ -29,7 +29,8 @@ const EmployeeDashboard = () => {
     isError
   } = useEmployeeDashboard();
 
-  const { clockIn, clockOut, isClockingIn, isClockingOut } = useClockState();
+  const clockData = useClockState();
+  const { clockIn, clockOut, isClockingIn, isClockingOut } = clockData;
   const { data: allWorkItems, isLoading: workItemsLoading } = useAllWorkItems();
   const { data: todayHours, isLoading: todayHoursLoading } = useTodayHours();
   const { filters, updateFilter } = useDashboardFilters();
@@ -118,11 +119,13 @@ const EmployeeDashboard = () => {
       {/* Debug Profile Info */}
       <DebugProfile />
 
-      {/* Hero Clock Card */}
-      <ClockStatusCard 
-        onClockOut={handleClockOut}
-        isClockingOut={isClockingOut}
-      />
+      {/* Hero Clock Card - Only show when NOT clocked */}
+      {!clockData.isClocked && (
+        <ClockStatusCard 
+          onClockOut={handleClockOut}
+          isClockingOut={isClockingOut}
+        />
+      )}
 
       {/* Active Timer Bar */}
       <ActiveTimerBar />
