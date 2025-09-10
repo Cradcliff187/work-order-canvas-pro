@@ -85,7 +85,11 @@ export class ClockErrorBoundary extends Component<ClockErrorBoundaryProps, Clock
 
   private static categorizeError(error: Error): ClockErrorBoundaryState['errorCategory'] {
     const message = error.message.toLowerCase();
-    console.log('[Clock Error Boundary] Categorizing error:', error.message);
+    console.error('[Clock Error Boundary] FULL ERROR DETAILS:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     
     if (message.includes('auth') || message.includes('profile') || message.includes('unauthorized') || message.includes('authentication expired')) {
       return 'auth';
@@ -98,6 +102,10 @@ export class ClockErrorBoundary extends Component<ClockErrorBoundaryProps, Clock
     }
     if (message.includes('no active clock session found') || message.includes('session') || message.includes('clock')) {
       return 'session';
+    }
+    if (message.includes('hook') || message.includes('rendered more hooks') || message.includes('rendered fewer hooks')) {
+      console.error('[Clock Error Boundary] REACT HOOKS VIOLATION DETECTED:', error.message);
+      return 'component';
     }
     
     return 'component';
