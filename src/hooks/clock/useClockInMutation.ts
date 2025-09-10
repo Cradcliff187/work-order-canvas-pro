@@ -102,22 +102,35 @@ export function useClockInMutation(): ClockInMutationReturn {
         }
 
         if (existingSessions && existingSessions.length > 0) {
-          console.log('[Clock In] Found existing active sessions, closing them:', existingSessions.length);
-          // Close all existing active sessions to prevent orphaned states
+          console.log('[Clock In] Closing existing sessions:', existingSessions.length);
+          
+          // Close all sessions properly with Promise.all
           const now = new Date();
-          for (const session of existingSessions) {
+          const closePromises = existingSessions.map(session => {
             const clockInTime = new Date(session.clock_in_time);
             const hoursWorked = (now.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
             
-            await supabase
+            return supabase
               .from('employee_reports')
               .update({
                 clock_out_time: now.toISOString(),
                 hours_worked: Math.round(hoursWorked * 100) / 100
               })
               .eq('id', session.id);
+          });
+          
+          const results = await Promise.all(closePromises);
+          const failed = results.filter(r => r.error);
+          
+          if (failed.length > 0) {
+            console.error('[Clock In] Failed to close some sessions:', failed);
+            throw new Error('Failed to close existing sessions. Please try again.');
           }
-          console.log('[Clock In] Closed all existing active sessions');
+          
+          // Add delay for DB consistency
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          console.log('[Clock In] Successfully closed all existing sessions');
         }
 
         // Create employee report with clock in time and location
