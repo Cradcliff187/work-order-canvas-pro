@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Clock, MapPin, User, Building, Briefcase, FolderOpen } from 'lucide-react';
@@ -8,8 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { BasicClockButton } from '@/components/employee/BasicClockButton';
 import { useClockState } from '@/hooks/useClockState';
+import { useClockWidgetActions } from '@/hooks/useClockWidgetActions';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import type { ClockOption } from '@/components/employee/clock/types';
 
 // Unified assignment interface
 interface UnifiedAssignment {
@@ -49,6 +52,8 @@ export default function AssignmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isClocked, clockInTime, workOrderId, projectId } = useClockState();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const { data: assignment, isLoading, error } = useQuery({
     queryKey: ['assignment', id],
@@ -202,7 +207,7 @@ export default function AssignmentDetail() {
       }
 
       // If nothing found, throw specific error
-      throw new Error('Assignment not found - you may not be assigned to this work order or project');
+      throw new Error('Assignment not found. You may not be assigned to this work order or project, or the ID may be invalid.');
     },
     enabled: !!id
   });
@@ -224,7 +229,16 @@ export default function AssignmentDetail() {
           </Button>
           <h1 className="text-lg font-semibold">Assignment Not Found</h1>
         </div>
-        <p className="text-muted-foreground">The assignment you're looking for could not be found.</p>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground mb-4">
+              {error instanceof Error ? error.message : 'The assignment you\'re looking for could not be found.'}
+            </p>
+            <Button onClick={() => navigate('/employee/dashboard')} variant="outline">
+              Return to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -232,6 +246,32 @@ export default function AssignmentDetail() {
   const workOrder = assignment?.work_order;
   const project = assignment?.project;
   const item = workOrder || project;
+
+  // Create clock option for this assignment
+  const clockOption: ClockOption | null = item ? {
+    id: item.id,
+    type: assignment.type,
+    title: assignment.type === 'work_order' ? workOrder!.title : project!.name,
+    number: assignment.type === 'work_order' ? workOrder!.work_order_number : project!.project_number || '',
+    section: 'assigned' as const,
+  } : null;
+
+  // Check if currently clocked into this specific item
+  const isClockedIntoThisItem = isClocked && (
+    (assignment.type === 'work_order' && workOrderId === workOrder?.id) ||
+    (assignment.type === 'project' && projectId === project?.id)
+  );
+
+  // Use clock widget actions for this specific assignment
+  const { handleClockAction } = useClockWidgetActions({
+    selectedOption: clockOption,
+    onSuccess: () => {
+      toast({
+        title: isClocked ? "Clocked Out" : "Clocked In",
+        description: `Successfully ${isClocked ? 'clocked out of' : 'clocked into'} ${clockOption?.title}`,
+      });
+    },
+  });
 
   return (
     <div className="p-4 space-y-4">
@@ -346,23 +386,55 @@ export default function AssignmentDetail() {
               <div>
                 <p className="text-sm font-medium">Current Status</p>
                 <p className="text-sm text-muted-foreground">
-                  {isClocked 
-                    ? assignment.type === 'work_order' 
-                      ? `Clocked in ${workOrderId === workOrder?.id ? 'to this work order' : 'to another item'}`
-                      : `Clocked in ${projectId === project?.id ? 'to this project' : 'to another item'}`
-                    : 'Not clocked in'
-                  }
+                  {isClocked ? (
+                    isClockedIntoThisItem ? (
+                      <span className="text-success">
+                        Clocked in to this {assignment.type === 'work_order' ? 'work order' : 'project'}
+                      </span>
+                    ) : (
+                      <span className="text-warning">
+                        Clocked in to a different {assignment.type === 'work_order' ? 'work order' : 'project'}
+                      </span>
+                    )
+                  ) : (
+                    'Not clocked in'
+                  )}
                 </p>
+                {isClocked && clockInTime && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Since {format(new Date(clockInTime), 'h:mm a')}
+                  </p>
+                )}
               </div>
             </div>
             
-            <BasicClockButton 
-              onClick={() => {
-                // BasicClockButton now handles the proper logic for both work orders and projects
-                // based on the useClockWidgetActions hook which already supports both types
-              }}
-              className="w-full"
-            />
+            <div className="flex gap-2">
+              <BasicClockButton 
+                onClick={async () => {
+                  if (!clockOption) return;
+                  setIsProcessing(true);
+                  try {
+                    await handleClockAction();
+                  } catch (error) {
+                    console.error('Clock action failed:', error);
+                  } finally {
+                    setIsProcessing(false);
+                  }
+                }}
+                loading={isProcessing}
+                className="flex-1"
+              />
+              
+              {item && (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/employee/time-reports?${assignment.type === 'work_order' ? 'workOrderId' : 'projectId'}=${item.id}`)}
+                  className="flex-shrink-0"
+                >
+                  View Reports
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
