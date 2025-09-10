@@ -428,7 +428,7 @@ export type Database = {
           report_date: string
           total_labor_cost: number | null
           updated_at: string
-          work_order_id: string
+          work_order_id: string | null
           work_performed: string
         }
         Insert: {
@@ -452,7 +452,7 @@ export type Database = {
           report_date: string
           total_labor_cost?: number | null
           updated_at?: string
-          work_order_id: string
+          work_order_id?: string | null
           work_performed: string
         }
         Update: {
@@ -476,7 +476,7 @@ export type Database = {
           report_date?: string
           total_labor_cost?: number | null
           updated_at?: string
-          work_order_id?: string
+          work_order_id?: string | null
           work_performed?: string
         }
         Relationships: [
