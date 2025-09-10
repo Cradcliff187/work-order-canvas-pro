@@ -213,12 +213,7 @@ export class ClockErrorBoundary extends Component<ClockErrorBoundaryProps, Clock
       }
       
       if (fallbackLevel === 'basic' || fallbackLevel === 'simplified') {
-        return (
-          <>
-            {this.renderSimplifiedClock()}
-            {this.renderErrorUI()}
-          </>
-        );
+        return this.renderErrorUI();
       }
 
       return this.renderErrorUI();
