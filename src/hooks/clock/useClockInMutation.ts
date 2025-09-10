@@ -144,26 +144,78 @@ export function useClockInMutation(): ClockInMutationReturn {
           console.log('[Clock In] Successfully closed all existing sessions');
         }
 
-        // Create employee report with clock in time and location
-        const { error: reportError } = await supabase
-          .from('employee_reports')
-          .insert({
-            employee_user_id: profile.id,
-            work_order_id: finalWorkOrderId || null,
-            project_id: projectId || null,
-            report_date: new Date().toISOString().split('T')[0],
-            clock_in_time: new Date().toISOString(),
-            hourly_rate_snapshot: userProfile.hourly_cost_rate,
-            hours_worked: 0,
-            work_performed: '',
-            ...locationData
-          });
+        // Smart retry for unique constraint conflicts
+        const maxRetries = 3;
+        let lastError = null;
 
-        if (reportError) {
-          throw reportError;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            const { data: newSession, error: reportError } = await supabase
+              .from('employee_reports')
+              .insert({
+                employee_user_id: profile.id,
+                work_order_id: finalWorkOrderId || null,
+                project_id: projectId || null,
+                report_date: new Date().toISOString().split('T')[0],
+                clock_in_time: new Date().toISOString(),
+                hourly_rate_snapshot: userProfile.hourly_cost_rate,
+                hours_worked: 0,
+                work_performed: '',
+                ...locationData
+              })
+              .select()
+              .single();
+
+            if (!reportError) {
+              console.log('[Clock In] Successfully created session on attempt', attempt);
+              return locationData; // Success!
+            }
+
+            // Check if it's the unique constraint violation
+            if (reportError.code === '23505' || reportError.message?.includes('duplicate key')) {
+              lastError = reportError;
+              
+              if (attempt < maxRetries) {
+                console.log(`[Clock In] Unique constraint conflict, retry ${attempt}/${maxRetries}`);
+                // Exponential backoff: 750ms, 1500ms, 3000ms
+                await new Promise(resolve => setTimeout(resolve, 750 * attempt));
+                
+                // Re-check if old sessions need closing
+                const { data: stillActive } = await supabase
+                  .from('employee_reports')
+                  .select('id')
+                  .eq('employee_user_id', profile.id)
+                  .is('clock_out_time', null)
+                  .single();
+                
+                if (stillActive) {
+                  // Force close it
+                  await supabase
+                    .from('employee_reports')
+                    .update({
+                      clock_out_time: new Date().toISOString(),
+                      hours_worked: 0
+                    })
+                    .eq('id', stillActive.id);
+                  
+                  // Wait for commit
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                continue; // Retry
+              }
+            } else {
+              // Different error, throw immediately
+              throw reportError;
+            }
+          } catch (error) {
+            if (attempt === maxRetries) {
+              throw error || lastError || new Error('Failed to create clock session');
+            }
+          }
         }
-        
-        return locationData;
+
+        // If we get here, all retries failed
+        throw lastError || new Error('Failed to create clock session after retries');
       } finally {
         setIsClockingIn(false);
         // Clear lock
