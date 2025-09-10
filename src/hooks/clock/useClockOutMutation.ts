@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { getCurrentLocationCached, getAddressFromLocationCached, formatLocationForClockOut } from '@/services/locationService';
 import type { ClockOutResult, ClockStateData, ClockOutLocationData } from './types';
 
+const CLOCK_OPERATION_KEY = 'clock-operation-out-progress';
+
 interface ClockOutMutationReturn {
   clockOut: UseMutationResult<ClockOutResult, Error, boolean>;
   isClockingOut: boolean;
@@ -43,6 +45,15 @@ export function useClockOutMutation(): ClockOutMutationReturn {
 
   const clockOut = useMutation({
     mutationFn: async (forceClockOut: boolean = false): Promise<ClockOutResult> => {
+      // Check if operation already in progress
+      if (sessionStorage.getItem(CLOCK_OPERATION_KEY) === 'true') {
+        console.warn('[Clock Out] Operation already in progress');
+        throw new Error('Clock operation in progress. Please wait.');
+      }
+
+      // Set lock
+      sessionStorage.setItem(CLOCK_OPERATION_KEY, 'true');
+
       if (!profile?.id) {
         console.error('[Clock Out] No profile found');
         throw new Error('No profile found. Please refresh and try again.');
@@ -125,6 +136,8 @@ export function useClockOutMutation(): ClockOutMutationReturn {
         throw error;
       } finally {
         setIsClockingOut(false);
+        // Clear lock
+        sessionStorage.removeItem(CLOCK_OPERATION_KEY);
       }
     },
     onMutate: () => {

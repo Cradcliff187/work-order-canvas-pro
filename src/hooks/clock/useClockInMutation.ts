@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { getCurrentLocationCached, getAddressFromLocationCached, formatLocationForClockIn } from '@/services/locationService';
 import type { ClockInParams, ClockInResult } from './types';
 
+const CLOCK_OPERATION_KEY = 'clock-operation-in-progress';
+
 interface ClockInMutationReturn {
   clockIn: UseMutationResult<ClockInResult | null, Error, ClockInParams>;
   isClockingIn: boolean;
@@ -19,6 +21,15 @@ export function useClockInMutation(): ClockInMutationReturn {
 
   const clockIn = useMutation({
     mutationFn: async ({ workOrderId, projectId }: ClockInParams = {}): Promise<ClockInResult | null> => {
+      // Check if operation already in progress
+      if (sessionStorage.getItem(CLOCK_OPERATION_KEY) === 'true') {
+        console.warn('[Clock In] Operation already in progress');
+        throw new Error('Clock operation in progress. Please wait.');
+      }
+
+      // Set lock
+      sessionStorage.setItem(CLOCK_OPERATION_KEY, 'true');
+
       console.log('=== CLOCK IN DIAGNOSTIC ===');
       console.log('Auth Profile:', { 
         id: profile?.id, 
@@ -155,6 +166,8 @@ export function useClockInMutation(): ClockInMutationReturn {
         return locationData;
       } finally {
         setIsClockingIn(false);
+        // Clear lock
+        sessionStorage.removeItem(CLOCK_OPERATION_KEY);
       }
     },
     onMutate: () => {
