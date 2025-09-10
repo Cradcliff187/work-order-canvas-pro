@@ -28,7 +28,7 @@ export function useClockStatus(): ClockStatusReturn {
         throw new Error('No employee ID available');
       }
 
-      console.log('[Clock Status] Fetching active clock session for employee:', profile.id);
+      
 
       const { data, error } = await supabase
         .from('employee_reports')
@@ -46,7 +46,6 @@ export function useClockStatus(): ClockStatusReturn {
       }
       
       if (!data?.clock_in_time) {
-        console.log('[Clock Status] No active clock session found');
         return null;
       }
 
