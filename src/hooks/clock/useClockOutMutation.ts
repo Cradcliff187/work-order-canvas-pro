@@ -43,8 +43,6 @@ export function useClockOutMutation(): ClockOutMutationReturn {
 
   const clockOut = useMutation({
     mutationFn: async (forceClockOut: boolean = false): Promise<ClockOutResult> => {
-      console.log('[Clock Out] Starting clock out process, forceClockOut:', forceClockOut);
-      
       if (!profile?.id) {
         console.error('[Clock Out] No profile found');
         throw new Error('No profile found. Please refresh and try again.');
