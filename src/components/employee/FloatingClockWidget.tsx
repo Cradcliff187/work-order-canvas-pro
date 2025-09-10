@@ -41,26 +41,26 @@ export function FloatingClockWidget() {
   }, [setIsOpen]);
   
   // Hide FAB on dashboard when not clocked (dashboard shows hero card instead)
-  if (location.pathname === '/employee/dashboard' && !clockData.isClocked) {
-    return null;
-  }
-  
-
+  const shouldHideFAB = location.pathname === '/employee/dashboard' && !clockData.isClocked;
 
   return (
     <>
-      {isMobile ? (
-        <MobileClockFAB
-          isClocked={clockData.isClocked}
-          elapsedTime={elapsedTime}
-          onFabClick={handleFabClick}
-        />
-      ) : (
-        <ClockFAB
-          isClocked={clockData.isClocked}
-          elapsedTime={elapsedTime}
-          onFabClick={handleFabClick}
-        />
+      {!shouldHideFAB && (
+        <>
+          {isMobile ? (
+            <MobileClockFAB
+              isClocked={clockData.isClocked}
+              elapsedTime={elapsedTime}
+              onFabClick={handleFabClick}
+            />
+          ) : (
+            <ClockFAB
+              isClocked={clockData.isClocked}
+              elapsedTime={elapsedTime}
+              onFabClick={handleFabClick}
+            />
+          )}
+        </>
       )}
       
       <ClockSheet
