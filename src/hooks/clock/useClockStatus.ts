@@ -25,7 +25,7 @@ export function useClockStatus(): ClockStatusReturn {
     queryKey: ['employee-clock-state', profile?.id],
     queryFn: async (): Promise<ClockStateData | null> => {
       if (!profile?.id) {
-        throw new Error('No employee ID available');
+        return null;
       }
 
       
@@ -71,7 +71,7 @@ export function useClockStatus(): ClockStatusReturn {
     refetchInterval: (data) => data ? 30000 : 120000, // 30s when clocked in, 2min when not
     refetchIntervalInBackground: false, // Stop polling when tab inactive
     staleTime: 15000, // 15 seconds
-    retry: 3,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
