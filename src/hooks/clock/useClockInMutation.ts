@@ -90,10 +90,13 @@ export function useClockInMutation(): ClockInMutationReturn {
           console.log('[Clock In] Location capture skipped:', err);
         }
 
-        // SIMPLIFIED APPROACH: Close any existing sessions without checking first
-        console.log('[Clock In] Closing any existing sessions...');
-        
-        const { error: closeError } = await db
+        // Get today's date for the constraint check
+        const todayDate = new Date().toISOString().split('T')[0];
+
+        // FORCE close ALL sessions for today (the constraint is per day)
+        console.log('[Clock In] Force closing all sessions for today:', todayDate);
+
+        const { data: closedSessions, error: closeError } = await db
           .from('employee_reports')
           .update({
             clock_out_time: new Date().toISOString(),
@@ -101,66 +104,51 @@ export function useClockInMutation(): ClockInMutationReturn {
             notes: 'Auto-closed for new clock in'
           })
           .eq('employee_user_id', profile.id)
-          .is('clock_out_time', null);
-        
-        // Don't check closeError - it's fine if nothing was updated
-        console.log('[Clock In] Cleanup complete, creating new session...');
-        
-        // Wait briefly for DB consistency
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Create new session with retry for constraint violations
-        let attempts = 0;
-        const maxAttempts = 3;
-        
-        while (attempts < maxAttempts) {
-          attempts++;
-          
-          try {
-            const { data: newSession, error: insertError } = await db
-              .from('employee_reports')
-              .insert({
-                employee_user_id: profile.id,
-                work_order_id: finalWorkOrderId || null,
-                project_id: projectId || null,
-                report_date: new Date().toISOString().split('T')[0],
-                clock_in_time: new Date().toISOString(),
-                hourly_rate_snapshot: userProfile.hourly_cost_rate,
-                hours_worked: 0,
-                work_performed: '',
-                ...locationData
-              })
-              .select()
-              .single();
-            
-            if (!insertError) {
-              console.log('[Clock In] SUCCESS - Session created on attempt', attempts);
-              return locationData;
-            }
-            
-            // Check if it's a constraint violation
-            if (insertError.code === '23505' || insertError.message?.includes('duplicate')) {
-              console.log(`[Clock In] Constraint violation on attempt ${attempts}, retrying...`);
-              
-              if (attempts < maxAttempts) {
-                // Exponential backoff
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-                continue;
-              }
-            }
-            
-            // Other error or max attempts reached
-            throw insertError;
-            
-          } catch (err) {
-            if (attempts >= maxAttempts) {
-              console.error('[Clock In] All attempts failed:', err);
-              throw new Error('Unable to clock in after multiple attempts. Please try again.');
-            }
-          }
+          .eq('report_date', todayDate)
+          .is('clock_out_time', null)
+          .select();
+
+        if (closedSessions && closedSessions.length > 0) {
+          console.log(`[Clock In] Closed ${closedSessions.length} existing sessions`);
+        } else {
+          console.log('[Clock In] No existing sessions to close');
         }
-        
-        throw new Error('Clock in failed - please try again');
+
+        // Wait for database to fully commit the updates
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Now try to create the new session (no retry needed if we properly closed old ones)
+        console.log('[Clock In] Creating new session...');
+
+        const { data: newSession, error: insertError } = await db
+          .from('employee_reports')
+          .insert({
+            employee_user_id: profile.id,
+            work_order_id: finalWorkOrderId || null,
+            project_id: projectId || null,
+            report_date: todayDate,
+            clock_in_time: new Date().toISOString(),
+            hourly_rate_snapshot: userProfile.hourly_cost_rate,
+            hours_worked: 0,
+            work_performed: '',
+            ...locationData
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('[Clock In] Failed to create session:', insertError);
+          
+          // If still getting constraint violation, there's a stuck session
+          if (insertError.code === '23505') {
+            throw new Error('There is an existing clock session for today that could not be closed. Please contact support to clear your time records.');
+          }
+          
+          throw insertError;
+        }
+
+        console.log('[Clock In] SUCCESS - Session created');
+        return locationData;
         
       } finally {
         setIsClockingIn(false);
