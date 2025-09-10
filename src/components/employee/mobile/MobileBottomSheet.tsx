@@ -49,6 +49,16 @@ export function MobileBottomSheet({
     }
   }, [isOpen, onOpen, hapticFeedback, onFieldSave]);
 
+  // Lock body scroll when open - MUST be before early return
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isOpen]);
+
   // Touch event handlers for swipe gesture
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!swipeToClose) return;
@@ -119,16 +129,6 @@ export function MobileBottomSheet({
 
   // Prevent rendering when not open and not closing
   if (!isOpen && !isClosing) return null;
-
-  // Lock body scroll when open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isOpen]);
 
   return (
     <div 
