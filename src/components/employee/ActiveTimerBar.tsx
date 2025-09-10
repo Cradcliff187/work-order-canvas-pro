@@ -1,8 +1,9 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, Loader2 } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { useClockState } from '@/hooks/useClockState';
+import { useClockWidget } from '@/contexts/ClockWidgetContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ElapsedTimeDisplay } from './clock/ElapsedTimeDisplay';
@@ -13,10 +14,10 @@ export const ActiveTimerBar: React.FC = () => {
     isClocked, 
     elapsedTime, 
     workOrderId, 
-    projectId, 
-    clockOut,
-    isClockingOut 
+    projectId
   } = useClockState();
+  
+  const { openClockWidget } = useClockWidget();
 
   // Get work item details
   const { data: workItem } = useQuery({
@@ -51,7 +52,7 @@ export const ActiveTimerBar: React.FC = () => {
   }
 
   const handleClockOut = () => {
-    clockOut.mutate(false);
+    openClockWidget();
   };
 
   return (
@@ -95,20 +96,10 @@ export const ActiveTimerBar: React.FC = () => {
             onClick={handleClockOut}
             variant="outline"
             size="sm"
-            disabled={isClockingOut}
             className="text-xs border-primary/30 hover:bg-primary/10"
           >
-            {isClockingOut ? (
-              <>
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                Clocking Out
-              </>
-            ) : (
-              <>
-                <Clock className="h-3 w-3 mr-1" />
-                Clock Out
-              </>
-            )}
+            <Clock className="h-3 w-3 mr-1" />
+            Clock Out
           </Button>
         </div>
       </CardContent>
