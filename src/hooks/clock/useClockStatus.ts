@@ -28,8 +28,6 @@ export function useClockStatus(): ClockStatusReturn {
         return null;
       }
 
-      
-
       const { data, error } = await supabase
         .from('employee_reports')
         .select('id, clock_in_time, clock_out_time, work_order_id, project_id, location_lat, location_lng, location_address, hourly_rate_snapshot')
