@@ -174,13 +174,19 @@ export function useClockInMutation(): ClockInMutationReturn {
       // Optimistic update: immediately show loading state
       setIsClockingIn(true);
     },
-    onSuccess: (locationData) => {
+    onSuccess: async (locationData) => {
+      // Wait for DB to be consistent
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Then invalidate queries
       queryClient.invalidateQueries({ queryKey: ['employee-clock-state'] });
+      
+      // Show success toast
       const locationText = locationData?.location_address ? 
         ` at ${locationData.location_address}` : '';
       toast({
         title: 'Clocked In',
-        description: `Successfully clocked in to your work assignment${locationText}.`,
+        description: `Successfully clocked in${locationText}`,
       });
     },
     onError: (error) => {
