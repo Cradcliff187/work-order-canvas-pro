@@ -90,35 +90,48 @@ export function useClockInMutation(): ClockInMutationReturn {
           console.log('[Clock In] Location capture skipped:', err);
         }
 
-        // Get today's date for the constraint check
+        // Get today's date for the constraint
         const todayDate = new Date().toISOString().split('T')[0];
 
-        // FORCE close ALL sessions for today (the constraint is per day)
-        console.log('[Clock In] Force closing all sessions for today:', todayDate);
+        console.log('[Clock In] Checking for existing report for this work order today...');
 
-        const { data: closedSessions, error: closeError } = await db
+        // Check if there's already a report for this work order today
+        const { data: existingReport } = await db
           .from('employee_reports')
-          .update({
-            clock_out_time: new Date().toISOString(),
-            hours_worked: 0,
-            notes: 'Auto-closed for new clock in'
-          })
+          .select('id, clock_out_time')
           .eq('employee_user_id', profile.id)
+          .eq('work_order_id', finalWorkOrderId)
           .eq('report_date', todayDate)
-          .is('clock_out_time', null)
-          .select();
+          .single();
 
-        if (closedSessions && closedSessions.length > 0) {
-          console.log(`[Clock In] Closed ${closedSessions.length} existing sessions`);
-        } else {
-          console.log('[Clock In] No existing sessions to close');
+        if (existingReport) {
+          console.log('[Clock In] Found existing report for this work order today, reopening it...');
+          
+          // Reopen the existing report by clearing clock_out_time and resetting clock_in_time
+          const { data: reopened, error: reopenError } = await db
+            .from('employee_reports')
+            .update({
+              clock_in_time: new Date().toISOString(),
+              clock_out_time: null,
+              hours_worked: 0,
+              work_performed: '',
+              ...locationData
+            })
+            .eq('id', existingReport.id)
+            .select()
+            .single();
+          
+          if (reopenError) {
+            console.error('[Clock In] Failed to reopen existing report:', reopenError);
+            throw new Error('Unable to clock in. You have already worked on this order today.');
+          }
+          
+          console.log('[Clock In] SUCCESS - Reopened existing report');
+          return locationData;
         }
 
-        // Wait for database to fully commit the updates
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Now try to create the new session (no retry needed if we properly closed old ones)
-        console.log('[Clock In] Creating new session...');
+        // No existing report, create a new one
+        console.log('[Clock In] No existing report, creating new session...');
 
         const { data: newSession, error: insertError } = await db
           .from('employee_reports')
@@ -131,23 +144,18 @@ export function useClockInMutation(): ClockInMutationReturn {
             hourly_rate_snapshot: userProfile.hourly_cost_rate,
             hours_worked: 0,
             work_performed: '',
+            is_retroactive: false,
             ...locationData
           })
           .select()
           .single();
 
         if (insertError) {
-          console.error('[Clock In] Failed to create session:', insertError);
-          
-          // If still getting constraint violation, there's a stuck session
-          if (insertError.code === '23505') {
-            throw new Error('There is an existing clock session for today that could not be closed. Please contact support to clear your time records.');
-          }
-          
-          throw insertError;
+          console.error('[Clock In] Failed to create new session:', insertError);
+          throw new Error('Unable to clock in. Please try a different work order or contact support.');
         }
 
-        console.log('[Clock In] SUCCESS - Session created');
+        console.log('[Clock In] SUCCESS - New session created');
         return locationData;
         
       } finally {
