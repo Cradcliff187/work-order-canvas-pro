@@ -43,6 +43,51 @@ export function useEmployeeReports() {
     enabled: !!user,
   });
 
+  // Get assigned projects for the employee
+  const assignedProjects = useQuery({
+    queryKey: ["employee-projects", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      // Get current user profile to get the profile ID
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!profile) return [];
+
+      // Get projects assigned to this employee through project_assignments
+      const { data: assignmentData, error: assignmentError } = await supabase
+        .from("project_assignments")
+        .select(`
+          project_id,
+          projects!project_assignments_project_id_fkey (
+            *,
+            employee_reports (
+              id,
+              report_date,
+              hours_worked,
+              total_labor_cost
+            )
+          )
+        `)
+        .eq("assigned_to", profile.id)
+        .order("created_at", { ascending: false });
+
+      if (assignmentError) throw assignmentError;
+      
+      // Transform the data to extract projects and add type field
+      const data = assignmentData?.map(assignment => ({
+        ...assignment.projects,
+        type: 'project' as const
+      })).filter(Boolean) || [];
+      return data;
+    },
+    enabled: !!user,
+  });
+
   // Get employee time reports
   const timeReports = useQuery({
     queryKey: ["employee-time-reports", user?.id],
@@ -66,6 +111,11 @@ export function useEmployeeReports() {
             work_order_number,
             title,
             store_location
+          ),
+          projects (
+            project_number,
+            name,
+            location_address
           )
         `)
         .eq("employee_user_id", profile.id)
@@ -251,6 +301,7 @@ export function useEmployeeReports() {
 
   return {
     assignedWorkOrders,
+    assignedProjects,
     timeReports,
     employeeProfile,
     getWorkOrder,

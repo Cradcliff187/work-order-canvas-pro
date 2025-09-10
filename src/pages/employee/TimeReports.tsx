@@ -12,10 +12,10 @@ import { useEmployeeReports } from "@/hooks/useEmployeeReports";
 import { Clock, Plus, FileText, Calendar } from "lucide-react";
 
 export default function EmployeeTimeReports() {
-  const { timeReports, assignedWorkOrders } = useEmployeeReports();
+  const { timeReports, assignedWorkOrders, assignedProjects } = useEmployeeReports();
   const isMobile = useIsMobile();
 
-  if (timeReports.isLoading || assignedWorkOrders.isLoading) {
+  if (timeReports.isLoading || assignedWorkOrders.isLoading || assignedProjects.isLoading) {
     return (
       <div className="space-y-6">
         <div className="h-8 bg-muted rounded animate-pulse" />
@@ -30,9 +30,19 @@ export default function EmployeeTimeReports() {
 
   const reports = timeReports.data || [];
   const workOrders = assignedWorkOrders.data || [];
-  const pendingReports = workOrders.filter(wo => 
+  const projects = assignedProjects.data || [];
+  
+  // Combine work orders and projects for pending reports
+  const pendingWorkOrders = workOrders.filter(wo => 
     wo.status === "assigned" || wo.status === "in_progress"
   );
+  const pendingProjects = projects.filter(project => 
+    project.status === "active"
+  );
+  const allPendingItems = [
+    ...pendingWorkOrders.map(wo => ({ ...wo, type: 'work_order' as const })),
+    ...pendingProjects
+  ];
 
   return (
     <div className="space-y-6">
@@ -88,32 +98,39 @@ export default function EmployeeTimeReports() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingReports.length}</div>
+            <div className="text-2xl font-bold">{allPendingItems.length}</div>
             <p className="text-xs text-muted-foreground">
-              Work orders awaiting reports
+              Work items awaiting reports
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Pending Work Orders */}
-      {pendingReports.length > 0 && (
+      {/* Pending Work Items */}
+      {allPendingItems.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Work Orders Awaiting Time Reports</CardTitle>
+            <CardTitle className="text-lg">Work Items Awaiting Time Reports</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {pendingReports.map((workOrder) => (
-                <div key={workOrder.id} className="flex items-center justify-between p-3 border rounded-lg">
+              {allPendingItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <p className="font-medium">
-                      {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`}
+                      {item.type === 'work_order' 
+                        ? (item.work_order_number || `WO-${item.id.slice(0, 8)}`)
+                        : (item.project_number || `PJ-${item.id.slice(0, 8)}`)
+                      }
                     </p>
-                    <p className="text-sm text-muted-foreground">{workOrder.title}</p>
-                    <p className="text-xs text-muted-foreground">{workOrder.store_location}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.type === 'work_order' ? item.title : item.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.type === 'work_order' ? item.store_location : item.location_address}
+                    </p>
                   </div>
-                  <Link to={`/employee/time-reports/submit/${workOrder.id}`}>
+                  <Link to={`/employee/time-reports/submit/${item.id}`}>
                     <Button size="sm">
                       <Plus className="h-4 w-4 mr-2" />
                       Submit Report
@@ -142,34 +159,46 @@ export default function EmployeeTimeReports() {
               <div className="hidden lg:block rounded-md border">
                 <Table className="admin-table">
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Work Order</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Hours</TableHead>
-                      <TableHead className="text-right">Labor Cost</TableHead>
-                      <TableHead>Work Performed</TableHead>
-                    </TableRow>
+                   <TableRow>
+                       <TableHead>Date</TableHead>
+                       <TableHead>Work Item</TableHead>
+                       <TableHead>Location</TableHead>
+                       <TableHead>Hours</TableHead>
+                       <TableHead className="text-right">Labor Cost</TableHead>
+                       <TableHead>Work Performed</TableHead>
+                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {reports.map((report) => (
-                      <TableRow 
-                        key={report.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => window.location.href = `/employee/time-reports/submit/${report.work_order_id}`}
-                      >
+                       <TableRow 
+                         key={report.id}
+                         className="cursor-pointer hover:bg-muted/50"
+                         onClick={() => {
+                           const targetId = report.work_order_id || report.project_id;
+                           if (targetId) {
+                             window.location.href = `/employee/time-reports/submit/${targetId}`;
+                           }
+                         }}
+                       >
                         <TableCell>
                           {format(new Date(report.report_date), "PP")}
                         </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium font-mono text-sm">
-                              {report.work_orders?.work_order_number || `WO-${report.work_order_id.slice(0, 8)}`}
-                            </p>
-                            <p className="text-sm text-muted-foreground">{report.work_orders?.title}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>{report.work_orders?.store_location}</TableCell>
+                         <TableCell>
+                           <div>
+                             <p className="font-medium font-mono text-sm">
+                               {report.work_order_id 
+                                 ? (report.work_orders?.work_order_number || `WO-${report.work_order_id.slice(0, 8)}`)
+                                 : (report.projects?.project_number || `PJ-${report.project_id?.slice(0, 8) || 'N/A'}`)
+                               }
+                             </p>
+                             <p className="text-sm text-muted-foreground">
+                               {report.work_order_id ? report.work_orders?.title : report.projects?.name}
+                             </p>
+                           </div>
+                         </TableCell>
+                         <TableCell>
+                           {report.work_order_id ? report.work_orders?.store_location : report.projects?.location_address}
+                         </TableCell>
                         <TableCell>{report.hours_worked} hrs</TableCell>
                         <TableCell className="text-right font-mono">${(report.total_labor_cost || 0).toFixed(2)}</TableCell>
                         <TableCell>
@@ -186,16 +215,29 @@ export default function EmployeeTimeReports() {
               {/* Mobile Cards */}
               <div className="block lg:hidden space-y-3">
                 {reports.map((report) => (
-                  <MobileTableCard
-                    key={report.id}
-                    title={report.work_orders?.work_order_number || `WO-${report.work_order_id.slice(0, 8)}`}
-                    subtitle={`${report.work_orders?.title} • ${report.work_orders?.store_location}`}
-                    status={
-                      <div className="text-xs text-muted-foreground">
-                        {format(new Date(report.report_date), "PP")}
-                      </div>
-                    }
-                    onClick={() => window.location.href = `/employee/time-reports/submit/${report.work_order_id}`}
+                   <MobileTableCard
+                     key={report.id}
+                     title={
+                       report.work_order_id 
+                         ? (report.work_orders?.work_order_number || `WO-${report.work_order_id.slice(0, 8)}`)
+                         : (report.projects?.project_number || `PJ-${report.project_id?.slice(0, 8) || 'N/A'}`)
+                     }
+                     subtitle={`${
+                       report.work_order_id ? report.work_orders?.title : report.projects?.name
+                     } • ${
+                       report.work_order_id ? report.work_orders?.store_location : report.projects?.location_address
+                     }`}
+                     status={
+                       <div className="text-xs text-muted-foreground">
+                         {format(new Date(report.report_date), "PP")}
+                       </div>
+                     }
+                     onClick={() => {
+                       const targetId = report.work_order_id || report.project_id;
+                       if (targetId) {
+                         window.location.href = `/employee/time-reports/submit/${targetId}`;
+                       }
+                     }}
                   >
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Hours:</span>
