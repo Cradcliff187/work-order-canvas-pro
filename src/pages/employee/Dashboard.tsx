@@ -11,6 +11,8 @@ import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 import { SlimHeader } from '@/components/employee/SlimHeader';
 import { SimpleFilterChips } from '@/components/employee/SimpleFilterChips';
 import { ClockStatusCard } from '@/components/employee/ClockStatusCard';
+import { ClockActive } from '@/components/employee/clock/ClockActive';
+import { ClockErrorBoundary } from '@/components/employee/clock/ClockErrorBoundary';
 import { SlimStatsBar } from '@/components/employee/SlimStatsBar';
 import { ActiveWorkCard } from '@/components/employee/ActiveWorkCard';
 import { useNavigate } from 'react-router-dom';
@@ -30,7 +32,7 @@ const EmployeeDashboard = () => {
   } = useEmployeeDashboard();
 
   const clockData = useClockState();
-  const { clockIn, clockOut, isClockingIn, isClockingOut } = clockData;
+  const { clockIn, clockOut, isClockingIn, isClockingOut, isClocked, activeReportId } = clockData;
   const { data: allWorkItems, isLoading: workItemsLoading } = useAllWorkItems();
   const { data: todayHours, isLoading: todayHoursLoading } = useTodayHours();
   const { filters, updateFilter } = useDashboardFilters();
@@ -120,9 +122,16 @@ const EmployeeDashboard = () => {
       {/* Debug Profile Info */}
       <DebugProfile />
 
-      {/* Hero Clock Card - Only show when NOT clocked */}
-      {!clockData.isClocked && (
-        <ClockStatusCard />
+      {/* Clock Status - Active or Inactive */}
+      {isClocked ? (
+        <ClockErrorBoundary key={`clock-active-${activeReportId}`}>
+          <ClockActive
+            onClockOut={handleClockOut}
+            isClockingOut={isClockingOut}
+          />
+        </ClockErrorBoundary>
+      ) : (
+        <ClockStatusCard key="clock-inactive" />
       )}
 
       {/* Active Timer Bar */}
