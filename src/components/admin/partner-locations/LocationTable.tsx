@@ -31,9 +31,11 @@ import {
   useReactTable, 
   getCoreRowModel, 
   getSortedRowModel,
+  getPaginationRowModel,
   flexRender,
   ColumnDef,
-  SortingState 
+  SortingState,
+  PaginationState 
 } from '@tanstack/react-table';
 import { createLocationColumns } from './LocationColumns';
 
@@ -129,6 +131,12 @@ export function LocationTable({
   // Sorting state
   const [sorting, setSorting] = useState<SortingState>([]);
   
+  // Pagination state
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 20,
+  });
+  
   // Column visibility setup
   const { 
     columnVisibility, 
@@ -163,11 +171,14 @@ export function LocationTable({
       sorting,
       rowSelection,
       columnVisibility,
+      pagination,
     },
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     enableRowSelection: bulkMode,
     getRowId: (row) => row.id,
   });
@@ -318,7 +329,9 @@ export function LocationTable({
             </div>
           ) : (
             <div className="space-y-3 mt-4">
-              {data.map(location => (
+              {table.getRowModel().rows.map(row => {
+                const location = row.original;
+                return (
                 <MobileTableCard
                   key={location.id}
                   title={location.location_name}
@@ -361,7 +374,8 @@ export function LocationTable({
                   onSelect={bulkMode ? () => toggleRowSelection(location.id) : undefined}
                   onClick={() => !bulkMode && console.log('Location clicked:', location)}
                 />
-              ))}
+              );
+              })}
             </div>
           )}
         </div>
@@ -570,7 +584,8 @@ export function LocationTable({
         /* Card view for desktop */
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.map(location => {
+            {table.getRowModel().rows.map(row => {
+              const location = row.original;
               const org = organizationMap[location.organization_id];
               const woCounts = workOrderCounts[location.id];
               
@@ -625,22 +640,7 @@ export function LocationTable({
       
       {/* Pagination */}
       <TablePagination 
-        table={{
-          getState: () => ({ 
-            pagination: { 
-              pageIndex: 0, 
-              pageSize: data.length 
-            } 
-          }),
-          getPageCount: () => 1,
-          getCanPreviousPage: () => false,
-          getCanNextPage: () => false,
-          previousPage: () => {},
-          nextPage: () => {},
-          setPageSize: (size: number) => {},
-          getRowModel: () => ({ rows: data }),
-          getFilteredRowModel: () => ({ rows: data })
-        } as any}
+        table={table}
         totalCount={data.length}
         itemName="locations"
         isMobile={isMobile}
