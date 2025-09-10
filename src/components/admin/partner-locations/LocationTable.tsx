@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
@@ -472,7 +472,8 @@ export function LocationTable({
       </div>
 
       {/* Content based on view mode */}
-      {isLoading ? (
+      <CardContent className="p-0 overflow-hidden">
+        {isLoading ? (
         <div className="p-6">
           <TableSkeleton 
             rows={10} 
@@ -483,7 +484,7 @@ export function LocationTable({
         viewMode === 'table' ? (
           <div className="p-0">
             <ResponsiveTableContainer>
-              <Table className="admin-table">
+              <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
@@ -542,7 +543,7 @@ export function LocationTable({
       ) : viewMode === 'table' ? (
         <div className="p-0 overflow-x-auto">
           <ResponsiveTableContainer>
-            <Table className="admin-table">
+            <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
@@ -637,6 +638,7 @@ export function LocationTable({
           </div>
         </div>
       )}
+      </CardContent>
       
       {/* Pagination */}
       <TablePagination 
