@@ -20,7 +20,7 @@ export function SimpleFilterChips({ filters, onFilterChange, workCounts }: Simpl
       key: 'showMyWorkOnly' as keyof DashboardFilters,
       label: 'My Work',
       icon: User,
-      count: filters.showMyWorkOnly ? workCounts?.myWork : workCounts?.total,
+      count: workCounts?.myWork,
       active: filters.showMyWorkOnly,
     },
     {
