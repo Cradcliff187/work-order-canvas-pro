@@ -122,10 +122,7 @@ const EmployeeDashboard = () => {
 
       {/* Hero Clock Card - Only show when NOT clocked */}
       {!clockData.isClocked && (
-        <ClockStatusCard 
-          onClockOut={handleClockOut}
-          isClockingOut={isClockingOut}
-        />
+        <ClockStatusCard />
       )}
 
       {/* Active Timer Bar */}

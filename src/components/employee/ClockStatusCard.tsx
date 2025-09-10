@@ -3,15 +3,7 @@ import { useClockState } from '@/hooks/useClockState';
 import { ClockInactive } from './clock/ClockInactive';
 import { Card } from '@/components/ui/card';
 
-interface ClockStatusCardProps {
-  onClockOut: () => void;
-  isClockingOut: boolean;
-}
-
-export const ClockStatusCard: React.FC<ClockStatusCardProps> = ({
-  onClockOut,
-  isClockingOut
-}) => {
+export const ClockStatusCard: React.FC = () => {
   const { isClocked } = useClockState();
 
   return isClocked ? (
