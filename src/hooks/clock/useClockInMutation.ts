@@ -87,6 +87,39 @@ export function useClockInMutation(): ClockInMutationReturn {
           throw new Error('Hourly rate not set. Please contact administration.');
         }
 
+        // Check for existing active sessions and close them first
+        console.log('[Clock In] Checking for existing active sessions...');
+        const { data: existingSessions, error: checkError } = await supabase
+          .from('employee_reports')
+          .select('id, clock_in_time')
+          .eq('employee_user_id', profile.id)
+          .not('clock_in_time', 'is', null)
+          .is('clock_out_time', null);
+
+        if (checkError) {
+          console.error('[Clock In] Error checking existing sessions:', checkError);
+          throw checkError;
+        }
+
+        if (existingSessions && existingSessions.length > 0) {
+          console.log('[Clock In] Found existing active sessions, closing them:', existingSessions.length);
+          // Close all existing active sessions to prevent orphaned states
+          const now = new Date();
+          for (const session of existingSessions) {
+            const clockInTime = new Date(session.clock_in_time);
+            const hoursWorked = (now.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
+            
+            await supabase
+              .from('employee_reports')
+              .update({
+                clock_out_time: now.toISOString(),
+                hours_worked: Math.round(hoursWorked * 100) / 100
+              })
+              .eq('id', session.id);
+          }
+          console.log('[Clock In] Closed all existing active sessions');
+        }
+
         // Create employee report with clock in time and location
         const { error: reportError } = await supabase
           .from('employee_reports')

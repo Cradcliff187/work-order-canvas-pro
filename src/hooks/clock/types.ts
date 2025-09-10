@@ -5,7 +5,7 @@ export type EmployeeReport = Database['public']['Tables']['employee_reports']['R
 export interface ClockStateData {
   id: string;
   clock_in_time: string;
-  work_order_id: string;
+  work_order_id: string | null; // Allow null to match database
   project_id?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;

@@ -13,7 +13,7 @@ interface ClockErrorBoundaryProps {
 interface ClockErrorBoundaryState {
   hasError: boolean;
   error?: Error;
-  errorCategory: 'auth' | 'network' | 'business' | 'component';
+  errorCategory: 'auth' | 'network' | 'business' | 'component' | 'session';
   retryCount: number;
   lastRetryTime: number;
 }
@@ -58,6 +58,13 @@ export class ClockErrorBoundary extends Component<ClockErrorBoundaryProps, Clock
       canRetry: false,
       maxRetries: 0,
     },
+    session: {
+      icon: Clock,
+      title: 'Session State Issue',
+      description: 'Clock session state needs refresh. Auto-recovering...',
+      canRetry: true,
+      maxRetries: 2,
+    },
     component: {
       icon: AlertTriangle,
       title: 'Clock Interface Error',
@@ -78,8 +85,9 @@ export class ClockErrorBoundary extends Component<ClockErrorBoundaryProps, Clock
 
   private static categorizeError(error: Error): ClockErrorBoundaryState['errorCategory'] {
     const message = error.message.toLowerCase();
+    console.log('[Clock Error Boundary] Categorizing error:', error.message);
     
-    if (message.includes('auth') || message.includes('profile') || message.includes('unauthorized')) {
+    if (message.includes('auth') || message.includes('profile') || message.includes('unauthorized') || message.includes('authentication expired')) {
       return 'auth';
     }
     if (message.includes('network') || message.includes('fetch') || message.includes('connection')) {
@@ -88,6 +96,10 @@ export class ClockErrorBoundary extends Component<ClockErrorBoundaryProps, Clock
     if (message.includes('hourly') || message.includes('assignment') || message.includes('setup')) {
       return 'business';
     }
+    if (message.includes('no active clock session found') || message.includes('session') || message.includes('clock')) {
+      return 'session';
+    }
+    
     return 'component';
   }
 

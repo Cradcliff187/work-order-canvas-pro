@@ -28,6 +28,8 @@ export function useClockStatus(): ClockStatusReturn {
         throw new Error('No employee ID available');
       }
 
+      console.log('[Clock Status] Fetching active clock session for employee:', profile.id);
+
       const { data, error } = await supabase
         .from('employee_reports')
         .select('id, clock_in_time, clock_out_time, work_order_id, project_id, location_lat, location_lng, location_address, hourly_rate_snapshot')
@@ -39,12 +41,21 @@ export function useClockStatus(): ClockStatusReturn {
         .maybeSingle();
 
       if (error) {
+        console.error('[Clock Status] Database error:', error);
         throw error;
       }
       
       if (!data?.clock_in_time) {
+        console.log('[Clock Status] No active clock session found');
         return null;
       }
+
+      console.log('[Clock Status] Active session found:', {
+        id: data.id,
+        work_order_id: data.work_order_id,
+        project_id: data.project_id,
+        clock_in_time: data.clock_in_time
+      });
       
       return {
         id: data.id,

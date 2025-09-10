@@ -43,35 +43,28 @@ export function useClockOutMutation(): ClockOutMutationReturn {
 
   const clockOut = useMutation({
     mutationFn: async (forceClockOut: boolean = false): Promise<ClockOutResult> => {
+      console.log('[Clock Out] Starting clock out process, forceClockOut:', forceClockOut);
+      
       if (!profile?.id) {
+        console.error('[Clock Out] No profile found');
         throw new Error('No profile found. Please refresh and try again.');
       }
       
       // Verify authentication before proceeding
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
+        console.error('[Clock Out] Authentication error:', authError);
         throw new Error('Authentication expired. Please refresh and log in again.');
       }
 
+      console.log('[Clock Out] Authentication verified for user:', user.id);
       setIsClockingOut(true);
 
       try {
-        // Capture GPS location for clock out with caching
-        let locationData = {};
-        try {
-          const location = await getCurrentLocationCached();
-          if (location) {
-            const address = await getAddressFromLocationCached(location);
-            locationData = formatLocationForClockOut(location, address || 'Location captured');
-          }
-        } catch {
-          // Location capture is optional, continue without it
-        }
-        
-        // Get current clock data
+        // Get current clock data first to validate session exists
         const { data: clockData, error: queryError } = await supabase
           .from('employee_reports')
-          .select('id, clock_in_time, work_order_id')
+          .select('id, clock_in_time, work_order_id, project_id')
           .eq('employee_user_id', profile.id)
           .not('clock_in_time', 'is', null)
           .is('clock_out_time', null)
@@ -80,24 +73,58 @@ export function useClockOutMutation(): ClockOutMutationReturn {
           .maybeSingle();
 
         if (queryError) {
+          console.error('[Clock Out] Database query error:', queryError);
           throw queryError;
         }
 
-        if (!clockData?.id) {
-          if (forceClockOut) {
-            throw new Error('No active clock sessions found');
-          } else {
-            throw new Error('No active clock session found. Try refreshing the page.');
+        console.log('[Clock Out] Current clock session:', clockData);
+
+        if (!clockData?.id || !clockData.clock_in_time) {
+          const errorMsg = forceClockOut ? 
+            'No active clock sessions found to force close.' : 
+            'No active clock session found. You may already be clocked out.';
+          console.error('[Clock Out] No active session:', errorMsg);
+          throw new Error(errorMsg);
+        }
+
+        // Validate the session is actually active (not corrupted)
+        const clockInTime = new Date(clockData.clock_in_time);
+        const now = new Date();
+        if (clockInTime > now) {
+          console.error('[Clock Out] Invalid session - clock in time is in future:', clockInTime);
+          throw new Error('Invalid clock session detected. Please refresh and try again.');
+        }
+
+        // Capture GPS location for clock out with caching
+        let locationData = {};
+        try {
+          console.log('[Clock Out] Capturing location...');
+          const location = await getCurrentLocationCached();
+          if (location) {
+            const address = await getAddressFromLocationCached(location);
+            locationData = formatLocationForClockOut(location, address || 'Location captured');
+            console.log('[Clock Out] Location captured successfully');
           }
+        } catch (locationError) {
+          console.warn('[Clock Out] Location capture failed:', locationError);
+          // Location capture is optional, continue without it
         }
         
         const clockStateData: ClockStateData = {
           id: clockData.id,
           clock_in_time: clockData.clock_in_time,
-          work_order_id: clockData.work_order_id
+          work_order_id: clockData.work_order_id,
+          project_id: clockData.project_id
         };
         
-        return await performClockOut(clockStateData, locationData, profile.id);
+        console.log('[Clock Out] Performing clock out operation...');
+        const result = await performClockOut(clockStateData, locationData, profile.id);
+        console.log('[Clock Out] Clock out completed successfully');
+        
+        return result;
+      } catch (error) {
+        console.error('[Clock Out] Clock out failed:', error);
+        throw error;
       } finally {
         setIsClockingOut(false);
       }
