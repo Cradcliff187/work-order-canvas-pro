@@ -103,7 +103,7 @@ export function useAllWorkItems() {
         // 1. It's assigned to me, OR
         // 2. I'm internal employee and it's available
         const hasNoAssignments = assignments.length === 0;
-        const shouldShow = isAssignedToMe || (isInternalEmployee && (hasNoAssignments || true));
+        const shouldShow = isAssignedToMe || (isInternalEmployee && hasNoAssignments);
         
         if (shouldShow) {
           // Get name of first assignee (if not assigned to me)
@@ -139,7 +139,7 @@ export function useAllWorkItems() {
         // 1. It's assigned to me, OR
         // 2. I'm internal employee and it's available
         const hasNoAssignments = assignments.length === 0;
-        const shouldShow = isAssignedToMe || (isInternalEmployee && (hasNoAssignments || true));
+        const shouldShow = isAssignedToMe || (isInternalEmployee && hasNoAssignments);
         
         if (shouldShow) {
           // Get name of first assignee (if not assigned to me)
