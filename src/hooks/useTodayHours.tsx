@@ -26,6 +26,6 @@ export const useTodayHours = () => {
       return totalHours;
     },
     enabled: !!profile?.id,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
   });
 };
