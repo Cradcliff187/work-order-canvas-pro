@@ -68,7 +68,7 @@ export const createBillColumns = ({
     accessorKey: 'internal_bill_number',
     header: ({ column }) => <SortableHeader column={column} label="Bill #" />,
     cell: ({ row }) => (
-      <div className="font-mono text-sm text-right">
+      <div className="font-mono text-sm">
         {row.getValue('internal_bill_number')}
       </div>
     ),
@@ -79,7 +79,7 @@ export const createBillColumns = ({
     cell: ({ row }) => {
       const external = row.getValue('external_bill_number') as string | null;
       return (
-        <div className="font-mono text-sm text-right">
+        <div className="font-mono text-sm">
           {external || <span className="text-muted-foreground">—</span>}
         </div>
       );
@@ -149,7 +149,7 @@ export const createBillColumns = ({
       const raw = row.getValue('total_amount') as any;
       const amount = typeof raw === 'number' ? raw : parseFloat(raw || '0');
       return (
-        <div className="font-mono font-medium text-right">
+        <div className="font-mono font-medium">
           {formatCurrency(amount, true)}
         </div>
       );
