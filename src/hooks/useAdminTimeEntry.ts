@@ -32,10 +32,14 @@ interface TimeEntryData {
   report_date: string;
   hours_worked: number;
   work_performed: string;
-  materials_used?: string;
+  materials_used?: number;
   hourly_rate_snapshot: number;
   total_labor_cost: number;
   notes?: string;
+  receipt_attachments?: {
+    receipt_id: string;
+    allocated_amount: number;
+  }[];
 }
 
 interface TimeEntry {
@@ -171,6 +175,32 @@ export function useAdminTimeEntry() {
     },
   });
 
+  // Fetch employee receipts for selection
+  const { data: employeeReceipts, isLoading: receiptsLoading } = useQuery({
+    queryKey: ['admin-employee-receipts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('receipts')
+        .select(`
+          id,
+          vendor_name,
+          amount,
+          receipt_date,
+          description,
+          receipt_image_url,
+          employee_user_id,
+          receipt_work_orders (
+            allocated_amount
+          )
+        `)
+        .order('receipt_date', { ascending: false })
+        .limit(200);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Create time entry mutation
   const createTimeEntry = useMutation({
     mutationFn: async (data: TimeEntryData) => {
@@ -184,6 +214,7 @@ export function useAdminTimeEntry() {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-recent'] });
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-employee-receipts'] });
       toast({
         title: "Success",
         description: "Time entry added successfully",
@@ -266,7 +297,8 @@ export function useAdminTimeEntry() {
     workOrders,
     projects,
     recentEntries,
-    isLoading: employeesLoading || workOrdersLoading || projectsLoading || entriesLoading,
+    employeeReceipts,
+    isLoading: employeesLoading || workOrdersLoading || projectsLoading || entriesLoading || receiptsLoading,
     createTimeEntry,
     updateTimeEntry,
     deleteTimeEntry,

@@ -20,6 +20,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminTimeEntry } from '@/hooks/useAdminTimeEntry';
 
+import { ReceiptAttachmentSection } from '@/components/admin/ReceiptAttachmentSection';
+
 const timeEntrySchema = z.object({
   employeeId: z.string().min(1, 'Employee is required'),
   workItemId: z.string().min(1, 'Work order or project is required'),
@@ -32,9 +34,15 @@ const timeEntrySchema = z.object({
 
 type TimeEntryForm = z.infer<typeof timeEntrySchema>;
 
+interface ReceiptAttachment {
+  receipt_id: string;
+  allocated_amount: number;
+}
+
 export default function AdminTimeEntry() {
   const { toast } = useToast();
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
+  const [receiptAttachments, setReceiptAttachments] = useState<ReceiptAttachment[]>([]);
   const [editingEntry, setEditingEntry] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   
@@ -43,6 +51,7 @@ export default function AdminTimeEntry() {
     workOrders,
     projects,
     recentEntries,
+    employeeReceipts,
     isLoading,
     createTimeEntry,
     updateTimeEntry,
@@ -79,10 +88,11 @@ export default function AdminTimeEntry() {
         report_date: format(data.date, 'yyyy-MM-dd'),
         hours_worked: data.hours,
         work_performed: data.workPerformed,
-        materials_used: data.materialsCost ? `Materials cost: $${data.materialsCost}` : undefined,
+        materials_used: data.materialsCost || 0,
         hourly_rate_snapshot: employee.hourly_billable_rate || 0,
         total_labor_cost: data.hours * (employee.hourly_billable_rate || 0),
         notes: 'Added by admin',
+        receipt_attachments: receiptAttachments.length > 0 ? receiptAttachments : undefined,
       };
 
       await createTimeEntry.mutateAsync(entryData);
@@ -97,6 +107,9 @@ export default function AdminTimeEntry() {
         workPerformed: '',
         materialsCost: 0,
       });
+      
+      // Clear receipt attachments
+      setReceiptAttachments([]);
       
       toast({
         title: "Success",
@@ -130,6 +143,10 @@ export default function AdminTimeEntry() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleMaterialsCostUpdate = (cost: number) => {
+    form.setValue('materialsCost', cost);
   };
 
   const watchedEmployee = form.watch('employeeId');
@@ -318,7 +335,18 @@ export default function AdminTimeEntry() {
               )}
             </div>
 
-            <Button type="submit" disabled={createTimeEntry.isPending || isLoading}>
+            {/* Receipt Attachments */}
+            <ReceiptAttachmentSection
+              receipts={employeeReceipts || []}
+              selectedEmployee={watchedEmployee}
+              attachments={receiptAttachments}
+              onAttachmentsChange={setReceiptAttachments}
+              onMaterialsCostUpdate={handleMaterialsCostUpdate}
+              disabled={createTimeEntry.isPending || isLoading}
+              className="mt-6"
+            />
+
+            <Button type="submit" disabled={createTimeEntry.isPending || isLoading} className="mt-6">
               <Plus className="mr-2 h-4 w-4" />
               Add Entry
             </Button>
