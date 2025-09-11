@@ -10,6 +10,7 @@ import { CalendarIcon, Search, X, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { TimeManagementFilters as Filters, Employee, WorkOrder, Project } from '@/hooks/useTimeManagement';
+import { FilterPresetsManager } from './FilterPresetsManager';
 
 interface TimeManagementFiltersProps {
   filters: Filters;
@@ -61,6 +62,12 @@ export function TimeManagementFilters({
 
   return (
     <div className="space-y-4">
+      {/* Filter Presets Manager */}
+      <FilterPresetsManager
+        currentFilters={filters}
+        onLoadPreset={onFiltersChange}
+      />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4" />

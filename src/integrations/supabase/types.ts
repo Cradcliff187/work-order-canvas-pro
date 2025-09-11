@@ -430,6 +430,7 @@ export type Database = {
           project_id: string | null
           rejection_reason: string | null
           report_date: string
+          search_vector: unknown | null
           total_labor_cost: number | null
           updated_at: string
           work_order_id: string | null
@@ -460,6 +461,7 @@ export type Database = {
           project_id?: string | null
           rejection_reason?: string | null
           report_date: string
+          search_vector?: unknown | null
           total_labor_cost?: number | null
           updated_at?: string
           work_order_id?: string | null
@@ -490,6 +492,7 @@ export type Database = {
           project_id?: string | null
           rejection_reason?: string | null
           report_date?: string
+          search_vector?: unknown | null
           total_labor_cost?: number | null
           updated_at?: string
           work_order_id?: string | null
@@ -515,6 +518,47 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      filter_presets: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          filters: Json
+          id: string
+          is_global: boolean | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          filters: Json
+          id?: string
+          is_global?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          filters?: Json
+          id?: string
+          is_global?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "filter_presets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2694,6 +2738,17 @@ export type Database = {
       refresh_analytics_views: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      search_employee_reports: {
+        Args: { filters?: Json; search_query: string }
+        Returns: {
+          hours_worked: number
+          id: string
+          notes: string
+          report_date: string
+          ts_rank_score: number
+          work_performed: string
+        }[]
       }
       seed_test_data: {
         Args: Record<PropertyKey, never>
