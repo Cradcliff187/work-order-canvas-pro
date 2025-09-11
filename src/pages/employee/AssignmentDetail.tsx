@@ -212,6 +212,39 @@ export default function AssignmentDetail() {
     enabled: !!id
   });
 
+  // Create clock option for this assignment - moved before useClockWidgetActions
+  const workOrder = assignment?.work_order;
+  const project = assignment?.project;
+  const item = workOrder || project;
+
+  const clockOption: ClockOption | null = item ? {
+    id: item.id,
+    type: assignment!.type,
+    title: assignment!.type === 'work_order' ? workOrder!.title : project!.name,
+    number: assignment!.type === 'work_order' ? workOrder!.work_order_number : project!.project_number || '',
+    section: 'assigned' as const,
+  } : null;
+
+  // Check if currently clocked into this specific item
+  const isClockedIntoThisItem = isClocked && assignment && (
+    (assignment.type === 'work_order' && workOrderId === workOrder?.id) ||
+    (assignment.type === 'project' && projectId === project?.id)
+  );
+
+  // Use clock widget actions for this specific assignment - moved to top before conditional rendering
+  const { handleClockAction } = useClockWidgetActions({
+    selectedOption: clockOption,
+    onSuccess: () => {
+      if (clockOption) {
+        toast({
+          title: isClocked ? "Clocked Out" : "Clocked In",
+          description: `Successfully ${isClocked ? 'clocked out of' : 'clocked into'} ${clockOption.title}`,
+        });
+      }
+    },
+  });
+
+  // Conditional rendering logic - now after all hooks are called
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -242,36 +275,6 @@ export default function AssignmentDetail() {
       </div>
     );
   }
-
-  const workOrder = assignment?.work_order;
-  const project = assignment?.project;
-  const item = workOrder || project;
-
-  // Create clock option for this assignment
-  const clockOption: ClockOption | null = item ? {
-    id: item.id,
-    type: assignment.type,
-    title: assignment.type === 'work_order' ? workOrder!.title : project!.name,
-    number: assignment.type === 'work_order' ? workOrder!.work_order_number : project!.project_number || '',
-    section: 'assigned' as const,
-  } : null;
-
-  // Check if currently clocked into this specific item
-  const isClockedIntoThisItem = isClocked && (
-    (assignment.type === 'work_order' && workOrderId === workOrder?.id) ||
-    (assignment.type === 'project' && projectId === project?.id)
-  );
-
-  // Use clock widget actions for this specific assignment
-  const { handleClockAction } = useClockWidgetActions({
-    selectedOption: clockOption,
-    onSuccess: () => {
-      toast({
-        title: isClocked ? "Clocked Out" : "Clocked In",
-        description: `Successfully ${isClocked ? 'clocked out of' : 'clocked into'} ${clockOption?.title}`,
-      });
-    },
-  });
 
   return (
     <div className="p-4 space-y-4">
