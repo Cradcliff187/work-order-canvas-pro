@@ -8,7 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useViewMode } from '@/hooks/useViewMode';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, TrendingUp, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatting';
 import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
 import { SubcontractorBill } from '@/hooks/useSubcontractorBills';
@@ -253,13 +253,6 @@ export default function BillingDashboard() {
     });
   };
 
-  // Generate partner invoice
-  const handleGeneratePartnerInvoice = () => {
-    toast({
-      title: "Invoice generated",
-      description: "Partner invoice generated.",
-    });
-  };
 
   if (pipelineError) {
     return (
@@ -288,10 +281,6 @@ export default function BillingDashboard() {
               )}
             </p>
           </div>
-          <Button onClick={handleGeneratePartnerInvoice} className="shrink-0">
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Partner Invoice
-          </Button>
         </header>
 
         {/* Stats Cards */}
