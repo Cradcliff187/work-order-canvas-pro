@@ -18,9 +18,17 @@ interface WorkOrder {
   status: string;
 }
 
+interface Project {
+  id: string;
+  project_number: string;
+  name: string;
+  status: string;
+}
+
 interface TimeEntryData {
   employee_user_id: string;
-  work_order_id: string;
+  work_order_id?: string;
+  project_id?: string;
   report_date: string;
   hours_worked: number;
   work_performed: string;
@@ -44,6 +52,10 @@ interface TimeEntry {
   work_order?: {
     work_order_number: string;
     title: string;
+  };
+  project?: {
+    project_number: string;
+    name: string;
   };
 }
 
@@ -96,8 +108,28 @@ export function useAdminTimeEntry() {
           )
         `)
         .eq('organizations.organization_type', 'internal')
-        .in('status', ['assigned', 'in_progress'])
+        .in('status', ['assigned', 'in_progress', 'completed'])
         .order('work_order_number', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch internal projects
+  const { data: projects, isLoading: projectsLoading } = useQuery({
+    queryKey: ['admin-time-entry-projects'],
+    queryFn: async (): Promise<Project[]> => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          id,
+          project_number,
+          name,
+          status
+        `)
+        .eq('status', 'active')
+        .order('project_number', { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -124,6 +156,10 @@ export function useAdminTimeEntry() {
           work_order:work_orders!work_order_id(
             work_order_number,
             title
+          ),
+          project:projects!project_id(
+            project_number,
+            name
           )
         `)
         .order('report_date', { ascending: false })
@@ -146,6 +182,8 @@ export function useAdminTimeEntry() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-recent'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entry-work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entry-projects'] });
       toast({
         title: "Success",
         description: "Time entry added successfully",
@@ -172,6 +210,8 @@ export function useAdminTimeEntry() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-recent'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entry-work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entry-projects'] });
       toast({
         title: "Success",
         description: "Time entry updated successfully",
@@ -198,6 +238,8 @@ export function useAdminTimeEntry() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-recent'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entry-work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entry-projects'] });
       toast({
         title: "Success",
         description: "Time entry deleted successfully",
@@ -215,14 +257,16 @@ export function useAdminTimeEntry() {
   const refetch = () => {
     queryClient.invalidateQueries({ queryKey: ['admin-time-entry-employees'] });
     queryClient.invalidateQueries({ queryKey: ['admin-time-entry-work-orders'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-time-entry-projects'] });
     queryClient.invalidateQueries({ queryKey: ['admin-time-entry-recent'] });
   };
 
   return {
     employees,
     workOrders,
+    projects,
     recentEntries,
-    isLoading: employeesLoading || workOrdersLoading || entriesLoading,
+    isLoading: employeesLoading || workOrdersLoading || projectsLoading || entriesLoading,
     createTimeEntry,
     updateTimeEntry,
     deleteTimeEntry,

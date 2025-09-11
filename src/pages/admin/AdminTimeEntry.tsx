@@ -22,7 +22,8 @@ import { useAdminTimeEntry } from '@/hooks/useAdminTimeEntry';
 
 const timeEntrySchema = z.object({
   employeeId: z.string().min(1, 'Employee is required'),
-  workOrderId: z.string().min(1, 'Work order is required'),
+  workItemId: z.string().min(1, 'Work order or project is required'),
+  workItemType: z.enum(['work_order', 'project']),
   date: z.date({ required_error: 'Date is required' }),
   hours: z.number().min(0.25, 'Minimum 0.25 hours').max(24, 'Maximum 24 hours'),
   workPerformed: z.string().min(1, 'Work performed description is required'),
@@ -40,6 +41,7 @@ export default function AdminTimeEntry() {
   const {
     employees,
     workOrders,
+    projects,
     recentEntries,
     isLoading,
     createTimeEntry,
@@ -54,6 +56,7 @@ export default function AdminTimeEntry() {
       date: new Date(),
       hours: 8,
       materialsCost: 0,
+      workItemType: 'work_order',
     },
   });
 
@@ -71,7 +74,8 @@ export default function AdminTimeEntry() {
 
       const entryData = {
         employee_user_id: data.employeeId,
-        work_order_id: data.workOrderId,
+        work_order_id: data.workItemType === 'work_order' ? data.workItemId : undefined,
+        project_id: data.workItemType === 'project' ? data.workItemId : undefined,
         report_date: format(data.date, 'yyyy-MM-dd'),
         hours_worked: data.hours,
         work_performed: data.workPerformed,
@@ -86,6 +90,8 @@ export default function AdminTimeEntry() {
       // Reset form but keep employee selected for batch entry
       form.reset({
         employeeId: data.employeeId,
+        workItemId: '',
+        workItemType: 'work_order',
         date: new Date(),
         hours: 8,
         workPerformed: '',
@@ -177,27 +183,46 @@ export default function AdminTimeEntry() {
                 )}
               </div>
 
-              {/* Work Order Selector */}
+              {/* Work Item Selector */}
               <div className="space-y-2">
-                <Label htmlFor="workOrder">Work Order</Label>
+                <Label htmlFor="workItem">Work Order / Project</Label>
                 <Select
-                  value={form.watch('workOrderId')}
-                  onValueChange={(value) => form.setValue('workOrderId', value)}
+                  value={form.watch('workItemId')}
+                  onValueChange={(value) => {
+                    form.setValue('workItemId', value);
+                    // Auto-detect type based on selection
+                    const isWorkOrder = workOrders?.some(wo => wo.id === value);
+                    form.setValue('workItemType', isWorkOrder ? 'work_order' : 'project');
+                  }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select work order" />
+                    <SelectValue placeholder="Select work order or project" />
                   </SelectTrigger>
                   <SelectContent>
+                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                      Work Orders
+                    </div>
                     {workOrders?.map((workOrder) => (
                       <SelectItem key={workOrder.id} value={workOrder.id}>
                         {workOrder.work_order_number} - {workOrder.title}
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          {workOrder.status}
+                        </Badge>
+                      </SelectItem>
+                    ))}
+                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                      Projects
+                    </div>
+                    {projects?.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.project_number} - {project.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {form.formState.errors.workOrderId && (
+                {form.formState.errors.workItemId && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.workOrderId.message}
+                    {form.formState.errors.workItemId.message}
                   </p>
                 )}
               </div>
@@ -324,7 +349,7 @@ export default function AdminTimeEntry() {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Employee</TableHead>
-                    <TableHead>Work Order</TableHead>
+                    <TableHead>Work Item</TableHead>
                     <TableHead className="text-right">Hours</TableHead>
                     <TableHead className="text-right">Labor Cost</TableHead>
                     <TableHead className="w-[50px]">Actions</TableHead>
@@ -345,12 +370,27 @@ export default function AdminTimeEntry() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">
-                          {entry.work_order?.work_order_number}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {entry.work_order?.title}
-                        </div>
+                        {entry.work_order ? (
+                          <>
+                            <div className="font-medium">
+                              {entry.work_order.work_order_number}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {entry.work_order.title}
+                            </div>
+                          </>
+                        ) : entry.project ? (
+                          <>
+                            <div className="font-medium">
+                              {entry.project.project_number}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {entry.project.name}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">No work item</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         {entry.hours_worked}h
