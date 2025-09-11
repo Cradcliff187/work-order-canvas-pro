@@ -208,11 +208,32 @@ export function useAdminTimeEntry() {
   // Create time entry mutation
   const createTimeEntry = useMutation({
     mutationFn: async (data: TimeEntryData) => {
-      const { error } = await supabase
+      // Extract receipt_attachments from data since it's not part of employee_reports table
+      const { receipt_attachments, ...timeEntryData } = data;
+      
+      // Insert the employee report and capture the returned ID
+      const { data: reportData, error } = await supabase
         .from('employee_reports')
-        .insert([data]);
-
+        .insert([timeEntryData])
+        .select()
+        .single();
+      
       if (error) throw error;
+
+      // Link selected receipts to the work order (not time entry)
+      if (receipt_attachments?.length > 0 && reportData.work_order_id) {
+        const receiptLinks = receipt_attachments.map(attachment => ({
+          receipt_id: attachment.receipt_id,
+          work_order_id: reportData.work_order_id,
+          allocated_amount: attachment.allocated_amount
+        }));
+        
+        const { error: linkError } = await supabase
+          .from('receipt_work_orders')
+          .insert(receiptLinks);
+          
+        if (linkError) throw linkError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-recent'] });
