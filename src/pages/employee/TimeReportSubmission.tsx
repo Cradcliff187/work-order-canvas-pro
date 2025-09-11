@@ -26,7 +26,7 @@ export default function TimeReportSubmission() {
   );
 
   const existingReport = existingReportQuery.data;
-  const hourlyRate = profileQuery.data?.hourly_cost_rate || 0;
+  const hourlyRate = profileQuery.data?.hourly_billable_rate || 0;
 
   const handleEditExisting = () => {
     if (existingReport) {

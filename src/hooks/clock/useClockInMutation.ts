@@ -68,15 +68,15 @@ export function useClockInMutation(): ClockInMutationReturn {
         // Get user's hourly rate
         const { data: userProfile, error: profileError } = await db
           .from('profiles')
-          .select('hourly_cost_rate')
+          .select('hourly_billable_rate')
           .eq('id', profile.id)
           .single();
 
-        if (profileError || !userProfile?.hourly_cost_rate) {
+        if (profileError || !userProfile?.hourly_billable_rate) {
           throw new Error('Hourly rate not set. Please contact administration.');
         }
 
-        console.log('[Clock In] Profile verified, hourly rate:', userProfile.hourly_cost_rate);
+        console.log('[Clock In] Profile verified, hourly rate:', userProfile.hourly_billable_rate);
 
         // Capture location (optional, don't fail if unavailable)
         let locationData: ClockInResult = {};
@@ -141,7 +141,7 @@ export function useClockInMutation(): ClockInMutationReturn {
             project_id: projectId || null,
             report_date: todayDate,
             clock_in_time: new Date().toISOString(),
-            hourly_rate_snapshot: userProfile.hourly_cost_rate,
+            hourly_rate_snapshot: userProfile.hourly_billable_rate,
             hours_worked: 0,
             work_performed: '',
             is_retroactive: false,

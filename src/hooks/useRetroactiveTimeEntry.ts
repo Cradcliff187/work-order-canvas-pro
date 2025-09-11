@@ -35,11 +35,11 @@ export function useRetroactiveTimeEntry() {
       // Get hourly rate from profile
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('hourly_cost_rate')
+        .select('hourly_billable_rate')
         .eq('id', profile.id)
         .single();
 
-      const hourlyRate = profileData?.hourly_cost_rate || 0;
+      const hourlyRate = profileData?.hourly_billable_rate || 0;
 
       // Insert employee report with retroactive flag
       const { data, error } = await supabase

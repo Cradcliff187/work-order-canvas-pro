@@ -216,13 +216,13 @@ export function useEmployeeReports() {
       // Get current user profile to get the profile ID and rate
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, hourly_cost_rate")
+        .select("id, hourly_billable_rate")
         .eq("user_id", user.id)
         .single();
 
       if (!profile) throw new Error("Profile not found");
 
-      const hourlyRate = profile.hourly_cost_rate || 0;
+      const hourlyRate = profile.hourly_billable_rate || 0;
 
       let report;
       
