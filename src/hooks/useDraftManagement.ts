@@ -15,6 +15,8 @@ export function useDraftManagement(
       workPerformed: string;
       materialsUsed?: string;
       hoursWorked?: number;
+      laborCost?: number;
+      materialsCost?: number;
       notes?: string;
     },
     photos: PhotoAttachment[],

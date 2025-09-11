@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 interface GeneratePartnerInvoiceData {
   partnerOrganizationId: string;
   selectedBillIds: string[];
-  employeeReportIds?: string[];
+  selectedReportIds?: string[];
   markupPercentage: number;
   subtotal: number;
   totalAmount: number;
@@ -77,18 +77,18 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     throw new Error('Failed to fetch selected bills');
   }
 
-  // Fetch employee reports if provided
-  let employeeReports = [];
-  if (data.employeeReportIds && data.employeeReportIds.length > 0) {
+  // Fetch internal work order reports if provided
+  let internalReports = [];
+  if (data.selectedReportIds && data.selectedReportIds.length > 0) {
     const { data: reportsData, error: reportsError } = await supabase
       .from('work_order_reports')
-      .select('*, subcontractor:profiles!subcontractor_user_id(first_name, last_name)')
-      .in('id', data.employeeReportIds);
+      .select('*, work_orders(work_order_number, title)')
+      .in('id', data.selectedReportIds);
       
     if (reportsError) {
-      throw new Error('Failed to fetch employee reports');
+      throw new Error('Failed to fetch internal reports');
     }
-    employeeReports = reportsData || [];
+    internalReports = reportsData || [];
   }
 
   // Create partner invoice
@@ -129,9 +129,9 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     });
   });
   
-  // Add employee report line items
-  employeeReports.forEach(report => {
-    const cost = report.total_labor_cost || 0;
+  // Add internal report line items
+  internalReports.forEach(report => {
+    const cost = report.bill_amount || 0;
     const markupAmount = cost * (data.markupPercentage / 100);
     const totalAmount = cost + markupAmount;
     
@@ -139,7 +139,7 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       partner_invoice_id: partnerInvoice.id,
       work_order_report_id: report.id,
       amount: totalAmount,
-      description: `Labor: ${report.subcontractor?.first_name || 'Employee'} ${report.subcontractor?.last_name || ''} - ${report.hours_worked || 0}hrs`.trim()
+      description: `Internal Work - ${report.work_orders?.work_order_number}: ${report.work_orders?.title}`
     });
   });
   
@@ -162,6 +162,20 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     
   if (updateError) {
     throw new Error('Failed to update bill status');
+  }
+
+  // Update internal reports with partner invoice info
+  if (data.selectedReportIds && data.selectedReportIds.length > 0) {
+    const { error: reportsUpdateError } = await supabase
+      .from('work_order_reports')
+      .update({
+        partner_invoice_id: partnerInvoice.id
+      })
+      .in('id', data.selectedReportIds);
+      
+    if (reportsUpdateError) {
+      throw new Error('Failed to update report status');
+    }
   }
 
   return {

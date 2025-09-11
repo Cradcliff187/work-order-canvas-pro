@@ -30,6 +30,8 @@ export interface ReportDraft {
   workPerformed: string;
   materialsUsed?: string;
   hoursWorked?: number;
+  laborCost?: number;
+  materialsCost?: number;
   invoiceAmount?: number;
   invoiceNumber?: string;
   notes?: string;

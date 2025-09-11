@@ -8,6 +8,8 @@ export interface WorkOrderReportData {
   workPerformed: string;
   materialsUsed?: string;
   hoursWorked?: number;
+  laborCost?: number;
+  materialsCost?: number;
   notes?: string;
   photos?: File[];
 }
@@ -23,6 +25,9 @@ export function useWorkOrderReportSubmission() {
         throw new Error('User profile not found');
       }
 
+      // Calculate bill amount for internal reports
+      const billAmount = (reportData.laborCost || 0) + (reportData.materialsCost || 0);
+
       // Submit the work order report
       const reportInsert = {
         work_order_id: reportData.workOrderId,
@@ -30,6 +35,7 @@ export function useWorkOrderReportSubmission() {
         work_performed: reportData.workPerformed,
         materials_used: reportData.materialsUsed,
         hours_worked: reportData.hoursWorked,
+        bill_amount: billAmount > 0 ? billAmount : null,
         notes: reportData.notes,
         status: 'submitted' as const,
       };

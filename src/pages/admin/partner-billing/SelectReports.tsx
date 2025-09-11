@@ -367,7 +367,7 @@ export default function SelectBills() {
     generateInvoice({
       partnerOrganizationId: selectedPartnerId,
       selectedBillIds: Array.from(selectedBillIds),
-      employeeReportIds: Array.from(selectedReportIds),
+      selectedReportIds: Array.from(selectedReportIds),
       markupPercentage,
       subtotal: calculations.subtotal,
       totalAmount: calculations.total,

@@ -31,6 +31,8 @@ interface FormData {
   materialsUsed: string;
   notes: string;
   hoursWorked: string;
+  laborCost: string;
+  materialsCost: string;
   attachments: File[];
 }
 
@@ -53,7 +55,14 @@ export default function SubmitReport() {
       
       const { data, error } = await supabase
         .from('work_orders')
-        .select('*')
+        .select(`
+          *,
+          assigned_organization:organizations!assigned_organization_id(
+            id,
+            name,
+            organization_type
+          )
+        `)
         .eq('id', workOrderId)
         .single();
 
@@ -69,6 +78,8 @@ export default function SubmitReport() {
     materialsUsed: '',
     notes: '',
     hoursWorked: '',
+    laborCost: '',
+    materialsCost: '',
     attachments: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,10 +140,15 @@ export default function SubmitReport() {
       return;
     }
 
-    if (!formData.workPerformed.trim() || (isEmployee() && !formData.hoursWorked.trim())) {
+    const isInternalReport = workOrderQuery.data?.assigned_organization?.organization_type === 'internal';
+    const isInternalFormValid = !isInternalReport || (formData.laborCost.trim() && parseFloat(formData.laborCost) > 0);
+    
+    if (!formData.workPerformed.trim() || (isEmployee() && !formData.hoursWorked.trim()) || !isInternalFormValid) {
       toast({
         title: "Missing Required Fields",
-        description: "Please fill in all required fields before submitting.",
+        description: isInternalReport 
+          ? "Please fill in all required fields including labor cost."
+          : "Please fill in all required fields before submitting.",
         variant: "destructive",
       });
       return;
@@ -146,11 +162,15 @@ export default function SubmitReport() {
 
     setIsSubmitting(true);
     try {
+      const isInternalReport = workOrderQuery.data?.assigned_organization?.organization_type === 'internal';
+      
       await submitReport.mutateAsync({
         workOrderId,
         workPerformed: formData.workPerformed,
         materialsUsed: formData.materialsUsed || undefined,
         hoursWorked: isEmployee() && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
+        laborCost: isInternalReport && formData.laborCost ? parseFloat(formData.laborCost) : undefined,
+        materialsCost: isInternalReport && formData.materialsCost ? parseFloat(formData.materialsCost) : undefined,
         notes: formData.notes || undefined,
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
@@ -222,6 +242,8 @@ export default function SubmitReport() {
           workPerformed: formData.workPerformed,
           materialsUsed: formData.materialsUsed,
           hoursWorked: isEmployee() && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
+          laborCost: formData.laborCost ? parseFloat(formData.laborCost) : undefined,
+          materialsCost: formData.materialsCost ? parseFloat(formData.materialsCost) : undefined,
           notes: formData.notes,
         },
         photoAttachments,
@@ -250,6 +272,8 @@ export default function SubmitReport() {
       materialsUsed: draft.materialsUsed || '',
       notes: draft.notes || '',
       hoursWorked: draft.hoursWorked?.toString() || '',
+      laborCost: draft.laborCost?.toString() || '',
+      materialsCost: draft.materialsCost?.toString() || '',
       attachments: [], // Attachments would need to be converted back from base64
     });
     setCurrentDraftId(draft.id);
@@ -429,6 +453,44 @@ export default function SubmitReport() {
                     Enter total hours worked on this assignment for payroll tracking
                   </p>
                 </div>
+              )}
+
+              {workOrder?.assigned_organization?.organization_type === 'internal' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="laborCost">Labor Cost *</Label>
+                    <Input
+                      id="laborCost"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={formData.laborCost}
+                      onChange={(e) => setFormData(prev => ({ ...prev, laborCost: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="materialsCost">Materials Cost</Label>
+                    <Input
+                      id="materialsCost"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={formData.materialsCost}
+                      onChange={(e) => setFormData(prev => ({ ...prev, materialsCost: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="bg-muted p-3 rounded-lg">
+                    <Label className="text-sm font-medium">Amount to Bill Partner</Label>
+                    <p className="text-lg font-semibold">
+                      ${((parseFloat(formData.laborCost) || 0) + (parseFloat(formData.materialsCost) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </>
               )}
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
