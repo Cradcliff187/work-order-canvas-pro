@@ -14,6 +14,11 @@ export interface TimeEntry {
   employee_user_id: string;
   work_order_id?: string;
   project_id?: string;
+  approval_status: 'pending' | 'approved' | 'rejected' | 'flagged';
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+  materials_cost?: number;
   created_at: string;
   updated_at: string;
   employee: {
@@ -100,6 +105,10 @@ export function useTimeManagement(filters: TimeManagementFilters) {
           employee_user_id,
           work_order_id,
           project_id,
+          approval_status,
+          approved_by,
+          approved_at,
+          rejection_reason,
           created_at,
           updated_at,
           employee:profiles!employee_user_id(
@@ -147,10 +156,32 @@ export function useTimeManagement(filters: TimeManagementFilters) {
         query = query.ilike('work_performed', `%${filters.search}%`);
       }
 
+      if (filters.status.length > 0) {
+        query = query.in('approval_status', filters.status as Array<'pending' | 'approved' | 'rejected' | 'flagged'>);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+
+      // Calculate materials cost for each time entry
+      const entriesWithMaterials = await Promise.all(
+        (data || []).map(async (entry) => {
+          const { data: materialsData } = await supabase
+            .from('receipt_time_entries')
+            .select('allocated_amount')
+            .eq('time_entry_id', entry.id);
+
+          const materials_cost = materialsData?.reduce(
+            (sum, allocation) => sum + allocation.allocated_amount, 
+            0
+          ) || 0;
+
+          return { ...entry, materials_cost };
+        })
+      );
+
+      return entriesWithMaterials;
     },
   });
 
@@ -203,8 +234,8 @@ export function useTimeManagement(filters: TimeManagementFilters) {
   const summaryStats: SummaryStats = {
     totalHours: timeEntries.reduce((sum, entry) => sum + entry.hours_worked, 0),
     totalLaborCost: timeEntries.reduce((sum, entry) => sum + (entry.total_labor_cost || 0), 0),
-    totalMaterialsCost: 0, // TODO: Calculate from receipts
-    pendingApproval: 0, // TODO: Implement approval status
+    totalMaterialsCost: timeEntries.reduce((sum, entry) => sum + (entry.materials_cost || 0), 0),
+    pendingApproval: timeEntries.filter(entry => entry.approval_status === 'pending').length,
     avgHoursPerEmployee: employees.length > 0 
       ? timeEntries.reduce((sum, entry) => sum + entry.hours_worked, 0) / employees.length 
       : 0,
@@ -260,12 +291,52 @@ export function useTimeManagement(filters: TimeManagementFilters) {
   // Bulk approve mutation
   const bulkApproveMutation = useMutation({
     mutationFn: async (entryIds: string[]) => {
-      // TODO: Implement approval status in database
-      console.log('Bulk approving entries:', entryIds);
+      const { error } = await supabase
+        .from('employee_reports')
+        .update({ 
+          approval_status: 'approved',
+          approved_at: new Date().toISOString()
+        })
+        .in('id', entryIds);
+
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] });
       toast({ title: 'Time entries approved successfully' });
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Failed to approve time entries', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  // Bulk reject mutation
+  const bulkRejectMutation = useMutation({
+    mutationFn: async ({ entryIds, reason }: { entryIds: string[]; reason: string }) => {
+      const { error } = await supabase
+        .from('employee_reports')
+        .update({ 
+          approval_status: 'rejected',
+          rejection_reason: reason
+        })
+        .in('id', entryIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] });
+      toast({ title: 'Time entries rejected' });
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Failed to reject time entries', 
+        description: error.message,
+        variant: 'destructive' 
+      });
     },
   });
 
@@ -283,6 +354,9 @@ export function useTimeManagement(filters: TimeManagementFilters) {
       Hours: entry.hours_worked,
       'Hourly Rate': entry.hourly_rate_snapshot,
       'Labor Cost': entry.total_labor_cost,
+      'Materials Cost': entry.materials_cost || 0,
+      'Total Cost': (entry.total_labor_cost || 0) + (entry.materials_cost || 0),
+      'Approval Status': entry.approval_status,
       Description: entry.work_performed,
       Notes: entry.notes || '',
     }));
@@ -313,6 +387,8 @@ export function useTimeManagement(filters: TimeManagementFilters) {
       updateTimeEntryMutation.mutate({ id, data }),
     deleteTimeEntry: deleteTimeEntryMutation.mutate,
     bulkApprove: bulkApproveMutation.mutate,
+    bulkReject: (entryIds: string[], reason: string) => 
+      bulkRejectMutation.mutate({ entryIds, reason }),
     exportToCSV,
     refetch: () => queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] }),
   };

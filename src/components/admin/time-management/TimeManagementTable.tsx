@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, MoreHorizontal, Clock, DollarSign } from 'lucide-react';
+import { Edit, Trash2, MoreHorizontal, Clock, DollarSign, CheckCircle, XCircle, Flag } from 'lucide-react';
 import { format } from 'date-fns';
 import { TimeEntry } from '@/hooks/useTimeManagement';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,9 @@ interface TimeManagementTableProps {
   onSelectAll: (selected: boolean) => void;
   onEdit: (entry: TimeEntry) => void;
   onDelete: (entryId: string) => void;
+  onApprove?: (entryId: string) => void;
+  onReject?: (entryId: string, reason: string) => void;
+  onFlag?: (entryId: string) => void;
   isLoading: boolean;
 }
 
@@ -28,6 +31,9 @@ export function TimeManagementTable({
   onSelectAll,
   onEdit,
   onDelete,
+  onApprove,
+  onReject,
+  onFlag,
   isLoading
 }: TimeManagementTableProps) {
   
@@ -43,11 +49,20 @@ export function TimeManagementTable({
   };
 
   const getStatusBadge = (entry: TimeEntry) => {
-    // TODO: Implement proper status logic based on approval system
-    if (entry.hours_worked > 8) {
-      return <Badge variant="secondary">Overtime</Badge>;
-    }
-    return <Badge variant="outline">Normal</Badge>;
+    const baseVariant = entry.approval_status === 'approved' ? 'default' : 
+                        entry.approval_status === 'rejected' ? 'destructive' :
+                        entry.approval_status === 'flagged' ? 'secondary' : 'outline';
+    
+    const statusText = entry.approval_status.charAt(0).toUpperCase() + entry.approval_status.slice(1);
+    
+    return (
+      <div className="flex flex-col gap-1">
+        <Badge variant={baseVariant}>{statusText}</Badge>
+        {entry.hours_worked > 8 && (
+          <Badge variant="secondary" className="text-xs">OT</Badge>
+        )}
+      </div>
+    );
   };
 
   const allSelected = entries.length > 0 && selectedEntries.length === entries.length;
@@ -90,7 +105,8 @@ export function TimeManagementTable({
             <TableHead>Work Item</TableHead>
             <TableHead className="text-right">Hours</TableHead>
             <TableHead className="text-right">Rate</TableHead>
-            <TableHead className="text-right">Cost</TableHead>
+            <TableHead className="text-right">Labor Cost</TableHead>
+            <TableHead className="text-right">Materials</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Description</TableHead>
             <TableHead className="w-12"></TableHead>
@@ -184,6 +200,10 @@ export function TimeManagementTable({
                 </div>
               </TableCell>
               
+              <TableCell className="text-right">
+                {entry.materials_cost ? formatCurrency(entry.materials_cost) : '-'}
+              </TableCell>
+              
               <TableCell>
                 {getStatusBadge(entry)}
               </TableCell>
@@ -211,6 +231,34 @@ export function TimeManagementTable({
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </DropdownMenuItem>
+                    
+                    {entry.approval_status === 'pending' && onApprove && (
+                      <DropdownMenuItem 
+                        onClick={() => onApprove(entry.id)}
+                        className="text-green-600"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approve
+                      </DropdownMenuItem>
+                    )}
+                    
+                    {entry.approval_status !== 'rejected' && onReject && (
+                      <DropdownMenuItem 
+                        onClick={() => onReject(entry.id, 'Individual rejection')}
+                        className="text-red-600"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Reject
+                      </DropdownMenuItem>
+                    )}
+                    
+                    {onFlag && (
+                      <DropdownMenuItem onClick={() => onFlag(entry.id)}>
+                        <Flag className="h-4 w-4 mr-2" />
+                        Flag for Review
+                      </DropdownMenuItem>
+                    )}
+                    
                     <DropdownMenuItem 
                       onClick={() => onDelete(entry.id)}
                       className="text-destructive"

@@ -39,6 +39,7 @@ export default function AdminTimeManagement() {
     updateTimeEntry,
     deleteTimeEntry,
     bulkApprove,
+    bulkReject,
     exportToCSV,
     refetch
   } = useTimeManagement(filters);
@@ -63,6 +64,9 @@ export default function AdminTimeManagement() {
         case 'approve':
           await bulkApprove(selectedEntries);
           break;
+        case 'reject':
+          await bulkReject(selectedEntries, 'Bulk rejection');
+          break;
         case 'export':
           await exportToCSV(selectedEntries);
           break;
@@ -74,6 +78,36 @@ export default function AdminTimeManagement() {
       refetch();
     } catch (error) {
       console.error('Bulk action failed:', error);
+    }
+  };
+
+  const handleApprove = async (entryId: string) => {
+    try {
+      await updateTimeEntry(entryId, { approval_status: 'approved' });
+      refetch();
+    } catch (error) {
+      console.error('Failed to approve time entry:', error);
+    }
+  };
+
+  const handleReject = async (entryId: string, reason: string) => {
+    try {
+      await updateTimeEntry(entryId, { 
+        approval_status: 'rejected',
+        rejection_reason: reason 
+      });
+      refetch();
+    } catch (error) {
+      console.error('Failed to reject time entry:', error);
+    }
+  };
+
+  const handleFlag = async (entryId: string) => {
+    try {
+      await updateTimeEntry(entryId, { approval_status: 'flagged' });
+      refetch();
+    } catch (error) {
+      console.error('Failed to flag time entry:', error);
     }
   };
 
@@ -151,6 +185,9 @@ export default function AdminTimeManagement() {
             onSelectAll={handleSelectAll}
             onEdit={handleEdit}
             onDelete={deleteTimeEntry}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onFlag={handleFlag}
             isLoading={isLoading}
           />
         </CardContent>

@@ -408,6 +408,9 @@ export type Database = {
       }
       employee_reports: {
         Row: {
+          approval_status: Database["public"]["Enums"]["approval_status"] | null
+          approved_at: string | null
+          approved_by: string | null
           clock_in_time: string | null
           clock_out_location_address: string | null
           clock_out_location_lat: number | null
@@ -425,6 +428,7 @@ export type Database = {
           location_lng: number | null
           notes: string | null
           project_id: string | null
+          rejection_reason: string | null
           report_date: string
           total_labor_cost: number | null
           updated_at: string
@@ -432,6 +436,11 @@ export type Database = {
           work_performed: string
         }
         Insert: {
+          approval_status?:
+            | Database["public"]["Enums"]["approval_status"]
+            | null
+          approved_at?: string | null
+          approved_by?: string | null
           clock_in_time?: string | null
           clock_out_location_address?: string | null
           clock_out_location_lat?: number | null
@@ -449,6 +458,7 @@ export type Database = {
           location_lng?: number | null
           notes?: string | null
           project_id?: string | null
+          rejection_reason?: string | null
           report_date: string
           total_labor_cost?: number | null
           updated_at?: string
@@ -456,6 +466,11 @@ export type Database = {
           work_performed: string
         }
         Update: {
+          approval_status?:
+            | Database["public"]["Enums"]["approval_status"]
+            | null
+          approved_at?: string | null
+          approved_by?: string | null
           clock_in_time?: string | null
           clock_out_location_address?: string | null
           clock_out_location_lat?: number | null
@@ -473,6 +488,7 @@ export type Database = {
           location_lng?: number | null
           notes?: string | null
           project_id?: string | null
+          rejection_reason?: string | null
           report_date?: string
           total_labor_cost?: number | null
           updated_at?: string
@@ -1122,6 +1138,58 @@ export type Database = {
         }
         Relationships: []
       }
+      receipt_time_entries: {
+        Row: {
+          allocated_amount: number
+          allocation_percentage: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          receipt_id: string
+          time_entry_id: string
+        }
+        Insert: {
+          allocated_amount: number
+          allocation_percentage?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          receipt_id: string
+          time_entry_id: string
+        }
+        Update: {
+          allocated_amount?: number
+          allocation_percentage?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          receipt_id?: string
+          time_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_time_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipt_time_entries_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipt_time_entries_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "employee_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receipt_work_orders: {
         Row: {
           allocated_amount: number
@@ -1501,6 +1569,57 @@ export type Database = {
             columns: ["updated_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entry_audits: {
+        Row: {
+          action: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          time_entry_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          time_entry_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          time_entry_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entry_audits_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_audits_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "employee_reports"
             referencedColumns: ["id"]
           },
         ]
@@ -2669,6 +2788,7 @@ export type Database = {
       }
     }
     Enums: {
+      approval_status: "pending" | "approved" | "rejected" | "flagged"
       assignment_type: "internal" | "subcontractor"
       conversation_type: "direct" | "organization" | "announcement"
       email_status: "sent" | "delivered" | "failed" | "bounced"
@@ -2813,6 +2933,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      approval_status: ["pending", "approved", "rejected", "flagged"],
       assignment_type: ["internal", "subcontractor"],
       conversation_type: ["direct", "organization", "announcement"],
       email_status: ["sent", "delivered", "failed", "bounced"],

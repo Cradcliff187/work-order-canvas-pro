@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCheck, Download, Trash2, Flag } from 'lucide-react';
+import { CheckCheck, Download, Trash2, Flag, XCircle } from 'lucide-react';
 
 interface BulkActionsBarProps {
   selectedCount: number;
@@ -25,6 +25,15 @@ export function BulkActionsBar({ selectedCount, onAction }: BulkActionsBarProps)
           >
             <CheckCheck className="h-4 w-4 mr-2" />
             Approve
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onAction('reject')}
+            className="text-red-600 hover:text-red-600"
+          >
+            <XCircle className="h-4 w-4 mr-2" />
+            Reject
           </Button>
           <Button
             variant="outline"

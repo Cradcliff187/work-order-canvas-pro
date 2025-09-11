@@ -185,7 +185,48 @@ export function TimeManagementFilters({
       </div>
 
       {/* Work Orders and Projects */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Approval Status */}
+        <div className="space-y-2">
+          <Label>Approval Status</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-start">
+                {filters.status.length > 0 
+                  ? `${filters.status.length} selected`
+                  : "All statuses"
+                }
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0">
+              <Command>
+                <CommandGroup className="max-h-64 overflow-auto">
+                  {[
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'approved', label: 'Approved' },
+                    { value: 'rejected', label: 'Rejected' },
+                    { value: 'flagged', label: 'Flagged' }
+                  ].map((status) => (
+                    <CommandItem
+                      key={status.value}
+                      onSelect={() => toggleArrayFilter('status', status.value)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={filters.status.includes(status.value)}
+                          readOnly
+                        />
+                        <span>{status.label}</span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+        
         {/* Work Orders */}
         <div className="space-y-2">
           <Label>Work Orders</Label>
