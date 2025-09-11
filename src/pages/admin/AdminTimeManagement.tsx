@@ -115,7 +115,15 @@ export default function AdminTimeManagement() {
     );
   };
 
-  const handleSelectAll = () => {
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedEntries(timeEntries.map(entry => entry.id));
+    } else {
+      setSelectedEntries([]);
+    }
+  };
+
+  const handleSelectAllToggle = () => {
     if (selectedEntries.length === timeEntries.length) {
       setSelectedEntries([]);
     } else {
@@ -193,7 +201,7 @@ export default function AdminTimeManagement() {
   };
 
   const handleBulkExport = () => {
-    exportToCSV(timeEntries, filters);
+    exportToCSV(selectedEntries);
   };
 
   const handleEntrySave = async (updatedEntry: any) => {
@@ -212,7 +220,7 @@ export default function AdminTimeManagement() {
   // Enhanced keyboard shortcuts
   useTimeManagementKeyboards({
     selectedEntries,
-    onSelectAll: handleSelectAll,
+    onSelectAll: handleSelectAllToggle,
     onClearSelection: handleClearSelection,
     onApproveSelected: () => selectedEntries.length > 0 && handleBulkAction('approve'),
     onDeleteSelected: () => selectedEntries.length > 0 && handleBulkAction('delete'),
@@ -304,14 +312,14 @@ export default function AdminTimeManagement() {
               entries={timeEntries}
               selectedEntries={selectedEntries}
               columnVisibility={columnVisibility}
-              onSelect={handleEntrySelect}
+              onSelectionChange={handleEntrySelect}
               onSelectAll={handleSelectAll}
               onEdit={handleEntryEdit}
               onDelete={handleEntryDelete}
               onApprove={handleEntryApprove}
               onReject={handleEntryReject}
               onFlag={handleEntryFlag}
-              loading={isLoading}
+              isLoading={isLoading}
             />
           </CardContent>
         </Card>
@@ -322,6 +330,7 @@ export default function AdminTimeManagement() {
             currentPage={filters.page}
             totalPages={totalPages}
             pageSize={filters.limit}
+            totalItems={totalEntries}
             onPageChange={handlePageChange}
             onPageSizeChange={handlePageSizeChange}
           />
@@ -331,8 +340,11 @@ export default function AdminTimeManagement() {
       {editingEntry && (
         <TimeEntryEditModal
           entry={editingEntry}
-          onClose={() => setEditingEntry(null)}
+          onCancel={() => setEditingEntry(null)}
           onSave={handleEntrySave}
+          employees={employees}
+          workOrders={workOrders}
+          projects={projects}
         />
       )}
     </>

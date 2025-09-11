@@ -14,7 +14,7 @@ import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 interface TimeManagementTableProps {
   entries: TimeEntry[];
   selectedEntries: string[];
-  onSelectionChange: (entryId: string, selected: boolean) => void;
+  onSelectionChange: (entryId: string) => void;
   onSelectAll: (selected: boolean) => void;
   onEdit: (entry: TimeEntry) => void;
   onDelete: (entryId: string) => void;
@@ -126,8 +126,8 @@ export function TimeManagementTable({
               <TableCell>
                 <Checkbox
                   checked={selectedEntries.includes(entry.id)}
-                  onCheckedChange={(checked) => 
-                    onSelectionChange(entry.id, checked as boolean)
+                  onCheckedChange={() => 
+                    onSelectionChange(entry.id)
                   }
                 />
               </TableCell>
