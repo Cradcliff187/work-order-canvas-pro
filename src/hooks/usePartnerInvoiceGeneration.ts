@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 interface GeneratePartnerInvoiceData {
   partnerOrganizationId: string;
   selectedBillIds: string[];
-  selectedReportIds?: string[];
+  internalReportIds?: string[];
   markupPercentage: number;
   subtotal: number;
   totalAmount: number;
@@ -78,18 +78,19 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
   }
 
   // Fetch internal work order reports if provided
-  let internalReports = [];
-  if (data.selectedReportIds && data.selectedReportIds.length > 0) {
-    const { data: reportsData, error: reportsError } = await supabase
+  const { data: internalReports } = data.internalReportIds?.length ? 
+    await supabase
       .from('work_order_reports')
-      .select('*, work_orders(work_order_number, title)')
-      .in('id', data.selectedReportIds);
-      
-    if (reportsError) {
-      throw new Error('Failed to fetch internal reports');
-    }
-    internalReports = reportsData || [];
-  }
+      .select(`
+        *,
+        work_orders!inner(
+          work_order_number,
+          title,
+          assigned_organization_id
+        )
+      `)
+      .in('id', data.internalReportIds)
+    : { data: [] };
 
   // Create partner invoice
   const { data: partnerInvoice, error: invoiceError } = await supabase
@@ -129,17 +130,17 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     });
   });
   
-  // Add internal report line items
-  internalReports.forEach(report => {
+  // Add internal reports to line items
+  internalReports?.forEach(report => {
     const cost = report.bill_amount || 0;
     const markupAmount = cost * (data.markupPercentage / 100);
-    const totalAmount = cost + markupAmount;
+    const totalWithMarkup = cost + markupAmount;
     
     lineItems.push({
       partner_invoice_id: partnerInvoice.id,
       work_order_report_id: report.id,
-      amount: totalAmount,
-      description: `Internal Work - ${report.work_orders?.work_order_number}: ${report.work_orders?.title}`
+      amount: totalWithMarkup,
+      description: `Internal Work - ${report.work_orders.work_order_number}: ${report.work_orders.title}`
     });
   });
   
@@ -165,16 +166,27 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
   }
 
   // Update internal reports with partner invoice info
-  if (data.selectedReportIds && data.selectedReportIds.length > 0) {
-    const { error: reportsUpdateError } = await supabase
-      .from('work_order_reports')
-      .update({
-        partner_invoice_id: partnerInvoice.id
-      })
-      .in('id', data.selectedReportIds);
-      
-    if (reportsUpdateError) {
-      throw new Error('Failed to update report status');
+  if (data.internalReportIds?.length) {
+    // Calculate total for each report (with markup)
+    const reportAmounts = internalReports?.map(report => {
+      const cost = report.bill_amount || 0;
+      const markup = cost * (data.markupPercentage / 100);
+      return {
+        id: report.id,
+        amount: cost + markup
+      };
+    }) || [];
+    
+    // Update each report with its billed amount
+    for (const reportAmount of reportAmounts) {
+      await supabase
+        .from('work_order_reports')
+        .update({ 
+          partner_invoice_id: partnerInvoice.id,
+          partner_billed_at: new Date().toISOString(),
+          partner_billed_amount: reportAmount.amount
+        })
+        .eq('id', reportAmount.id);
     }
   }
 
