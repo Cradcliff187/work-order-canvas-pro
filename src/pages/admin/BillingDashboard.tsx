@@ -2,11 +2,10 @@ import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { useOrganizations } from '@/hooks/useOrganizations';
-import { countActiveFilters } from '@/lib/filters';
+import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useViewMode } from '@/hooks/useViewMode';
-import { usePartnerInvoicingFilters, usePartnerInvoicingFilterCount } from '@/hooks/usePartnerInvoicingFilters';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, TrendingUp, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
@@ -32,9 +31,30 @@ export default function BillingDashboard() {
     refetch: refetchPipeline 
   } = useWorkOrderLifecycle();
 
-  // Billing-specific state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<BillingFiltersValue>({});
+  // Standardized filter management with persistence
+  const initialFilters: BillingFiltersValue = {
+    search: '',
+    status: [],
+    financial_status: [],
+    partner_billing_status: [],
+    report_status: [],
+    partner_organization_ids: [],
+    subcontractor_organization_ids: [],
+    date_from: '',
+    date_to: '',
+    amount_min: '',
+    amount_max: ''
+  };
+
+  const {
+    filters,
+    setFilters,
+    clearFilters: clearAllFilters,
+    filterCount
+  } = useAdminFilters('billing-dashboard-filters-v1', initialFilters, {
+    excludeKeys: ['search'] // Exclude search from filter count as it's handled separately
+  });
+
   const { viewMode, setViewMode } = useViewMode({
     componentKey: 'billing-dashboard',
     config: {
@@ -45,6 +65,12 @@ export default function BillingDashboard() {
 
   // Data fetching
   const { data: organizationsData } = useOrganizations();
+
+  // Create organization mapping for efficient filtering
+  const organizationMap = useMemo(() => {
+    if (!organizationsData) return new Map();
+    return new Map(organizationsData.map(org => [org.id, org]));
+  }, [organizationsData]);
 
   // Column visibility
   const {
@@ -70,8 +96,8 @@ export default function BillingDashboard() {
 
     return pipelineData.filter(item => {
       // Search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
+      if (filters.search?.trim()) {
+        const searchLower = filters.search.toLowerCase();
         const searchableFields = [
           item.work_order_number,
           item.description,
@@ -102,15 +128,36 @@ export default function BillingDashboard() {
         return false;
       }
 
-      // Organization filters - use name matching since IDs may not be available
-      if (filters.partner_organization_ids?.length && item.partner_organization_name) {
-        // For now, we'll skip ID-based filtering and rely on name filtering in search
-        // This could be enhanced later with proper ID mapping
+      // Partner organization filter - now functional with ID-based filtering
+      if (filters.partner_organization_ids?.length && filters.partner_organization_ids.length > 0) {
+        // Try ID-based filtering first
+        if (item.organization_id && filters.partner_organization_ids.includes(item.organization_id)) {
+          // Match found by ID
+        } else if (item.partner_organization_name) {
+          // Fallback to name-based filtering
+          const matchingOrg = Array.from(organizationMap.values()).find(org => 
+            org.organization_type === 'partner' && 
+            org.name === item.partner_organization_name &&
+            filters.partner_organization_ids?.includes(org.id)
+          );
+          if (!matchingOrg) {
+            return false;
+          }
+        } else {
+          return false;
+        }
       }
       
-      if (filters.subcontractor_organization_ids?.length) {
-        // Similar to partner organizations, skip for now
-        // This filtering would need proper subcontractor data structure
+      // Subcontractor organization filter - now functional
+      if (filters.subcontractor_organization_ids?.length && filters.subcontractor_organization_ids.length > 0) {
+        // Check if item has subcontractor information
+        if (item.assigned_organization_id && filters.subcontractor_organization_ids.includes(item.assigned_organization_id)) {
+          // Match found by assigned organization ID
+        } else {
+          // For now, we don't have reliable subcontractor name mapping in pipeline data
+          // This could be enhanced when subcontractor organization names are added to the data structure
+          return false;
+        }
       }
 
       // Date range filter - use created_at if available
@@ -127,19 +174,19 @@ export default function BillingDashboard() {
       }
 
       // Amount range filter
-      if (filters.amount_min || filters.amount_max) {
+      if (filters.amount_min?.trim() || filters.amount_max?.trim()) {
         const amount = item.partner_billed_amount || item.subcontractor_bill_amount || 0;
-        if (filters.amount_min && amount < parseFloat(filters.amount_min)) {
+        if (filters.amount_min?.trim() && amount < parseFloat(filters.amount_min)) {
           return false;
         }
-        if (filters.amount_max && amount > parseFloat(filters.amount_max)) {
+        if (filters.amount_max?.trim() && amount > parseFloat(filters.amount_max)) {
           return false;
         }
       }
 
       return true;
     });
-  }, [pipelineData, searchTerm, filters]);
+  }, [pipelineData, filters, organizationMap]);
 
   // Calculate stats from filtered data
   const totalWorkOrders = filteredPipelineData.length;
@@ -150,12 +197,15 @@ export default function BillingDashboard() {
     item.report_status === 'reviewed'
   ).length;
 
-  // Count all active filters including search term
-  const filterCount = useMemo(() => {
-    let count = searchTerm ? 1 : 0;
-    count += countActiveFilters(filters);
+  // Total filter count including search (already handled by useAdminFilters hook)
+  const totalFilterCount = useMemo(() => {
+    let count = filterCount;
+    // Add search to count if it has a value
+    if (filters.search?.trim()) {
+      count += 1;
+    }
     return count;
-  }, [searchTerm, filters]);
+  }, [filterCount, filters.search]);
 
   // Prepare stats cards
   const statsCards: StatCard[] = useMemo(() => [
@@ -190,10 +240,9 @@ export default function BillingDashboard() {
     await refetchPipeline();
   };
 
-  // Clear all filters
+  // Clear all filters - now uses standardized clearing
   const clearFilters = () => {
-    setSearchTerm('');
-    setFilters({});
+    clearAllFilters();
   };
 
   // Export handlers
@@ -256,15 +305,15 @@ export default function BillingDashboard() {
           data={filteredPipelineData}
           isLoading={pipelineLoading}
           isError={pipelineError}
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
+          searchValue={filters.search || ''}
+          onSearchChange={(value) => setFilters({ ...filters, search: value })}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           allowedModes={['table', 'card']}
           filters={filters}
           onFiltersChange={setFilters}
           onClearFilters={clearFilters}
-          filterCount={filterCount}
+          filterCount={totalFilterCount}
           columnVisibilityColumns={getAllColumns()}
           onToggleColumn={toggleColumn}
           onResetColumns={resetToDefaults}

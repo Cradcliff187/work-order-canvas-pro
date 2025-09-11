@@ -29,6 +29,7 @@ export interface BillingFiltersProps {
   value: BillingFiltersValue;
   onChange: (value: BillingFiltersValue) => void;
   onClear?: () => void;
+  filterCount?: number;
 }
 
 const workOrderStatusOptions = [
@@ -59,7 +60,8 @@ const reportStatusOptions = [
 export function BillingFilters({
   value,
   onChange,
-  onClear
+  onClear,
+  filterCount = 0
 }: BillingFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showDateFrom, setShowDateFrom] = useState(false);
@@ -75,22 +77,8 @@ export function BillingFilters({
   
   const { data: organizations = [] } = useOrganizations();
 
-  // Calculate active filter count
-  const activeCount = useMemo(() => {
-    let count = 0;
-    if (value.search?.trim()) count++;
-    if (value.status?.length) count++;
-    if (value.financial_status?.length) count++;
-    if (value.partner_billing_status?.length) count++;
-    if (value.report_status?.length) count++;
-    if (value.partner_organization_ids?.length) count++;
-    if (value.subcontractor_organization_ids?.length) count++;
-    if (value.date_from) count++;
-    if (value.date_to) count++;
-    if (value.amount_min?.trim()) count++;
-    if (value.amount_max?.trim()) count++;
-    return count;
-  }, [value]);
+  // Use passed filter count for consistency with standardized filtering
+  const activeCount = filterCount;
 
   // Memoize organization options to prevent re-renders
   const partnerOrganizationOptions = useMemo(() => 
@@ -175,7 +163,19 @@ export function BillingFilters({
   }, [localValue, onChange]);
 
   const handleClearFilters = useCallback(() => {
-    const cleared = {};
+    const cleared = {
+      search: '',
+      status: [],
+      financial_status: [],
+      partner_billing_status: [],
+      report_status: [],
+      partner_organization_ids: [],
+      subcontractor_organization_ids: [],
+      date_from: '',
+      date_to: '',
+      amount_min: '',
+      amount_max: ''
+    };
     setLocalValue(cleared);
     if (!isMobile) {
       onChange(cleared);
