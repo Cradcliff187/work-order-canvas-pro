@@ -66,7 +66,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
     setSubcontractorNotes((invoice as any).subcontractor_notes || '');
     setAdminNotes(invoice.admin_notes || '');
     setPaymentReference(invoice.payment_reference || '');
-    setInvoiceDate((invoice as any).invoice_date ? new Date((invoice as any).invoice_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
+    setInvoiceDate(invoice.bill_date ? new Date(invoice.bill_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
     setDueDate((invoice as any).due_date ? new Date((invoice as any).due_date).toISOString().slice(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
     setPaidAt(invoice.paid_at ? new Date(invoice.paid_at).toISOString().slice(0, 10) : '');
     
@@ -107,7 +107,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
         subcontractor_notes: subcontractorNotes || null,
         admin_notes: adminNotes || null,
         payment_reference: paymentReference || null,
-        invoice_date: invoiceDate || null,
+        bill_date: invoiceDate || null,
         due_date: dueDate || null,
         total_amount: getTotalAmount(),
       };
