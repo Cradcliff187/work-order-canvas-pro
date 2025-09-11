@@ -98,7 +98,7 @@ export const createBillColumns = ({
     accessorKey: 'attachment_count',
     header: 'Attachments',
     cell: ({ row }) => {
-      const count = row.original.subcontractor_bill_attachments?.length || 0;
+      const count = row.original.attachmentCount || 0;
       return count > 0 ? (
         <div className="flex items-center gap-1">
           <Paperclip className="h-4 w-4 text-muted-foreground" />

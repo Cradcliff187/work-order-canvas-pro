@@ -41,6 +41,7 @@ export interface SubcontractorBill {
     name: string;
   };
   workOrderCount?: number;
+  attachmentCount?: number;
   // Heavy nested data only available in detail view
   submitted_by_profile?: {
     id: string;
@@ -171,17 +172,24 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
 
       if (error) throw error;
 
-      // Add work order count for each bill
+      // Add work order count and attachment count for each bill
       const billsWithCounts = await Promise.all(
         (data || []).map(async (bill) => {
-          const { count: workOrderCount } = await supabase
-            .from('subcontractor_bill_work_orders')
-            .select('*', { count: 'exact', head: true })
-            .eq('subcontractor_bill_id', bill.id);
+          const [workOrderResult, attachmentResult] = await Promise.all([
+            supabase
+              .from('subcontractor_bill_work_orders')
+              .select('*', { count: 'exact', head: true })
+              .eq('subcontractor_bill_id', bill.id),
+            supabase
+              .from('subcontractor_bill_attachments')
+              .select('*', { count: 'exact', head: true })
+              .eq('subcontractor_bill_id', bill.id)
+          ]);
           
           return {
             ...bill,
-            workOrderCount: workOrderCount || 0
+            workOrderCount: workOrderResult.count || 0,
+            attachmentCount: attachmentResult.count || 0
           };
         })
       );
