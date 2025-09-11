@@ -5,7 +5,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
   AdminDashboard,
-  
+  AdminTimeEntry,
   PipelineDashboard,
   AdminUsers,
   AdminOrganizations,
@@ -64,6 +64,16 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <BillingDashboard />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/admin/time-entry" element={
+      <ProtectedRoute requiredUserType="admin">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <AdminTimeEntry />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
