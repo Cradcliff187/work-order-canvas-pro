@@ -124,7 +124,7 @@ export default function SelectBills() {
   // Fetch ready bills and internal reports for the selected partner
   const { data: partnerData, isLoading: isLoadingBills, error: billsError } = usePartnerReadyBills(selectedPartnerId);
   const bills = partnerData?.bills;
-  const internalReports = partnerData?.internalReports;
+  const internalReports = partnerData?.internalReports || [];
   const { mutate: generateInvoice, isPending: isGeneratingInvoice } = usePartnerInvoiceGeneration();
 
   // Apply filters to bills with inline filtering logic
@@ -725,12 +725,12 @@ export default function SelectBills() {
         )}
 
         {/* Internal Work Reports Display */}
-        {selectedPartnerId && internalReports.length > 0 && (
+        {selectedPartnerId && internalReports && internalReports.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileBarChart className="w-5 h-5" />
-                Internal Work Completed ({internalReports.length})
+                Internal Work Completed ({internalReports?.length || 0})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -739,10 +739,11 @@ export default function SelectBills() {
                   <TableRow>
                     <TableHead className="w-12">
                       <Checkbox 
-                        checked={selectedReportIds.size === internalReports.length && internalReports.length > 0}
+                        checked={internalReports && selectedReportIds.size === internalReports.length && internalReports.length > 0}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setSelectedReportIds(new Set(internalReports.map(r => r.id)));
+                            const allReportIds = internalReports?.map(r => r.id) || [];
+                            setSelectedReportIds(new Set(allReportIds));
                           } else {
                             setSelectedReportIds(new Set());
                           }
@@ -755,7 +756,7 @@ export default function SelectBills() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {internalReports.map((report) => (
+                  {(internalReports || []).map((report) => (
                     <TableRow key={report.id}>
                       <TableCell>
                         <Checkbox
