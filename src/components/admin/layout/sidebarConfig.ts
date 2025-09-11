@@ -20,7 +20,8 @@ import {
   MailCheck,
   DollarSign,
   MessageSquare,
-  FolderKanban
+  FolderKanban,
+  Clock
 } from 'lucide-react';
 
 export interface SidebarItem {
@@ -31,13 +32,12 @@ export interface SidebarItem {
 
 export const sidebarItems: SidebarItem[] = [
   { title: 'Admin Dashboard', url: '/admin/dashboard', icon: Gauge },
-  { title: 'Employee Dashboard', url: '/employee/dashboard', icon: HardHat },
   { title: 'Billing Dashboard', url: '/admin/billing-dashboard', icon: DollarSign },
+  { title: 'Time Entry', url: '/admin/time-entry', icon: Clock },
+  { title: 'Time Management', url: '/admin/time-management', icon: Timer },
   { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList },
   { title: 'Messages', url: '/messages', icon: MessageSquare },
   { title: 'Reports', url: '/admin/reports', icon: FileBarChart },
-  { title: 'Time Reports', url: '/employee/time-reports', icon: Timer },
-  { title: 'Receipts', url: '/employee/receipts', icon: Receipt },
   { title: 'Finance Receipts', url: '/admin/finance/receipts', icon: Wallet },
   { title: 'Subcontractor Bills', url: '/admin/subcontractor-bills', icon: FileText },
   { title: 'Partner Invoices', url: '/admin/partner-billing/invoices', icon: CreditCard },
@@ -54,12 +54,12 @@ export const sidebarItems: SidebarItem[] = [
 ];
 
 export const sidebarSections = {
-  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Messages', 'Reports', 'Time Reports', 'Projects'],
-  FINANCIAL: ['Billing Dashboard', 'Receipts', 'Finance Receipts', 'Subcontractor Bills', 'Partner Invoices'],
+  OPERATIONS: ['Admin Dashboard', 'Work Orders', 'Messages', 'Reports', 'Projects'],
+  FINANCIAL: ['Billing Dashboard', 'Time Entry', 'Time Management', 'Finance Receipts', 'Subcontractor Bills', 'Partner Invoices'],
   MANAGEMENT: ['Users', 'Organizations', 'Partner Locations', 'Employees'],
   INSIGHTS: ['Analytics', 'Email Templates'],
   SYSTEM: ['Settings', 'System Health', 'Email Testing']
 };
 
-export const adminOnlyItems = ['Admin Dashboard', 'Billing Dashboard', 'Finance Receipts', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Projects', 'Subcontractor Bills', 'Partner Invoices', 'Settings', 'System Health', 'Email Testing'];
-export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Messages', 'Time Reports', 'Receipts'];
+export const adminOnlyItems = ['Admin Dashboard', 'Billing Dashboard', 'Time Entry', 'Time Management', 'Finance Receipts', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Projects', 'Subcontractor Bills', 'Partner Invoices', 'Settings', 'System Health', 'Email Testing'];
+export const employeeAccessItems = ['Work Orders', 'Messages'];
