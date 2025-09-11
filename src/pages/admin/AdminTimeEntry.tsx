@@ -179,6 +179,22 @@ export default function AdminTimeEntry() {
     form.setValue('materialsCost', cost);
   };
 
+  const handleEmployeeChange = (employeeId: string) => {
+    const selectedEmployee = employees?.find(emp => emp.id === employeeId);
+    
+    if (selectedEmployee && !selectedEmployee.hourly_billable_rate) {
+      toast({
+        title: "Error",
+        description: `${selectedEmployee.first_name} ${selectedEmployee.last_name} doesn't have an hourly rate set. Please set their rate in Employee Management first.`,
+        variant: "destructive",
+      });
+      form.setValue('employeeId', '');
+      return;
+    }
+    
+    form.setValue('employeeId', employeeId);
+  };
+
   const watchedEmployee = form.watch('employeeId');
   const selectedEmployeeData = employees?.find(emp => emp.id === watchedEmployee);
   const watchedStartTime = form.watch('startTime');
@@ -219,7 +235,7 @@ export default function AdminTimeEntry() {
                 <Label htmlFor="employee">Employee</Label>
                 <Select
                   value={form.watch('employeeId')}
-                  onValueChange={(value) => form.setValue('employeeId', value)}
+                  onValueChange={handleEmployeeChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select employee" />
@@ -227,7 +243,18 @@ export default function AdminTimeEntry() {
                   <SelectContent>
                     {employees?.map((employee) => (
                       <SelectItem key={employee.id} value={employee.id}>
-                        {employee.first_name} {employee.last_name} (Rate: ${employee.hourly_billable_rate || 0}/hr)
+                        <div className="flex items-center justify-between w-full">
+                          <span>{employee.first_name} {employee.last_name}</span>
+                          {employee.hourly_billable_rate ? (
+                            <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                              (Rate: ${employee.hourly_billable_rate}/hr)
+                            </span>
+                          ) : (
+                            <span className="text-sm text-destructive font-medium">
+                              (No rate set)
+                            </span>
+                          )}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -442,7 +469,7 @@ export default function AdminTimeEntry() {
               className="mt-6"
             />
 
-            <Button type="submit" disabled={createTimeEntry.isPending || isLoading} className="mt-6">
+            <Button type="submit" disabled={createTimeEntry.isPending || isLoading || !selectedEmployeeData?.hourly_billable_rate} className="mt-6">
               <Plus className="mr-2 h-4 w-4" />
               Add Entry
             </Button>
