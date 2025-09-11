@@ -90,7 +90,7 @@ export const createBillColumns = ({
     header: 'Work Orders',
     cell: ({ row }) => {
       const count = row.original.workOrderCount || 0;
-      return <span className="text-sm">{count} {count === 1 ? 'order' : 'orders'}</span>;
+      return <span className="text-sm">{count}</span>;
     },
     enableHiding: false,
   },
