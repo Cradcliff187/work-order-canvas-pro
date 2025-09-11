@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { usePartnerReadyBills } from '@/hooks/usePartnerReadyBills';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -65,6 +66,7 @@ export default function BillingDashboard() {
 
   // Data fetching
   const { data: organizationsData } = useOrganizations();
+  const { data: readyBills } = usePartnerReadyBills();
 
   // Create organization mapping for efficient filtering
   const organizationMap = useMemo(() => {
@@ -188,6 +190,13 @@ export default function BillingDashboard() {
     });
   }, [pipelineData, filters, organizationMap]);
 
+  // Destructure ready bills data
+  const { bills, internalReports } = readyBills || { bills: [], internalReports: [] };
+  
+  // Calculate partner ready bills totals
+  const billsTotal = bills.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+  const internalTotal = internalReports.reduce((sum, r) => sum + (r.bill_amount || 0), 0);
+
   // Calculate stats from filtered data
   const totalWorkOrders = filteredPipelineData.length;
   const totalValue = filteredPipelineData.reduce((sum, item) => sum + (item.partner_billed_amount || 0), 0);
@@ -217,8 +226,9 @@ export default function BillingDashboard() {
     },
     {
       icon: CheckCircle,
-      label: 'Ready to Invoice',
-      value: readyToBill,
+      label: 'Ready to Bill Partners',
+      value: formatCurrency(billsTotal + internalTotal),
+      subtitle: `${bills.length} bills, ${internalReports.length} internal reports`,
       variant: 'success'
     },
     {
