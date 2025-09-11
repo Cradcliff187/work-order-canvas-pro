@@ -10,6 +10,7 @@ import { ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { SubcontractorBill } from '@/hooks/useSubcontractorBills';
+import { useSubcontractorBill } from '@/hooks/useSubcontractorBills';
 
 /**
  * Edit sheet for subcontractor BILLS (not partner invoices)
@@ -21,7 +22,7 @@ interface SubcontractorBillWorkOrder {
   work_order_id: string;
   amount: number;
   description?: string;
-  work_order?: {
+  work_orders?: {
     work_order_number: string;
     title: string;
   };
@@ -58,21 +59,27 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
   const [workOrdersOpen, setWorkOrdersOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Fetch full bill details to get work orders if not already loaded
+  const { data: fullBillData } = useSubcontractorBill(invoice?.id || '');
+
   useEffect(() => {
-    if (!invoice) return;
-    setExternalBillNumber(invoice.external_bill_number || '');
-    setPurchaseOrderNumber((invoice as any).purchase_order_number || '');
-    setPaymentTerms((invoice as any).payment_terms || 'Net 30');
-    setSubcontractorNotes((invoice as any).subcontractor_notes || '');
-    setAdminNotes(invoice.admin_notes || '');
-    setPaymentReference(invoice.payment_reference || '');
-    setInvoiceDate(invoice.bill_date ? new Date(invoice.bill_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
-    setDueDate((invoice as any).due_date ? new Date((invoice as any).due_date).toISOString().slice(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
-    setPaidAt(invoice.paid_at ? new Date(invoice.paid_at).toISOString().slice(0, 10) : '');
+    // Use fullBillData if available, otherwise fallback to invoice prop
+    const billData = fullBillData || invoice;
+    if (!billData) return;
     
-    // Use existing subcontractor bill work orders data instead of separate fetch
-    setWorkOrderAmounts(invoice.subcontractor_bill_work_orders || []);
-  }, [invoice]);
+    setExternalBillNumber(billData.external_bill_number || '');
+    setPurchaseOrderNumber((billData as any).purchase_order_number || '');
+    setPaymentTerms((billData as any).payment_terms || 'Net 30');
+    setSubcontractorNotes((billData as any).subcontractor_notes || '');
+    setAdminNotes(billData.admin_notes || '');
+    setPaymentReference(billData.payment_reference || '');
+    setInvoiceDate(billData.bill_date ? new Date(billData.bill_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
+    setDueDate((billData as any).due_date ? new Date((billData as any).due_date).toISOString().slice(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+    setPaidAt(billData.paid_at ? new Date(billData.paid_at).toISOString().slice(0, 10) : '');
+    
+    // Use work orders data from fullBillData if available, otherwise fallback to invoice prop
+    setWorkOrderAmounts(billData.subcontractor_bill_work_orders || []);
+  }, [invoice, fullBillData]);
 
 
   const updateWorkOrderAmount = (workOrderId: string, newAmount: number) => {
@@ -84,7 +91,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
   };
 
   const getTotalAmount = () => {
-    return workOrderAmounts.reduce((sum, wo) => sum + (wo.amount || 0), 0);
+    return workOrderAmounts.reduce((sum, wo) => sum + Number(wo.amount || 0), 0);
   };
 
   const handleSave = async () => {
@@ -99,7 +106,16 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
     try {
       setIsSaving(true);
       
-      // Update invoice metadata
+      // Update work order amounts first
+      for (const workOrder of workOrderAmounts) {
+        const { error: workOrderError } = await supabase
+          .from('subcontractor_bill_work_orders')
+          .update({ amount: Number(workOrder.amount) })
+          .eq('id', workOrder.id);
+        if (workOrderError) throw workOrderError;
+      }
+
+      // Update bill metadata
       const invoicePayload: any = {
         external_bill_number: externalBillNumber || null,
         purchase_order_number: purchaseOrderNumber || null,
@@ -109,8 +125,13 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
         payment_reference: paymentReference || null,
         bill_date: invoiceDate || null,
         due_date: dueDate || null,
-        total_amount: getTotalAmount(),
       };
+
+      // Only update total_amount if we have work order amounts to calculate from
+      if (workOrderAmounts.length > 0) {
+        invoicePayload.total_amount = getTotalAmount();
+      }
+
       if (paidAt) {
         invoicePayload.paid_at = new Date(paidAt).toISOString();
       } else {
@@ -122,15 +143,6 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
         .update(invoicePayload)
         .eq('id', invoice.id);
       if (invoiceError) throw invoiceError;
-
-      // Update work order amounts
-      for (const workOrder of workOrderAmounts) {
-        const { error: workOrderError } = await supabase
-          .from('subcontractor_bill_work_orders')
-          .update({ amount: workOrder.amount })
-          .eq('id', workOrder.id);
-        if (workOrderError) throw workOrderError;
-      }
 
       toast({ title: 'Bill updated' });
       onSaved?.();
@@ -216,10 +228,10 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
                     <div key={workOrder.id} className="flex items-center gap-3 p-3 border rounded-md">
                       <div className="flex-1">
                         <div className="text-sm font-medium">
-                          {workOrder.work_order?.work_order_number}
+                          {workOrder.work_orders?.work_order_number}
                         </div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {workOrder.work_order?.title}
+                          {workOrder.work_orders?.title}
                         </div>
                       </div>
                       <div className="w-24">
