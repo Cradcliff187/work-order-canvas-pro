@@ -31,7 +31,7 @@ export function TimeManagementFilters({
     onFiltersChange({ ...filters, [key]: value });
   };
 
-  const clearAllFilters = () => {
+  const handleReset = () => {
     onFiltersChange({
       employeeIds: [],
       dateFrom: '',
@@ -39,7 +39,9 @@ export function TimeManagementFilters({
       workOrderIds: [],
       projectIds: [],
       status: [],
-      search: ''
+      search: '',
+      page: 1,
+      limit: 50
     });
   };
 
@@ -68,7 +70,7 @@ export function TimeManagementFilters({
           )}
         </div>
         {getFilterCount() > 0 && (
-          <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+          <Button variant="ghost" size="sm" onClick={handleReset}>
             <X className="h-4 w-4 mr-1" />
             Clear All
           </Button>

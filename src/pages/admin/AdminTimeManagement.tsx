@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, Clock, DollarSign, Users, Download, CheckCheck, Flag, Trash2, Edit } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Users, Download, CheckCheck, Flag, Trash2, Edit, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useTimeManagement } from '@/hooks/useTimeManagement';
@@ -15,6 +15,9 @@ import { TimeManagementTable } from '@/components/admin/time-management/TimeMana
 import { TimeManagementSummary } from '@/components/admin/time-management/TimeManagementSummary';
 import { TimeEntryEditModal } from '@/components/admin/time-management/TimeEntryEditModal';
 import { BulkActionsBar } from '@/components/admin/time-management/BulkActionsBar';
+import { TimeManagementPagination } from '@/components/admin/time-management/TimeManagementPagination';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 
 export default function AdminTimeManagement() {
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
@@ -26,11 +29,53 @@ export default function AdminTimeManagement() {
     workOrderIds: [] as string[],
     projectIds: [] as string[],
     status: [] as string[],
-    search: ''
+    search: '',
+    page: 1,
+    limit: 50
   });
+
+  // Column visibility setup
+  const columnMetadata = {
+    date: { label: 'Date', defaultVisible: true },
+    employee: { label: 'Employee', defaultVisible: true },
+    workItem: { label: 'Work Item', defaultVisible: true },
+    hours: { label: 'Hours', defaultVisible: true },
+    rate: { label: 'Rate', defaultVisible: true },
+    laborCost: { label: 'Labor Cost', defaultVisible: true },
+    materials: { label: 'Materials', defaultVisible: true },
+    status: { label: 'Status', defaultVisible: true },
+    description: { label: 'Description', defaultVisible: true },
+  };
+
+  const {
+    columnVisibility,
+    toggleColumn,
+    resetToDefaults,
+    getAllColumns
+  } = useColumnVisibility({
+    storageKey: 'time-management-columns',
+    columnMetadata,
+  });
+
+  const handleShowAll = () => {
+    Object.keys(columnMetadata).forEach(columnId => {
+      if (!columnVisibility[columnId]) {
+        toggleColumn(columnId);
+      }
+    });
+  };
+
+  const handleHideAll = () => {
+    Object.keys(columnMetadata).forEach(columnId => {
+      if (columnVisibility[columnId]) {
+        toggleColumn(columnId);
+      }
+    });
+  };
 
   const {
     timeEntries,
+    totalEntries,
     employees,
     workOrders,
     projects,
@@ -43,6 +88,19 @@ export default function AdminTimeManagement() {
     exportToCSV,
     refetch
   } = useTimeManagement(filters);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(totalEntries / filters.limit);
+
+  const handlePageChange = (page: number) => {
+    setFilters(prev => ({ ...prev, page }));
+    setSelectedEntries([]); // Clear selections when changing pages
+  };
+
+  const handlePageSizeChange = (limit: number) => {
+    setFilters(prev => ({ ...prev, limit, page: 1 }));
+    setSelectedEntries([]);
+  };
 
   const handleSelectionChange = (entryId: string, selected: boolean) => {
     setSelectedEntries(prev => 
@@ -173,8 +231,13 @@ export default function AdminTimeManagement() {
             <Clock className="h-5 w-5" />
             Time Entries
             <Badge variant="secondary" className="ml-auto">
-              {timeEntries.length} entries
+              {totalEntries} total entries
             </Badge>
+            <ColumnVisibilityDropdown
+              columns={getAllColumns()}
+              onToggleColumn={toggleColumn}
+              onResetToDefaults={resetToDefaults}
+            />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -189,6 +252,17 @@ export default function AdminTimeManagement() {
             onReject={handleReject}
             onFlag={handleFlag}
             isLoading={isLoading}
+            columnVisibility={columnVisibility}
+          />
+          
+          {/* Pagination */}
+          <TimeManagementPagination
+            currentPage={filters.page}
+            totalPages={totalPages}
+            pageSize={filters.limit}
+            totalItems={totalEntries}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
           />
         </CardContent>
       </Card>

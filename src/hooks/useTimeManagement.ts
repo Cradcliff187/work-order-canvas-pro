@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { useEffect } from 'react';
 
 export interface TimeEntry {
   id: string;
@@ -82,16 +83,18 @@ export interface TimeManagementFilters {
   projectIds: string[];
   status: string[];
   search: string;
+  page: number;
+  limit: number;
 }
 
 export function useTimeManagement(filters: TimeManagementFilters) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch time entries with filters
-  const { data: timeEntries = [], isLoading } = useQuery({
+  // Fetch time entries with pagination and filters
+  const { data: timeEntriesData, isLoading } = useQuery({
     queryKey: ['admin-time-entries', filters],
-    queryFn: async (): Promise<TimeEntry[]> => {
+    queryFn: async (): Promise<{ entries: TimeEntry[]; total: number }> => {
       let query = supabase
         .from('employee_reports')
         .select(`
@@ -131,7 +134,37 @@ export function useTimeManagement(filters: TimeManagementFilters) {
         `)
         .order('report_date', { ascending: false });
 
-      // Apply filters
+      // Get total count first
+      let countQuery = supabase
+        .from('employee_reports')
+        .select('*', { count: 'exact', head: true });
+
+      // Apply same filters for count
+      if (filters.employeeIds.length > 0) {
+        countQuery = countQuery.in('employee_user_id', filters.employeeIds);
+      }
+      if (filters.dateFrom) {
+        countQuery = countQuery.gte('report_date', filters.dateFrom);
+      }
+      if (filters.dateTo) {
+        countQuery = countQuery.lte('report_date', filters.dateTo);
+      }
+      if (filters.workOrderIds.length > 0) {
+        countQuery = countQuery.in('work_order_id', filters.workOrderIds);
+      }
+      if (filters.projectIds.length > 0) {
+        countQuery = countQuery.in('project_id', filters.projectIds);
+      }
+      if (filters.search) {
+        countQuery = countQuery.ilike('work_performed', `%${filters.search}%`);
+      }
+      if (filters.status.length > 0) {
+        countQuery = countQuery.in('approval_status', filters.status as Array<'pending' | 'approved' | 'rejected' | 'flagged'>);
+      }
+
+      const { count: totalCount } = await countQuery;
+
+      // Apply filters to main query
       if (filters.employeeIds.length > 0) {
         query = query.in('employee_user_id', filters.employeeIds);
       }
@@ -160,6 +193,10 @@ export function useTimeManagement(filters: TimeManagementFilters) {
         query = query.in('approval_status', filters.status as Array<'pending' | 'approved' | 'rejected' | 'flagged'>);
       }
 
+      // Apply pagination
+      const offset = (filters.page - 1) * filters.limit;
+      query = query.range(offset, offset + filters.limit - 1);
+
       const { data, error } = await query;
 
       if (error) throw error;
@@ -181,9 +218,35 @@ export function useTimeManagement(filters: TimeManagementFilters) {
         })
       );
 
-      return entriesWithMaterials;
+      return { entries: entriesWithMaterials, total: totalCount || 0 };
     },
   });
+
+  // Real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('time-entries-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'employee_reports'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  // Extract data from paginated response
+  const timeEntries = timeEntriesData?.entries || [];
+  const totalEntries = timeEntriesData?.total || 0;
 
   // Fetch employees
   const { data: employees = [] } = useQuery({
@@ -378,6 +441,7 @@ export function useTimeManagement(filters: TimeManagementFilters) {
 
   return {
     timeEntries,
+    totalEntries,
     employees,
     workOrders,
     projects,

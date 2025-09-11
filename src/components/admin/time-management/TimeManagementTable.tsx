@@ -22,6 +22,7 @@ interface TimeManagementTableProps {
   onReject?: (entryId: string, reason: string) => void;
   onFlag?: (entryId: string) => void;
   isLoading: boolean;
+  columnVisibility: any;
 }
 
 export function TimeManagementTable({
@@ -34,7 +35,8 @@ export function TimeManagementTable({
   onApprove,
   onReject,
   onFlag,
-  isLoading
+  isLoading,
+  columnVisibility
 }: TimeManagementTableProps) {
   
   const formatCurrency = (amount: number) => {
@@ -100,15 +102,15 @@ export function TimeManagementTable({
                 onCheckedChange={(checked) => onSelectAll(checked as boolean)}
               />
             </TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Employee</TableHead>
-            <TableHead>Work Item</TableHead>
-            <TableHead className="text-right">Hours</TableHead>
-            <TableHead className="text-right">Rate</TableHead>
-            <TableHead className="text-right">Labor Cost</TableHead>
-            <TableHead className="text-right">Materials</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Description</TableHead>
+            {columnVisibility.date && <TableHead>Date</TableHead>}
+            {columnVisibility.employee && <TableHead>Employee</TableHead>}
+            {columnVisibility.workItem && <TableHead>Work Item</TableHead>}
+            {columnVisibility.hours && <TableHead className="text-right">Hours</TableHead>}
+            {columnVisibility.rate && <TableHead className="text-right">Rate</TableHead>}
+            {columnVisibility.laborCost && <TableHead className="text-right">Labor Cost</TableHead>}
+            {columnVisibility.materials && <TableHead className="text-right">Materials</TableHead>}
+            {columnVisibility.status && <TableHead>Status</TableHead>}
+            {columnVisibility.description && <TableHead>Description</TableHead>}
             <TableHead className="w-12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -130,94 +132,112 @@ export function TimeManagementTable({
                 />
               </TableCell>
               
-              <TableCell className="font-medium">
-                <div className="flex flex-col">
-                  <span>{format(new Date(entry.report_date), 'MMM d, yyyy')}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {format(new Date(entry.report_date), 'EEEE')}
-                  </span>
-                </div>
-              </TableCell>
+              {columnVisibility.date && (
+                <TableCell className="font-medium">
+                  <div className="flex flex-col">
+                    <span>{format(new Date(entry.report_date), 'MMM d, yyyy')}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(entry.report_date), 'EEEE')}
+                    </span>
+                  </div>
+                </TableCell>
+              )}
               
-              <TableCell>
-                <div className="flex items-center space-x-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={entry.employee?.avatar_url} />
-                    <AvatarFallback>
-                      {entry.employee?.first_name[0]}{entry.employee?.last_name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-medium">
-                      {entry.employee?.first_name} {entry.employee?.last_name}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {entry.employee?.email}
+              {columnVisibility.employee && (
+                <TableCell>
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={entry.employee?.avatar_url} />
+                      <AvatarFallback>
+                        {entry.employee?.first_name[0]}{entry.employee?.last_name[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">
+                        {entry.employee?.first_name} {entry.employee?.last_name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {entry.employee?.email}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TableCell>
+                </TableCell>
+              )}
               
-              <TableCell>
-                {entry.work_order ? (
-                  <div>
-                    <div className="font-medium text-sm">
-                      {entry.work_order.work_order_number}
+              {columnVisibility.workItem && (
+                <TableCell>
+                  {entry.work_order ? (
+                    <div>
+                      <div className="font-medium text-sm">
+                        {entry.work_order.work_order_number}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {entry.work_order.title}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {entry.work_order.title}
+                  ) : entry.project ? (
+                    <div>
+                      <div className="font-medium text-sm">
+                        {entry.project.project_number}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {entry.project.name}
+                      </div>
                     </div>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+              )}
+              
+              {columnVisibility.hours && (
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <Clock className="h-3 w-3" />
+                    {formatHours(entry.hours_worked)}
                   </div>
-                ) : entry.project ? (
-                  <div>
-                    <div className="font-medium text-sm">
-                      {entry.project.project_number}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {entry.project.name}
-                    </div>
+                </TableCell>
+              )}
+              
+              {columnVisibility.rate && (
+                <TableCell className="text-right">
+                  {formatCurrency(entry.hourly_rate_snapshot)}
+                </TableCell>
+              )}
+              
+              {columnVisibility.laborCost && (
+                <TableCell className="text-right font-medium">
+                  <div className="flex items-center justify-end gap-1">
+                    <DollarSign className="h-3 w-3" />
+                    {formatCurrency(entry.total_labor_cost || 0)}
                   </div>
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </TableCell>
+                </TableCell>
+              )}
               
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatHours(entry.hours_worked)}
-                </div>
-              </TableCell>
+              {columnVisibility.materials && (
+                <TableCell className="text-right">
+                  {entry.materials_cost ? formatCurrency(entry.materials_cost) : '-'}
+                </TableCell>
+              )}
               
-              <TableCell className="text-right">
-                {formatCurrency(entry.hourly_rate_snapshot)}
-              </TableCell>
+              {columnVisibility.status && (
+                <TableCell>
+                  {getStatusBadge(entry)}
+                </TableCell>
+              )}
               
-              <TableCell className="text-right font-medium">
-                <div className="flex items-center justify-end gap-1">
-                  <DollarSign className="h-3 w-3" />
-                  {formatCurrency(entry.total_labor_cost || 0)}
-                </div>
-              </TableCell>
-              
-              <TableCell className="text-right">
-                {entry.materials_cost ? formatCurrency(entry.materials_cost) : '-'}
-              </TableCell>
-              
-              <TableCell>
-                {getStatusBadge(entry)}
-              </TableCell>
-              
-              <TableCell className="max-w-xs">
-                <div className="truncate" title={entry.work_performed}>
-                  {entry.work_performed}
-                </div>
-                {entry.notes && (
-                  <div className="text-xs text-muted-foreground truncate" title={entry.notes}>
-                    Note: {entry.notes}
+              {columnVisibility.description && (
+                <TableCell className="max-w-xs">
+                  <div className="truncate" title={entry.work_performed}>
+                    {entry.work_performed}
                   </div>
-                )}
-              </TableCell>
+                  {entry.notes && (
+                    <div className="text-xs text-muted-foreground truncate" title={entry.notes}>
+                      Note: {entry.notes}
+                    </div>
+                  )}
+                </TableCell>
+              )}
               
               <TableCell>
                 <DropdownMenu>
