@@ -17,12 +17,15 @@ import { TimeEntryEditModal } from '@/components/admin/time-management/TimeEntry
 import { BulkActionsBar } from '@/components/admin/time-management/BulkActionsBar';
 import { TimeManagementPagination } from '@/components/admin/time-management/TimeManagementPagination';
 import { PrintView } from '@/components/admin/time-management/PrintView';
+import { MobileTimeManagement } from '@/components/admin/time-management/MobileTimeManagement';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { useTimeManagementKeyboards } from '@/hooks/useTimeManagementKeyboards';
 import { KeyboardShortcutsTooltip } from '@/components/ui/keyboard-shortcuts-tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function AdminTimeManagement() {
+  const isMobile = useIsMobile();
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
   const [editingEntry, setEditingEntry] = useState<any>(null);
   const [showPrintView, setShowPrintView] = useState(false);
@@ -264,76 +267,100 @@ export default function AdminTimeManagement() {
         {/* Summary Stats */}
         <TimeManagementSummary stats={summaryStats} />
 
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TimeManagementFilters
-              filters={filters}
-              onFiltersChange={setFilters}
-              employees={employees}
-              workOrders={workOrders}
-              projects={projects}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Bulk Actions */}
-        {selectedEntries.length > 0 && (
-          <BulkActionsBar
-            selectedCount={selectedEntries.length}
-            onAction={handleBulkAction}
+        {isMobile ? (
+          <MobileTimeManagement
+            timeEntries={timeEntries}
+            selectedEntries={selectedEntries}
+            totalEntries={totalEntries}
+            filters={filters}
+            onFiltersChange={setFilters}
+            onEntrySelect={handleEntrySelect}
+            onSelectAll={handleSelectAll}
+            onEdit={handleEntryEdit}
+            onDelete={handleEntryDelete}
+            onApprove={handleEntryApprove}
+            onReject={handleEntryReject}
+            onFlag={handleEntryFlag}
+            onBulkAction={handleBulkAction}
+            employees={employees}
+            workOrders={workOrders}
+            projects={projects}
+            isLoading={isLoading}
           />
-        )}
+        ) : (
+          <>
+            {/* Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Filters
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TimeManagementFilters
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  employees={employees}
+                  workOrders={workOrders}
+                  projects={projects}
+                />
+              </CardContent>
+            </Card>
 
-        {/* Time Entries Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Time Entries
-              <Badge variant="secondary" className="ml-auto">
-                {totalEntries} total entries
-              </Badge>
-              <ColumnVisibilityDropdown
-                columns={getAllColumns()}
-                onToggleColumn={toggleColumn}
-                onResetToDefaults={resetToDefaults}
+            {/* Bulk Actions */}
+            {selectedEntries.length > 0 && (
+              <BulkActionsBar
+                selectedCount={selectedEntries.length}
+                onAction={handleBulkAction}
               />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TimeManagementTable
-              entries={timeEntries}
-              selectedEntries={selectedEntries}
-              columnVisibility={columnVisibility}
-              onSelectionChange={handleEntrySelect}
-              onSelectAll={handleSelectAll}
-              onEdit={handleEntryEdit}
-              onDelete={handleEntryDelete}
-              onApprove={handleEntryApprove}
-              onReject={handleEntryReject}
-              onFlag={handleEntryFlag}
-              isLoading={isLoading}
-            />
-          </CardContent>
-        </Card>
+            )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <TimeManagementPagination
-            currentPage={filters.page}
-            totalPages={totalPages}
-            pageSize={filters.limit}
-            totalItems={totalEntries}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-          />
+            {/* Time Entries Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Time Entries
+                  <Badge variant="secondary" className="ml-auto">
+                    {totalEntries} total entries
+                  </Badge>
+                  <ColumnVisibilityDropdown
+                    columns={getAllColumns()}
+                    onToggleColumn={toggleColumn}
+                    onResetToDefaults={resetToDefaults}
+                  />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TimeManagementTable
+                  entries={timeEntries}
+                  selectedEntries={selectedEntries}
+                  columnVisibility={columnVisibility}
+                  onSelectionChange={handleEntrySelect}
+                  onSelectAll={handleSelectAll}
+                  onEdit={handleEntryEdit}
+                  onDelete={handleEntryDelete}
+                  onApprove={handleEntryApprove}
+                  onReject={handleEntryReject}
+                  onFlag={handleEntryFlag}
+                  isLoading={isLoading}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <TimeManagementPagination
+                currentPage={filters.page}
+                totalPages={totalPages}
+                pageSize={filters.limit}
+                totalItems={totalEntries}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            )}
+          </>
         )}
       </div>
 
