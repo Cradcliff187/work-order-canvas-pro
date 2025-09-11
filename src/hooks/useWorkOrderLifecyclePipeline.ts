@@ -38,6 +38,7 @@ export interface WorkOrderPipelineItem {
   // Latest report status
   report_status: 'submitted' | 'reviewed' | 'approved' | 'rejected' | null;
   report_submitted_at: string | null;
+  bill_amount: number | null;
   
   // Invoice status (subcontractor billing)
   invoice_status: string | null;
@@ -194,7 +195,7 @@ export function useWorkOrderLifecycle() {
               // Get latest report for this work order
               supabase
                 .from('work_order_reports')
-                .select('status, submitted_at, partner_billed_amount, partner_billed_at')
+                .select('status, submitted_at, partner_billed_amount, partner_billed_at, bill_amount')
                 .eq('work_order_id', workOrder.id)
                 .order('submitted_at', { ascending: false })
                 .limit(1)
@@ -276,6 +277,7 @@ export function useWorkOrderLifecycle() {
               // Latest report status with safe fallbacks
               report_status: latestReport?.status || null,
               report_submitted_at: latestReport?.submitted_at || null,
+              bill_amount: latestReport?.bill_amount || null,
               
               // Invoice status (subcontractor billing)
               invoice_status: subcontractorInvoice?.status || null,
