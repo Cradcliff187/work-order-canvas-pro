@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 interface GeneratePartnerInvoiceData {
   partnerOrganizationId: string;
   selectedBillIds: string[];
+  employeeReportIds?: string[];
   markupPercentage: number;
   subtotal: number;
   totalAmount: number;
@@ -76,6 +77,20 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     throw new Error('Failed to fetch selected bills');
   }
 
+  // Fetch employee reports if provided
+  let employeeReports = [];
+  if (data.employeeReportIds && data.employeeReportIds.length > 0) {
+    const { data: reportsData, error: reportsError } = await supabase
+      .from('work_order_reports')
+      .select('*, subcontractor:profiles!subcontractor_user_id(first_name, last_name)')
+      .in('id', data.employeeReportIds);
+      
+    if (reportsError) {
+      throw new Error('Failed to fetch employee reports');
+    }
+    employeeReports = reportsData || [];
+  }
+
   // Create partner invoice
   const { data: partnerInvoice, error: invoiceError } = await supabase
     .from('partner_invoices')
@@ -97,18 +112,35 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     throw new Error('Failed to create partner invoice');
   }
 
-  // Create line items from bills
-  const lineItems = selectedBills.map(bill => {
+  // Create line items from both bills and employee reports
+  const lineItems = [];
+  
+  // Add bill line items
+  selectedBills.forEach(bill => {
     const cost = bill.total_amount || 0;
     const markupAmount = cost * (data.markupPercentage / 100);
     const totalAmount = cost + markupAmount;
     
-    return {
+    lineItems.push({
       partner_invoice_id: partnerInvoice.id,
       work_order_report_id: null, // Bills don't have specific work order reports
       amount: totalAmount,
       description: `Bill ${bill.internal_bill_number}${bill.external_bill_number ? ` (${bill.external_bill_number})` : ''}`
-    };
+    });
+  });
+  
+  // Add employee report line items
+  employeeReports.forEach(report => {
+    const cost = report.total_labor_cost || 0;
+    const markupAmount = cost * (data.markupPercentage / 100);
+    const totalAmount = cost + markupAmount;
+    
+    lineItems.push({
+      partner_invoice_id: partnerInvoice.id,
+      work_order_report_id: report.id,
+      amount: totalAmount,
+      description: `Labor: ${report.subcontractor?.first_name || 'Employee'} ${report.subcontractor?.last_name || ''} - ${report.hours_worked || 0}hrs`.trim()
+    });
   });
   
   const { error: lineItemsError } = await supabase

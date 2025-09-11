@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -48,6 +49,9 @@ export default function SelectBills() {
     return v || undefined;
   });
   const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(new Set());
+  const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
+  const [internalReports, setInternalReports] = useState([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
   const [markupPercentage, setMarkupPercentage] = useState<number>(() => {
     const v = localStorage.getItem('pb.markupPercentage');
     return v !== null ? Number(v) : 20;
@@ -80,6 +84,63 @@ export default function SelectBills() {
     },
     defaultMode: 'table'
   });
+
+  // Fetch internal work order reports for selected partner
+  useEffect(() => {
+    const fetchInternalReports = async () => {
+      if (!selectedPartnerId) {
+        setInternalReports([]);
+        return;
+      }
+      
+      setIsLoadingReports(true);
+      try {
+        // First get the internal organization ID
+        const { data: internalOrg } = await supabase
+          .from('organizations')
+          .select('id')
+          .eq('organization_type', 'internal')
+          .single();
+          
+        if (!internalOrg) {
+          console.error('Internal organization not found');
+          setInternalReports([]);
+          return;
+        }
+        
+        // Fetch internal work order reports
+        const { data: reportsData, error } = await supabase
+          .from('work_order_reports')
+          .select(`
+            *,
+            work_orders!inner(
+              work_order_number, 
+              title, 
+              organization_id,
+              assigned_organization_id
+            ),
+            subcontractor:profiles!subcontractor_user_id(
+              first_name,
+              last_name
+            )
+          `)
+          .eq('work_orders.organization_id', selectedPartnerId)
+          .eq('status', 'approved')
+          .is('partner_invoice_id', null)
+          .eq('work_orders.assigned_organization_id', internalOrg.id);
+          
+        if (error) throw error;
+        setInternalReports(reportsData || []);
+      } catch (error) {
+        console.error('Error fetching internal reports:', error);
+        setInternalReports([]);
+      } finally {
+        setIsLoadingReports(false);
+      }
+    };
+    
+    fetchInternalReports();
+  }, [selectedPartnerId]);
 
   // Sorting and pagination for table
   type SortKey = 'bill_number' | 'date' | 'amount';
@@ -197,17 +258,21 @@ export default function SelectBills() {
     getPageCount: () => Math.ceil(filteredAndSortedBills.length / pagination.pageSize)
   } as any;
 
-  // Calculate totals based on selected bills
+  // Calculate totals based on selected bills and reports
   const calculations = useMemo(() => {
-    if (!filteredAndSortedBills) return { subtotal: 0, markupAmount: 0, total: 0, selectedBills: [] };
+    if (!filteredAndSortedBills && !internalReports) return { subtotal: 0, markupAmount: 0, total: 0, selectedBills: [], selectedReports: [] };
     
-    const selectedBills = filteredAndSortedBills.filter(bill => selectedBillIds.has(bill.bill_id));
-    const subtotal = selectedBills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
+    const selectedBills = filteredAndSortedBills?.filter(bill => selectedBillIds.has(bill.bill_id)) || [];
+    const selectedReports = internalReports.filter(report => selectedReportIds.has(report.id));
+    
+    const billsSubtotal = selectedBills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
+    const reportsSubtotal = selectedReports.reduce((sum, report) => sum + (report.total_labor_cost || 0), 0);
+    const subtotal = billsSubtotal + reportsSubtotal;
     const markupAmount = subtotal * (markupPercentage / 100);
     const total = subtotal + markupAmount;
     
-    return { subtotal, markupAmount, total, selectedBills };
-  }, [filteredAndSortedBills, selectedBillIds, markupPercentage]);
+    return { subtotal, markupAmount, total, selectedBills, selectedReports };
+  }, [filteredAndSortedBills, selectedBillIds, internalReports, selectedReportIds, markupPercentage]);
 
   const handleBillToggle = (billId: string, checked: boolean) => {
     const newSet = new Set(selectedBillIds);
@@ -302,6 +367,7 @@ export default function SelectBills() {
     generateInvoice({
       partnerOrganizationId: selectedPartnerId,
       selectedBillIds: Array.from(selectedBillIds),
+      employeeReportIds: Array.from(selectedReportIds),
       markupPercentage,
       subtotal: calculations.subtotal,
       totalAmount: calculations.total,
@@ -311,6 +377,7 @@ export default function SelectBills() {
       onSuccess: (result) => {
         // Clear selection
         setSelectedBillIds(new Set());
+        setSelectedReportIds(new Set());
         setShowConfirmDialog(false);
         // Navigate to invoice detail
         navigate(`/admin/partner-billing/invoices/${result.invoiceId}`);
@@ -713,8 +780,77 @@ export default function SelectBills() {
           </Card>
         )}
 
+        {/* Internal Work Reports Display */}
+        {selectedPartnerId && internalReports.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileBarChart className="w-5 h-5" />
+                Internal Work Completed ({internalReports.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox 
+                        checked={selectedReportIds.size === internalReports.length && internalReports.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedReportIds(new Set(internalReports.map(r => r.id)));
+                          } else {
+                            setSelectedReportIds(new Set());
+                          }
+                        }}
+                      />
+                    </TableHead>
+                    <TableHead>Work Order</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Hours</TableHead>
+                    <TableHead className="text-right">Total Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {internalReports.map((report) => (
+                    <TableRow key={report.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedReportIds.has(report.id)}
+                          onCheckedChange={(checked) => {
+                            const newSet = new Set(selectedReportIds);
+                            if (checked) {
+                              newSet.add(report.id);
+                            } else {
+                              newSet.delete(report.id);
+                            }
+                            setSelectedReportIds(newSet);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>{report.work_orders?.work_order_number}</TableCell>
+                      <TableCell>{report.work_orders?.title}</TableCell>
+                      <TableCell>
+                        {report.subcontractor ? 
+                          `${report.subcontractor.first_name} ${report.subcontractor.last_name}` : 
+                          'Unknown'
+                        }
+                      </TableCell>
+                      <TableCell>{report.hours_worked || 0}hrs</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(report.total_labor_cost || 0)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Selection Summary and Generate Invoice */}
-        {selectedBillIds.size > 0 && (
+        {(selectedBillIds.size > 0 || selectedReportIds.size > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -726,8 +862,8 @@ export default function SelectBills() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold">{selectedBillIds.size}</div>
-                    <div className="text-sm text-muted-foreground">Selected Bills</div>
+                    <div className="text-2xl font-bold">{selectedBillIds.size + selectedReportIds.size}</div>
+                    <div className="text-sm text-muted-foreground">Selected Items</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold">{formatCurrency(calculations.subtotal)}</div>
@@ -769,7 +905,7 @@ export default function SelectBills() {
                     <AlertDialogTrigger asChild>
                       <Button 
                         className="gap-2" 
-                        disabled={selectedBillIds.size === 0 || isGeneratingInvoice}
+                        disabled={selectedBillIds.size === 0 && selectedReportIds.size === 0 || isGeneratingInvoice}
                       >
                         <Receipt className="h-4 w-4" />
                         Generate Partner Invoice
@@ -779,7 +915,8 @@ export default function SelectBills() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Generate Partner Invoice</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will create a new partner invoice for {selectedBillIds.size} selected bill{selectedBillIds.size !== 1 ? 's' : ''} 
+                          This will create a new partner invoice for {selectedBillIds.size + selectedReportIds.size} selected item{(selectedBillIds.size + selectedReportIds.size) !== 1 ? 's' : ''} 
+                          ({selectedBillIds.size} bill{selectedBillIds.size !== 1 ? 's' : ''} and {selectedReportIds.size} report{selectedReportIds.size !== 1 ? 's' : ''}) 
                           totaling {formatCurrency(calculations.total)}. This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
