@@ -14,6 +14,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { TimeEntry, Employee, WorkOrder, Project } from '@/hooks/useTimeManagement';
+import { AuditLogDisplay } from './AuditLogDisplay';
 
 const editTimeEntrySchema = z.object({
   report_date: z.date({ required_error: 'Date is required' }),
@@ -81,153 +82,163 @@ export function TimeEntryEditModal({
 
   return (
     <Dialog open={true} onOpenChange={() => onCancel()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Time Entry</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Date */}
-            <div className="space-y-2">
-              <Label>Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => setValue('report_date', date!)}
-                    initialFocus
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Form Section */}
+          <div>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Date */}
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => setValue('report_date', date!)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {errors.report_date && (
+                    <p className="text-sm text-destructive">{errors.report_date.message}</p>
+                  )}
+                </div>
+
+                {/* Hours */}
+                <div className="space-y-2">
+                  <Label htmlFor="hours">Hours Worked</Label>
+                  <Input
+                    id="hours"
+                    type="number"
+                    step="0.25"
+                    min="0.25"
+                    max="24"
+                    {...register('hours_worked', { valueAsNumber: true })}
                   />
-                </PopoverContent>
-              </Popover>
-              {errors.report_date && (
-                <p className="text-sm text-destructive">{errors.report_date.message}</p>
-              )}
-            </div>
+                  {errors.hours_worked && (
+                    <p className="text-sm text-destructive">{errors.hours_worked.message}</p>
+                  )}
+                </div>
 
-            {/* Hours */}
-            <div className="space-y-2">
-              <Label htmlFor="hours">Hours Worked</Label>
-              <Input
-                id="hours"
-                type="number"
-                step="0.25"
-                min="0.25"
-                max="24"
-                {...register('hours_worked', { valueAsNumber: true })}
-              />
-              {errors.hours_worked && (
-                <p className="text-sm text-destructive">{errors.hours_worked.message}</p>
-              )}
-            </div>
+                {/* Hourly Rate */}
+                <div className="space-y-2">
+                  <Label htmlFor="rate">Hourly Rate</Label>
+                  <Input
+                    id="rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register('hourly_rate_snapshot', { valueAsNumber: true })}
+                  />
+                  {errors.hourly_rate_snapshot && (
+                    <p className="text-sm text-destructive">{errors.hourly_rate_snapshot.message}</p>
+                  )}
+                </div>
 
-            {/* Hourly Rate */}
-            <div className="space-y-2">
-              <Label htmlFor="rate">Hourly Rate</Label>
-              <Input
-                id="rate"
-                type="number"
-                step="0.01"
-                min="0"
-                {...register('hourly_rate_snapshot', { valueAsNumber: true })}
-              />
-              {errors.hourly_rate_snapshot && (
-                <p className="text-sm text-destructive">{errors.hourly_rate_snapshot.message}</p>
-              )}
-            </div>
+                {/* Work Item Selection */}
+                <div className="space-y-2">
+                  <Label>Work Item</Label>
+                  <div className="space-y-2">
+                    <Select
+                      value={workOrderId}
+                      onValueChange={(value) => {
+                        setValue('work_order_id', value);
+                        if (value) setValue('project_id', '');
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select work order..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No work order</SelectItem>
+                        {workOrders.map((wo) => (
+                          <SelectItem key={wo.id} value={wo.id}>
+                            {wo.work_order_number} - {wo.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-            {/* Work Item Selection */}
-            <div className="space-y-2">
-              <Label>Work Item</Label>
-              <div className="space-y-2">
-                <Select
-                  value={workOrderId}
-                  onValueChange={(value) => {
-                    setValue('work_order_id', value);
-                    if (value) setValue('project_id', '');
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select work order..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No work order</SelectItem>
-                    {workOrders.map((wo) => (
-                      <SelectItem key={wo.id} value={wo.id}>
-                        {wo.work_order_number} - {wo.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={projectId}
-                  onValueChange={(value) => {
-                    setValue('project_id', value);
-                    if (value) setValue('work_order_id', '');
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Or select project..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No project</SelectItem>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.project_number} - {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <Select
+                      value={projectId}
+                      onValueChange={(value) => {
+                        setValue('project_id', value);
+                        if (value) setValue('work_order_id', '');
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Or select project..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No project</SelectItem>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.project_number} - {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-            </div>
+
+              {/* Work Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">Work Performed</Label>
+                <Textarea
+                  id="description"
+                  rows={3}
+                  {...register('work_performed')}
+                />
+                {errors.work_performed && (
+                  <p className="text-sm text-destructive">{errors.work_performed.message}</p>
+                )}
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  rows={2}
+                  {...register('notes')}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
           </div>
 
-          {/* Work Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Work Performed</Label>
-            <Textarea
-              id="description"
-              rows={3}
-              {...register('work_performed')}
-            />
-            {errors.work_performed && (
-              <p className="text-sm text-destructive">{errors.work_performed.message}</p>
-            )}
+          {/* Audit Log Section */}
+          <div>
+            <AuditLogDisplay timeEntryId={entry.id} />
           </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              rows={2}
-              {...register('notes')}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
