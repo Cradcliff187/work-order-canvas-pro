@@ -452,7 +452,9 @@ export function WorkOrderPipelineTable({
   });
 
   const handleRowClick = (item: WorkOrderPipelineItem) => {
-    navigate(`/admin/work-orders/${item.id}`);
+    const currentPath = window.location.pathname;
+    const queryParams = currentPath.includes('billing-dashboard') ? '?from=billing-pipeline' : '';
+    navigate(`/admin/work-orders/${item.id}${queryParams}`);
   };
 
   if (isError) {

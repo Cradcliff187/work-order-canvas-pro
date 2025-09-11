@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -105,11 +105,21 @@ const DetailSkeleton = () => (
 export default function AdminWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(id!);
   const { data: assignments = [], isLoading: isLoadingAssignments, refetch: refetchAssignments } = useWorkOrderAssignments(id);
   const { uploadFiles, removeFile } = useFileUpload();
   const { toast } = useToast();
   
+  // Navigation context
+  const from = searchParams.get('from');
+  const getBackPath = () => {
+    if (from === 'billing-pipeline') {
+      return '/admin/billing-dashboard';
+    }
+    return '/admin/work-orders';
+  };
+
   // Delete confirmation state
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
@@ -282,8 +292,8 @@ export default function AdminWorkOrderDetail() {
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-destructive">Invalid work order ID</p>
-            <Button onClick={() => navigate('/admin/work-orders')} className="mt-4">
-              Back to Work Orders
+            <Button onClick={() => navigate(getBackPath())} className="mt-4">
+              Back to {from === 'billing-pipeline' ? 'Billing Dashboard' : 'Work Orders'}
             </Button>
           </CardContent>
         </Card>
@@ -306,8 +316,8 @@ export default function AdminWorkOrderDetail() {
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Try Again
               </Button>
-              <Button onClick={() => navigate('/admin/work-orders')} variant="ghost">
-                Back to Work Orders
+              <Button onClick={() => navigate(getBackPath())} variant="ghost">
+                Back to {from === 'billing-pipeline' ? 'Billing Dashboard' : 'Work Orders'}
               </Button>
             </div>
           </CardContent>
@@ -322,8 +332,8 @@ export default function AdminWorkOrderDetail() {
         <Card>
           <CardContent className="p-6 text-center space-y-4">
             <p className="text-muted-foreground">Work order not found</p>
-            <Button onClick={() => navigate('/admin/work-orders')} variant="outline">
-              Back to Work Orders
+            <Button onClick={() => navigate(getBackPath())} variant="outline">
+              Back to {from === 'billing-pipeline' ? 'Billing Dashboard' : 'Work Orders'}
             </Button>
           </CardContent>
         </Card>
@@ -416,7 +426,7 @@ export default function AdminWorkOrderDetail() {
           <Button 
             variant="outline" 
             size="icon"
-            onClick={() => navigate('/admin/work-orders')}
+            onClick={() => navigate(getBackPath())}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

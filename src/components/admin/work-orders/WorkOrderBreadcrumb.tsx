@@ -1,6 +1,6 @@
 
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 export interface WorkOrderBreadcrumbProps {
   workOrderId?: string;
@@ -8,6 +8,24 @@ export interface WorkOrderBreadcrumbProps {
 }
 
 export function WorkOrderBreadcrumb({ workOrderId, currentPage }: WorkOrderBreadcrumbProps) {
+  const [searchParams] = useSearchParams();
+  const from = searchParams.get('from');
+  
+  // Determine the correct path based on context
+  const getWorkOrdersPath = () => {
+    if (from === 'billing-pipeline') {
+      return '/admin/billing-dashboard';
+    }
+    return '/admin/work-orders';
+  };
+  
+  const getWorkOrdersLabel = () => {
+    if (from === 'billing-pipeline') {
+      return 'Billing Dashboard';
+    }
+    return 'Work Orders';
+  };
+
   return (
     <Breadcrumb>
       <BreadcrumbList>
@@ -19,7 +37,7 @@ export function WorkOrderBreadcrumb({ workOrderId, currentPage }: WorkOrderBread
         <BreadcrumbSeparator />
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link to="/admin/work-orders">Work Orders</Link>
+            <Link to={getWorkOrdersPath()}>{getWorkOrdersLabel()}</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         {workOrderId && (
