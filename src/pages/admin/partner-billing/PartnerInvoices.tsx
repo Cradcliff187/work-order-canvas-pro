@@ -255,7 +255,7 @@ export default function PartnerInvoices() {
             </Button>
             
             <Button 
-              onClick={() => console.log('Create new invoice')} 
+              onClick={() => navigate('/admin/partner-billing/select-reports')} 
               className="flex-1 sm:flex-initial h-9"
             >
               <Plus className="h-4 w-4 sm:mr-2" />
