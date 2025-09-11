@@ -15,12 +15,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Clock, Plus, Edit, Trash2 } from 'lucide-react';
+import { CalendarIcon, Clock, Plus, Edit, Trash2, FileUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminTimeEntry } from '@/hooks/useAdminTimeEntry';
 
 import { ReceiptAttachmentSection } from '@/components/admin/ReceiptAttachmentSection';
+import { CSVImportModal } from '@/components/admin/CSVImportModal';
 
 const timeEntrySchema = z.object({
   employeeId: z.string().min(1, 'Employee is required'),
@@ -45,6 +46,7 @@ export default function AdminTimeEntry() {
   const [receiptAttachments, setReceiptAttachments] = useState<ReceiptAttachment[]>([]);
   const [editingEntry, setEditingEntry] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   
   const {
     employees,
@@ -157,11 +159,17 @@ export default function AdminTimeEntry() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Employee Time Entry</h1>
-        <p className="text-muted-foreground">
-          Add time entries for internal team members
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Employee Time Entry</h1>
+          <p className="text-muted-foreground">
+            Add time entries for internal team members
+          </p>
+        </div>
+        <Button onClick={() => setShowImportModal(true)} variant="outline">
+          <FileUp className="h-4 w-4 mr-2" />
+          Import from CSV
+        </Button>
       </div>
 
       {/* Time Entry Form */}
@@ -451,6 +459,16 @@ export default function AdminTimeEntry() {
           )}
         </CardContent>
       </Card>
+
+      {/* CSV Import Modal */}
+      <CSVImportModal
+        open={showImportModal}
+        onOpenChange={setShowImportModal}
+        onSuccess={() => {
+          refetch();
+          setShowImportModal(false);
+        }}
+      />
     </div>
   );
 }
