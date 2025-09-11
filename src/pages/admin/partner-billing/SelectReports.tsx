@@ -117,17 +117,15 @@ export default function SelectBills() {
               work_order_number, 
               title, 
               organization_id,
-              assigned_organization_id
-            ),
-            subcontractor:profiles!subcontractor_user_id(
-              first_name,
-              last_name
+              assigned_organization_id,
+              organizations!assigned_organization_id(organization_type)
             )
           `)
           .eq('work_orders.organization_id', selectedPartnerId)
+          .eq('work_orders.organizations.organization_type', 'internal')
           .eq('status', 'approved')
           .is('partner_invoice_id', null)
-          .eq('work_orders.assigned_organization_id', internalOrg.id);
+          .not('bill_amount', 'is', null);  // Must have a bill amount
           
         if (error) throw error;
         setInternalReports(reportsData || []);
@@ -266,7 +264,7 @@ export default function SelectBills() {
     const selectedReports = internalReports.filter(report => selectedReportIds.has(report.id));
     
     const billsSubtotal = selectedBills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
-    const reportsSubtotal = selectedReports.reduce((sum, report) => sum + (report.total_labor_cost || 0), 0);
+    const reportsSubtotal = selectedReports.reduce((sum, report) => sum + (report.bill_amount || 0), 0);
     const subtotal = billsSubtotal + reportsSubtotal;
     const markupAmount = subtotal * (markupPercentage / 100);
     const total = subtotal + markupAmount;
@@ -807,9 +805,7 @@ export default function SelectBills() {
                     </TableHead>
                     <TableHead>Work Order</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Hours</TableHead>
-                    <TableHead className="text-right">Total Amount</TableHead>
+                    <TableHead className="text-right">Bill Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -831,15 +827,8 @@ export default function SelectBills() {
                       </TableCell>
                       <TableCell>{report.work_orders?.work_order_number}</TableCell>
                       <TableCell>{report.work_orders?.title}</TableCell>
-                      <TableCell>
-                        {report.subcontractor ? 
-                          `${report.subcontractor.first_name} ${report.subcontractor.last_name}` : 
-                          'Unknown'
-                        }
-                      </TableCell>
-                      <TableCell>{report.hours_worked || 0}hrs</TableCell>
                       <TableCell className="text-right">
-                        {formatCurrency(report.total_labor_cost || 0)}
+                        {formatCurrency(report.bill_amount || 0)}
                       </TableCell>
                     </TableRow>
                   ))}
