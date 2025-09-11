@@ -134,35 +134,41 @@ export function useTimeManagement(filters: TimeManagementFilters) {
         `)
         .order('report_date', { ascending: false });
 
-      // Get total count first
-      let countQuery = supabase
-        .from('employee_reports')
-        .select('*', { count: 'exact', head: true });
-
-      // Apply same filters for count
-      if (filters.employeeIds.length > 0) {
-        countQuery = countQuery.in('employee_user_id', filters.employeeIds);
-      }
-      if (filters.dateFrom) {
-        countQuery = countQuery.gte('report_date', filters.dateFrom);
-      }
-      if (filters.dateTo) {
-        countQuery = countQuery.lte('report_date', filters.dateTo);
-      }
-      if (filters.workOrderIds.length > 0) {
-        countQuery = countQuery.in('work_order_id', filters.workOrderIds);
-      }
-      if (filters.projectIds.length > 0) {
-        countQuery = countQuery.in('project_id', filters.projectIds);
-      }
+      // Get total count - handle search differently
+      let totalCount = 0;
+      
       if (filters.search) {
-        countQuery = countQuery.ilike('work_performed', `%${filters.search}%`);
-      }
-      if (filters.status.length > 0) {
-        countQuery = countQuery.in('approval_status', filters.status as Array<'pending' | 'approved' | 'rejected' | 'flagged'>);
-      }
+        // For search, we'll get the count from the search function results
+        // This will be handled in the search branch below
+      } else {
+        // Normal count query for non-search requests
+        let countQuery = supabase
+          .from('employee_reports')
+          .select('*', { count: 'exact', head: true });
 
-      const { count: totalCount } = await countQuery;
+        // Apply same filters for count
+        if (filters.employeeIds.length > 0) {
+          countQuery = countQuery.in('employee_user_id', filters.employeeIds);
+        }
+        if (filters.dateFrom) {
+          countQuery = countQuery.gte('report_date', filters.dateFrom);
+        }
+        if (filters.dateTo) {
+          countQuery = countQuery.lte('report_date', filters.dateTo);
+        }
+        if (filters.workOrderIds.length > 0) {
+          countQuery = countQuery.in('work_order_id', filters.workOrderIds);
+        }
+        if (filters.projectIds.length > 0) {
+          countQuery = countQuery.in('project_id', filters.projectIds);
+        }
+        if (filters.status.length > 0) {
+          countQuery = countQuery.in('approval_status', filters.status as Array<'pending' | 'approved' | 'rejected' | 'flagged'>);
+        }
+
+        const { count } = await countQuery;
+        totalCount = count || 0;
+      }
 
       // Apply filters to main query
       if (filters.employeeIds.length > 0) {
@@ -185,16 +191,61 @@ export function useTimeManagement(filters: TimeManagementFilters) {
         query = query.in('project_id', filters.projectIds);
       }
 
-      if (filters.search) {
-        query = query.ilike('work_performed', `%${filters.search}%`);
-      }
-
       if (filters.status.length > 0) {
         query = query.in('approval_status', filters.status as Array<'pending' | 'approved' | 'rejected' | 'flagged'>);
       }
 
       // Apply pagination
       const offset = (filters.page - 1) * filters.limit;
+
+      // Use full-text search function if search term provided
+      if (filters.search) {
+        // Build filters object for search function
+        const searchFilters = {
+          employee_ids: filters.employeeIds.length > 0 ? filters.employeeIds : null,
+          work_order_ids: filters.workOrderIds.length > 0 ? filters.workOrderIds : null,
+          project_ids: filters.projectIds.length > 0 ? filters.projectIds : null,
+          status_filter: filters.status.length > 0 ? filters.status : null,
+          date_from: filters.dateFrom || null,
+          date_to: filters.dateTo || null,
+          limit_count: filters.limit,
+          offset_count: offset
+        };
+
+        const { data: searchData, error: searchError } = await supabase
+          .rpc('search_employee_reports', {
+            search_query: filters.search,
+            filters: searchFilters
+          });
+
+        if (searchError) throw searchError;
+
+        // Calculate materials cost for search results
+        const entriesWithMaterials = await Promise.all(
+          (searchData || []).map(async (entry: any) => {
+            const { data: materialsData } = await supabase
+              .from('receipt_time_entries')
+              .select('allocated_amount')
+              .eq('time_entry_id', entry.id);
+
+            const materials_cost = materialsData?.reduce(
+              (sum, allocation) => sum + allocation.allocated_amount, 
+              0
+            ) || 0;
+
+            return { ...entry, materials_cost };
+          })
+        );
+
+        // For search, get total count by running search without pagination
+        const { data: countData } = await supabase
+          .rpc('search_employee_reports', {
+            search_query: filters.search,
+            filters: { ...searchFilters, limit_count: null, offset_count: 0 }
+          });
+
+        return { entries: entriesWithMaterials, total: countData?.length || 0 };
+      }
       query = query.range(offset, offset + filters.limit - 1);
 
       const { data, error } = await query;
