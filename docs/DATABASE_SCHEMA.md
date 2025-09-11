@@ -343,6 +343,24 @@ The partner invoice audit system operates automatically through database trigger
 - Complete audit trail for compliance and debugging
 - Integration with existing RLS policies for secure access
 
+### partner_invoice_line_items
+Line items for partner invoices, supporting both work order reports and standalone billing entries.
+
+```sql
+- id (UUID, primary key)
+- partner_invoice_id (UUID, references partner_invoices.id)
+- work_order_report_id (UUID, references work_order_reports, nullable)
+- description (text, nullable)
+- amount (numeric, not null)
+- created_at (timestamp, default now())
+```
+
+**Key Features:**
+- Links partner invoices to specific work order reports when applicable
+- `work_order_report_id` can be NULL for subcontractor bills without specific report references
+- Supports both detailed work order billing and general expense line items
+- Maintains audit trail through partner invoice audit system
+
 ## System Tables
 
 ### audit_logs

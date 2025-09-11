@@ -723,7 +723,7 @@ export type Database = {
           description: string | null
           id: string
           partner_invoice_id: string
-          work_order_report_id: string
+          work_order_report_id: string | null
         }
         Insert: {
           amount: number
@@ -731,7 +731,7 @@ export type Database = {
           description?: string | null
           id?: string
           partner_invoice_id: string
-          work_order_report_id: string
+          work_order_report_id?: string | null
         }
         Update: {
           amount?: number
@@ -739,7 +739,7 @@ export type Database = {
           description?: string | null
           id?: string
           partner_invoice_id?: string
-          work_order_report_id?: string
+          work_order_report_id?: string | null
         }
         Relationships: [
           {
