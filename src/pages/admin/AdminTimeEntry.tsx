@@ -27,7 +27,9 @@ const timeEntrySchema = z.object({
   employeeId: z.string().min(1, 'Employee is required'),
   workItemId: z.string().min(1, 'Work order or project is required'),
   date: z.date({ required_error: 'Date is required' }),
-  hours: z.number().min(0.25, 'Minimum 0.25 hours').max(24, 'Maximum 24 hours'),
+  startTime: z.string().min(1, 'Start time is required'),
+  endTime: z.string().min(1, 'End time is required'),
+  breakMinutes: z.number().min(0, 'Break time cannot be negative').optional(),
   workPerformed: z.string().min(1, 'Work performed description is required'),
   materialsCost: z.number().min(0, 'Materials cost cannot be negative').optional(),
 });
@@ -64,10 +66,22 @@ export default function AdminTimeEntry() {
     resolver: zodResolver(timeEntrySchema),
     defaultValues: {
       date: new Date(),
-      hours: 8,
+      startTime: '08:00',
+      endTime: '17:00',
+      breakMinutes: 0,
       materialsCost: 0,
     },
   });
+
+  const calculateHours = (start: string, end: string, breakMinutes: number = 0): number => {
+    if (!start || !end) return 0;
+    const [startHour, startMin] = start.split(':').map(Number);
+    const [endHour, endMin] = end.split(':').map(Number);
+    let totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    if (totalMinutes < 0) totalMinutes += 24 * 60; // Handle overnight
+    totalMinutes -= breakMinutes;
+    return Math.max(0, totalMinutes / 60);
+  };
 
   const onSubmit = async (data: TimeEntryForm) => {
     try {
@@ -81,6 +95,18 @@ export default function AdminTimeEntry() {
         return;
       }
 
+      // Calculate hours from time inputs
+      const calculatedHours = calculateHours(data.startTime, data.endTime, data.breakMinutes || 0);
+
+      if (calculatedHours <= 0) {
+        toast({
+          title: "Error",
+          description: "Invalid time range. End time must be after start time.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Parse the prefixed value
       const [type, id] = data.workItemId.split('_');
 
@@ -89,11 +115,11 @@ export default function AdminTimeEntry() {
         work_order_id: type === 'wo' ? id : undefined,
         project_id: type === 'proj' ? id : undefined,
         report_date: format(data.date, 'yyyy-MM-dd'),
-        hours_worked: data.hours,
+        hours_worked: calculatedHours,
         work_performed: data.workPerformed,
         materials_used: data.materialsCost || 0,
         hourly_rate_snapshot: employee.hourly_billable_rate || 0,
-        total_labor_cost: data.hours * (employee.hourly_billable_rate || 0),
+        total_labor_cost: calculatedHours * (employee.hourly_billable_rate || 0),
         notes: 'Added by admin',
         receipt_attachments: receiptAttachments.length > 0 ? receiptAttachments : undefined,
       };
@@ -105,7 +131,9 @@ export default function AdminTimeEntry() {
         employeeId: data.employeeId,
         workItemId: '',
         date: new Date(),
-        hours: 8,
+        startTime: '08:00',
+        endTime: '17:00',
+        breakMinutes: 0,
         workPerformed: '',
         materialsCost: 0,
       });
@@ -153,8 +181,11 @@ export default function AdminTimeEntry() {
 
   const watchedEmployee = form.watch('employeeId');
   const selectedEmployeeData = employees?.find(emp => emp.id === watchedEmployee);
-  const watchedHours = form.watch('hours');
-  const calculatedLabor = watchedHours * (selectedEmployeeData?.hourly_billable_rate || 0);
+  const watchedStartTime = form.watch('startTime');
+  const watchedEndTime = form.watch('endTime');
+  const watchedBreakMinutes = form.watch('breakMinutes') || 0;
+  const calculatedHours = calculateHours(watchedStartTime, watchedEndTime, watchedBreakMinutes);
+  const calculatedLabor = calculatedHours * (selectedEmployeeData?.hourly_billable_rate || 0);
 
   return (
     <div className="space-y-6">
@@ -307,22 +338,58 @@ export default function AdminTimeEntry() {
                 )}
               </div>
 
-              {/* Hours Worked */}
+              {/* Time Tracking */}
               <div className="space-y-2">
-                <Label htmlFor="hours">Hours Worked</Label>
+                <Label htmlFor="startTime">Start Time</Label>
                 <Input
-                  id="hours"
-                  type="number"
-                  step="0.25"
-                  min="0.25"
-                  max="24"
-                  {...form.register('hours', { valueAsNumber: true })}
+                  id="startTime"
+                  type="time"
+                  {...form.register('startTime')}
                 />
-                {form.formState.errors.hours && (
+                {form.formState.errors.startTime && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.hours.message}
+                    {form.formState.errors.startTime.message}
                   </p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endTime">End Time</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  {...form.register('endTime')}
+                />
+                {form.formState.errors.endTime && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.endTime.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Break Time (Optional) */}
+              <div className="space-y-2">
+                <Label htmlFor="breakMinutes">Break Time (minutes)</Label>
+                <Input
+                  id="breakMinutes"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  {...form.register('breakMinutes', { valueAsNumber: true })}
+                />
+                {form.formState.errors.breakMinutes && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.breakMinutes.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Calculated Hours Display */}
+              <div className="space-y-2">
+                <Label>Total Hours</Label>
+                <div className="text-lg font-semibold text-primary">
+                  {calculatedHours.toFixed(2)} hours
+                </div>
                 {calculatedLabor > 0 && (
                   <p className="text-sm text-muted-foreground">
                     Labor cost: ${calculatedLabor.toFixed(2)}
