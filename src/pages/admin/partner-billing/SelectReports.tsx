@@ -20,7 +20,7 @@ import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 
-import { usePartnerReadyBills } from '@/hooks/usePartnerReadyBills';
+import { usePartnerReadyBills, PartnerReadyData } from '@/hooks/usePartnerReadyBills';
 import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useViewMode } from '@/hooks/useViewMode';
@@ -32,7 +32,7 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { exportToCSV, ExportColumn } from '@/lib/utils/export';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
-import { PartnerReadyBill } from '@/hooks/usePartnerReadyBills';
+import { PartnerReadyBill, PartnerReadyInternalReport } from '@/hooks/usePartnerReadyBills';
 import { cn } from '@/lib/utils';
 import {
   Breadcrumb,
@@ -50,8 +50,6 @@ export default function SelectBills() {
   });
   const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(new Set());
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
-  const [internalReports, setInternalReports] = useState([]);
-  const [isLoadingReports, setIsLoadingReports] = useState(false);
   const [markupPercentage, setMarkupPercentage] = useState<number>(() => {
     const v = localStorage.getItem('pb.markupPercentage');
     return v !== null ? Number(v) : 20;
@@ -85,60 +83,6 @@ export default function SelectBills() {
     defaultMode: 'table'
   });
 
-  // Fetch internal work order reports for selected partner
-  useEffect(() => {
-    const fetchInternalReports = async () => {
-      if (!selectedPartnerId) {
-        setInternalReports([]);
-        return;
-      }
-      
-      setIsLoadingReports(true);
-      try {
-        // First get the internal organization ID
-        const { data: internalOrg } = await supabase
-          .from('organizations')
-          .select('id')
-          .eq('organization_type', 'internal')
-          .single();
-          
-        if (!internalOrg) {
-          console.error('Internal organization not found');
-          setInternalReports([]);
-          return;
-        }
-        
-        // Fetch internal work order reports
-        const { data: reportsData, error } = await supabase
-          .from('work_order_reports')
-          .select(`
-            *,
-            work_orders!inner(
-              work_order_number, 
-              title, 
-              organization_id,
-              assigned_organization_id,
-              organizations!assigned_organization_id(organization_type)
-            )
-          `)
-          .eq('work_orders.organization_id', selectedPartnerId)
-          .eq('work_orders.organizations.organization_type', 'internal')
-          .eq('status', 'approved')
-          .is('partner_invoice_id', null)
-          .not('bill_amount', 'is', null);  // Must have a bill amount
-          
-        if (error) throw error;
-        setInternalReports(reportsData || []);
-      } catch (error) {
-        console.error('Error fetching internal reports:', error);
-        setInternalReports([]);
-      } finally {
-        setIsLoadingReports(false);
-      }
-    };
-    
-    fetchInternalReports();
-  }, [selectedPartnerId]);
 
   // Sorting and pagination for table
   type SortKey = 'bill_number' | 'date' | 'amount';
@@ -177,8 +121,10 @@ export default function SelectBills() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Fetch ready bills for the selected partner
-  const { data: bills, isLoading: isLoadingBills, error: billsError } = usePartnerReadyBills(selectedPartnerId);
+  // Fetch ready bills and internal reports for the selected partner
+  const { data: partnerData, isLoading: isLoadingBills, error: billsError } = usePartnerReadyBills(selectedPartnerId);
+  const bills = partnerData?.bills;
+  const internalReports = partnerData?.internalReports;
   const { mutate: generateInvoice, isPending: isGeneratingInvoice } = usePartnerInvoiceGeneration();
 
   // Apply filters to bills with inline filtering logic
@@ -261,7 +207,7 @@ export default function SelectBills() {
     if (!filteredAndSortedBills && !internalReports) return { subtotal: 0, markupAmount: 0, total: 0, selectedBills: [], selectedReports: [] };
     
     const selectedBills = filteredAndSortedBills?.filter(bill => selectedBillIds.has(bill.bill_id)) || [];
-    const selectedReports = internalReports.filter(report => selectedReportIds.has(report.id));
+    const selectedReports = internalReports?.filter(report => selectedReportIds.has(report.id)) || [];
     
     const billsSubtotal = selectedBills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
     const reportsSubtotal = selectedReports.reduce((sum, report) => sum + (report.bill_amount || 0), 0);
@@ -825,8 +771,8 @@ export default function SelectBills() {
                           }}
                         />
                       </TableCell>
-                      <TableCell>{report.work_orders?.work_order_number}</TableCell>
-                      <TableCell>{report.work_orders?.title}</TableCell>
+                      <TableCell>{report.work_order_number}</TableCell>
+                      <TableCell>{report.title}</TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(report.bill_amount || 0)}
                       </TableCell>

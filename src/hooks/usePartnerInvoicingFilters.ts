@@ -1,16 +1,16 @@
 import { useMemo } from 'react';
-import { PartnerReadyBill } from '@/hooks/usePartnerReadyBills';
+import { PartnerReadyData } from '@/hooks/usePartnerReadyBills';
 import { PartnerInvoicingFiltersValue } from '@/components/admin/partner-billing/PartnerInvoicingFilters';
 import { subDays, isAfter } from 'date-fns';
 
 export function usePartnerInvoicingFilters(
-  bills: PartnerReadyBill[] | undefined,
+  data: PartnerReadyData | undefined,
   filters: PartnerInvoicingFiltersValue
 ) {
   return useMemo(() => {
-    if (!bills) return [];
+    if (!data?.bills) return [];
 
-    return bills.filter(bill => {
+    return data.bills.filter(bill => {
       // Search filter
       if (filters.search?.trim()) {
         const searchTerm = filters.search.toLowerCase();
@@ -48,7 +48,7 @@ export function usePartnerInvoicingFilters(
 
       return true;
     });
-  }, [bills, filters]);
+  }, [data?.bills, filters]);
 }
 
 export function usePartnerInvoicingFilterCount(filters: PartnerInvoicingFiltersValue) {
