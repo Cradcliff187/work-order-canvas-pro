@@ -16,6 +16,7 @@ interface WorkOrder {
   work_order_number: string;
   title: string;
   status: string;
+  store_location?: string;
 }
 
 interface Project {
@@ -23,6 +24,7 @@ interface Project {
   project_number: string;
   name: string;
   status: string;
+  location_address?: string;
 }
 
 interface TimeEntryData {
@@ -107,11 +109,12 @@ export function useAdminTimeEntry() {
           work_order_number,
           title,
           status,
-          organizations!inner(
+          store_location,
+          assigned_organization:organizations!assigned_organization_id(
             organization_type
           )
         `)
-        .eq('organizations.organization_type', 'internal')
+        .eq('assigned_organization.organization_type', 'internal')
         .in('status', ['assigned', 'in_progress', 'completed'])
         .order('work_order_number', { ascending: false });
 
@@ -130,9 +133,10 @@ export function useAdminTimeEntry() {
           id,
           project_number,
           name,
-          status
+          status,
+          location_address
         `)
-        .eq('status', 'active')
+        .in('status', ['planning', 'active', 'on_hold'])
         .order('project_number', { ascending: false });
 
       if (error) throw error;

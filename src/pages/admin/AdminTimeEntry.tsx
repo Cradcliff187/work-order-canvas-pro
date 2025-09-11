@@ -26,7 +26,6 @@ import { CSVImportModal } from '@/components/admin/CSVImportModal';
 const timeEntrySchema = z.object({
   employeeId: z.string().min(1, 'Employee is required'),
   workItemId: z.string().min(1, 'Work order or project is required'),
-  workItemType: z.enum(['work_order', 'project']),
   date: z.date({ required_error: 'Date is required' }),
   hours: z.number().min(0.25, 'Minimum 0.25 hours').max(24, 'Maximum 24 hours'),
   workPerformed: z.string().min(1, 'Work performed description is required'),
@@ -67,7 +66,6 @@ export default function AdminTimeEntry() {
       date: new Date(),
       hours: 8,
       materialsCost: 0,
-      workItemType: 'work_order',
     },
   });
 
@@ -83,10 +81,13 @@ export default function AdminTimeEntry() {
         return;
       }
 
+      // Parse the prefixed value
+      const [type, id] = data.workItemId.split('_');
+
       const entryData = {
         employee_user_id: data.employeeId,
-        work_order_id: data.workItemType === 'work_order' ? data.workItemId : undefined,
-        project_id: data.workItemType === 'project' ? data.workItemId : undefined,
+        work_order_id: type === 'wo' ? id : undefined,
+        project_id: type === 'proj' ? id : undefined,
         report_date: format(data.date, 'yyyy-MM-dd'),
         hours_worked: data.hours,
         work_performed: data.workPerformed,
@@ -103,7 +104,6 @@ export default function AdminTimeEntry() {
       form.reset({
         employeeId: data.employeeId,
         workItemId: '',
-        workItemType: 'work_order',
         date: new Date(),
         hours: 8,
         workPerformed: '',
@@ -213,36 +213,57 @@ export default function AdminTimeEntry() {
                 <Label htmlFor="workItem">Work Order / Project</Label>
                 <Select
                   value={form.watch('workItemId')}
-                  onValueChange={(value) => {
-                    form.setValue('workItemId', value);
-                    // Auto-detect type based on selection
-                    const isWorkOrder = workOrders?.some(wo => wo.id === value);
-                    form.setValue('workItemType', isWorkOrder ? 'work_order' : 'project');
-                  }}
+                  onValueChange={(value) => form.setValue('workItemId', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select work order or project" />
                   </SelectTrigger>
                   <SelectContent>
-                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-                      Work Orders
-                    </div>
-                    {workOrders?.map((workOrder) => (
-                      <SelectItem key={workOrder.id} value={workOrder.id}>
-                        {workOrder.work_order_number} - {workOrder.title}
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          {workOrder.status}
-                        </Badge>
-                      </SelectItem>
-                    ))}
-                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-                      Projects
-                    </div>
-                    {projects?.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.project_number} - {project.name}
-                      </SelectItem>
-                    ))}
+                    {workOrders && workOrders.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                          Work Orders
+                        </div>
+                        {workOrders.map((workOrder) => (
+                          <SelectItem key={workOrder.id} value={`wo_${workOrder.id}`}>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                {workOrder.work_order_number} - {workOrder.title}
+                                <Badge variant="secondary" className="text-xs">
+                                  {workOrder.status}
+                                </Badge>
+                              </div>
+                              {workOrder.store_location && (
+                                <div className="text-xs text-muted-foreground">
+                                  {workOrder.store_location}
+                                </div>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                    {projects && projects.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                          Projects
+                        </div>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={`proj_${project.id}`}>
+                            <div className="flex flex-col">
+                              <div>
+                                {project.project_number} - {project.name}
+                              </div>
+                              {project.location_address && (
+                                <div className="text-xs text-muted-foreground">
+                                  {project.location_address}
+                                </div>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 {form.formState.errors.workItemId && (
