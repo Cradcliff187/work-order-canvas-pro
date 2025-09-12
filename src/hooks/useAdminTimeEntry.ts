@@ -243,6 +243,7 @@ export function useAdminTimeEntry() {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-projects'] });
       queryClient.invalidateQueries({ queryKey: ['admin-employee-receipts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] });
       toast({
         title: "Success",
         description: "Time entry added successfully",
@@ -272,6 +273,7 @@ export function useAdminTimeEntry() {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-recent'] });
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] });
       toast({
         title: "Success",
         description: "Time entry updated successfully",
@@ -300,6 +302,7 @@ export function useAdminTimeEntry() {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-recent'] });
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] });
       toast({
         title: "Success",
         description: "Time entry deleted successfully",
