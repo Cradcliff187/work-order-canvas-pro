@@ -85,7 +85,6 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   // Partner Billing Status Icons
   work_pending: Clock,
   report_pending: FileText,
-  bill_needed: AlertCircle,
   bill_pending: Clock,
   ready: CheckCircle,
   billed: Check,

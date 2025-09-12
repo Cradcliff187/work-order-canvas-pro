@@ -89,14 +89,14 @@ export function WorkOrderPipelineTable({
     // Check if internal work with bill amount ready
     const isInternalWork = item.assigned_organization_type === 'internal';
     if (!item.invoice_status && !isInternalWork) {
-      return 'bill_needed';  // Subcontractor needs to submit bill
+      return 'ready';  // Subcontractor needs to submit bill
     }
     if (!item.invoice_status && isInternalWork && item.report_status === 'approved') {
       // Check if report has bill_amount
       if (item.bill_amount && item.bill_amount > 0) {
         return 'ready';  // Internal work ready to invoice
       }
-      return 'bill_needed';  // Internal report needs cost added
+      return 'ready';  // Internal report needs cost added
     }
     
     // If bill pending (submitted) → "Bill Pending"
@@ -115,7 +115,7 @@ export function WorkOrderPipelineTable({
     }
     
     // Default fallback
-    return 'bill_needed';
+    return 'ready';
   };
 
   const tableColumns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [

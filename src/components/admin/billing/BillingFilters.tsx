@@ -47,7 +47,6 @@ const financialStatusOptions = [
 const partnerBillingStatusOptions = [
   { value: 'work_pending', label: 'Work Pending' },
   { value: 'report_pending', label: 'Report Pending' },
-  { value: 'bill_needed', label: 'Bill Needed' },
   { value: 'bill_pending', label: 'Bill Pending' },
   { value: 'ready', label: 'Ready to Invoice' },
   { value: 'billed', label: 'Invoiced' }

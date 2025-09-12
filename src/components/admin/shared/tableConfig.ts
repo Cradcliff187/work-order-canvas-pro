@@ -238,10 +238,6 @@ export const statusConfig = {
       label: "Report Pending", 
       className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
-    bill_needed: {
-      label: "Bill Needed",
-      className: "bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700"
-    },
     bill_pending: {
       label: "Bill Pending",
       className: "bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700"
