@@ -66,7 +66,7 @@ export const usePartnerReadyBills = (partnerOrgId?: string) => {
         .is('partner_invoice_id', null)
         .not('bill_amount', 'is', null)
         .gt('bill_amount', 0)
-        .eq('work_orders.organizations.organization_type', 'internal')
+        .eq('organizations.organization_type', 'internal')
         .eq('work_orders.organization_id', partnerOrgId);
 
       if (reportsError) throw reportsError;
