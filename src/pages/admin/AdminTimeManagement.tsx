@@ -359,16 +359,6 @@ export default function AdminTimeManagement() {
         ) : (
           <>
             {/* Filters */}
-            <CompactTimeManagementFilters
-              filters={filters}
-              onFiltersChange={setFilters}
-              onClearFilters={clearFilters}
-              employees={employees}
-              workOrders={workOrders}
-              projects={projects}
-              filterCount={filterCount}
-            />
-
             {/* Bulk Actions */}
             {selectedEntries.length > 0 && (
               <BulkActionsBar
@@ -406,6 +396,23 @@ export default function AdminTimeManagement() {
                   onReject={handleEntryReject}
                   onFlag={handleEntryFlag}
                   isLoading={isLoading}
+                  filterComponent={
+                    <CompactTimeManagementFilters
+                      value={{
+                        employeeIds: filters.employeeIds,
+                        workOrderIds: filters.workOrderIds,
+                        projectIds: filters.projectIds,
+                        dateFrom: filters.dateFrom,
+                        dateTo: filters.dateTo,
+                        status: filters.status,
+                      }}
+                      onChange={(value) => setFilters(prev => ({ ...prev, ...value }))}
+                      onClear={clearFilters}
+                      employees={employees}
+                      workOrders={workOrders}
+                      projects={projects}
+                    />
+                  }
                 />
               </CardContent>
             </Card>
