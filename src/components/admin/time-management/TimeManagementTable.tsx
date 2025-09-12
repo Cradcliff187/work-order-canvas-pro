@@ -121,35 +121,43 @@ export function TimeManagementTable({
       {/* Table toolbar with search and filters */}
       {(filterComponent || onSearchChange) && (
         <div className="border-b">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
+            {/* Left side - Title */}
             <div className="flex items-center gap-4">
-              <h3 className="text-lg font-semibold">Time Management</h3>
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold leading-none tracking-tight">
+                  Time Management
+                </h2>
+              </div>
             </div>
-            
+
+            {/* Right side - Filters and Search */}
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              {filterComponent}
-              
-              {onSearchChange && (
-                <div className="relative flex-1 sm:flex-initial sm:w-80">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder={searchPlaceholder}
-                    value={searchValue}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    className="pl-10 pr-10 h-10"
-                  />
-                  {searchValue && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onSearchChange('')}
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {filterComponent}
+                
+                {onSearchChange && (
+                  <div className="relative flex-1 sm:flex-initial sm:w-80">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={searchPlaceholder}
+                      value={searchValue}
+                      onChange={(e) => onSearchChange(e.target.value)}
+                      className="pl-10 pr-10 h-10"
+                    />
+                    {searchValue && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onSearchChange('')}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
