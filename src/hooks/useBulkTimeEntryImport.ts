@@ -8,6 +8,8 @@ export interface CSVRow {
   employeeEmail: string;
   workOrderNumber: string;
   date: string;
+  startTime: string;
+  endTime: string;
   hours: string;
   description: string;
 }
@@ -30,6 +32,8 @@ export interface ValidationResult {
     hourly_rate_snapshot: number;
     total_labor_cost: number;
     notes: string;
+    clock_in_time: string;
+    clock_out_time: string;
     is_retroactive: boolean;
     approval_status: 'pending' | 'approved' | 'rejected';
   };
@@ -122,6 +126,10 @@ export function useBulkTimeEntryImport() {
         'workordernumber': 'workOrderNumber',
         'wo': 'workOrderNumber',
         'date': 'date',
+        'starttime': 'startTime',
+        'start': 'startTime',
+        'endtime': 'endTime',
+        'end': 'endTime',
         'hours': 'hours',
         'description': 'description',
         'workperformed': 'description',
@@ -143,6 +151,8 @@ export function useBulkTimeEntryImport() {
             employeeEmail: rowData.employeeEmail || '',
             workOrderNumber: rowData.workOrderNumber || '',
             date: rowData.date || '',
+            startTime: rowData.startTime || '',
+            endTime: rowData.endTime || '',
             hours: rowData.hours || '',
             description: rowData.description || '',
           };
@@ -237,22 +247,84 @@ export function useBulkTimeEntryImport() {
           }
         }
 
-        // Validate hours
-        const hours = parseFloat(row.hours);
-        if (isNaN(hours)) {
+        // Validate start and end times
+        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        let startTime = '';
+        let endTime = '';
+        let calculatedHours = 0;
+        
+        if (row.startTime && row.endTime) {
+          if (!timeRegex.test(row.startTime)) {
+            errors.push({
+              field: 'startTime',
+              message: 'Start time must be in HH:MM format'
+            });
+          } else {
+            startTime = row.startTime;
+          }
+
+          if (!timeRegex.test(row.endTime)) {
+            errors.push({
+              field: 'endTime',
+              message: 'End time must be in HH:MM format'
+            });
+          } else {
+            endTime = row.endTime;
+          }
+
+          // Calculate hours from times if both are valid
+          if (startTime && endTime && parsedDate) {
+            const start = new Date(`${format(parsedDate, 'yyyy-MM-dd')}T${startTime}:00`);
+            const end = new Date(`${format(parsedDate, 'yyyy-MM-dd')}T${endTime}:00`);
+            if (end > start) {
+              calculatedHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+            } else {
+              errors.push({
+                field: 'endTime',
+                message: 'End time must be after start time'
+              });
+            }
+          }
+        }
+
+        // Validate hours (use calculated if available, otherwise require manual entry)
+        let finalHours = 0;
+        if (calculatedHours > 0) {
+          finalHours = calculatedHours;
+        } else if (row.hours) {
+          const hours = parseFloat(row.hours);
+          if (isNaN(hours)) {
+            errors.push({
+              field: 'hours',
+              message: 'Hours must be a valid number'
+            });
+          } else if (hours < 0.25) {
+            errors.push({
+              field: 'hours',
+              message: 'Hours must be at least 0.25'
+            });
+          } else if (hours > 24) {
+            errors.push({
+              field: 'hours',
+              message: 'Hours cannot exceed 24'
+            });
+          } else {
+            finalHours = hours;
+            // Default times if not provided but hours are
+            if (!startTime) startTime = '08:00';
+            if (!endTime) {
+              const startHour = parseInt(startTime.split(':')[0]);
+              const startMin = parseInt(startTime.split(':')[1]);
+              const endTotalMinutes = (startHour * 60 + startMin) + (hours * 60);
+              const endHour = Math.floor(endTotalMinutes / 60);
+              const endMin = endTotalMinutes % 60;
+              endTime = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
+            }
+          }
+        } else {
           errors.push({
             field: 'hours',
-            message: 'Hours must be a valid number'
-          });
-        } else if (hours < 0.25) {
-          errors.push({
-            field: 'hours',
-            message: 'Hours must be at least 0.25'
-          });
-        } else if (hours > 24) {
-          errors.push({
-            field: 'hours',
-            message: 'Hours cannot exceed 24'
+            message: 'Hours must be provided or calculable from start/end times'
           });
         }
 
@@ -284,6 +356,16 @@ export function useBulkTimeEntryImport() {
 
         const isValid = errors.length === 0;
         
+        // Calculate clock times if valid
+        let clockInTime = '';
+        let clockOutTime = '';
+        if (isValid && parsedDate && startTime && endTime) {
+          const clockIn = new Date(`${format(parsedDate, 'yyyy-MM-dd')}T${startTime}:00`);
+          const clockOut = new Date(`${format(parsedDate, 'yyyy-MM-dd')}T${endTime}:00`);
+          clockInTime = clockIn.toISOString();
+          clockOutTime = clockOut.toISOString();
+        }
+        
         results.push({
           rowIndex: i,
           isValid,
@@ -292,11 +374,13 @@ export function useBulkTimeEntryImport() {
             employee_user_id: employeeId,
             work_order_id: workOrderId,
             report_date: parsedDate ? format(parsedDate, 'yyyy-MM-dd') : '',
-            hours_worked: hours || 0,
+            hours_worked: finalHours,
             work_performed: row.description || '',
             hourly_rate_snapshot: hourlyRate,
-            total_labor_cost: (hours || 0) * hourlyRate,
+            total_labor_cost: finalHours * hourlyRate,
             notes: 'Imported from CSV',
+            clock_in_time: clockInTime,
+            clock_out_time: clockOutTime,
             is_retroactive: true,
             approval_status: 'pending' as const,
           }

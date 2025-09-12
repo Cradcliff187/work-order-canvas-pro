@@ -53,6 +53,8 @@ export default function TimeReportSubmission() {
       await submitTimeReport.mutateAsync({
         workOrderId,
         reportDate: data.reportDate.toISOString().split('T')[0],
+        startTime: data.startTime,
+        endTime: data.endTime,
         workPerformed: data.workPerformed,
         materialsUsed: data.materialsUsed,
         hoursWorked: data.hoursWorked,

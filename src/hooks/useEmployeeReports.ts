@@ -204,6 +204,8 @@ export function useEmployeeReports() {
     mutationFn: async (reportData: {
       workOrderId: string;
       reportDate: string;
+      startTime: string;
+      endTime: string;
       workPerformed: string;
       materialsUsed?: string;
       hoursWorked: number;
@@ -224,6 +226,23 @@ export function useEmployeeReports() {
 
       const hourlyRate = profile.hourly_billable_rate || 0;
 
+      // Calculate clock in/out times from date and times
+      const reportDate = new Date(reportData.reportDate);
+      const clockInTime = new Date(
+        reportDate.getFullYear(),
+        reportDate.getMonth(),
+        reportDate.getDate(),
+        parseInt(reportData.startTime.split(':')[0]),
+        parseInt(reportData.startTime.split(':')[1])
+      );
+      const clockOutTime = new Date(
+        reportDate.getFullYear(),
+        reportDate.getMonth(),
+        reportDate.getDate(),
+        parseInt(reportData.endTime.split(':')[0]),
+        parseInt(reportData.endTime.split(':')[1])
+      );
+
       let report;
       
       if (reportData.existingReportId) {
@@ -236,6 +255,10 @@ export function useEmployeeReports() {
             hours_worked: reportData.hoursWorked,
             hourly_rate_snapshot: hourlyRate,
             notes: reportData.notes,
+            clock_in_time: clockInTime.toISOString(),
+            clock_out_time: clockOutTime.toISOString(),
+            is_retroactive: true,
+            approval_status: 'pending',
           })
           .eq("id", reportData.existingReportId)
           .select()
@@ -256,6 +279,10 @@ export function useEmployeeReports() {
             hours_worked: reportData.hoursWorked,
             hourly_rate_snapshot: hourlyRate,
             notes: reportData.notes,
+            clock_in_time: clockInTime.toISOString(),
+            clock_out_time: clockOutTime.toISOString(),
+            is_retroactive: true,
+            approval_status: 'pending',
           })
           .select()
           .single();
