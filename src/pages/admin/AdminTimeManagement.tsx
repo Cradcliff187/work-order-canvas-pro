@@ -104,6 +104,7 @@ export default function AdminTimeManagement() {
     isLoading,
     updateTimeEntry,
     deleteTimeEntry,
+    bulkDeleteTimeEntries,
     bulkApprove,
     bulkReject,
     exportToCSV,
@@ -259,18 +260,10 @@ export default function AdminTimeManagement() {
     
     setIsDeleting(true);
     try {
-      await Promise.all(selectedEntries.map(id => deleteTimeEntry(id)));
-      toast({
-        title: "Success",
-        description: `${selectedEntries.length} time entries deleted successfully`,
-      });
+      await bulkDeleteTimeEntries(selectedEntries);
       setSelectedEntries([]);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete some time entries",
-        variant: "destructive",
-      });
+      // Error handling is done in the hook
     } finally {
       setIsDeleting(false);
       setBulkDeleteDialogOpen(false);

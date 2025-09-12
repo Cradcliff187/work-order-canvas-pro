@@ -410,9 +410,18 @@ export function useTimeManagement(filters: TimeManagementFilters) {
     },
   });
 
-  // Delete time entry mutation
+  // Delete time entry mutation with cascading delete
   const deleteTimeEntryMutation = useMutation({
     mutationFn: async (id: string) => {
+      // First delete related receipt allocations
+      const { error: receiptError } = await supabase
+        .from('receipt_time_entries')
+        .delete()
+        .eq('time_entry_id', id);
+
+      if (receiptError) throw receiptError;
+
+      // Then delete the time entry
       const { error } = await supabase
         .from('employee_reports')
         .delete()
@@ -425,13 +434,41 @@ export function useTimeManagement(filters: TimeManagementFilters) {
       toast({ title: 'Time entry deleted successfully' });
     },
     onError: (error: any) => {
-      let description = error?.message;
-      if (error?.code === '23503' || /foreign key|constraint/i.test(description || '')) {
-        description = 'This time entry is linked to other records (e.g., receipt allocations or invoices). Remove those links first.';
-      }
       toast({ 
         title: 'Failed to delete time entry', 
-        description,
+        description: error?.message || 'An error occurred while deleting the time entry',
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  // Bulk delete time entries mutation
+  const bulkDeleteTimeEntriesMutation = useMutation({
+    mutationFn: async (entryIds: string[]) => {
+      // First delete all related receipt allocations
+      const { error: receiptError } = await supabase
+        .from('receipt_time_entries')
+        .delete()
+        .in('time_entry_id', entryIds);
+
+      if (receiptError) throw receiptError;
+
+      // Then delete all time entries
+      const { error } = await supabase
+        .from('employee_reports')
+        .delete()
+        .in('id', entryIds);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, entryIds) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] });
+      toast({ title: `${entryIds.length} time entries deleted successfully` });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Failed to delete time entries', 
+        description: error?.message || 'An error occurred while deleting the time entries',
         variant: 'destructive' 
       });
     },
@@ -536,6 +573,7 @@ export function useTimeManagement(filters: TimeManagementFilters) {
     updateTimeEntry: (id: string, data: Partial<TimeEntry>) => 
       updateTimeEntryMutation.mutateAsync({ id, data }),
     deleteTimeEntry: (id: string) => deleteTimeEntryMutation.mutateAsync(id),
+    bulkDeleteTimeEntries: (entryIds: string[]) => bulkDeleteTimeEntriesMutation.mutateAsync(entryIds),
     bulkApprove: (entryIds: string[]) => bulkApproveMutation.mutateAsync(entryIds),
     bulkReject: (entryIds: string[], reason: string) => 
       bulkRejectMutation.mutateAsync({ entryIds, reason }),
