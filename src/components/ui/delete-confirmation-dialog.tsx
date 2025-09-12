@@ -33,7 +33,7 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
   
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent role="alertdialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle id="delete-dialog-title">Delete {safeItemType}</AlertDialogTitle>
           <AlertDialogDescription id="delete-dialog-description">
