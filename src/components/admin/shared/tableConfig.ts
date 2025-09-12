@@ -244,7 +244,7 @@ export const statusConfig = {
     },
     ready: {
       label: "Ready to Invoice",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
+      className: "bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700"
     },
     billed: {
       label: "Invoiced",
