@@ -23,12 +23,19 @@ import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-drop
 import { useTimeManagementKeyboards } from '@/hooks/useTimeManagementKeyboards';
 import { KeyboardShortcutsTooltip } from '@/components/ui/keyboard-shortcuts-tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminTimeManagement() {
+  const { toast } = useToast();
   const isMobile = useIsMobile();
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
   const [editingEntry, setEditingEntry] = useState<any>(null);
   const [showPrintView, setShowPrintView] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [filters, setFilters] = useState({
     employeeIds: [] as string[],
     dateFrom: '',
@@ -143,10 +150,32 @@ export default function AdminTimeManagement() {
     setEditingEntry(entry);
   };
 
-  const handleEntryDelete = async (entryId: string) => {
-    if (window.confirm('Are you sure you want to delete this time entry?')) {
-      await deleteTimeEntry(entryId);
-      setSelectedEntries(prev => prev.filter(id => id !== entryId));
+  const handleEntryDelete = (entryId: string) => {
+    setEntryToDelete(entryId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteEntry = async () => {
+    if (!entryToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteTimeEntry(entryToDelete);
+      setSelectedEntries(prev => prev.filter(id => id !== entryToDelete));
+      toast({
+        title: "Success",
+        description: "Time entry deleted successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete time entry",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setEntryToDelete(null);
     }
   };
 
@@ -197,9 +226,29 @@ export default function AdminTimeManagement() {
   };
 
   const handleBulkDelete = async (entryIds: string[]) => {
-    if (window.confirm(`Are you sure you want to delete ${entryIds.length} time entries?`)) {
-      await Promise.all(entryIds.map(id => deleteTimeEntry(id)));
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    if (selectedEntries.length === 0) return;
+    
+    setIsDeleting(true);
+    try {
+      await Promise.all(selectedEntries.map(id => deleteTimeEntry(id)));
+      toast({
+        title: "Success",
+        description: `${selectedEntries.length} time entries deleted successfully`,
+      });
       setSelectedEntries([]);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete some time entries",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setBulkDeleteDialogOpen(false);
     }
   };
 
@@ -208,8 +257,20 @@ export default function AdminTimeManagement() {
   };
 
   const handleEntrySave = async (updatedEntry: any) => {
-    await updateTimeEntry(updatedEntry.id, updatedEntry);
-    setEditingEntry(null);
+    try {
+      await updateTimeEntry(updatedEntry.id, updatedEntry);
+      toast({
+        title: "Success",
+        description: "Time entry updated successfully",
+      });
+      setEditingEntry(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update time entry",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePrint = () => {
@@ -374,6 +435,25 @@ export default function AdminTimeManagement() {
           projects={projects}
         />
       )}
+
+      {/* Delete Confirmation Dialogs */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDeleteEntry}
+        itemName={entryToDelete ? `Time Entry #${entryToDelete.slice(0, 8)}` : ''}
+        itemType="time entry"
+        isLoading={isDeleting}
+      />
+
+      <DeleteConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        onConfirm={confirmBulkDelete}
+        itemName={`${selectedEntries.length} selected entries`}
+        itemType="time entries"
+        isLoading={isDeleting}
+      />
     </>
   );
 }
