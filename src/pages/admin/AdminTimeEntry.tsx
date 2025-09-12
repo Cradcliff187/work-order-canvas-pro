@@ -125,7 +125,6 @@ export default function AdminTimeEntry() {
         report_date: format(data.date, 'yyyy-MM-dd'),
         hours_worked: calculatedHours,
         work_performed: data.workPerformed,
-        materials_used: data.materialsCost || 0,
         hourly_rate_snapshot: employee.hourly_billable_rate || 0,
         total_labor_cost: calculatedHours * (employee.hourly_billable_rate || 0),
         notes: 'Added by admin',

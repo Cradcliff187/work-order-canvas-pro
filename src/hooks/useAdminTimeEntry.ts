@@ -34,7 +34,6 @@ interface TimeEntryData {
   report_date: string;
   hours_worked: number;
   work_performed: string;
-  materials_used?: number;
   hourly_rate_snapshot: number;
   total_labor_cost: number;
   notes?: string;
