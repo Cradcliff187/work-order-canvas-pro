@@ -9,7 +9,7 @@ import { Edit, Trash2, MoreHorizontal, Clock, DollarSign, CheckCircle, XCircle, 
 import { format } from 'date-fns';
 import { TimeEntry } from '@/hooks/useTimeManagement';
 import { cn } from '@/lib/utils';
-import { calculateEntryOvertimeInfo } from '@/utils/overtimeCalculations';
+import { calculateWeeklyEntryOvertimeInfo } from '@/utils/overtimeCalculations';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 
 interface TimeManagementTableProps {
@@ -60,17 +60,6 @@ export function TimeManagementTable({
     
     // Calculate overtime info using weekly aggregation (40h threshold)
     const entriesWithOvertimeInfo = calculateWeeklyEntryOvertimeInfo(allEntries.map(entry => ({
-      id: entry.id,
-      report_date: entry.report_date,
-      hours_worked: entry.hours_worked,
-      employee_user_id: entry.employee_user_id,
-      employee: entry.employee ? {
-        id: entry.employee.id,
-        first_name: entry.employee.first_name,
-        last_name: entry.employee.last_name,
-        is_overtime_eligible: entry.employee.is_overtime_eligible
-      } : undefined
-    })));
       id: entry.id,
       report_date: entry.report_date,
       hours_worked: entry.hours_worked,
