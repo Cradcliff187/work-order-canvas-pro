@@ -370,33 +370,15 @@ export default function AdminTimeManagement() {
             {/* Time Entries Table */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Time Entries
-                  <Badge variant="secondary" className="ml-auto">
-                    {totalEntries} total entries
-                  </Badge>
-                  <ColumnVisibilityDropdown
-                    columns={getAllColumns()}
-                    onToggleColumn={toggleColumn}
-                    onResetToDefaults={resetToDefaults}
-                  />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TimeManagementTable
-                  entries={timeEntries}
-                  selectedEntries={selectedEntries}
-                  columnVisibility={columnVisibility}
-                  onSelectionChange={handleEntrySelect}
-                  onSelectAll={handleSelectAll}
-                  onEdit={handleEntryEdit}
-                  onDelete={handleEntryDelete}
-                  onApprove={handleEntryApprove}
-                  onReject={handleEntryReject}
-                  onFlag={handleEntryFlag}
-                  isLoading={isLoading}
-                  filterComponent={
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Time Entries
+                    <Badge variant="secondary">
+                      {totalEntries} total entries
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <CompactTimeManagementFilters
                       value={{
                         employeeIds: filters.employeeIds,
@@ -412,7 +394,27 @@ export default function AdminTimeManagement() {
                       workOrders={workOrders}
                       projects={projects}
                     />
-                  }
+                    <ColumnVisibilityDropdown
+                      columns={getAllColumns()}
+                      onToggleColumn={toggleColumn}
+                      onResetToDefaults={resetToDefaults}
+                    />
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TimeManagementTable
+                  entries={timeEntries}
+                  selectedEntries={selectedEntries}
+                  columnVisibility={columnVisibility}
+                  onSelectionChange={handleEntrySelect}
+                  onSelectAll={handleSelectAll}
+                  onEdit={handleEntryEdit}
+                  onDelete={handleEntryDelete}
+                  onApprove={handleEntryApprove}
+                  onReject={handleEntryReject}
+                  onFlag={handleEntryFlag}
+                  isLoading={isLoading}
                 />
               </CardContent>
             </Card>

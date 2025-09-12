@@ -5,8 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, MoreHorizontal, Clock, DollarSign, CheckCircle, XCircle, Flag, Search, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Edit, Trash2, MoreHorizontal, Clock, DollarSign, CheckCircle, XCircle, Flag } from 'lucide-react';
 import { format } from 'date-fns';
 import { TimeEntry } from '@/hooks/useTimeManagement';
 import { cn } from '@/lib/utils';
@@ -25,12 +24,6 @@ interface TimeManagementTableProps {
   onFlag?: (entryId: string) => void;
   isLoading: boolean;
   columnVisibility: any;
-  
-  // Filter and Search
-  filterComponent?: React.ReactNode;
-  searchValue?: string;
-  onSearchChange?: (value: string) => void;
-  searchPlaceholder?: string;
 }
 
 export function TimeManagementTable({
@@ -45,10 +38,6 @@ export function TimeManagementTable({
   onFlag,
   isLoading,
   columnVisibility,
-  filterComponent,
-  searchValue = '',
-  onSearchChange,
-  searchPlaceholder = "Search time entries...",
 }: TimeManagementTableProps) {
   
   const formatCurrency = (amount: number) => {
@@ -118,50 +107,6 @@ export function TimeManagementTable({
 
   return (
     <div className="rounded-md border">
-      {/* Table toolbar with search and filters */}
-      {(filterComponent || onSearchChange) && (
-        <div className="border-b">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6">
-            {/* Left side - Title */}
-            <div className="flex items-center gap-4">
-              <div className="min-w-0">
-                <h2 className="text-lg font-semibold leading-none tracking-tight">
-                  Time Management
-                </h2>
-              </div>
-            </div>
-
-            {/* Right side - Filters and Search */}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="flex items-center gap-2">
-                {filterComponent}
-                
-                {onSearchChange && (
-                  <div className="relative flex-1 sm:flex-initial sm:w-80">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder={searchPlaceholder}
-                      value={searchValue}
-                      onChange={(e) => onSearchChange(e.target.value)}
-                      className="pl-10 pr-10 h-10"
-                    />
-                    {searchValue && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onSearchChange('')}
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       
       <div className="space-y-4">
         <Table>
