@@ -9,6 +9,7 @@ import { Edit, Trash2, MoreHorizontal, Clock, DollarSign, CheckCircle, XCircle, 
 import { format } from 'date-fns';
 import { TimeEntry } from '@/hooks/useTimeManagement';
 import { cn } from '@/lib/utils';
+import { calculateEntryOvertimeInfo } from '@/utils/overtimeCalculations';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 
 interface TimeManagementTableProps {
@@ -50,18 +51,25 @@ export function TimeManagementTable({
     return `${hours.toFixed(1)}h`;
   };
 
-  const getStatusBadge = (entry: TimeEntry) => {
+  const getStatusBadge = (entry: TimeEntry, allEntries: TimeEntry[]) => {
     const baseVariant = entry.approval_status === 'approved' ? 'default' : 
                         entry.approval_status === 'rejected' ? 'destructive' :
                         entry.approval_status === 'flagged' ? 'secondary' : 'outline';
     
     const statusText = entry.approval_status.charAt(0).toUpperCase() + entry.approval_status.slice(1);
     
+    // Calculate overtime info using daily aggregation
+    const entriesWithOvertimeInfo = calculateEntryOvertimeInfo(allEntries);
+    const entryWithOT = entriesWithOvertimeInfo.find(e => e.id === entry.id);
+    const hasOvertime = entryWithOT?.contributesToOvertime && entryWithOT.overtimePortion > 0;
+    
     return (
       <div className="flex flex-col gap-1">
         <Badge variant={baseVariant}>{statusText}</Badge>
-        {entry.hours_worked > 8 && (
-          <Badge variant="secondary" className="text-xs">OT</Badge>
+        {hasOvertime && (
+          <Badge variant="secondary" className="text-xs">
+            {entryWithOT.overtimePortion.toFixed(1)}h OT
+          </Badge>
         )}
       </div>
     );
@@ -222,7 +230,7 @@ export function TimeManagementTable({
               
               {columnVisibility.status && (
                 <TableCell>
-                  {getStatusBadge(entry)}
+                  {getStatusBadge(entry, entries)}
                 </TableCell>
               )}
               
