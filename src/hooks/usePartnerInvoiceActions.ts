@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { isValidUUID } from '@/lib/utils/validation';
 
 import { useRetry } from './useRetry';
 
@@ -156,6 +157,13 @@ export function usePartnerInvoiceActions() {
 
   const deleteInvoiceMutation = useMutation({
     mutationFn: async ({ invoiceId }: DeleteInvoiceParams) => {
+      // Validate UUID format
+      if (!isValidUUID(invoiceId)) {
+        throw new Error('Invalid invoice ID format');
+      }
+
+      console.log('Deleting partner invoice with ID:', invoiceId);
+
       // First, unlink any dependent reports that reference this invoice
       const { error: workOrderReportsError } = await supabase
         .from('work_order_reports')
