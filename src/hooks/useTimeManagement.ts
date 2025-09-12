@@ -29,6 +29,7 @@ export interface TimeEntry {
     last_name: string;
     email: string;
     avatar_url?: string;
+    is_overtime_eligible?: boolean;
   };
   work_order?: {
     id: string;
@@ -120,7 +121,8 @@ export function useTimeManagement(filters: TimeManagementFilters) {
             first_name,
             last_name,
             email,
-            avatar_url
+            avatar_url,
+            is_overtime_eligible
           ),
           work_order:work_orders(
             id,

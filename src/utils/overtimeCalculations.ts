@@ -9,6 +9,7 @@ export interface TimeEntry {
     id: string;
     first_name: string;
     last_name: string;
+    is_overtime_eligible?: boolean;
   };
 }
 
@@ -29,19 +30,28 @@ export interface EntryWithOvertimeInfo extends TimeEntry {
 }
 
 /**
+ * Normalizes date string to YYYY-MM-DD format
+ */
+function normalizeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return format(date, 'yyyy-MM-dd');
+}
+
+/**
  * Groups time entries by employee and date, calculating daily totals
  */
 export function groupTimeEntriesByEmployeeAndDate(entries: TimeEntry[]): DailyHours[] {
   const dailyGroups = new Map<string, DailyHours>();
 
   entries.forEach(entry => {
-    const key = `${entry.employee_user_id}-${entry.report_date}`;
+    const normalizedDate = normalizeDate(entry.report_date);
+    const key = `${entry.employee_user_id}-${normalizedDate}`;
     
     if (!dailyGroups.has(key)) {
       dailyGroups.set(key, {
         employeeId: entry.employee_user_id,
         employeeName: entry.employee ? `${entry.employee.first_name} ${entry.employee.last_name}` : undefined,
-        date: entry.report_date,
+        date: normalizedDate,
         totalHours: 0,
         regularHours: 0,
         overtimeHours: 0,
@@ -56,7 +66,11 @@ export function groupTimeEntriesByEmployeeAndDate(entries: TimeEntry[]): DailyHo
 
   // Calculate regular vs overtime hours for each day
   dailyGroups.forEach(dailyHours => {
-    if (dailyHours.totalHours <= 8) {
+    // Check if the employee is overtime eligible
+    const firstEntry = dailyHours.entries[0];
+    const isOvertimeEligible = firstEntry?.employee?.is_overtime_eligible ?? true; // Default to true if not specified
+    
+    if (!isOvertimeEligible || dailyHours.totalHours <= 8) {
       dailyHours.regularHours = dailyHours.totalHours;
       dailyHours.overtimeHours = 0;
     } else {
@@ -81,10 +95,14 @@ export function calculateEntryOvertimeInfo(entries: TimeEntry[]): EntryWithOvert
   });
 
   return entries.map(entry => {
-    const key = `${entry.employee_user_id}-${entry.report_date}`;
+    const normalizedDate = normalizeDate(entry.report_date);
+    const key = `${entry.employee_user_id}-${normalizedDate}`;
     const dailyInfo = dailyHoursMap.get(key);
     
-    if (!dailyInfo || dailyInfo.overtimeHours === 0) {
+    // Check if employee is overtime eligible
+    const isOvertimeEligible = entry.employee?.is_overtime_eligible ?? true;
+    
+    if (!dailyInfo || dailyInfo.overtimeHours === 0 || !isOvertimeEligible) {
       return {
         ...entry,
         contributesToOvertime: false,
@@ -93,7 +111,7 @@ export function calculateEntryOvertimeInfo(entries: TimeEntry[]): EntryWithOvert
       };
     }
 
-    // This entry contributes to overtime since the daily total > 8
+    // This entry contributes to overtime since the daily total > 8 and employee is eligible
     // We need to distribute the overtime proportionally among all entries for this day
     const entryProportion = entry.hours_worked / dailyInfo.totalHours;
     const overtimePortionForEntry = dailyInfo.overtimeHours * entryProportion;
