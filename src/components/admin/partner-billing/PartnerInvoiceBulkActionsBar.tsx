@@ -32,7 +32,7 @@ export function PartnerInvoiceBulkActionsBar({
 
   return (
     <Card 
-      className="fixed bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 z-45 shadow-lg mx-4 sm:mx-6 w-auto max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-3rem)]" 
+      className="fixed bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 z-50 shadow-lg mx-4 sm:mx-6 w-auto max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-3rem)]" 
       role="toolbar" 
       aria-label="Bulk actions for selected invoices"
     >
