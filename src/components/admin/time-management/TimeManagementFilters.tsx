@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Command, CommandList, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { CalendarIcon, Search, X, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -113,6 +113,7 @@ export function TimeManagementFilters({
                 selected={filters.dateFrom ? new Date(filters.dateFrom) : undefined}
                 onSelect={(date) => updateFilter('dateFrom', date ? format(date, 'yyyy-MM-dd') : '')}
                 initialFocus
+                className={cn("p-3 pointer-events-auto")}
               />
             </PopoverContent>
           </Popover>
@@ -140,6 +141,7 @@ export function TimeManagementFilters({
                 selected={filters.dateTo ? new Date(filters.dateTo) : undefined}
                 onSelect={(date) => updateFilter('dateTo', date ? format(date, 'yyyy-MM-dd') : '')}
                 initialFocus
+                className={cn("p-3 pointer-events-auto")}
               />
             </PopoverContent>
           </Popover>
@@ -160,24 +162,26 @@ export function TimeManagementFilters({
             <PopoverContent className="w-64 p-0">
               <Command>
                 <CommandInput placeholder="Search employees..." />
-                <CommandEmpty>No employees found.</CommandEmpty>
-                <CommandGroup className="max-h-64 overflow-auto">
-                  {employees.map((employee) => (
-                    <CommandItem
-                      key={employee.id}
-                      onSelect={() => toggleArrayFilter('employeeIds', employee.id)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={filters.employeeIds.includes(employee.id)}
-                          readOnly
-                        />
-                        <span>{employee.first_name} {employee.last_name}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                <CommandList>
+                  <CommandEmpty>No employees found.</CommandEmpty>
+                  <CommandGroup className="max-h-64 overflow-auto">
+                    {employees.map((employee) => (
+                      <CommandItem
+                        key={employee.id}
+                        onSelect={() => toggleArrayFilter('employeeIds', employee.id)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={filters.employeeIds.includes(employee.id)}
+                            readOnly
+                          />
+                          <span>{employee.first_name} {employee.last_name}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
               </Command>
             </PopoverContent>
           </Popover>
@@ -200,28 +204,30 @@ export function TimeManagementFilters({
             </PopoverTrigger>
             <PopoverContent className="w-64 p-0">
               <Command>
-                <CommandGroup className="max-h-64 overflow-auto">
-                  {[
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'approved', label: 'Approved' },
-                    { value: 'rejected', label: 'Rejected' },
-                    { value: 'flagged', label: 'Flagged' }
-                  ].map((status) => (
-                    <CommandItem
-                      key={status.value}
-                      onSelect={() => toggleArrayFilter('status', status.value)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={filters.status.includes(status.value)}
-                          readOnly
-                        />
-                        <span>{status.label}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                <CommandList>
+                  <CommandGroup className="max-h-64 overflow-auto">
+                    {[
+                      { value: 'pending', label: 'Pending' },
+                      { value: 'approved', label: 'Approved' },
+                      { value: 'rejected', label: 'Rejected' },
+                      { value: 'flagged', label: 'Flagged' }
+                    ].map((status) => (
+                      <CommandItem
+                        key={status.value}
+                        onSelect={() => toggleArrayFilter('status', status.value)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={filters.status.includes(status.value)}
+                            readOnly
+                          />
+                          <span>{status.label}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
               </Command>
             </PopoverContent>
           </Popover>
@@ -242,24 +248,26 @@ export function TimeManagementFilters({
             <PopoverContent className="w-80 p-0">
               <Command>
                 <CommandInput placeholder="Search work orders..." />
-                <CommandEmpty>No work orders found.</CommandEmpty>
-                <CommandGroup className="max-h-64 overflow-auto">
-                  {workOrders.map((workOrder) => (
-                    <CommandItem
-                      key={workOrder.id}
-                      onSelect={() => toggleArrayFilter('workOrderIds', workOrder.id)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={filters.workOrderIds.includes(workOrder.id)}
-                          readOnly
-                        />
-                        <span>{workOrder.work_order_number} - {workOrder.title}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                <CommandList>
+                  <CommandEmpty>No work orders found.</CommandEmpty>
+                  <CommandGroup className="max-h-64 overflow-auto">
+                    {workOrders.map((workOrder) => (
+                      <CommandItem
+                        key={workOrder.id}
+                        onSelect={() => toggleArrayFilter('workOrderIds', workOrder.id)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={filters.workOrderIds.includes(workOrder.id)}
+                            readOnly
+                          />
+                          <span>{workOrder.work_order_number} - {workOrder.title}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
               </Command>
             </PopoverContent>
           </Popover>
@@ -280,24 +288,26 @@ export function TimeManagementFilters({
             <PopoverContent className="w-80 p-0">
               <Command>
                 <CommandInput placeholder="Search projects..." />
-                <CommandEmpty>No projects found.</CommandEmpty>
-                <CommandGroup className="max-h-64 overflow-auto">
-                  {projects.map((project) => (
-                    <CommandItem
-                      key={project.id}
-                      onSelect={() => toggleArrayFilter('projectIds', project.id)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={filters.projectIds.includes(project.id)}
-                          readOnly
-                        />
-                        <span>{project.project_number} - {project.name}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                <CommandList>
+                  <CommandEmpty>No projects found.</CommandEmpty>
+                  <CommandGroup className="max-h-64 overflow-auto">
+                    {projects.map((project) => (
+                      <CommandItem
+                        key={project.id}
+                        onSelect={() => toggleArrayFilter('projectIds', project.id)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={filters.projectIds.includes(project.id)}
+                            readOnly
+                          />
+                          <span>{project.project_number} - {project.name}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
               </Command>
             </PopoverContent>
           </Popover>
