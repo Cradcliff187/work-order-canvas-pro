@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { PaginationState } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,6 @@ import { TimeManagementTable } from '@/components/admin/time-management/TimeMana
 import { TimeManagementSummary } from '@/components/admin/time-management/TimeManagementSummary';
 import { TimeEntryEditModal } from '@/components/admin/time-management/TimeEntryEditModal';
 import { BulkActionsBar } from '@/components/admin/time-management/BulkActionsBar';
-import { TimeManagementPagination } from '@/components/admin/time-management/TimeManagementPagination';
 import { PrintView } from '@/components/admin/time-management/PrintView';
 import { MobileTimeManagement } from '@/components/admin/time-management/MobileTimeManagement';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
@@ -110,18 +110,36 @@ export default function AdminTimeManagement() {
     refetch
   } = useTimeManagement(filters);
 
-  // Pagination calculations
-  const totalPages = Math.ceil(totalEntries / filters.limit);
+  // Pagination state - convert to TanStack Table format
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: filters.page - 1, // Convert to 0-based index
+    pageSize: filters.limit,
+  });
 
-  const handlePageChange = (page: number) => {
-    setFilters(prev => ({ ...prev, page }));
+  // Sync TanStack pagination with filters
+  React.useEffect(() => {
+    setPagination({
+      pageIndex: filters.page - 1,
+      pageSize: filters.limit,
+    });
+  }, [filters.page, filters.limit]);
+
+  // Handle pagination changes - update to work with TanStack Table
+  const handlePaginationChange = React.useCallback((updaterOrValue: any) => {
+    const newPagination = typeof updaterOrValue === 'function' 
+      ? updaterOrValue(pagination) 
+      : updaterOrValue;
+    
+    setFilters(prev => ({ 
+      ...prev, 
+      page: newPagination.pageIndex + 1, // Convert back to 1-based index
+      limit: newPagination.pageSize 
+    }));
     setSelectedEntries([]); // Clear selections when changing pages
-  };
+  }, [pagination, setFilters]);
 
-  const handlePageSizeChange = (limit: number) => {
-    setFilters(prev => ({ ...prev, page: 1, limit })); // Reset to page 1
-    setSelectedEntries([]); // Clear selections when changing page size
-  };
+  // Calculate pagination values
+  const pageCount = Math.ceil(totalEntries / filters.limit);
 
   // Selection handlers
   const handleEntrySelect = (entryId: string) => {
@@ -402,7 +420,7 @@ export default function AdminTimeManagement() {
                   </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <TimeManagementTable
                   entries={timeEntries}
                   selectedEntries={selectedEntries}
@@ -415,21 +433,13 @@ export default function AdminTimeManagement() {
                   onReject={handleEntryReject}
                   onFlag={handleEntryFlag}
                   isLoading={isLoading}
+                  pagination={pagination}
+                  setPagination={handlePaginationChange}
+                  pageCount={pageCount}
+                  totalCount={totalEntries}
                 />
               </CardContent>
             </Card>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <TimeManagementPagination
-                currentPage={filters.page}
-                totalPages={totalPages}
-                pageSize={filters.limit}
-                totalItems={totalEntries}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-              />
-            )}
           </>
         )}
       </div>
