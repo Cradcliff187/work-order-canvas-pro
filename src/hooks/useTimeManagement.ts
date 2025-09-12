@@ -421,13 +421,6 @@ export function useTimeManagement(filters: TimeManagementFilters) {
 
       if (receiptError) throw receiptError;
 
-      // Delete audit logs
-      const { error: auditError } = await supabase
-        .from('time_entry_audits')
-        .delete()
-        .eq('time_entry_id', id);
-
-      if (auditError) throw auditError;
 
       // Then delete the time entry
       const { error } = await supabase
@@ -442,6 +435,7 @@ export function useTimeManagement(filters: TimeManagementFilters) {
       toast({ title: 'Time entry deleted successfully' });
     },
     onError: (error: any) => {
+      console.error('Failed to delete time entry', error);
       toast({ 
         title: 'Failed to delete time entry', 
         description: error?.message || 'An error occurred while deleting the time entry',
@@ -461,13 +455,6 @@ export function useTimeManagement(filters: TimeManagementFilters) {
 
       if (receiptError) throw receiptError;
 
-      // Delete audit logs
-      const { error: auditError } = await supabase
-        .from('time_entry_audits')
-        .delete()
-        .in('time_entry_id', entryIds);
-
-      if (auditError) throw auditError;
 
       // Then delete all time entries
       const { error } = await supabase
@@ -482,6 +469,7 @@ export function useTimeManagement(filters: TimeManagementFilters) {
       toast({ title: `${entryIds.length} time entries deleted successfully` });
     },
     onError: (error: any) => {
+      console.error('Failed to bulk delete time entries', error);
       toast({ 
         title: 'Failed to delete time entries', 
         description: error?.message || 'An error occurred while deleting the time entries',
