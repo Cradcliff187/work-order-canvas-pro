@@ -30,6 +30,8 @@ export interface ValidationResult {
     hourly_rate_snapshot: number;
     total_labor_cost: number;
     notes: string;
+    is_retroactive: boolean;
+    approval_status: 'pending' | 'approved' | 'rejected';
   };
 }
 
@@ -63,7 +65,7 @@ export function useBulkTimeEntryImport() {
             )
           )
         `)
-        .eq('organization_members.organizations.organization_type', 'internal')
+        .eq('organization_members.organization.organization_type', 'internal')
         .eq('is_employee', true)
         .eq('is_active', true);
 
@@ -262,6 +264,24 @@ export function useBulkTimeEntryImport() {
           });
         }
 
+        // Check for existing time entry on same date/work order/employee
+        if (employeeId && workOrderId && parsedDate) {
+          const existingEntry = await supabase
+            .from('employee_reports')
+            .select('id')
+            .eq('employee_user_id', employeeId)
+            .eq('work_order_id', workOrderId)
+            .eq('report_date', format(parsedDate, 'yyyy-MM-dd'))
+            .single();
+
+          if (existingEntry.data && !existingEntry.error) {
+            errors.push({
+              field: 'date',
+              message: 'Time entry already exists for this employee, work order, and date'
+            });
+          }
+        }
+
         const isValid = errors.length === 0;
         
         results.push({
@@ -277,6 +297,8 @@ export function useBulkTimeEntryImport() {
             hourly_rate_snapshot: hourlyRate,
             total_labor_cost: (hours || 0) * hourlyRate,
             notes: 'Imported from CSV',
+            is_retroactive: true,
+            approval_status: 'pending' as const,
           }
         });
       }
