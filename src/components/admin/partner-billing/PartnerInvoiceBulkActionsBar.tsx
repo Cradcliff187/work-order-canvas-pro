@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, X, Edit, FileText, Mail, DollarSign } from 'lucide-react';
+import { Users, X, Edit, FileText, Mail, DollarSign, Trash2 } from 'lucide-react';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 
 export interface PartnerInvoiceBulkActionsBarProps {
@@ -12,6 +12,7 @@ export interface PartnerInvoiceBulkActionsBarProps {
   onSendEmails: (ids: string[]) => void;
   onUpdateStatus: (ids: string[]) => void;
   onBulkEdit: (ids: string[]) => void;
+  onBulkDelete: (ids: string[]) => void;
   loading?: boolean;
 }
 
@@ -24,6 +25,7 @@ export function PartnerInvoiceBulkActionsBar({
   onSendEmails,
   onUpdateStatus,
   onBulkEdit,
+  onBulkDelete,
   loading = false,
 }: PartnerInvoiceBulkActionsBarProps) {
   if (selectedCount === 0) return null;
@@ -95,6 +97,18 @@ export function PartnerInvoiceBulkActionsBar({
             >
               <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
               <span className="hidden sm:inline">Edit</span>
+            </Button>
+            
+            <Button 
+              size="sm" 
+              variant="destructive"
+              onClick={() => onBulkDelete(selectedIds)}
+              aria-label={`Delete ${selectedCount} selected invoices`}
+              className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+              disabled={loading}
+            >
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Delete</span>
             </Button>
             
             <Button 

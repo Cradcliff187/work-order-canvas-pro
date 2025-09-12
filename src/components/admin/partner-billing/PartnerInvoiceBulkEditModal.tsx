@@ -28,7 +28,7 @@ type BulkEditFormData = z.infer<typeof bulkEditSchema>;
 interface PartnerInvoiceBulkEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  invoices: PartnerInvoice[];
+  invoices: any[];
   onSave: (changes: BulkEditFormData) => Promise<void>;
 }
 

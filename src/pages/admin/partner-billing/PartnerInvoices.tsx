@@ -9,7 +9,7 @@ import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { PartnerInvoicesTable } from '@/components/admin/partner-billing/PartnerInvoicesTable';
 import { CompactPartnerInvoiceFilters } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
-import { createPartnerInvoiceColumns, PARTNER_INVOICE_COLUMN_METADATA } from '@/components/admin/partner-billing/PartnerInvoiceColumns';
+import { createPartnerInvoiceColumns, PARTNER_INVOICE_COLUMN_METADATA, type PartnerInvoice } from '@/components/admin/partner-billing/PartnerInvoiceColumns';
 import type { PartnerInvoiceFiltersValue } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
 import { PartnerInvoicesBreadcrumb } from '@/components/admin/partner-billing/PartnerInvoicesBreadcrumb';
 import { usePartnerInvoiceFilterCount } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
@@ -21,12 +21,9 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { usePartnerInvoiceBatch } from '@/hooks/usePartnerInvoiceBatch';
 import { usePartnerInvoiceActions } from '@/hooks/usePartnerInvoiceActions';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { Database } from '@/integrations/supabase/types';
 import { useIsMobile } from '@/hooks/use-mobile';
-
-type PartnerInvoice = Database['public']['Tables']['partner_invoices']['Row'] & {
-  partner_organization: { name: string } | null;
-};
 
 export default function PartnerInvoices() {
   const navigate = useNavigate();
@@ -37,9 +34,13 @@ export default function PartnerInvoices() {
   const [bulkMode, setBulkMode] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
-  const [bulkEditInvoices, setBulkEditInvoices] = useState<PartnerInvoice[]>([]);
+  const [bulkEditInvoices, setBulkEditInvoices] = useState<any[]>([]);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<PartnerInvoice | null>(null);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [invoicesToDelete, setInvoicesToDelete] = useState<string[]>([]);
 
   // Define initial filters
   const initialFilters: PartnerInvoiceFiltersValue = {
@@ -75,7 +76,7 @@ export default function PartnerInvoices() {
   const { batchGeneratePdf, batchSendEmails, operations, isProcessing, clearOperations } = usePartnerInvoiceBatch();
 
   // Partner invoice actions hook
-  const { generatePdf, sendInvoice, updateStatus } = usePartnerInvoiceActions();
+  const { generatePdf, sendInvoice, updateStatus, deleteInvoice, isDeletingInvoice } = usePartnerInvoiceActions();
 
   // Column visibility using the proper hook
   const columnVisibilityHook = useColumnVisibility({
@@ -154,6 +155,37 @@ export default function PartnerInvoices() {
     updateStatus({ invoiceId: invoice.id, status });
   };
 
+  // Delete handlers
+  const handleDelete = (invoice: PartnerInvoice) => {
+    setInvoiceToDelete(invoice);
+    setShowDeleteDialog(true);
+  };
+
+  const handleBulkDelete = (ids: string[]) => {
+    setInvoicesToDelete(ids);
+    setShowBulkDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (invoiceToDelete) {
+      deleteInvoice({ invoiceId: invoiceToDelete.id });
+      setShowDeleteDialog(false);
+      setInvoiceToDelete(null);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    if (invoicesToDelete.length > 0) {
+      // Delete invoices one by one
+      for (const invoiceId of invoicesToDelete) {
+        deleteInvoice({ invoiceId });
+      }
+      setShowBulkDeleteDialog(false);
+      setInvoicesToDelete([]);
+      clearSelection();
+    }
+  };
+
   // Export handlers
   const handleExportAll = async (format: 'csv' | 'excel') => {
     try {
@@ -206,9 +238,10 @@ export default function PartnerInvoices() {
           window.open(invoice.pdf_url, '_blank');
         }
       },
-      onUpdateStatus: (invoice, status) => updateStatus({ invoiceId: invoice.id, status })
+      onUpdateStatus: (invoice, status) => updateStatus({ invoiceId: invoice.id, status }),
+      onDelete: handleDelete
     }), 
-    [generatePdf, sendInvoice, updateStatus]
+    [generatePdf, sendInvoice, updateStatus, deleteInvoice]
   );
 
   const partnerOrganizations = useMemo(() => {
@@ -276,6 +309,7 @@ export default function PartnerInvoices() {
             onSendEmails={handleBulkSendEmails}
             onUpdateStatus={handleBulkUpdateStatus}
             onBulkEdit={handleBulkEdit}
+            onBulkDelete={handleBulkDelete}
             loading={isProcessing}
           />
         )}
@@ -295,6 +329,7 @@ export default function PartnerInvoices() {
           onSendInvoice={handleSendInvoice}
           onDownloadPdf={handleDownloadPdf}
           onUpdateStatus={handleUpdateStatus}
+          onBulkDelete={handleBulkDelete}
           // Column visibility props
           columnVisibility={columnVisibilityHook.columnVisibility}
           setColumnVisibility={columnVisibilityHook.setColumnVisibility}
@@ -330,6 +365,25 @@ export default function PartnerInvoices() {
         }}
         invoices={bulkEditInvoices}
         onSave={handleBulkEditSave}
+      />
+
+      {/* Delete Confirmation Dialogs */}
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={confirmDelete}
+        itemName={invoiceToDelete?.invoice_number || 'this invoice'}
+        itemType="invoice"
+        isLoading={isDeletingInvoice}
+      />
+
+      <DeleteConfirmationDialog
+        open={showBulkDeleteDialog}
+        onOpenChange={setShowBulkDeleteDialog}
+        onConfirm={confirmBulkDelete}
+        itemName={`${invoicesToDelete.length} invoices`}
+        itemType="bulk"
+        isLoading={isDeletingInvoice}
       />
     </div>
   );

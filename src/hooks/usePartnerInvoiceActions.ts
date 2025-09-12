@@ -19,6 +19,10 @@ interface UpdateStatusParams {
   paymentDate?: string;
 }
 
+interface DeleteInvoiceParams {
+  invoiceId: string;
+}
+
 export function usePartnerInvoiceActions() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const queryClient = useQueryClient();
@@ -150,12 +154,58 @@ export function usePartnerInvoiceActions() {
     }
   });
 
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: async ({ invoiceId }: DeleteInvoiceParams) => {
+      // First delete line items
+      const { error: lineItemsError } = await supabase
+        .from('partner_invoice_line_items')
+        .delete()
+        .eq('partner_invoice_id', invoiceId);
+
+      if (lineItemsError) {
+        throw new Error(lineItemsError.message);
+      }
+
+      // Then delete the invoice
+      const { error: invoiceError } = await supabase
+        .from('partner_invoices')
+        .delete()
+        .eq('id', invoiceId);
+
+      if (invoiceError) {
+        throw new Error(invoiceError.message);
+      }
+
+      return { invoiceId };
+    },
+    onSuccess: async (data) => {
+      toast({
+        title: 'Invoice Deleted',
+        description: 'Invoice has been successfully deleted.',
+      });
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['partner-invoice', data.invoiceId] });
+    },
+    onError: (error: any) => {
+      console.error('Delete invoice error:', error);
+      toast({
+        title: 'Delete Failed',
+        description: error.message || 'Failed to delete invoice. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  });
+
   return {
     generatePdf: generatePdfMutation.mutate,
     sendInvoice: sendInvoiceMutation.mutate,
     updateStatus: updateStatusMutation.mutate,
+    deleteInvoice: deleteInvoiceMutation.mutate,
     isGeneratingPdf,
     isSendingInvoice: sendInvoiceMutation.isPending,
     isUpdatingStatus: updateStatusMutation.isPending,
+    isDeletingInvoice: deleteInvoiceMutation.isPending,
   };
 }

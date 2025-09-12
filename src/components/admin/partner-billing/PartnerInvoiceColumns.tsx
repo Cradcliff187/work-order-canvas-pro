@@ -3,30 +3,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
-import { Eye, FileText, Send, Download, Mail, DollarSign, ArrowUpDown, Copy } from 'lucide-react';
+import { Eye, FileText, Send, Download, Mail, DollarSign, ArrowUpDown, Copy, Trash2 } from 'lucide-react';
 import { InvoiceStatusBadge } from '@/components/admin/partner-billing/InvoiceStatusBadge';
 import { formatCurrency } from '@/utils/formatting';
 import { format } from 'date-fns';
 import { ColumnMetadata } from '@/hooks/useColumnVisibility';
+import { Database } from '@/integrations/supabase/types';
 
-// Partner Invoice type extending database type
-export type PartnerInvoice = {
-  id: string;
-  invoice_number: string;
-  partner_organization_id: string;
-  invoice_date: string;
-  due_date: string | null;
-  total_amount: number;
-  status: string;
-  pdf_url: string | null;
-  sent_at: string | null;
-  payment_date: string | null;
-  created_at: string;
-  updated_at: string;
-  partner_organization?: {
-    id: string;
-    name: string;
-  } | null;
+// Shared type for Partner Invoice
+export type PartnerInvoice = Database['public']['Tables']['partner_invoices']['Row'] & {
+  partner_organization?: { name: string } | null;
 };
 
 // Column metadata for visibility management
@@ -79,6 +65,7 @@ export interface PartnerInvoiceColumnsProps {
   onSendInvoice?: (invoice: PartnerInvoice) => void;
   onDownloadPdf?: (invoice: PartnerInvoice) => void;
   onUpdateStatus?: (invoice: PartnerInvoice, status: string) => void;
+  onDelete?: (invoice: PartnerInvoice) => void;
 }
 
 export const createPartnerInvoiceColumns = ({ 
@@ -86,7 +73,8 @@ export const createPartnerInvoiceColumns = ({
   onGeneratePdf, 
   onSendInvoice, 
   onDownloadPdf, 
-  onUpdateStatus 
+  onUpdateStatus,
+  onDelete 
 }: PartnerInvoiceColumnsProps): ColumnDef<PartnerInvoice>[] => [
   {
     id: 'select',
@@ -283,6 +271,13 @@ export const createPartnerInvoiceColumns = ({
           icon: DollarSign,
           onClick: () => onUpdateStatus?.(invoice, 'paid'),
           show: invoice.status === 'sent' && !!onUpdateStatus
+        },
+        {
+          label: 'Delete Invoice',
+          icon: Trash2,
+          onClick: () => onDelete?.(invoice),
+          show: !!onDelete,
+          variant: 'destructive' as const
         }
       ];
 

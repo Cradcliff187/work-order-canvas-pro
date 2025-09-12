@@ -363,6 +363,7 @@ export function PartnerInvoicesTable({
             onSendEmails={() => onBulkSendInvoice?.(selectedIds)}
             onUpdateStatus={() => onBulkUpdateStatus?.(selectedIds, 'sent')}
             onBulkEdit={() => {/* TODO: Implement bulk edit */}}
+            onBulkDelete={() => onBulkDelete?.(selectedIds)}
             onExport={(format) => onExport?.(format, selectedIds)}
             onClearSelection={() => setRowSelection({})}
           />
