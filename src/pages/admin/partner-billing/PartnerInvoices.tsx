@@ -73,7 +73,7 @@ export default function PartnerInvoices() {
   });
 
   // Batch operations hook
-  const { batchGeneratePdf, batchSendEmails, operations, isProcessing, clearOperations } = usePartnerInvoiceBatch();
+  const { batchGeneratePdf, batchSendEmails, batchDelete, operations, isProcessing, clearOperations } = usePartnerInvoiceBatch();
 
   // Partner invoice actions hook
   const { generatePdf, sendInvoice, updateStatus, deleteInvoice, isDeletingInvoice } = usePartnerInvoiceActions();
@@ -176,10 +176,7 @@ export default function PartnerInvoices() {
 
   const confirmBulkDelete = async () => {
     if (invoicesToDelete.length > 0) {
-      // Delete invoices one by one
-      for (const invoiceId of invoicesToDelete) {
-        deleteInvoice({ invoiceId });
-      }
+      batchDelete(invoicesToDelete);
       setShowBulkDeleteDialog(false);
       setInvoicesToDelete([]);
       clearSelection();

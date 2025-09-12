@@ -147,11 +147,123 @@ export const usePartnerInvoiceBatch = () => {
     setOperations([]);
   };
 
+  const batchDelete = useMutation({
+    mutationFn: async (invoiceIds: string[]) => {
+      setOperations(invoiceIds.map(id => ({ invoiceId: id, status: 'pending' })));
+      
+      const results = [];
+      
+      for (const invoiceId of invoiceIds) {
+        try {
+          setOperations(prev => 
+            prev.map(op => 
+              op.invoiceId === invoiceId ? { ...op, status: 'processing' } : op
+            )
+          );
+
+          // Step 1: Delete audit log entries first (foreign key constraint)
+          const { error: auditLogError } = await supabase
+            .from('partner_invoice_audit_log')
+            .delete()
+            .eq('invoice_id', invoiceId);
+
+          if (auditLogError) {
+            throw new Error(`Failed to delete audit log entries: ${auditLogError.message}`);
+          }
+
+          // Step 2: Unlink any dependent reports that reference this invoice
+          const { error: workOrderReportsError } = await supabase
+            .from('work_order_reports')
+            .update({ 
+              partner_invoice_id: null,
+              partner_billed_at: null,
+              partner_billed_amount: null 
+            })
+            .eq('partner_invoice_id', invoiceId);
+
+          if (workOrderReportsError) {
+            throw new Error(`Failed to unlink work order reports: ${workOrderReportsError.message}`);
+          }
+
+          // Also unlink employee reports that reference this invoice
+          const { error: employeeReportsError } = await supabase
+            .from('employee_reports')
+            .update({ partner_invoice_id: null })
+            .eq('partner_invoice_id', invoiceId);
+
+          if (employeeReportsError) {
+            throw new Error(`Failed to unlink employee reports: ${employeeReportsError.message}`);
+          }
+
+          // Step 3: Delete line items
+          const { error: lineItemsError } = await supabase
+            .from('partner_invoice_line_items')
+            .delete()
+            .eq('partner_invoice_id', invoiceId);
+
+          if (lineItemsError) {
+            throw new Error(`Failed to delete line items: ${lineItemsError.message}`);
+          }
+
+          // Step 4: Finally delete the invoice
+          const { error: invoiceError } = await supabase
+            .from('partner_invoices')
+            .delete()
+            .eq('id', invoiceId);
+
+          if (invoiceError) {
+            throw new Error(`Failed to delete invoice: ${invoiceError.message}`);
+          }
+
+          setOperations(prev =>
+            prev.map(op => 
+              op.invoiceId === invoiceId ? { ...op, status: 'completed' } : op
+            )
+          );
+          
+          results.push({ invoiceId, success: true });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          
+          setOperations(prev => 
+            prev.map(op => 
+              op.invoiceId === invoiceId ? { ...op, status: 'failed', error: errorMessage } : op
+            )
+          );
+          
+          results.push({ invoiceId, success: false, error: errorMessage });
+        }
+      }
+      
+      return results;
+    },
+    onSuccess: (results) => {
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+      
+      toast({
+        title: "Batch Delete Complete",
+        description: `${successCount} invoices deleted successfully${failCount > 0 ? `, ${failCount} failed` : ''}`,
+        variant: failCount > 0 ? "destructive" : "default",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Batch Delete Failed",
+        description: error instanceof Error ? error.message : 'Failed to delete invoices',
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     batchGeneratePdf: batchGeneratePdf.mutate,
     batchSendEmails: batchSendEmails.mutate,
+    batchDelete: batchDelete.mutate,
     operations,
-    isProcessing: batchGeneratePdf.isPending || batchSendEmails.isPending,
+    isProcessing: batchGeneratePdf.isPending || batchSendEmails.isPending || batchDelete.isPending,
     clearOperations,
   };
 };
