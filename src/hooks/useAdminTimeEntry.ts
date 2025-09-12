@@ -38,6 +38,10 @@ interface TimeEntryData {
   hourly_rate_snapshot: number;
   total_labor_cost: number;
   notes?: string;
+  clock_in_time: string;
+  clock_out_time: string;
+  is_retroactive: boolean;
+  approval_status: 'pending' | 'approved' | 'rejected' | 'flagged';
   receipt_attachments?: {
     receipt_id: string;
     allocated_amount: number;
@@ -246,6 +250,7 @@ export function useAdminTimeEntry() {
       });
     },
     onError: (error: Error) => {
+      console.error('Time entry creation error:', error);
       toast({
         title: "Error",
         description: `Failed to add time entry: ${error.message}`,
@@ -256,7 +261,7 @@ export function useAdminTimeEntry() {
 
   // Update time entry mutation
   const updateTimeEntry = useMutation({
-    mutationFn: async ({ id, ...data }: { id: string } & Partial<TimeEntryData>) => {
+    mutationFn: async ({ id, ...data }: { id: string } & Partial<Omit<TimeEntryData, 'receipt_attachments'>>) => {
       const { error } = await supabase
         .from('employee_reports')
         .update(data)

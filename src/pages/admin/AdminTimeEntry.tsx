@@ -83,6 +83,14 @@ export default function AdminTimeEntry() {
     return Math.max(0, totalMinutes / 60);
   };
 
+  // Helper function to convert date and time to ISO timestamp
+  const createTimestamp = (date: Date, timeString: string): string => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const timestamp = new Date(date);
+    timestamp.setHours(hours, minutes, 0, 0);
+    return timestamp.toISOString();
+  };
+
   const onSubmit = async (data: TimeEntryForm) => {
     try {
       const employee = employees?.find(emp => emp.id === data.employeeId);
@@ -121,6 +129,10 @@ export default function AdminTimeEntry() {
         hourly_rate_snapshot: employee.hourly_billable_rate || 0,
         total_labor_cost: calculatedHours * (employee.hourly_billable_rate || 0),
         notes: 'Added by admin',
+        clock_in_time: createTimestamp(data.date, data.startTime),
+        clock_out_time: createTimestamp(data.date, data.endTime),
+        is_retroactive: true, // Admin entries are always retroactive
+        approval_status: 'approved' as const, // Admin entries are pre-approved
         receipt_attachments: receiptAttachments.length > 0 ? receiptAttachments : undefined,
       };
 
