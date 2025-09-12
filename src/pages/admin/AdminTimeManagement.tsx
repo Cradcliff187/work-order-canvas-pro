@@ -10,7 +10,7 @@ import { Calendar, Clock, DollarSign, Users, Download, CheckCheck, Flag, Trash2,
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useTimeManagement } from '@/hooks/useTimeManagement';
-import { TimeManagementFilters } from '@/components/admin/time-management/TimeManagementFilters';
+import { CompactTimeManagementFilters } from '@/components/admin/time-management/CompactTimeManagementFilters';
 import { TimeManagementTable } from '@/components/admin/time-management/TimeManagementTable';
 import { TimeManagementSummary } from '@/components/admin/time-management/TimeManagementSummary';
 import { TimeEntryEditModal } from '@/components/admin/time-management/TimeEntryEditModal';
@@ -359,24 +359,15 @@ export default function AdminTimeManagement() {
         ) : (
           <>
             {/* Filters */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Filters
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TimeManagementFilters
-                  filters={filters}
-                  onFiltersChange={setFilters}
-                  onClearFilters={clearFilters}
-                  employees={employees}
-                  workOrders={workOrders}
-                  projects={projects}
-                />
-              </CardContent>
-            </Card>
+            <CompactTimeManagementFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              onClearFilters={clearFilters}
+              employees={employees}
+              workOrders={workOrders}
+              projects={projects}
+              filterCount={filterCount}
+            />
 
             {/* Bulk Actions */}
             {selectedEntries.length > 0 && (
