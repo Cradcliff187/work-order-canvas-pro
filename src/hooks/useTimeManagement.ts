@@ -421,6 +421,14 @@ export function useTimeManagement(filters: TimeManagementFilters) {
 
       if (receiptError) throw receiptError;
 
+      // Delete audit logs
+      const { error: auditError } = await supabase
+        .from('time_entry_audits')
+        .delete()
+        .eq('time_entry_id', id);
+
+      if (auditError) throw auditError;
+
       // Then delete the time entry
       const { error } = await supabase
         .from('employee_reports')
@@ -452,6 +460,14 @@ export function useTimeManagement(filters: TimeManagementFilters) {
         .in('time_entry_id', entryIds);
 
       if (receiptError) throw receiptError;
+
+      // Delete audit logs
+      const { error: auditError } = await supabase
+        .from('time_entry_audits')
+        .delete()
+        .in('time_entry_id', entryIds);
+
+      if (auditError) throw auditError;
 
       // Then delete all time entries
       const { error } = await supabase
