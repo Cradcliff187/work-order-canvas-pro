@@ -14,6 +14,7 @@ import { flexRender, getCoreRowModel, useReactTable, ColumnDef } from '@tanstack
 import { TimeReport } from './TimeReportsColumns';
 import { format } from 'date-fns';
 import { Pencil, StickyNote, Send } from 'lucide-react';
+import { getEntryOvertimeHours } from '@/utils/overtimeCalculations';
 
 export interface TimeReportsTableProps {
   data?: TimeReport[];
@@ -27,10 +28,46 @@ export interface TimeReportsTableProps {
   onPeriodViewChange?: (view: 'week' | 'month') => void;
 }
 
-function calcOvertime(r: TimeReport) {
+function calcOvertime(r: TimeReport, allReports: TimeReport[] = []) {
+  // If overtime_hours is explicitly set, use it
+  if (r.overtime_hours != null) {
+    return Number.isFinite(r.overtime_hours) ? r.overtime_hours : 0;
+  }
+  
+  // Use daily aggregation for automatic calculation
+  if (allReports.length > 0) {
+    // Map to the format expected by overtime calculations
+    const entries = allReports.map(report => ({
+      id: report.id,
+      report_date: report.date,
+      hours_worked: report.hours_worked,
+      employee_user_id: report.employee_name, // Using employee_name as ID for now
+      employee: { 
+        id: report.employee_name, 
+        first_name: report.employee_name.split(' ')[0] || '', 
+        last_name: report.employee_name.split(' ').slice(1).join(' ') || '' 
+      }
+    }));
+    
+    return getEntryOvertimeHours(
+      {
+        id: r.id,
+        report_date: r.date,
+        hours_worked: r.hours_worked,
+        employee_user_id: r.employee_name,
+        employee: { 
+          id: r.employee_name, 
+          first_name: r.employee_name.split(' ')[0] || '', 
+          last_name: r.employee_name.split(' ').slice(1).join(' ') || '' 
+        }
+      },
+      entries
+    );
+  }
+  
+  // Fallback to old calculation if no context available
   const base = Number(r.hours_worked || 0);
-  const ot = r.overtime_hours ?? Math.max(0, base - 8);
-  return Number.isFinite(ot) ? ot : 0;
+  return Math.max(0, base - 8);
 }
 
 export function TimeReportsTable({
@@ -56,7 +93,7 @@ export function TimeReportsTable({
 
   const totals = useMemo(() => {
     const totalHours = data.reduce((acc, r) => acc + Number(r.hours_worked || 0), 0);
-    const totalOT = data.reduce((acc, r) => acc + calcOvertime(r), 0);
+    const totalOT = data.reduce((acc, r) => acc + calcOvertime(r, data), 0);
     return { totalHours, totalOT };
   }, [data]);
 
@@ -169,7 +206,7 @@ export function TimeReportsTable({
                     </div>
                     <div>
                       <div className="text-muted-foreground">Overtime</div>
-                      <div className="font-medium">{calcOvertime(r).toFixed(2)}</div>
+                      <div className="font-medium">{calcOvertime(r, data).toFixed(2)}</div>
                     </div>
                   </div>
                   {r.description && (

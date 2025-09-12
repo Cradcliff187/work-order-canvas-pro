@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, StickyNote, Send } from 'lucide-react';
 import { format } from 'date-fns';
+import { getEntryOvertimeHours } from '@/utils/overtimeCalculations';
 
 export type TimeReport = {
   id: string;
@@ -21,16 +22,53 @@ export interface TimeReportColumnProps<T = TimeReport> {
   onEditHours?: (report: T) => void;
   onAddNote?: (report: T) => void;
   onSubmitForApproval?: (report: T) => void;
+  allReports?: T[]; // Needed for daily overtime calculation
 }
 
-function calcOvertime(r: TimeReport) {
+function calcOvertime(r: TimeReport, allReports: TimeReport[] = []) {
+  // If overtime_hours is explicitly set, use it
+  if (r.overtime_hours != null) {
+    return Number.isFinite(r.overtime_hours) ? r.overtime_hours : 0;
+  }
+  
+  // Use daily aggregation for automatic calculation
+  if (allReports.length > 0) {
+    // Map to the format expected by overtime calculations
+    const entries = allReports.map(report => ({
+      id: report.id,
+      report_date: report.date,
+      hours_worked: report.hours_worked,
+      employee_user_id: report.employee_name, // Using employee_name as ID for now
+      employee: { 
+        id: report.employee_name, 
+        first_name: report.employee_name.split(' ')[0] || '', 
+        last_name: report.employee_name.split(' ').slice(1).join(' ') || '' 
+      }
+    }));
+    
+    return getEntryOvertimeHours(
+      {
+        id: r.id,
+        report_date: r.date,
+        hours_worked: r.hours_worked,
+        employee_user_id: r.employee_name,
+        employee: { 
+          id: r.employee_name, 
+          first_name: r.employee_name.split(' ')[0] || '', 
+          last_name: r.employee_name.split(' ').slice(1).join(' ') || '' 
+        }
+      },
+      entries
+    );
+  }
+  
+  // Fallback to old calculation if no context available
   const base = Number(r.hours_worked || 0);
-  const ot = r.overtime_hours ?? Math.max(0, base - 8);
-  return Number.isFinite(ot) ? ot : 0;
+  return Math.max(0, base - 8);
 }
 
 export function createTimeReportColumns<T extends TimeReport = TimeReport>(props: TimeReportColumnProps<T> = {}): ColumnDef<T, any>[] {
-  const { onEditHours, onAddNote, onSubmitForApproval } = props;
+  const { onEditHours, onAddNote, onSubmitForApproval, allReports = [] } = props;
 
   return [
     {
@@ -71,13 +109,13 @@ export function createTimeReportColumns<T extends TimeReport = TimeReport>(props
       id: 'overtime_hours',
       header: 'Overtime',
       cell: ({ row }) => {
-        const v = calcOvertime(row.original as TimeReport);
+        const v = calcOvertime(row.original as TimeReport, allReports as TimeReport[]);
         const auto = (row.original as TimeReport).overtime_hours == null && v > 0;
         return (
           <div className="flex items-center gap-2 justify-end">
             <span>{v.toFixed(2)}</span>
             {auto && (
-              <Badge variant="secondary" className="text-[10px]">auto</Badge>
+              <Badge variant="secondary" className="text-[10px]">daily</Badge>
             )}
           </div>
         );

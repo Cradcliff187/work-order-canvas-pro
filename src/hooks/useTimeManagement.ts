@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useEffect } from 'react';
+import { calculateTotalOvertimeHours } from '@/utils/overtimeCalculations';
 
 export interface TimeEntry {
   id: string;
@@ -344,7 +345,7 @@ export function useTimeManagement(filters: TimeManagementFilters) {
     },
   });
 
-  // Calculate summary stats
+  // Calculate summary stats using daily overtime aggregation
   const summaryStats: SummaryStats = {
     totalHours: timeEntries.reduce((sum, entry) => sum + entry.hours_worked, 0),
     totalLaborCost: timeEntries.reduce((sum, entry) => sum + (entry.total_labor_cost || 0), 0),
@@ -353,7 +354,7 @@ export function useTimeManagement(filters: TimeManagementFilters) {
     avgHoursPerEmployee: employees.length > 0 
       ? timeEntries.reduce((sum, entry) => sum + entry.hours_worked, 0) / employees.length 
       : 0,
-    overtimeHours: timeEntries.filter(entry => entry.hours_worked > 8).reduce((sum, entry) => sum + (entry.hours_worked - 8), 0),
+    overtimeHours: calculateTotalOvertimeHours(timeEntries),
   };
 
   // Update time entry mutation
