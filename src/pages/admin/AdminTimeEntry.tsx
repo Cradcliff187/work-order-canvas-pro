@@ -205,6 +205,70 @@ export default function AdminTimeEntry() {
     form.setValue('employeeId', employeeId);
   };
 
+  const handleCreateTestEntry = async () => {
+    try {
+      const employeeWithRate = employees?.find(e => (e.hourly_billable_rate ?? 0) > 0);
+      const employee = employeeWithRate || employees?.[0];
+
+      if (!employee) {
+        toast({
+          title: "No employees found",
+          description: "Create an internal employee first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!employee.hourly_billable_rate || employee.hourly_billable_rate <= 0) {
+        toast({
+          title: "Missing hourly rate",
+          description: `${employee.first_name} ${employee.last_name} needs an hourly rate set.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const workOrder = workOrders && workOrders.length > 0 ? workOrders[0] : undefined;
+      const project = !workOrder && projects && projects.length > 0 ? projects[0] : undefined;
+
+      if (!workOrder && !project) {
+        toast({
+          title: "No work items available",
+          description: "Create a work order or project first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const now = new Date();
+      const start = '08:00';
+      const end = '09:00';
+
+      const entryData = {
+        employee_user_id: employee.id,
+        work_order_id: workOrder?.id,
+        project_id: project?.id,
+        report_date: format(now, 'yyyy-MM-dd'),
+        hours_worked: 1,
+        work_performed: 'Test entry via Admin',
+        hourly_rate_snapshot: employee.hourly_billable_rate,
+        notes: 'Test entry created by admin',
+        clock_in_time: createTimestamp(now, start),
+        clock_out_time: createTimestamp(now, end),
+        is_retroactive: true,
+        approval_status: 'approved' as const,
+      };
+
+      const created = await createTimeEntry.mutateAsync(entryData as any);
+      if ((created as any)?.id) {
+        toast({ title: 'Test entry created', description: `ID: ${(created as any).id}` });
+      }
+    } catch (error: any) {
+      console.error('Test entry creation failed:', error);
+      toast({ title: 'Error', description: error?.message || 'Failed to create test entry', variant: 'destructive' });
+    }
+  };
+
   const watchedEmployee = form.watch('employeeId');
   const selectedEmployeeData = employees?.find(emp => emp.id === watchedEmployee);
   const watchedStartTime = form.watch('startTime');
@@ -223,10 +287,16 @@ export default function AdminTimeEntry() {
             Add time entries for internal team members
           </p>
         </div>
-        <Button onClick={() => setShowImportModal(true)} variant="outline">
-          <FileUp className="h-4 w-4 mr-2" />
-          Import from CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleCreateTestEntry} disabled={createTimeEntry.isPending || isLoading}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Test Entry
+          </Button>
+          <Button onClick={() => setShowImportModal(true)} variant="outline">
+            <FileUp className="h-4 w-4 mr-2" />
+            Import from CSV
+          </Button>
+        </div>
       </div>
 
       {/* Time Entry Form */}

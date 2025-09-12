@@ -236,6 +236,7 @@ export function useAdminTimeEntry() {
           
         if (linkError) throw linkError;
       }
+      return reportData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entry-recent'] });
