@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { TimeManagementFilters as Filters, Employee, WorkOrder, Project } from '@/hooks/useTimeManagement';
 import { FilterPresetsManager } from './FilterPresetsManager';
+import { countActiveFilters } from '@/lib/filters';
 
 interface TimeManagementFiltersProps {
   filters: Filters;
@@ -55,9 +56,7 @@ export function TimeManagementFilters({
   };
 
   const getFilterCount = () => {
-    return Object.values(filters).filter(value => 
-      Array.isArray(value) ? value.length > 0 : value !== ''
-    ).length;
+    return countActiveFilters(filters, ['page', 'limit']);
   };
 
   return (

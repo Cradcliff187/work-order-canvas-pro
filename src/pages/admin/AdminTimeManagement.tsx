@@ -25,6 +25,7 @@ import { KeyboardShortcutsTooltip } from '@/components/ui/keyboard-shortcuts-too
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useAdminFilters } from '@/hooks/useAdminFilters';
 
 export default function AdminTimeManagement() {
   const { toast } = useToast();
@@ -36,17 +37,23 @@ export default function AdminTimeManagement() {
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [filters, setFilters] = useState({
-    employeeIds: [] as string[],
-    dateFrom: '',
-    dateTo: '',
-    workOrderIds: [] as string[],
-    projectIds: [] as string[],
-    status: [] as string[],
-    search: '',
-    page: 1,
-    limit: 50
-  });
+  
+  // Use standardized admin filters with persistence
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters(
+    'time-management-filters',
+    {
+      employeeIds: [] as string[],
+      dateFrom: '',
+      dateTo: '',
+      workOrderIds: [] as string[],
+      projectIds: [] as string[],
+      status: [] as string[],
+      search: '',
+      page: 1,
+      limit: 50
+    },
+    { excludeKeys: ['page', 'limit'] }
+  );
 
   // Column visibility setup
   const columnMetadata = {
