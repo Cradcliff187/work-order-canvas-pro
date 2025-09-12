@@ -35,7 +35,6 @@ interface TimeEntryData {
   hours_worked: number;
   work_performed: string;
   hourly_rate_snapshot: number;
-  total_labor_cost: number;
   notes?: string;
   clock_in_time: string;
   clock_out_time: string;

@@ -126,7 +126,6 @@ export default function AdminTimeEntry() {
         hours_worked: calculatedHours,
         work_performed: data.workPerformed,
         hourly_rate_snapshot: employee.hourly_billable_rate || 0,
-        total_labor_cost: calculatedHours * (employee.hourly_billable_rate || 0),
         notes: 'Added by admin',
         clock_in_time: createTimestamp(data.date, data.startTime),
         clock_out_time: createTimestamp(data.date, data.endTime),

@@ -30,7 +30,6 @@ export interface ValidationResult {
     hours_worked: number;
     work_performed: string;
     hourly_rate_snapshot: number;
-    total_labor_cost: number;
     notes: string;
     clock_in_time: string;
     clock_out_time: string;
@@ -87,11 +86,11 @@ export function useBulkTimeEntryImport() {
           id,
           work_order_number,
           status,
-          organizations!inner(
+          assigned_organization:organizations!assigned_organization_id(
             organization_type
           )
         `)
-        .eq('organizations.organization_type', 'internal')
+        .eq('assigned_organization.organization_type', 'internal')
         .in('status', ['assigned', 'in_progress', 'completed']);
 
       if (error) throw error;
@@ -377,7 +376,6 @@ export function useBulkTimeEntryImport() {
             hours_worked: finalHours,
             work_performed: row.description || '',
             hourly_rate_snapshot: hourlyRate,
-            total_labor_cost: finalHours * hourlyRate,
             notes: 'Imported from CSV',
             clock_in_time: clockInTime,
             clock_out_time: clockOutTime,
