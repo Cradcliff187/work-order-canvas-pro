@@ -262,9 +262,33 @@ export function useAdminTimeEntry() {
   // Update time entry mutation
   const updateTimeEntry = useMutation({
     mutationFn: async ({ id, ...data }: { id: string } & Partial<Omit<TimeEntryData, 'receipt_attachments'>>) => {
+      // Sanitize payload to only include columns that exist on employee_reports
+      const allowedKeys = [
+        'employee_user_id',
+        'work_order_id',
+        'project_id',
+        'report_date',
+        'hours_worked',
+        'work_performed',
+        'hourly_rate_snapshot',
+        'notes',
+        'clock_in_time',
+        'clock_out_time',
+        'is_retroactive',
+        'approval_status',
+        'is_overtime',
+      ] as const;
+
+      const payload: Record<string, any> = {};
+      for (const key of allowedKeys) {
+        if (key in (data as any)) {
+          payload[key] = (data as any)[key];
+        }
+      }
+
       const { error } = await supabase
         .from('employee_reports')
-        .update(data)
+        .update(payload)
         .eq('id', id);
 
       if (error) throw error;
@@ -279,10 +303,13 @@ export function useAdminTimeEntry() {
         description: "Time entry updated successfully",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      const friendly = error?.code === 'PGRST116' || /payload|unexpected|column/i.test(error?.message || '')
+        ? 'Some fields were not allowed. Please try again.'
+        : error?.message;
       toast({
         title: "Error",
-        description: `Failed to update time entry: ${error.message}`,
+        description: `Failed to update time entry: ${friendly}`,
         variant: "destructive",
       });
     },
@@ -308,10 +335,14 @@ export function useAdminTimeEntry() {
         description: "Time entry deleted successfully",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      let description = error?.message;
+      if (error?.code === '23503' || /foreign key|constraint/i.test(description || '')) {
+        description = 'This time entry is linked to other records (e.g., receipt allocations or invoices). Remove those links first.';
+      }
       toast({
         title: "Error",
-        description: `Failed to delete time entry: ${error.message}`,
+        description: `Failed to delete time entry: ${description}`,
         variant: "destructive",
       });
     },

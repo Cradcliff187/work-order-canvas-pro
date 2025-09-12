@@ -1669,13 +1669,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "time_entry_audits_time_entry_id_fkey"
-            columns: ["time_entry_id"]
-            isOneToOne: false
-            referencedRelation: "employee_reports"
-            referencedColumns: ["id"]
-          },
         ]
       }
       trades: {
