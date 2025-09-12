@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency } from '@/utils/formatting';
 import { isValidUUID } from '@/lib/utils/validation';
+import { usePartnerInvoiceActions } from '@/hooks/usePartnerInvoiceActions';
 import { ArrowLeft, FileText, Pencil, Trash2 } from 'lucide-react';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
@@ -106,9 +107,9 @@ export default function PartnerInvoiceDetail() {
   console.log('PartnerInvoiceDetail - Invoice ID:', id, 'Valid UUID:', isValidId);
   
   const { data: invoice, isLoading, error, refetch } = usePartnerInvoiceDetail(isValidId ? id : '');
+  const { deleteInvoice, isDeletingInvoice } = usePartnerInvoiceActions();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleExport = (exportFormat: 'csv' | 'excel') => {
     try {
@@ -156,53 +157,15 @@ export default function PartnerInvoiceDetail() {
       return;
     }
     
-    try {
-      setIsDeleting(true);
-      console.log('Deleting partner invoice with ID:', id);
-      
-      // Clear references from work_order_reports
-      const { error: reportsError } = await supabase
-        .from('work_order_reports')
-        .update({ partner_invoice_id: null, partner_billed_at: null, partner_billed_amount: null })
-        .eq('partner_invoice_id', id);
-
-      if (reportsError) {
-        console.error('Error clearing work order reports:', reportsError);
-        throw new Error(`Failed to clear work order reports: ${reportsError.message}`);
+    deleteInvoice({ invoiceId: id }, {
+      onSuccess: () => {
+        setDeleteOpen(false);
+        navigate('/admin/partner-billing/invoices');
+      },
+      onError: () => {
+        setDeleteOpen(false);
       }
-
-      // Delete line items
-      const { error: lineItemsError } = await supabase
-        .from('partner_invoice_line_items')
-        .delete()
-        .eq('partner_invoice_id', id);
-
-      if (lineItemsError) {
-        console.error('Error deleting line items:', lineItemsError);
-        throw new Error(`Failed to delete line items: ${lineItemsError.message}`);
-      }
-
-      // Delete the invoice
-      const { error: invoiceError } = await supabase
-        .from('partner_invoices')
-        .delete()
-        .eq('id', id);
-        
-      if (invoiceError) {
-        console.error('Error deleting invoice:', invoiceError);
-        throw new Error(`Failed to delete invoice: ${invoiceError.message}`);
-      }
-
-      toast.success('Partner invoice deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
-      navigate('/admin/partner-billing/invoices');
-    } catch (e: any) {
-      console.error('Failed to delete partner invoice:', e);
-      toast.error(e.message || 'Failed to delete invoice - please try again');
-    } finally {
-      setIsDeleting(false);
-      setDeleteOpen(false);
-    }
+    });
   };
   if (isLoading) {
     return (
@@ -423,7 +386,7 @@ export default function PartnerInvoiceDetail() {
         onConfirm={confirmDelete}
         itemName={invoice.invoice_number}
         itemType="partner invoice"
-        isLoading={isDeleting}
+        isLoading={isDeletingInvoice}
       />
     </>
   );

@@ -164,7 +164,17 @@ export function usePartnerInvoiceActions() {
 
       console.log('Deleting partner invoice with ID:', invoiceId);
 
-      // First, unlink any dependent reports that reference this invoice
+      // Step 1: Delete audit log entries first (foreign key constraint)
+      const { error: auditLogError } = await supabase
+        .from('partner_invoice_audit_log')
+        .delete()
+        .eq('invoice_id', invoiceId);
+
+      if (auditLogError) {
+        throw new Error(`Failed to delete audit log entries: ${auditLogError.message}`);
+      }
+
+      // Step 2: Unlink any dependent reports that reference this invoice
       const { error: workOrderReportsError } = await supabase
         .from('work_order_reports')
         .update({ partner_invoice_id: null })
@@ -183,7 +193,7 @@ export function usePartnerInvoiceActions() {
         throw new Error(`Failed to unlink employee reports: ${employeeReportsError.message}`);
       }
 
-      // Then delete line items
+      // Step 3: Delete line items
       const { error: lineItemsError } = await supabase
         .from('partner_invoice_line_items')
         .delete()
@@ -193,7 +203,7 @@ export function usePartnerInvoiceActions() {
         throw new Error(`Failed to delete line items: ${lineItemsError.message}`);
       }
 
-      // Finally delete the invoice
+      // Step 4: Finally delete the invoice
       const { error: invoiceError } = await supabase
         .from('partner_invoices')
         .delete()
