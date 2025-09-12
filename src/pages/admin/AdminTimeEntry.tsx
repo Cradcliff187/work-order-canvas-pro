@@ -131,6 +131,8 @@ export default function AdminTimeEntry() {
         clock_out_time: createTimestamp(data.date, data.endTime),
         is_retroactive: true, // Admin entries are always retroactive
         approval_status: 'approved' as const, // Admin entries are pre-approved
+        approved_by: employee.id, // Set admin as approver
+        approved_at: new Date().toISOString(), // Set approval timestamp
         receipt_attachments: receiptAttachments.length > 0 ? receiptAttachments : undefined,
       };
 
@@ -257,6 +259,8 @@ export default function AdminTimeEntry() {
         clock_out_time: createTimestamp(now, end),
         is_retroactive: true,
         approval_status: 'approved' as const,
+        approved_by: employee.id, // Set admin as approver for test entry
+        approved_at: new Date().toISOString(), // Set approval timestamp
       };
 
       const created = await createTimeEntry.mutateAsync(entryData as any);
