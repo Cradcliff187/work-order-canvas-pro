@@ -149,6 +149,8 @@ export const usePartnerInvoiceBatch = () => {
 
   const batchDelete = useMutation({
     mutationFn: async (invoiceIds: string[]) => {
+      console.log('Starting batch delete for invoice IDs:', invoiceIds);
+      
       setOperations(invoiceIds.map(id => ({ invoiceId: id, status: 'pending' })));
       
       const results = [];
@@ -161,31 +163,18 @@ export const usePartnerInvoiceBatch = () => {
             )
           );
 
-          // Step 1: Delete audit log entries first (foreign key constraint)
-          const { error: auditLogError } = await supabase
-            .from('partner_invoice_audit_log')
-            .delete()
-            .eq('invoice_id', invoiceId);
+          console.log(`Processing deletion: ${invoiceId}`);
 
-          if (auditLogError) {
-            throw new Error(`Failed to delete audit log entries: ${auditLogError.message}`);
-          }
-
-          // Step 2: Unlink any dependent reports that reference this invoice
+          // Step 1: Unlink any dependent reports that reference this invoice
           const { error: workOrderReportsError } = await supabase
             .from('work_order_reports')
-            .update({ 
-              partner_invoice_id: null,
-              partner_billed_at: null,
-              partner_billed_amount: null 
-            })
+            .update({ partner_invoice_id: null })
             .eq('partner_invoice_id', invoiceId);
 
           if (workOrderReportsError) {
             throw new Error(`Failed to unlink work order reports: ${workOrderReportsError.message}`);
           }
 
-          // Also unlink employee reports that reference this invoice
           const { error: employeeReportsError } = await supabase
             .from('employee_reports')
             .update({ partner_invoice_id: null })
@@ -195,17 +184,7 @@ export const usePartnerInvoiceBatch = () => {
             throw new Error(`Failed to unlink employee reports: ${employeeReportsError.message}`);
           }
 
-          // Step 3: Delete line items
-          const { error: lineItemsError } = await supabase
-            .from('partner_invoice_line_items')
-            .delete()
-            .eq('partner_invoice_id', invoiceId);
-
-          if (lineItemsError) {
-            throw new Error(`Failed to delete line items: ${lineItemsError.message}`);
-          }
-
-          // Step 4: Finally delete the invoice
+          // Step 2: Delete the invoice (CASCADE will handle audit logs and line items)
           const { error: invoiceError } = await supabase
             .from('partner_invoices')
             .delete()
@@ -222,8 +201,10 @@ export const usePartnerInvoiceBatch = () => {
           );
           
           results.push({ invoiceId, success: true });
+          console.log(`Successfully deleted invoice ${invoiceId}`);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          console.error(`Failed to delete invoice ${invoiceId}:`, error);
           
           setOperations(prev => 
             prev.map(op => 

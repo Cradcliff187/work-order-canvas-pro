@@ -158,6 +158,7 @@ export function PartnerInvoicesTable({
     },
     enableRowSelection: true,
     manualPagination: false,
+    getRowId: (row) => row.id,
   });
 
   // Clear search
