@@ -359,9 +359,34 @@ export function useTimeManagement(filters: TimeManagementFilters) {
   // Update time entry mutation
   const updateTimeEntryMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<TimeEntry> }) => {
+      // Sanitize payload to only include columns that exist on employee_reports
+      const allowedKeys = [
+        'report_date',
+        'hours_worked',
+        'hourly_rate_snapshot',
+        'work_performed',
+        'notes',
+        'work_order_id',
+        'project_id',
+        'approval_status',
+        'approved_by',
+        'approved_at',
+        'rejection_reason',
+        'is_overtime',
+        'clock_in_time',
+        'clock_out_time',
+      ] as const;
+
+      const payload: Record<string, any> = {};
+      for (const key of allowedKeys) {
+        if (key in (data as any)) {
+          payload[key] = (data as any)[key];
+        }
+      }
+
       const { error } = await supabase
         .from('employee_reports')
-        .update(data)
+        .update(payload)
         .eq('id', id);
 
       if (error) throw error;
@@ -370,10 +395,13 @@ export function useTimeManagement(filters: TimeManagementFilters) {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] });
       toast({ title: 'Time entry updated successfully' });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const friendly = error?.code === 'PGRST116' || /payload|unexpected|column/i.test(error?.message || '')
+        ? 'Some fields were not allowed. Please try again.'
+        : error?.message;
       toast({ 
         title: 'Failed to update time entry', 
-        description: error.message,
+        description: friendly,
         variant: 'destructive' 
       });
     },
@@ -393,10 +421,14 @@ export function useTimeManagement(filters: TimeManagementFilters) {
       queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] });
       toast({ title: 'Time entry deleted successfully' });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      let description = error?.message;
+      if (error?.code === '23503' || /foreign key|constraint/i.test(description || '')) {
+        description = 'This time entry is linked to other records (e.g., receipt allocations or invoices). Remove those links first.';
+      }
       toast({ 
         title: 'Failed to delete time entry', 
-        description: error.message,
+        description,
         variant: 'destructive' 
       });
     },
@@ -499,11 +531,11 @@ export function useTimeManagement(filters: TimeManagementFilters) {
     summaryStats,
     isLoading,
     updateTimeEntry: (id: string, data: Partial<TimeEntry>) => 
-      updateTimeEntryMutation.mutate({ id, data }),
-    deleteTimeEntry: deleteTimeEntryMutation.mutate,
-    bulkApprove: bulkApproveMutation.mutate,
+      updateTimeEntryMutation.mutateAsync({ id, data }),
+    deleteTimeEntry: (id: string) => deleteTimeEntryMutation.mutateAsync(id),
+    bulkApprove: (entryIds: string[]) => bulkApproveMutation.mutateAsync(entryIds),
     bulkReject: (entryIds: string[], reason: string) => 
-      bulkRejectMutation.mutate({ entryIds, reason }),
+      bulkRejectMutation.mutateAsync({ entryIds, reason }),
     exportToCSV,
     refetch: () => queryClient.invalidateQueries({ queryKey: ['admin-time-entries'] }),
   };
