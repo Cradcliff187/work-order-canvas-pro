@@ -14,7 +14,7 @@ import { flexRender, getCoreRowModel, useReactTable, ColumnDef } from '@tanstack
 import { TimeReport } from './TimeReportsColumns';
 import { format } from 'date-fns';
 import { Pencil, StickyNote, Send } from 'lucide-react';
-import { getEntryOvertimeHours } from '@/utils/overtimeCalculations';
+import { getWeeklyEntryOvertimeHours } from '@/utils/overtimeCalculations';
 
 export interface TimeReportsTableProps {
   data?: TimeReport[];
@@ -49,7 +49,7 @@ function calcOvertime(r: TimeReport, allReports: TimeReport[] = []) {
       }
     }));
     
-    return getEntryOvertimeHours(
+    return getWeeklyEntryOvertimeHours(
       {
         id: r.id,
         report_date: r.date,
@@ -58,7 +58,8 @@ function calcOvertime(r: TimeReport, allReports: TimeReport[] = []) {
         employee: { 
           id: r.employee_name, 
           first_name: r.employee_name.split(' ')[0] || '', 
-          last_name: r.employee_name.split(' ').slice(1).join(' ') || '' 
+          last_name: r.employee_name.split(' ').slice(1).join(' ') || '',
+          is_overtime_eligible: r.is_overtime_eligible
         }
       },
       entries

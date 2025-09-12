@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, StickyNote, Send } from 'lucide-react';
 import { format } from 'date-fns';
-import { getEntryOvertimeHours } from '@/utils/overtimeCalculations';
+import { getWeeklyEntryOvertimeHours } from '@/utils/overtimeCalculations';
 
 export type TimeReport = {
   id: string;
@@ -15,6 +15,8 @@ export type TimeReport = {
   overtime_hours?: number | null; // if undefined, calculate as max(0, hours_worked - 8)
   description?: string | null;
   status?: 'draft' | 'submitted' | 'approved' | 'rejected';
+  is_overtime_eligible?: boolean;
+  employee_user_id?: string;
 };
 
 export interface TimeReportColumnProps<T = TimeReport> {
@@ -46,7 +48,7 @@ function calcOvertime(r: TimeReport, allReports: TimeReport[] = []) {
       }
     }));
     
-    return getEntryOvertimeHours(
+    return getWeeklyEntryOvertimeHours(
       {
         id: r.id,
         report_date: r.date,
@@ -55,7 +57,8 @@ function calcOvertime(r: TimeReport, allReports: TimeReport[] = []) {
         employee: { 
           id: r.employee_name, 
           first_name: r.employee_name.split(' ')[0] || '', 
-          last_name: r.employee_name.split(' ').slice(1).join(' ') || '' 
+          last_name: r.employee_name.split(' ').slice(1).join(' ') || '',
+          is_overtime_eligible: r.is_overtime_eligible
         }
       },
       entries

@@ -58,8 +58,30 @@ export function TimeManagementTable({
     
     const statusText = entry.approval_status.charAt(0).toUpperCase() + entry.approval_status.slice(1);
     
-    // Calculate overtime info using daily aggregation
-    const entriesWithOvertimeInfo = calculateEntryOvertimeInfo(allEntries);
+    // Calculate overtime info using weekly aggregation (40h threshold)
+    const entriesWithOvertimeInfo = calculateWeeklyEntryOvertimeInfo(allEntries.map(entry => ({
+      id: entry.id,
+      report_date: entry.report_date,
+      hours_worked: entry.hours_worked,
+      employee_user_id: entry.employee_user_id,
+      employee: entry.employee ? {
+        id: entry.employee.id,
+        first_name: entry.employee.first_name,
+        last_name: entry.employee.last_name,
+        is_overtime_eligible: entry.employee.is_overtime_eligible
+      } : undefined
+    })));
+      id: entry.id,
+      report_date: entry.report_date,
+      hours_worked: entry.hours_worked,
+      employee_user_id: entry.employee_user_id,
+      employee: entry.employee ? {
+        id: entry.employee.id,
+        first_name: entry.employee.first_name,
+        last_name: entry.employee.last_name,
+        is_overtime_eligible: entry.employee.is_overtime_eligible
+      } : undefined
+    })));
     const entryWithOT = entriesWithOvertimeInfo.find(e => e.id === entry.id);
     const hasOvertime = entryWithOT?.contributesToOvertime && entryWithOT.overtimePortion > 0;
     
