@@ -156,24 +156,43 @@ export function usePartnerInvoiceActions() {
 
   const deleteInvoiceMutation = useMutation({
     mutationFn: async ({ invoiceId }: DeleteInvoiceParams) => {
-      // First delete line items
+      // First, unlink any dependent reports that reference this invoice
+      const { error: workOrderReportsError } = await supabase
+        .from('work_order_reports')
+        .update({ partner_invoice_id: null })
+        .eq('partner_invoice_id', invoiceId);
+
+      if (workOrderReportsError) {
+        throw new Error(`Failed to unlink work order reports: ${workOrderReportsError.message}`);
+      }
+
+      const { error: employeeReportsError } = await supabase
+        .from('employee_reports')
+        .update({ partner_invoice_id: null })
+        .eq('partner_invoice_id', invoiceId);
+
+      if (employeeReportsError) {
+        throw new Error(`Failed to unlink employee reports: ${employeeReportsError.message}`);
+      }
+
+      // Then delete line items
       const { error: lineItemsError } = await supabase
         .from('partner_invoice_line_items')
         .delete()
         .eq('partner_invoice_id', invoiceId);
 
       if (lineItemsError) {
-        throw new Error(lineItemsError.message);
+        throw new Error(`Failed to delete line items: ${lineItemsError.message}`);
       }
 
-      // Then delete the invoice
+      // Finally delete the invoice
       const { error: invoiceError } = await supabase
         .from('partner_invoices')
         .delete()
         .eq('id', invoiceId);
 
       if (invoiceError) {
-        throw new Error(invoiceError.message);
+        throw new Error(`Failed to delete invoice: ${invoiceError.message}`);
       }
 
       return { invoiceId };
