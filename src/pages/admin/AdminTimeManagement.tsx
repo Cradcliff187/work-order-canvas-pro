@@ -342,6 +342,7 @@ export default function AdminTimeManagement() {
             totalEntries={totalEntries}
             filters={filters}
             onFiltersChange={setFilters}
+            onClearFilters={clearFilters}
             onEntrySelect={handleEntrySelect}
             onSelectAll={handleSelectAll}
             onEdit={handleEntryEdit}
@@ -369,6 +370,7 @@ export default function AdminTimeManagement() {
                 <TimeManagementFilters
                   filters={filters}
                   onFiltersChange={setFilters}
+                  onClearFilters={clearFilters}
                   employees={employees}
                   workOrders={workOrders}
                   projects={projects}

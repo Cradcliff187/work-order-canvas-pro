@@ -15,6 +15,7 @@ interface MobileTimeManagementProps {
   totalEntries: number;
   filters: any;
   onFiltersChange: (filters: any) => void;
+  onClearFilters: () => void;
   onEntrySelect: (entryId: string) => void;
   onSelectAll: (selected: boolean) => void;
   onEdit: (entry: TimeEntry) => void;
@@ -35,6 +36,7 @@ export function MobileTimeManagement({
   totalEntries,
   filters,
   onFiltersChange,
+  onClearFilters,
   onEntrySelect,
   onSelectAll,
   onEdit,
@@ -74,6 +76,7 @@ export function MobileTimeManagement({
           <MobileFiltersSheet
             filters={filters}
             onFiltersChange={onFiltersChange}
+            onClearFilters={onClearFilters}
             employees={employees}
             workOrders={workOrders}
             projects={projects}

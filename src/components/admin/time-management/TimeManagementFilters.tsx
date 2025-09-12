@@ -16,6 +16,7 @@ import { countActiveFilters } from '@/lib/filters';
 interface TimeManagementFiltersProps {
   filters: Filters;
   onFiltersChange: (filters: Filters) => void;
+  onClearFilters: () => void;
   employees: Employee[];
   workOrders: WorkOrder[];
   projects: Project[];
@@ -24,6 +25,7 @@ interface TimeManagementFiltersProps {
 export function TimeManagementFilters({
   filters,
   onFiltersChange,
+  onClearFilters,
   employees,
   workOrders,
   projects
@@ -34,17 +36,7 @@ export function TimeManagementFilters({
   };
 
   const handleReset = () => {
-    onFiltersChange({
-      employeeIds: [],
-      dateFrom: '',
-      dateTo: '',
-      workOrderIds: [],
-      projectIds: [],
-      status: [],
-      search: '',
-      page: 1,
-      limit: 50
-    });
+    onClearFilters();
   };
 
   const toggleArrayFilter = (key: 'employeeIds' | 'workOrderIds' | 'projectIds' | 'status', value: string) => {

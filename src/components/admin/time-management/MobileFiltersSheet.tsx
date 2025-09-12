@@ -18,6 +18,7 @@ interface MobileFiltersSheetProps {
     limit: number;
   };
   onFiltersChange: (filters: any) => void;
+  onClearFilters: () => void;
   employees: Employee[];
   workOrders: any[];
   projects: any[];
@@ -28,6 +29,7 @@ interface MobileFiltersSheetProps {
 export function MobileFiltersSheet({
   filters,
   onFiltersChange,
+  onClearFilters,
   employees,
   workOrders,
   projects,
@@ -44,17 +46,7 @@ export function MobileFiltersSheet({
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
-    onFiltersChange({
-      employeeIds: [],
-      dateFrom: '',
-      dateTo: '',
-      workOrderIds: [],
-      projectIds: [],
-      status: [],
-      search: '',
-      page: 1,
-      limit: filters.limit
-    });
+    onClearFilters();
   };
 
   return (
@@ -85,6 +77,7 @@ export function MobileFiltersSheet({
           <TimeManagementFilters
             filters={filters}
             onFiltersChange={onFiltersChange}
+            onClearFilters={onClearFilters}
             employees={employees}
             workOrders={workOrders}
             projects={projects}
