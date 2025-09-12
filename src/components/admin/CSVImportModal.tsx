@@ -40,6 +40,8 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
         'Employee Email': 'employee@company.com',
         'Work Order #': 'WO-2024-001',
         'Date': '2024-01-15',
+        'Start Time': '08:00',
+        'End Time': '17:00',
         'Hours': '8.0',
         'Description': 'Performed maintenance tasks'
       }
@@ -137,7 +139,7 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Download the template to see the required CSV format. Include columns: Employee Email, Work Order #, Date, Hours, Description
+                  Download the template to see the required CSV format. Include columns: Employee Email, Work Order #, Date, Start Time (HH:MM), End Time (HH:MM), Hours, Description. Hours will be calculated from start/end times if provided.
                 </AlertDescription>
               </Alert>
 
