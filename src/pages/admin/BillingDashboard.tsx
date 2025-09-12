@@ -191,11 +191,12 @@ export default function BillingDashboard() {
   }, [pipelineData, filters, organizationMap]);
 
   // Destructure ready bills data
-  const { bills, internalReports } = readyBills || { bills: [], internalReports: [] };
+  const { bills, internalReports, employeeTimeEntries } = readyBills || { bills: [], internalReports: [], employeeTimeEntries: [] };
   
   // Calculate partner ready bills totals
   const billsTotal = bills.reduce((sum, b) => sum + (b.total_amount || 0), 0);
   const internalTotal = internalReports.reduce((sum, r) => sum + (r.bill_amount || 0), 0);
+  const employeeTimeTotal = employeeTimeEntries.reduce((sum, e) => sum + (e.bill_amount || 0), 0);
 
   // Calculate stats from filtered data
   const totalWorkOrders = filteredPipelineData.length;

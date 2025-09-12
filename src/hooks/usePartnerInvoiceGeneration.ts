@@ -6,6 +6,7 @@ interface GeneratePartnerInvoiceData {
   partnerOrganizationId: string;
   selectedBillIds: string[];
   internalReportIds?: string[];
+  employeeTimeIds?: string[];
   markupPercentage: number;
   subtotal: number;
   totalAmount: number;
@@ -77,7 +78,7 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     throw new Error('Failed to fetch selected bills');
   }
 
-  // Fetch internal work order reports if provided
+  // Fetch internal work order reports and employee time entries if provided
   const { data: internalReports } = data.internalReportIds?.length ? 
     await supabase
       .from('work_order_reports')
@@ -90,6 +91,23 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
         )
       `)
       .in('id', data.internalReportIds)
+    : { data: [] };
+
+  const { data: employeeTimeEntries } = data.employeeTimeIds?.length ?
+    await supabase
+      .from('employee_reports')
+      .select(`
+        *,
+        work_orders!inner(
+          work_order_number,
+          title
+        ),
+        profiles!employee_user_id(
+          first_name,
+          last_name
+        )
+      `)
+      .in('id', data.employeeTimeIds)
     : { data: [] };
 
   // Create partner invoice
@@ -143,6 +161,22 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       description: `Internal Work - ${report.work_orders.work_order_number}: ${report.work_orders.title}`
     });
   });
+
+  // Add employee time entries to line items
+  employeeTimeEntries?.forEach(entry => {
+    const cost = (entry.hours_worked * entry.hourly_rate_snapshot) || 0;
+    const markupAmount = cost * (data.markupPercentage / 100);
+    const totalWithMarkup = cost + markupAmount;
+    
+    const employeeName = `${entry.profiles?.first_name || ''} ${entry.profiles?.last_name || ''}`.trim();
+    
+    lineItems.push({
+      partner_invoice_id: partnerInvoice.id,
+      work_order_report_id: null, // Employee time entries don't link to work_order_reports
+      amount: totalWithMarkup,
+      description: `Employee Time - ${entry.work_orders.work_order_number}: ${employeeName} (${entry.hours_worked}h)`
+    });
+  });
   
   const { error: lineItemsError } = await supabase
     .from('partner_invoice_line_items')
@@ -187,6 +221,20 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
           partner_billed_amount: reportAmount.amount
         })
         .eq('id', reportAmount.id);
+    }
+  }
+
+  // Update employee time entries with partner invoice info
+  if (data.employeeTimeIds?.length) {
+    const { error: employeeUpdateError } = await supabase
+      .from('employee_reports')
+      .update({ 
+        partner_invoice_id: partnerInvoice.id
+      })
+      .in('id', data.employeeTimeIds);
+      
+    if (employeeUpdateError) {
+      throw new Error('Failed to update employee time entries');
     }
   }
 

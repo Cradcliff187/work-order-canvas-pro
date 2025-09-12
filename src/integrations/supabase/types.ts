@@ -427,6 +427,7 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           notes: string | null
+          partner_invoice_id: string | null
           project_id: string | null
           rejection_reason: string | null
           report_date: string
@@ -458,6 +459,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           notes?: string | null
+          partner_invoice_id?: string | null
           project_id?: string | null
           rejection_reason?: string | null
           report_date: string
@@ -489,6 +491,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           notes?: string | null
+          partner_invoice_id?: string | null
           project_id?: string | null
           rejection_reason?: string | null
           report_date?: string
@@ -504,6 +507,13 @@ export type Database = {
             columns: ["employee_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_reports_partner_invoice_id_fkey"
+            columns: ["partner_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_invoices"
             referencedColumns: ["id"]
           },
           {

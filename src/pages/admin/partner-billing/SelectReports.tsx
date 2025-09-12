@@ -50,6 +50,7 @@ export default function SelectBills() {
   });
   const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(new Set());
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
+  const [selectedEmployeeTimeIds, setSelectedEmployeeTimeIds] = useState<Set<string>>(new Set());
   const [markupPercentage, setMarkupPercentage] = useState<number>(() => {
     const v = localStorage.getItem('pb.markupPercentage');
     return v !== null ? Number(v) : 20;
@@ -125,6 +126,7 @@ export default function SelectBills() {
   const { data: partnerData, isLoading: isLoadingBills, error: billsError } = usePartnerReadyBills(selectedPartnerId);
   const bills = partnerData?.bills;
   const internalReports = partnerData?.internalReports || [];
+  const employeeTimeEntries = partnerData?.employeeTimeEntries || [];
   const { mutate: generateInvoice, isPending: isGeneratingInvoice } = usePartnerInvoiceGeneration();
 
   // Apply filters to bills with inline filtering logic
@@ -204,19 +206,23 @@ export default function SelectBills() {
 
   // Calculate totals based on selected bills and reports
   const calculations = useMemo(() => {
-    if (!filteredAndSortedBills && !internalReports) return { subtotal: 0, markupAmount: 0, total: 0, selectedBills: [], selectedReports: [] };
+    if (!filteredAndSortedBills && !internalReports && !employeeTimeEntries) return { 
+      subtotal: 0, markupAmount: 0, total: 0, selectedBills: [], selectedReports: [], selectedTimeEntries: [] 
+    };
     
     const selectedBills = filteredAndSortedBills?.filter(bill => selectedBillIds.has(bill.bill_id)) || [];
     const selectedReports = internalReports?.filter(report => selectedReportIds.has(report.id)) || [];
+    const selectedTimeEntries = employeeTimeEntries?.filter(entry => selectedEmployeeTimeIds.has(entry.id)) || [];
     
     const billsSubtotal = selectedBills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
     const reportsSubtotal = selectedReports.reduce((sum, report) => sum + (report.bill_amount || 0), 0);
-    const subtotal = billsSubtotal + reportsSubtotal;
+    const timeEntriesSubtotal = selectedTimeEntries.reduce((sum, entry) => sum + (entry.bill_amount || 0), 0);
+    const subtotal = billsSubtotal + reportsSubtotal + timeEntriesSubtotal;
     const markupAmount = subtotal * (markupPercentage / 100);
     const total = subtotal + markupAmount;
     
-    return { subtotal, markupAmount, total, selectedBills, selectedReports };
-  }, [filteredAndSortedBills, selectedBillIds, internalReports, selectedReportIds, markupPercentage]);
+    return { subtotal, markupAmount, total, selectedBills, selectedReports, selectedTimeEntries };
+  }, [filteredAndSortedBills, selectedBillIds, internalReports, selectedReportIds, employeeTimeEntries, selectedEmployeeTimeIds, markupPercentage]);
 
   const handleBillToggle = (billId: string, checked: boolean) => {
     const newSet = new Set(selectedBillIds);
@@ -296,13 +302,13 @@ export default function SelectBills() {
   };
 
   const handleGenerateInvoice = () => {
-    if (!selectedPartnerId || selectedBillIds.size === 0) return;
+    if (!selectedPartnerId || (selectedBillIds.size === 0 && selectedReportIds.size === 0 && selectedEmployeeTimeIds.size === 0)) return;
     
     // Validate minimum invoice amount
     if (calculations.subtotal < 0.01) {
       toast({
         title: "Cannot Generate Invoice",
-        description: "Selected bills have no associated costs.",
+        description: "Selected items have no associated costs.",
         variant: "destructive"
       });
       return;
@@ -312,6 +318,7 @@ export default function SelectBills() {
       partnerOrganizationId: selectedPartnerId,
       selectedBillIds: Array.from(selectedBillIds),
       internalReportIds: Array.from(selectedReportIds),
+      employeeTimeIds: Array.from(selectedEmployeeTimeIds),
       markupPercentage,
       subtotal: calculations.subtotal,
       totalAmount: calculations.total,
@@ -785,8 +792,75 @@ export default function SelectBills() {
           </Card>
         )}
 
+        {/* Employee Time Entries Display */}
+        {selectedPartnerId && employeeTimeEntries && employeeTimeEntries.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Employee Time Entries ({employeeTimeEntries?.length || 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox 
+                        checked={employeeTimeEntries && selectedEmployeeTimeIds.size === employeeTimeEntries.length && employeeTimeEntries.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            const allTimeIds = employeeTimeEntries?.map(e => e.id) || [];
+                            setSelectedEmployeeTimeIds(new Set(allTimeIds));
+                          } else {
+                            setSelectedEmployeeTimeIds(new Set());
+                          }
+                        }}
+                      />
+                    </TableHead>
+                    <TableHead>Work Order</TableHead>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Hours</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Bill Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(employeeTimeEntries || []).map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedEmployeeTimeIds.has(entry.id)}
+                          onCheckedChange={(checked) => {
+                            const newSet = new Set(selectedEmployeeTimeIds);
+                            if (checked) {
+                              newSet.add(entry.id);
+                            } else {
+                              newSet.delete(entry.id);
+                            }
+                            setSelectedEmployeeTimeIds(newSet);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>{entry.work_order_number}</TableCell>
+                      <TableCell>{entry.employee_name}</TableCell>
+                      <TableCell>{format(new Date(entry.report_date), 'MMM d, yyyy')}</TableCell>
+                      <TableCell>{entry.hours_worked}h</TableCell>
+                      <TableCell className="max-w-xs truncate">{entry.work_performed}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(entry.bill_amount || 0)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Selection Summary and Generate Invoice */}
-        {(selectedBillIds.size > 0 || selectedReportIds.size > 0) && (
+        {(selectedBillIds.size > 0 || selectedReportIds.size > 0 || selectedEmployeeTimeIds.size > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -841,7 +915,7 @@ export default function SelectBills() {
                     <AlertDialogTrigger asChild>
                       <Button 
                         className="gap-2" 
-                        disabled={selectedBillIds.size === 0 && selectedReportIds.size === 0 || isGeneratingInvoice}
+                        disabled={selectedBillIds.size === 0 && selectedReportIds.size === 0 && selectedEmployeeTimeIds.size === 0 || isGeneratingInvoice}
                       >
                         <Receipt className="h-4 w-4" />
                         Generate Partner Invoice
