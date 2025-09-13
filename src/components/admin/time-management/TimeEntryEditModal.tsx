@@ -60,20 +60,22 @@ export function TimeEntryEditModal({
       hourly_rate_snapshot: entry.hourly_rate_snapshot,
       work_performed: entry.work_performed,
       notes: entry.notes || '',
-      work_order_id: entry.work_order_id || '',
-      project_id: entry.project_id || '',
+      work_order_id: entry.work_order_id || 'none',
+      project_id: entry.project_id || 'none',
     }
   });
 
   const selectedDate = watch('report_date');
-  const workOrderId = watch('work_order_id');
-  const projectId = watch('project_id');
+  const workOrderId = watch('work_order_id') || 'none';
+  const projectId = watch('project_id') || 'none';
 
   const onSubmit = (data: EditTimeEntryForm) => {
     const updatedEntry: TimeEntry = {
       ...entry,
       ...data,
       report_date: format(data.report_date, 'yyyy-MM-dd'),
+      work_order_id: data.work_order_id === 'none' ? null : data.work_order_id,
+      project_id: data.project_id === 'none' ? null : data.project_id,
       total_labor_cost: data.hours_worked * data.hourly_rate_snapshot,
       updated_at: new Date().toISOString(),
     };
@@ -160,15 +162,15 @@ export function TimeEntryEditModal({
                     <Select
                       value={workOrderId}
                       onValueChange={(value) => {
-                        setValue('work_order_id', value);
-                        if (value) setValue('project_id', '');
+                        setValue('work_order_id', value === 'none' ? '' : value);
+                        if (value && value !== 'none') setValue('project_id', 'none');
                       }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select work order..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No work order</SelectItem>
+                        <SelectItem value="none">No work order</SelectItem>
                         {workOrders.map((wo) => (
                           <SelectItem key={wo.id} value={wo.id}>
                             {wo.work_order_number} - {wo.title}
@@ -180,15 +182,15 @@ export function TimeEntryEditModal({
                     <Select
                       value={projectId}
                       onValueChange={(value) => {
-                        setValue('project_id', value);
-                        if (value) setValue('work_order_id', '');
+                        setValue('project_id', value === 'none' ? '' : value);
+                        if (value && value !== 'none') setValue('work_order_id', 'none');
                       }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Or select project..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No project</SelectItem>
+                        <SelectItem value="none">No project</SelectItem>
                         {projects.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.project_number} - {project.name}
