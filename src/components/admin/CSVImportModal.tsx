@@ -19,7 +19,7 @@ interface CSVImportModalProps {
 export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModalProps) {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [fileUploaded, setFileUploaded] = useState(false);
-  const [step, setStep] = useState<'upload' | 'preview' | 'importing' | 'results'>('upload');
+  const [step, setStep] = useState<'upload' | 'preview' | 'approval' | 'importing' | 'results'>('upload');
   const [importResults, setImportResults] = useState<{ success: number; failed: number; errors: string[] }>({
     success: 0,
     failed: 0,
@@ -76,6 +76,14 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
   };
 
   const handleProceedToPreview = () => {
+    setStep('preview');
+  };
+
+  const handleProceedToApproval = () => {
+    setStep('approval');
+  };
+
+  const handleBackToPreview = () => {
     setStep('preview');
   };
 
@@ -233,14 +241,87 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
                       Back
                     </Button>
                     <Button
-                      onClick={handleImport}
+                      onClick={handleProceedToApproval}
                       disabled={validEntries.length === 0}
                     >
-                      Import {validEntries.length} Entries
+                      Continue to Approval ({validEntries.length} entries)
                     </Button>
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {step === 'approval' && csvFile && validationResults && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Step 3: Confirm Import</h3>
+                <div className="text-sm text-muted-foreground">
+                  File: {csvFile.name}
+                </div>
+              </div>
+
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  <strong>Ready to import {validEntries.length} time entries</strong>
+                  <br />
+                  Please review the summary below and confirm to proceed.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h4 className="font-medium text-sm mb-2">Import Summary</h4>
+                    <div className="space-y-1 text-sm">
+                      <div>Total entries: <strong>{validEntries.length}</strong></div>
+                      <div>Employees affected: <strong>{[...new Set(parsedData.filter((_, i) => validEntries.some(v => v.rowIndex === i)).map(row => row.employeeEmail))].length}</strong></div>
+                      <div>Work orders: <strong>{[...new Set(parsedData.filter((row, i) => validEntries.some(v => v.rowIndex === i) && row.workOrderNumber).map(row => row.workOrderNumber))].length}</strong></div>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h4 className="font-medium text-sm mb-2">Date Range</h4>
+                    <div className="space-y-1 text-sm">
+                      {(() => {
+                        const dates = parsedData.filter((_, i) => validEntries.some(v => v.rowIndex === i)).map(row => row.date).filter(Boolean);
+                        const minDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => new Date(d).getTime()))) : null;
+                        const maxDate = dates.length > 0 ? new Date(Math.max(...dates.map(d => new Date(d).getTime()))) : null;
+                        return (
+                          <>
+                            <div>From: <strong>{minDate ? minDate.toLocaleDateString() : 'N/A'}</strong></div>
+                            <div>To: <strong>{maxDate ? maxDate.toLocaleDateString() : 'N/A'}</strong></div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {invalidEntries.length > 0 && (
+                  <Alert className="border-yellow-200 bg-yellow-50">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <AlertDescription className="text-yellow-800">
+                      <strong>{invalidEntries.length} entries will be skipped</strong> due to validation errors.
+                      These can be reviewed in the previous step.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t">
+                <Button onClick={handleBackToPreview} variant="outline">
+                  Review Data
+                </Button>
+                <Button
+                  onClick={handleImport}
+                  disabled={validEntries.length === 0}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  Confirm Import ({validEntries.length} entries)
+                </Button>
+              </div>
             </div>
           )}
 

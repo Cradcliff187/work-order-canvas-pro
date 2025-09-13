@@ -225,7 +225,7 @@ export const useFileValidation = ({
   // Auto-clear validation errors when the underlying issue is resolved
   useEffect(() => {
     setErrors(currentErrors => {
-      return currentErrors.filter(error => {
+      const filteredErrors = currentErrors.filter(error => {
         // Keep max files error if we're still over the limit
         if (error.type === 'maxFiles' && files.length >= maxFiles) {
           return true;
@@ -240,6 +240,12 @@ export const useFileValidation = ({
         // Keep other errors
         return true;
       });
+      
+      // Only update if the errors actually changed
+      if (filteredErrors.length !== currentErrors.length) {
+        return filteredErrors;
+      }
+      return currentErrors;
     });
   }, [files, maxFiles]);
 
