@@ -18,6 +18,7 @@ interface CSVImportModalProps {
 
 export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModalProps) {
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [fileUploaded, setFileUploaded] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview' | 'importing' | 'results'>('upload');
   const [importResults, setImportResults] = useState<{ success: number; failed: number; errors: string[] }>({
     success: 0,
@@ -71,7 +72,17 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
     if (!file) return;
 
     setCsvFile(file);
+    setFileUploaded(true);
+  };
+
+  const handleProceedToPreview = () => {
     setStep('preview');
+  };
+
+  const handleUploadDifferentFile = () => {
+    setCsvFile(null);
+    setFileUploaded(false);
+    resetData();
   };
 
   const handleImport = async () => {
@@ -104,6 +115,7 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
   const handleClose = () => {
     setStep('upload');
     setCsvFile(null);
+    setFileUploaded(false);
     resetData();
     setImportResults({ success: 0, failed: 0, errors: [] });
     onOpenChange(false);
@@ -136,23 +148,50 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
                 </Button>
               </div>
 
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Download the template to see the required CSV format. Include columns: Employee Email, Work Order #, Date, Start Time (HH:MM), End Time (HH:MM), Hours, Description. Hours will be calculated from start/end times if provided.
-                </AlertDescription>
-              </Alert>
+              {!fileUploaded ? (
+                <>
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Download the template to see the required CSV format. Include columns: Employee Email, Work Order #, Date, Start Time (HH:MM), End Time (HH:MM), Hours, Description. Hours will be calculated from start/end times if provided.
+                    </AlertDescription>
+                  </Alert>
 
-              <UnifiedFileUpload
-                acceptedTypes={[
-                  'text/csv',
-                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                  'application/vnd.ms-excel'
-                ]}
-                maxFiles={1}
-                onFilesSelected={handleFileUpload}
-                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8"
-              />
+                  <UnifiedFileUpload
+                    acceptedTypes={[
+                      'text/csv',
+                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                      'application/vnd.ms-excel'
+                    ]}
+                    maxFiles={1}
+                    onFilesSelected={handleFileUpload}
+                    className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8"
+                  />
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <Alert className="border-green-200 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">
+                      <strong>File uploaded successfully!</strong>
+                      <br />
+                      File: {csvFile?.name}
+                      <br />
+                      Size: {csvFile ? Math.round(csvFile.size / 1024) : 0} KB
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="flex justify-between items-center pt-4">
+                    <Button onClick={handleUploadDifferentFile} variant="outline">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Different File
+                    </Button>
+                    <Button onClick={handleProceedToPreview}>
+                      Continue to Preview
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
