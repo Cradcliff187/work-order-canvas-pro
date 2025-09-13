@@ -144,7 +144,11 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
               </Alert>
 
               <UnifiedFileUpload
-                acceptedTypes={['.csv', '.xlsx', '.xls']}
+                acceptedTypes={[
+                  'text/csv',
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  'application/vnd.ms-excel'
+                ]}
                 maxFiles={1}
                 onFilesSelected={handleFileUpload}
                 className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8"
