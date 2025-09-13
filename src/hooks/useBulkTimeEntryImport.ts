@@ -51,7 +51,12 @@ export function useBulkTimeEntryImport() {
   const [isBulkImporting, setIsBulkImporting] = useState(false);
 
   // Fetch reference data for validation
-  const { data: employees } = useQuery({
+  const { 
+    data: employees, 
+    isLoading: employeesLoading, 
+    error: employeesError,
+    refetch: refetchEmployees 
+  } = useQuery({
     queryKey: ['csv-import-employees'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -77,7 +82,12 @@ export function useBulkTimeEntryImport() {
     },
   });
 
-  const { data: workOrders } = useQuery({
+  const { 
+    data: workOrders, 
+    isLoading: workOrdersLoading, 
+    error: workOrdersError,
+    refetch: refetchWorkOrders 
+  } = useQuery({
     queryKey: ['csv-import-work-orders'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -170,6 +180,13 @@ export function useBulkTimeEntryImport() {
   }, []);
 
   const validateData = useCallback(async (data: CSVRow[]) => {
+    // Check if reference data is still loading
+    if (employeesLoading || workOrdersLoading) return;
+    
+    // Check if reference data failed to load
+    if (employeesError || workOrdersError) return;
+    
+    // Check if reference data is available
     if (!employees || !workOrders) return;
 
     setIsValidating(true);
@@ -392,7 +409,7 @@ export function useBulkTimeEntryImport() {
     } finally {
       setIsValidating(false);
     }
-  }, [employees, workOrders]);
+  }, [employees, workOrders, employeesLoading, workOrdersLoading, employeesError, workOrdersError]);
 
   const bulkImport = useCallback(async (validData: ValidationResult['data'][]): Promise<BulkImportResult> => {
     setIsBulkImporting(true);
@@ -447,13 +464,27 @@ export function useBulkTimeEntryImport() {
     setIsBulkImporting(false);
   }, []);
 
+  const retryReferenceData = useCallback(() => {
+    refetchEmployees();
+    refetchWorkOrders();
+  }, [refetchEmployees, refetchWorkOrders]);
+
   return {
     parsedData,
     validationResults,
     isValidating,
     isBulkImporting,
+    // Reference data states
+    employeesLoading,
+    workOrdersLoading,
+    employeesError,
+    workOrdersError,
+    isReferenceDataLoading: employeesLoading || workOrdersLoading,
+    referenceDataError: employeesError || workOrdersError,
+    // Functions
     parseCSV,
     bulkImport,
     resetData,
+    retryReferenceData,
   };
 }

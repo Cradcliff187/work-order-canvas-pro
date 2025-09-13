@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { useBulkTimeEntryImport, type ValidationResult } from '@/hooks/useBulkTimeEntryImport';
 
 interface CSVPreviewTableProps {
@@ -11,7 +12,16 @@ interface CSVPreviewTableProps {
 }
 
 export function CSVPreviewTable({ file, validationResults }: CSVPreviewTableProps) {
-  const { parseCSV, parsedData, isValidating } = useBulkTimeEntryImport();
+  const { 
+    parseCSV, 
+    parsedData, 
+    isValidating,
+    isReferenceDataLoading,
+    referenceDataError,
+    employeesError,
+    workOrdersError,
+    retryReferenceData
+  } = useBulkTimeEntryImport();
 
   useEffect(() => {
     if (file) {
@@ -19,11 +29,53 @@ export function CSVPreviewTable({ file, validationResults }: CSVPreviewTableProp
     }
   }, [file, parseCSV]);
 
+  // Show reference data loading state
+  if (isReferenceDataLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-2 text-muted-foreground">Loading employees and work orders...</span>
+      </div>
+    );
+  }
+
+  // Show reference data errors
+  if (referenceDataError) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription className="space-y-3">
+          <div>
+            <p className="font-medium">Failed to load reference data</p>
+            <div className="mt-2 space-y-1 text-sm">
+              {employeesError && (
+                <p>• Employees: {employeesError.message}</p>
+              )}
+              {workOrdersError && (
+                <p>• Work Orders: {workOrdersError.message}</p>
+              )}
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={retryReferenceData}
+            className="mt-2"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Show validation in progress state
   if (isValidating) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="ml-2 text-muted-foreground">Loading and validating data...</span>
+        <span className="ml-2 text-muted-foreground">Validating data...</span>
       </div>
     );
   }
