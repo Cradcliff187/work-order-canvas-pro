@@ -90,7 +90,7 @@ serve(async (req) => {
       .from('partner-invoices')
       .upload(filePath, pdfBlob, {
         contentType: 'application/pdf',
-        upsert: false
+        upsert: true
       });
 
     if (uploadError) {
