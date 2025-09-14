@@ -15,7 +15,8 @@ import {
   Send,
   Clock,
   CheckCircle,
-  DollarSign
+  DollarSign,
+  Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -177,10 +178,11 @@ export function PartnerInvoiceActions({
     }
   };
 
-  const canGeneratePdf = invoice.status !== 'draft';
-  const canSendEmail = invoice.status === 'draft' && invoice.pdf_url;
-  const canMarkSent = invoice.status === 'draft';
+  const canGeneratePdf = invoice.status !== 'paid';
+  const canApprove = invoice.status === 'pending_review' && invoice.pdf_url;
+  const canSendEmail = invoice.status === 'approved' && invoice.pdf_url;
   const canMarkPaid = invoice.status === 'sent';
+  const canReturnToDraft = ['pending_review', 'approved'].includes(invoice.status);
 
   return (
     <DropdownMenu>
@@ -190,17 +192,35 @@ export function PartnerInvoiceActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem
-          onClick={handleGeneratePdf}
-          disabled={isGeneratingPdf || !canGeneratePdf}
-        >
-          <FileText className="h-4 w-4 mr-2" />
-          {isGeneratingPdf ? 'Generating PDF...' : 'Generate PDF'}
-        </DropdownMenuItem>
+        {canGeneratePdf && (
+          <DropdownMenuItem
+            onClick={handleGeneratePdf}
+            disabled={isGeneratingPdf}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            {isGeneratingPdf ? 'Regenerating PDF...' : 'Regenerate PDF'}
+          </DropdownMenuItem>
+        )}
 
         {invoice.pdf_url && (
           <DropdownMenuItem
             onClick={() => window.open(invoice.pdf_url!, '_blank')}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            View PDF
+          </DropdownMenuItem>
+        )}
+
+        {invoice.pdf_url && (
+          <DropdownMenuItem
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = invoice.pdf_url!;
+              link.download = `invoice-${invoice.invoice_number}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
           >
             <Download className="h-4 w-4 mr-2" />
             Download PDF
@@ -209,6 +229,16 @@ export function PartnerInvoiceActions({
 
         <DropdownMenuSeparator />
 
+        {canApprove && (
+          <DropdownMenuItem
+            onClick={() => handleStatusChange('approved')}
+            disabled={isUpdatingStatus}
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Approve Invoice
+          </DropdownMenuItem>
+        )}
+
         {canSendEmail && (
           <DropdownMenuItem
             onClick={handleSendEmail}
@@ -216,16 +246,6 @@ export function PartnerInvoiceActions({
           >
             <Send className="h-4 w-4 mr-2" />
             {isSendingEmail ? 'Sending...' : 'Send Invoice'}
-          </DropdownMenuItem>
-        )}
-
-        {canMarkSent && (
-          <DropdownMenuItem
-            onClick={() => handleStatusChange('sent')}
-            disabled={isUpdatingStatus}
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            Mark as Sent
           </DropdownMenuItem>
         )}
 
@@ -241,13 +261,15 @@ export function PartnerInvoiceActions({
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem
-          onClick={() => handleStatusChange('draft')}
-          disabled={isUpdatingStatus || invoice.status === 'draft'}
-        >
-          <Clock className="h-4 w-4 mr-2" />
-          Mark as Draft
-        </DropdownMenuItem>
+        {canReturnToDraft && (
+          <DropdownMenuItem
+            onClick={() => handleStatusChange('draft')}
+            disabled={isUpdatingStatus}
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            Return to Draft
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

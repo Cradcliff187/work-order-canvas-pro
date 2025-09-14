@@ -121,7 +121,7 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       subtotal: data.subtotal,
       markup_percentage: data.markupPercentage,
       total_amount: data.totalAmount,
-      status: 'draft',
+      status: 'pending_review',
       created_by: userProfile.id
     })
     .select('id')
@@ -238,6 +238,21 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     }
   }
 
+  // Automatically generate PDF after invoice creation
+  try {
+    const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-partner-invoice-pdf', {
+      body: { invoiceId: partnerInvoice.id }
+    });
+
+    if (pdfError || !pdfData?.success) {
+      console.warn('PDF generation failed after invoice creation:', pdfError || pdfData?.error);
+      // Don't throw error here - invoice creation was successful, PDF can be generated later
+    }
+  } catch (pdfError) {
+    console.warn('PDF generation failed after invoice creation:', pdfError);
+    // Don't throw error here - invoice creation was successful, PDF can be generated later
+  }
+
   return {
     invoiceId: partnerInvoice.id,
     invoiceNumber: invoiceNumber
@@ -257,7 +272,7 @@ export function usePartnerInvoiceGeneration() {
       
       toast({
         title: 'Invoice Generated Successfully',
-        description: `Partner invoice ${result.invoiceNumber} has been created.`,
+        description: `Partner invoice ${result.invoiceNumber} has been created and is ready for review.`,
       });
     },
     onError: (error) => {
