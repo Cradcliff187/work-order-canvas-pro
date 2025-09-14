@@ -42,12 +42,12 @@ interface PartnerInvoiceDetail {
     id: string;
     amount: number;
     description: string;
-    work_order_report: {
+    work_order_report?: {
       work_order: {
         work_order_number: string;
         title: string;
       };
-    };
+    } | null;
   }>;
 }
 
@@ -69,8 +69,8 @@ async function fetchPartnerInvoiceDetail(invoiceId: string): Promise<PartnerInvo
         id,
         amount,
         description,
-        work_order_report:work_order_reports!work_order_report_id(
-          work_order:work_orders!work_order_id(
+        work_order_report:work_order_reports(
+          work_order:work_orders(
             work_order_number,
             title
           )
@@ -120,8 +120,8 @@ export default function PartnerInvoiceDetail() {
         customer: invoice.partner_organization.name,
         invoice_number: invoice.invoice_number,
         invoice_date: format(new Date(invoice.invoice_date), 'MM/dd/yyyy'),
-        work_order_number: item.work_order_report.work_order.work_order_number,
-        description: item.description || item.work_order_report.work_order.title,
+        work_order_number: item.work_order_report?.work_order?.work_order_number || 'N/A',
+        description: item.description || item.work_order_report?.work_order?.title || 'Employee Time Entry',
         amount: item.amount
       }));
 
@@ -312,13 +312,21 @@ export default function PartnerInvoiceDetail() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">
-                        {item.work_order_report.work_order.work_order_number}
-                      </span>
-                      <span className="text-muted-foreground">-</span>
-                      <span className="text-sm text-muted-foreground">
-                        {item.work_order_report.work_order.title}
-                      </span>
+                      {item.work_order_report ? (
+                        <>
+                          <span className="font-medium">
+                            {item.work_order_report.work_order.work_order_number}
+                          </span>
+                          <span className="text-muted-foreground">-</span>
+                          <span className="text-sm text-muted-foreground">
+                            {item.work_order_report.work_order.title}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-medium text-muted-foreground">
+                          Employee Time Entry
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground ml-6">
                       {item.description}
