@@ -556,9 +556,6 @@ export default function AdminTimeEntry() {
                         <div className="font-medium">
                           {entry.employee?.first_name} {entry.employee?.last_name}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {entry.employee?.email}
-                        </div>
                       </TableCell>
                       <TableCell>
                         {entry.work_order ? (

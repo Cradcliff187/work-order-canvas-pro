@@ -154,9 +154,6 @@ export function TimeManagementTable({
               <div className="font-medium">
                 {entry.employee?.first_name} {entry.employee?.last_name}
               </div>
-              <div className="text-xs text-muted-foreground">
-                {entry.employee?.email}
-              </div>
             </div>
           </div>
         );

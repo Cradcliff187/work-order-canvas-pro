@@ -168,7 +168,7 @@ export function AdminTimeEntryEditModal({
           <div className="grid gap-2">
             <Label>Employee</Label>
             <Input
-              value={`${employee?.first_name} ${employee?.last_name} (${employee?.email})`}
+              value={`${employee?.first_name} ${employee?.last_name}`}
               disabled
               className="bg-muted"
             />
