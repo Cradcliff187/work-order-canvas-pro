@@ -44,6 +44,16 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 
+interface UnifiedBillableItem {
+  id: string;
+  type: 'bill' | 'internal' | 'time';
+  reference: string;
+  description: string;
+  date: string;
+  amount: number;
+  originalData: any;
+}
+
 export default function SelectBills() {
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | undefined>(() => {
     const v = localStorage.getItem('pb.selectedPartnerId');
