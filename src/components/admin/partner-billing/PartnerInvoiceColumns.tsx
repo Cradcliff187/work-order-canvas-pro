@@ -17,11 +17,6 @@ export type PartnerInvoice = Database['public']['Tables']['partner_invoices']['R
 
 // Column metadata for visibility management
 export const PARTNER_INVOICE_COLUMN_METADATA: Record<string, ColumnMetadata> = {
-  select: { 
-    label: 'Select', 
-    description: 'Row selection checkbox',
-    defaultVisible: true 
-  },
   invoice_number: { 
     label: 'Invoice #', 
     description: 'Invoice number and details',
@@ -76,29 +71,6 @@ export const createPartnerInvoiceColumns = ({
   onUpdateStatus,
   onDelete 
 }: PartnerInvoiceColumnsProps): ColumnDef<PartnerInvoice>[] => [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected()}
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        onClick={(e) => e.stopPropagation()}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-    meta: {
-      className: "align-middle"
-    },
-  },
   {
     accessorKey: 'invoice_number',
     header: ({ column }) => (

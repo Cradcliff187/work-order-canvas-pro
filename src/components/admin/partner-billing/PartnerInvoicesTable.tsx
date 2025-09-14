@@ -25,7 +25,6 @@ import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { Plus, ClipboardList, Search, X, Eye, Download, Send } from 'lucide-react';
-import { PartnerInvoiceBulkActionsBar } from '@/components/admin/partner-billing/PartnerInvoiceBulkActionsBar';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 // Simple type for partner invoice filters
@@ -50,8 +49,6 @@ interface PartnerInvoicesTableProps {
   setPagination: (pagination: PaginationState) => void;
   sorting: SortingState;
   setSorting: (sorting: SortingState) => void;
-  rowSelection: RowSelectionState;
-  setRowSelection: (selection: RowSelectionState) => void;
   columnVisibility?: VisibilityState;
   setColumnVisibility?: (visibility: VisibilityState) => void;
   onInvoiceClick: (invoice: any) => void;
@@ -63,13 +60,7 @@ interface PartnerInvoicesTableProps {
   filters?: PartnerInvoiceFiltersValue;
   onFiltersChange?: (filters: PartnerInvoiceFiltersValue) => void;
   onClearFilters?: () => void;
-  // Bulk actions
-  bulkMode?: boolean;
-  onBulkGeneratePdf?: (ids: string[]) => void;
-  onBulkSendInvoice?: (ids: string[]) => void;
-  onBulkUpdateStatus?: (ids: string[], status: string) => void;
-  onBulkDelete?: (ids: string[]) => void;
-  onExport?: (format: 'csv' | 'excel', ids?: string[]) => void;
+  onExport?: (format: 'csv' | 'excel') => void;
   // Column visibility
   allColumns?: Array<{ id: string; label: string; visible: boolean; canHide: boolean }>;
   onToggleColumn?: (columnId: string) => void;
@@ -94,8 +85,6 @@ export function PartnerInvoicesTable({
   setPagination,
   sorting,
   setSorting,
-  rowSelection,
-  setRowSelection,
   columnVisibility = {},
   setColumnVisibility,
   onInvoiceClick,
@@ -107,11 +96,6 @@ export function PartnerInvoicesTable({
   filters = {},
   onFiltersChange,
   onClearFilters,
-  bulkMode = false,
-  onBulkGeneratePdf,
-  onBulkSendInvoice,
-  onBulkUpdateStatus,
-  onBulkDelete,
   onExport,
   allColumns = [],
   onToggleColumn,
@@ -148,15 +132,12 @@ export function PartnerInvoicesTable({
     getFilteredRowModel: getFilteredRowModel(),
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
-    onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
     state: {
       pagination,
       sorting,
-      rowSelection,
       columnVisibility,
     },
-    enableRowSelection: true,
     manualPagination: false,
     getRowId: (row) => row.id,
   });
@@ -164,9 +145,6 @@ export function PartnerInvoicesTable({
   // Clear search
   const clearSearch = () => setSearchTerm('');
 
-  // Selected invoice IDs for bulk operations
-  const selectedIds = Object.keys(rowSelection);
-  const hasSelection = selectedIds.length > 0;
 
   if (error) {
     return (
@@ -236,12 +214,6 @@ export function PartnerInvoicesTable({
               </div>
             )}
 
-            {/* Mobile bulk actions */}
-            {bulkMode && hasSelection && (
-              <div className="bg-muted/50 p-3 rounded-lg">
-                <p className="text-sm font-medium">{selectedIds.length} selected</p>
-              </div>
-            )}
           </div>
 
           {/* Mobile content */}
@@ -275,8 +247,6 @@ export function PartnerInvoicesTable({
                       { label: 'Due', value: invoice.due_date ? format(new Date(invoice.due_date), 'MMM dd, yyyy') : 'No due date' },
                       { label: 'Amount', value: formatCurrency(invoice.total_amount || 0) }
                     ]}
-                    selected={bulkMode ? row.getIsSelected() : undefined}
-                    onSelect={bulkMode ? (selected) => row.toggleSelected(selected) : undefined}
                   />
                 );
               })}
@@ -341,7 +311,7 @@ export function PartnerInvoicesTable({
             
             {onExport && (
               <ExportDropdown
-                onExport={(format) => onExport(format)}
+                onExport={onExport}
                 disabled={filteredData.length === 0}
               />
             )}
@@ -355,20 +325,6 @@ export function PartnerInvoicesTable({
           </div>
         </div>
 
-        {/* Bulk actions bar */}
-        {bulkMode && hasSelection && (
-          <PartnerInvoiceBulkActionsBar
-            selectedCount={selectedIds.length}
-            selectedIds={selectedIds}
-            onGeneratePDFs={() => onBulkGeneratePdf?.(selectedIds)}
-            onSendEmails={() => onBulkSendInvoice?.(selectedIds)}
-            onUpdateStatus={() => onBulkUpdateStatus?.(selectedIds, 'sent')}
-            onBulkEdit={() => {/* TODO: Implement bulk edit */}}
-            onBulkDelete={() => onBulkDelete?.(selectedIds)}
-            onExport={(format) => onExport?.(format, selectedIds)}
-            onClearSelection={() => setRowSelection({})}
-          />
-        )}
       </CardHeader>
 
       <CardContent>
@@ -470,8 +426,6 @@ export function PartnerInvoicesTable({
                           ...(onDownloadPdf ? [{ label: 'Download PDF', icon: Download, onClick: () => onDownloadPdf(invoice) }] : []),
                           ...(onSendInvoice ? [{ label: 'Send', icon: Send, onClick: () => onSendInvoice(invoice) }] : [])
                         ]}
-                        selected={bulkMode ? row.getIsSelected() : undefined}
-                        onSelect={bulkMode ? (selected) => row.toggleSelected(selected) : undefined}
                       />
                     );
                   })

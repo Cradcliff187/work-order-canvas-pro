@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { PaginationState, SortingState, ColumnDef, RowSelectionState, VisibilityState } from '@tanstack/react-table';
+import { PaginationState, SortingState, ColumnDef, VisibilityState } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, CheckSquare } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { usePartnerInvoices } from '@/hooks/usePartnerInvoices';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { PartnerInvoicesTable } from '@/components/admin/partner-billing/PartnerInvoicesTable';
@@ -13,13 +13,10 @@ import { createPartnerInvoiceColumns, PARTNER_INVOICE_COLUMN_METADATA, type Part
 import type { PartnerInvoiceFiltersValue } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
 import { PartnerInvoicesBreadcrumb } from '@/components/admin/partner-billing/PartnerInvoicesBreadcrumb';
 import { usePartnerInvoiceFilterCount } from '@/components/admin/partner-billing/CompactPartnerInvoiceFilters';
-import { PartnerInvoiceBulkActionsBar } from '@/components/admin/partner-billing/PartnerInvoiceBulkActionsBar';
-import { PartnerInvoiceBulkEditModal } from '@/components/admin/partner-billing/PartnerInvoiceBulkEditModal';
 import { useViewMode } from '@/hooks/useViewMode';
 import { useToast } from '@/hooks/use-toast';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
-import { usePartnerInvoiceBatch } from '@/hooks/usePartnerInvoiceBatch';
 import { usePartnerInvoiceActions } from '@/hooks/usePartnerInvoiceActions';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { Database } from '@/integrations/supabase/types';
@@ -31,16 +28,10 @@ export default function PartnerInvoices() {
   const isMobile = useIsMobile();
 
   // State management
-  const [bulkMode, setBulkMode] = useState(false);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
-  const [bulkEditInvoices, setBulkEditInvoices] = useState<any[]>([]);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<PartnerInvoice | null>(null);
-  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
-  const [invoicesToDelete, setInvoicesToDelete] = useState<string[]>([]);
 
   // Define initial filters
   const initialFilters: PartnerInvoiceFiltersValue = {
@@ -72,9 +63,6 @@ export default function PartnerInvoices() {
     defaultMode: 'table'
   });
 
-  // Batch operations hook
-  const { batchGeneratePdf, batchSendEmails, batchDelete, operations, isProcessing, clearOperations } = usePartnerInvoiceBatch();
-
   // Partner invoice actions hook
   const { generatePdf, sendInvoice, updateStatus, deleteInvoice, isDeletingInvoice } = usePartnerInvoiceActions();
 
@@ -86,49 +74,6 @@ export default function PartnerInvoices() {
     legacyKeys: []
   });
 
-  // Selection handlers
-  const selectedIds = Object.keys(rowSelection);
-  const selectedInvoices = invoices.filter(invoice => selectedIds.includes(invoice.id));
-
-  const clearSelection = () => {
-    setRowSelection({});
-  };
-
-  // Bulk action handlers
-  const handleBulkGeneratePDF = (ids: string[]) => {
-    batchGeneratePdf(ids);
-    clearSelection();
-  };
-
-  const handleBulkSendEmails = (ids: string[]) => {
-    batchSendEmails(ids);
-    clearSelection();
-  };
-
-  const handleBulkUpdateStatus = (ids: string[]) => {
-    // For now, open bulk edit modal - this could be expanded to a status-specific modal
-    const invoicesToEdit = invoices.filter(invoice => ids.includes(invoice.id));
-    setBulkEditInvoices(invoicesToEdit);
-    setShowBulkEditModal(true);
-  };
-
-  const handleBulkEdit = (ids: string[]) => {
-    const invoicesToEdit = invoices.filter(invoice => ids.includes(invoice.id));
-    setBulkEditInvoices(invoicesToEdit);
-    setShowBulkEditModal(true);
-  };
-
-  const handleBulkEditSave = async (changes: any) => {
-    // This would typically call a bulk update mutation
-    console.log('Bulk edit changes:', changes, 'for invoices:', bulkEditInvoices);
-    toast({
-      title: 'Success',
-      description: `Updated ${bulkEditInvoices.length} invoices`,
-    });
-    setShowBulkEditModal(false);
-    setBulkEditInvoices([]);
-    clearSelection();
-  };
 
   // Individual action handlers
   const handleGeneratePdf = (invoice: any) => {
@@ -161,10 +106,6 @@ export default function PartnerInvoices() {
     setShowDeleteDialog(true);
   };
 
-  const handleBulkDelete = (ids: string[]) => {
-    setInvoicesToDelete(ids);
-    setShowBulkDeleteDialog(true);
-  };
 
   const confirmDelete = async () => {
     if (invoiceToDelete) {
@@ -174,14 +115,6 @@ export default function PartnerInvoices() {
     }
   };
 
-  const confirmBulkDelete = async () => {
-    if (invoicesToDelete.length > 0) {
-      batchDelete(invoicesToDelete);
-      setShowBulkDeleteDialog(false);
-      setInvoicesToDelete([]);
-      clearSelection();
-    }
-  };
 
   // Export handlers
   const handleExportAll = async (format: 'csv' | 'excel') => {
@@ -201,24 +134,6 @@ export default function PartnerInvoices() {
     }
   };
 
-  const handleExport = (format: 'csv' | 'excel', ids: string[]) => {
-    try {
-      const selectedData = invoices.filter(inv => ids.includes(inv.id));
-      if (!selectedData || selectedData.length === 0) {
-        toast({ title: 'No data to export', variant: 'destructive' });
-        return;
-      }
-      
-      // exportPartnerInvoices(selectedData, format); // Implement this utility function
-      toast({ title: `Successfully exported ${ids.length} invoices as ${format.toUpperCase()}` });
-    } catch (error) {
-      toast({ 
-        title: 'Export failed', 
-        description: 'Failed to export invoices. Please try again.',
-        variant: 'destructive' 
-      });
-    }
-  };
 
   const handleInvoiceClick = (invoice: any) => {
     navigate(`/admin/partner-billing/invoices/${invoice.id}`);
@@ -253,7 +168,7 @@ export default function PartnerInvoices() {
 
   return (
     <div className="flex-1 space-y-4 overflow-x-hidden">
-      <div className={cn("max-w-full p-4 md:p-6 space-y-6", bulkMode && Object.keys(rowSelection).length > 0 && "pb-24 sm:pb-28")}>
+      <div className="max-w-full p-4 md:p-6 space-y-6">
         {/* Breadcrumb */}
         <PartnerInvoicesBreadcrumb />
         
@@ -266,50 +181,17 @@ export default function PartnerInvoices() {
             <p className="text-muted-foreground">
               {invoices.length} total invoices
             </p>
-            {bulkMode && (
-              <p className="text-sm text-primary mt-1">
-                Select invoices using checkboxes, then use the action bar below
-              </p>
-            )}
           </div>
           
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button
-              variant={bulkMode ? "default" : "outline"}
-              onClick={() => setBulkMode(!bulkMode)}
-              className="flex-1 sm:flex-initial h-9"
-            >
-              <CheckSquare className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">{bulkMode ? "Exit Bulk Mode" : "Select Multiple"}</span>
-              <span className="sm:hidden">{bulkMode ? "Exit Bulk" : "Select"}</span>
-            </Button>
-            
-            <Button 
-              onClick={() => navigate('/admin/partner-billing/select-reports')} 
-              className="flex-1 sm:flex-initial h-9"
-            >
-              <Plus className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Create Invoice</span>
-              <span className="sm:hidden">Create</span>
-            </Button>
-          </div>
+          <Button 
+            onClick={() => navigate('/admin/partner-billing/select-reports')} 
+            className="h-9"
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Create Invoice</span>
+            <span className="sm:hidden">Create</span>
+          </Button>
         </header>
-
-        {/* Bulk actions bar - shown when items are selected */}
-        {bulkMode && selectedIds.length > 0 && (
-          <PartnerInvoiceBulkActionsBar
-            selectedCount={selectedIds.length}
-            selectedIds={selectedIds}
-            onClearSelection={clearSelection}
-            onExport={handleExport}
-            onGeneratePDFs={handleBulkGeneratePDF}
-            onSendEmails={handleBulkSendEmails}
-            onUpdateStatus={handleBulkUpdateStatus}
-            onBulkEdit={handleBulkEdit}
-            onBulkDelete={handleBulkDelete}
-            loading={isProcessing}
-          />
-        )}
 
         {/* Partner Invoices Table */}
         <PartnerInvoicesTable
@@ -317,16 +199,12 @@ export default function PartnerInvoices() {
           isLoading={isLoading}
           viewMode={viewMode}
           setViewMode={setViewMode}
-          bulkMode={bulkMode}
-          rowSelection={rowSelection}
-          setRowSelection={setRowSelection}
           onInvoiceClick={handleInvoiceClick}
-          onExport={handleExport}
+          onExport={handleExportAll}
           onGeneratePdf={handleGeneratePdf}
           onSendInvoice={handleSendInvoice}
           onDownloadPdf={handleDownloadPdf}
           onUpdateStatus={handleUpdateStatus}
-          onBulkDelete={handleBulkDelete}
           // Column visibility props
           columnVisibility={columnVisibilityHook.columnVisibility}
           setColumnVisibility={columnVisibilityHook.setColumnVisibility}
@@ -353,33 +231,13 @@ export default function PartnerInvoices() {
         />
       </div>
 
-      {/* Bulk Edit Modal */}
-      <PartnerInvoiceBulkEditModal
-        isOpen={showBulkEditModal}
-        onClose={() => {
-          setShowBulkEditModal(false);
-          setBulkEditInvoices([]);
-        }}
-        invoices={bulkEditInvoices}
-        onSave={handleBulkEditSave}
-      />
-
-      {/* Delete Confirmation Dialogs */}
+      {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         onConfirm={confirmDelete}
         itemName={invoiceToDelete?.invoice_number || 'this invoice'}
         itemType="invoice"
-        isLoading={isDeletingInvoice}
-      />
-
-      <DeleteConfirmationDialog
-        open={showBulkDeleteDialog}
-        onOpenChange={setShowBulkDeleteDialog}
-        onConfirm={confirmBulkDelete}
-        itemName={`${invoicesToDelete.length} invoices`}
-        itemType="bulk"
         isLoading={isDeletingInvoice}
       />
     </div>
