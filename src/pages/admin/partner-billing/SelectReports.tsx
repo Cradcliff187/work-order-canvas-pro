@@ -60,7 +60,7 @@ export default function SelectBills() {
     return v || undefined;
   });
   // Unified selection state
-  const [selectedUnifiedIds, setSelectedUnifiedIds] = useState<Set<string>>(new Set());
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [markupPercentage, setMarkupPercentage] = useState<number>(() => {
     const v = localStorage.getItem('pb.markupPercentage');
     return v !== null ? Number(v) : 20;
@@ -258,7 +258,7 @@ export default function SelectBills() {
 
   // Calculate totals from unified selection
   const calculations = useMemo(() => {
-    const selectedItems = Array.from(selectedUnifiedIds).map(id => 
+    const selectedItems = Array.from(selectedItemIds).map(id =>
       unifiedItems.find(item => item.id === id)
     ).filter(Boolean);
     
@@ -267,11 +267,11 @@ export default function SelectBills() {
     const total = subtotal + markupAmount;
     
     return { subtotal, markupAmount, total, selectedItems };
-  }, [selectedUnifiedIds, unifiedItems, markupPercentage]);
+  }, [selectedItemIds, unifiedItems, markupPercentage]);
 
   // Unified selection handlers
   const handleUnifiedItemToggle = (id: string, checked: boolean) => {
-    setSelectedUnifiedIds(prev => {
+    setSelectedItemIds(prev => {
       const newSet = new Set(prev);
       if (checked) {
         newSet.add(id);
@@ -284,12 +284,12 @@ export default function SelectBills() {
 
   const handleSelectAll = () => {
     if (!paginatedUnifiedItems) return;
-    const allCurrentItemsSelected = paginatedUnifiedItems.every(item => selectedUnifiedIds.has(item.id));
+    const allCurrentItemsSelected = paginatedUnifiedItems.every(item => selectedItemIds.has(item.id));
     
     if (allCurrentItemsSelected) {
       // Deselect all current page items
       paginatedUnifiedItems.forEach(item => {
-        setSelectedUnifiedIds(prev => {
+        setSelectedItemIds(prev => {
           const newSet = new Set(prev);
           newSet.delete(item.id);
           return newSet;
@@ -298,7 +298,7 @@ export default function SelectBills() {
     } else {
       // Select all current page items
       paginatedUnifiedItems.forEach(item => {
-        setSelectedUnifiedIds(prev => new Set(prev).add(item.id));
+        setSelectedItemIds(prev => new Set(prev).add(item.id));
       });
     }
   };
@@ -317,9 +317,9 @@ export default function SelectBills() {
 
   const handleExportSelected = (exportFormat: 'csv' | 'excel') => {
     try {
-      if (selectedUnifiedIds.size === 0) return;
+      if (selectedItemIds.size === 0) return;
 
-      const selectedItems = Array.from(selectedUnifiedIds).map(id => 
+      const selectedItems = Array.from(selectedItemIds).map(id => 
         unifiedItems.find(item => item.id === id)
       ).filter(Boolean);
       
@@ -358,7 +358,7 @@ export default function SelectBills() {
   };
 
   const handleGenerateInvoice = () => {
-    if (!selectedPartnerId || selectedUnifiedIds.size === 0) return;
+    if (!selectedPartnerId || selectedItemIds.size === 0) return;
     
     // Validate minimum invoice amount
     if (calculations.subtotal < 0.01) {
@@ -375,7 +375,7 @@ export default function SelectBills() {
     const reportIds: string[] = [];
     const employeeTimeIds: string[] = [];
 
-    Array.from(selectedUnifiedIds).forEach(id => {
+    Array.from(selectedItemIds).forEach(id => {
       const item = unifiedItems.find(item => item.id === id);
       if (item) {
         switch (item.type) {
@@ -405,7 +405,7 @@ export default function SelectBills() {
     }, {
       onSuccess: (result) => {
         // Clear selection
-        setSelectedUnifiedIds(new Set());
+        setSelectedItemIds(new Set());
         setShowConfirmDialog(false);
         // Navigate to invoice detail
         navigate(`/admin/partner-billing/invoices/${result.invoiceId}`);
@@ -562,12 +562,12 @@ export default function SelectBills() {
                         onClick={handleSelectAll}
                         disabled={!paginatedUnifiedItems || paginatedUnifiedItems.length === 0}
                       >
-                        {paginatedUnifiedItems?.every(item => selectedUnifiedIds.has(item.id)) ? 'Deselect All' : 'Select All'}
+                        {paginatedUnifiedItems?.every(item => selectedItemIds.has(item.id)) ? 'Deselect All' : 'Select All'}
                       </Button>
-                      {selectedUnifiedIds.size > 0 && (
+                      {selectedItemIds.size > 0 && (
                         <ExportDropdown 
                           onExport={handleExportSelected} 
-                          disabled={selectedUnifiedIds.size === 0}
+                          disabled={selectedItemIds.size === 0}
                         />
                       )}
                     </div>
@@ -611,7 +611,7 @@ export default function SelectBills() {
                             <TableRow>
                               <TableHead className="w-12">
                                 <Checkbox
-                                  checked={paginatedUnifiedItems.length > 0 && paginatedUnifiedItems.every(item => selectedUnifiedIds.has(item.id))}
+                                  checked={paginatedUnifiedItems.length > 0 && paginatedUnifiedItems.every(item => selectedItemIds.has(item.id))}
                                   onCheckedChange={handleSelectAll}
                                   aria-label="Select all visible items"
                                 />
@@ -646,7 +646,7 @@ export default function SelectBills() {
                           </TableHeader>
                           <TableBody>
                             {paginatedUnifiedItems.map((item) => {
-                              const isSelected = selectedUnifiedIds.has(item.id);
+                              const isSelected = selectedItemIds.has(item.id);
                               
                               return (
                                 <TableRow 
@@ -706,7 +706,7 @@ export default function SelectBills() {
                     /* Card View */
                     <div className="space-y-4">
                       {paginatedUnifiedItems.map((item) => {
-                        const isSelected = selectedUnifiedIds.has(item.id);
+                        const isSelected = selectedItemIds.has(item.id);
                         
                         return (
                           <MobileTableCard 
@@ -761,7 +761,7 @@ export default function SelectBills() {
         )}
 
         {/* Selection Summary and Generate Invoice */}
-        {selectedUnifiedIds.size > 0 && (
+        {selectedItemIds.size > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -773,7 +773,7 @@ export default function SelectBills() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold">{selectedUnifiedIds.size}</div>
+                    <div className="text-2xl font-bold">{selectedItemIds.size}</div>
                     <div className="text-sm text-muted-foreground">Selected Items</div>
                   </div>
                   <div className="text-center">
@@ -816,7 +816,7 @@ export default function SelectBills() {
                     <AlertDialogTrigger asChild>
                       <Button 
                         className="gap-2" 
-                        disabled={selectedUnifiedIds.size === 0 || isGeneratingInvoice}
+                        disabled={selectedItemIds.size === 0 || isGeneratingInvoice}
                       >
                         <Receipt className="h-4 w-4" />
                         Generate Partner Invoice
@@ -826,7 +826,7 @@ export default function SelectBills() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Generate Partner Invoice</AlertDialogTitle>
                         <AlertDialogDescription>
-                           This will create a new partner invoice for {selectedUnifiedIds.size} selected item{selectedUnifiedIds.size !== 1 ? 's' : ''} 
+                           This will create a new partner invoice for {selectedItemIds.size} selected item{selectedItemIds.size !== 1 ? 's' : ''} 
                           totaling {formatCurrency(calculations.total)}. This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
