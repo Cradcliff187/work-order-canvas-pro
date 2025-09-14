@@ -238,6 +238,11 @@ export const createPartnerInvoiceColumns = ({
     cell: ({ row }) => {
       const count = (row.original as any).work_orders_count || 0;
       const workOrders = (row.original as any).work_orders || [];
+      console.log('Partner Invoice Row Data:', row.original);
+      console.log('Work Orders Array:', workOrders);
+      if (workOrders.length > 0) {
+        console.log('First Work Order Structure:', workOrders[0]);
+      }
       
       if (count === 0) {
         return (
