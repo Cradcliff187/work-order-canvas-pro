@@ -28,7 +28,7 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [status, setStatus] = useState('pending_review');
+  const [status, setStatus] = useState('draft');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
     setInvoiceNumber(invoice.invoice_number || '');
     setInvoiceDate(invoice.invoice_date ? new Date(invoice.invoice_date).toISOString().slice(0, 10) : '');
     setDueDate(invoice.due_date ? new Date(invoice.due_date).toISOString().slice(0, 10) : '');
-    setStatus(invoice.status || 'pending_review');
+    setStatus(invoice.status || 'draft');
   }, [invoice]);
 
   const handleSave = async () => {
@@ -97,14 +97,9 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending_review">
+                <SelectItem value="draft">
                   <div className="flex items-center gap-2">
-                    <InvoiceStatusBadge status="pending_review" showIcon size="sm" />
-                  </div>
-                </SelectItem>
-                <SelectItem value="approved">
-                  <div className="flex items-center gap-2">
-                    <InvoiceStatusBadge status="approved" showIcon size="sm" />
+                    <InvoiceStatusBadge status="draft" showIcon size="sm" />
                   </div>
                 </SelectItem>
                 <SelectItem value="sent">
@@ -115,6 +110,11 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
                 <SelectItem value="paid">
                   <div className="flex items-center gap-2">
                     <InvoiceStatusBadge status="paid" showIcon size="sm" />
+                  </div>
+                </SelectItem>
+                <SelectItem value="overdue">
+                  <div className="flex items-center gap-2">
+                    <InvoiceStatusBadge status="overdue" showIcon size="sm" />
                   </div>
                 </SelectItem>
                 <SelectItem value="cancelled">

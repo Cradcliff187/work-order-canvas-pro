@@ -179,10 +179,9 @@ export function PartnerInvoiceActions({
   };
 
   const canGeneratePdf = invoice.status !== 'paid';
-  const canApprove = invoice.status === 'pending_review' && invoice.pdf_url;
-  const canSendEmail = invoice.status === 'approved' && invoice.pdf_url;
+  const canSendEmail = invoice.status === 'draft' && !!invoice.pdf_url;
   const canMarkPaid = invoice.status === 'sent';
-  const canReturnToDraft = ['pending_review', 'approved'].includes(invoice.status);
+  const canReturnToDraft = invoice.status === 'sent';
 
   return (
     <DropdownMenu>
@@ -229,15 +228,6 @@ export function PartnerInvoiceActions({
 
         <DropdownMenuSeparator />
 
-        {canApprove && (
-          <DropdownMenuItem
-            onClick={() => handleStatusChange('approved')}
-            disabled={isUpdatingStatus}
-          >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Approve Invoice
-          </DropdownMenuItem>
-        )}
 
         {canSendEmail && (
           <DropdownMenuItem

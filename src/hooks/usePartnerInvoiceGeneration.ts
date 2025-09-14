@@ -121,7 +121,7 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       subtotal: data.subtotal,
       markup_percentage: data.markupPercentage,
       total_amount: data.totalAmount,
-      status: 'pending_review',
+      status: 'draft',
       created_by: userProfile.id
     })
     .select('id')

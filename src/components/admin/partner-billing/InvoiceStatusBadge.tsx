@@ -40,6 +40,11 @@ const statusConfig = {
     className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900 dark:text-red-300',
     icon: AlertCircle,
   },
+  cancelled: {
+    label: 'Cancelled',
+    className: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300',
+    icon: AlertCircle,
+  },
   pending: {
     label: 'Pending',
     className: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300',
