@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useForm } from 'react-hook-form';
@@ -19,7 +19,9 @@ import { parseDateOnly } from '@/lib/utils/date';
 
 const editTimeEntrySchema = z.object({
   report_date: z.date({ required_error: 'Date is required' }),
-  hours_worked: z.number().min(0.25, 'Hours must be at least 0.25').max(24, 'Hours cannot exceed 24'),
+  startTime: z.string().min(1, 'Start time is required'),
+  endTime: z.string().min(1, 'End time is required'),
+  breakMinutes: z.number().min(0, 'Break time cannot be negative').optional(),
   hourly_rate_snapshot: z.number().min(0, 'Rate must be positive'),
   work_performed: z.string().min(1, 'Description is required'),
   notes: z.string().optional(),
@@ -47,6 +49,64 @@ export function TimeEntryEditModal({
   projects
 }: TimeEntryEditModalProps) {
   
+  // Helper functions
+  const getTimeFromTimestamp = (timestamp?: string | null): string => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toTimeString().slice(0, 5); // HH:MM format
+  };
+
+  const calculateBreakMinutes = (): number => {
+    // Check if entry has clock times in different possible property names
+    const clockIn = entry.clock_in_time || (entry as any).clockInTime;
+    const clockOut = entry.clock_out_time || (entry as any).clockOutTime;
+    
+    if (!clockIn || !clockOut) return 0;
+    
+    const clockInTime = new Date(clockIn);
+    const clockOutTime = new Date(clockOut);
+    const totalMinutes = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60);
+    const hoursInMinutes = entry.hours_worked * 60;
+    return Math.max(0, totalMinutes - hoursInMinutes);
+  };
+
+  const calculateHours = (start: string, end: string, breakMinutes: number = 0): number => {
+    if (!start || !end) return 0;
+    const [startHour, startMin] = start.split(':').map(Number);
+    const [endHour, endMin] = end.split(':').map(Number);
+    let totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    if (totalMinutes < 0) totalMinutes += 24 * 60; // Handle overnight
+    totalMinutes -= breakMinutes;
+    return Math.max(0, totalMinutes / 60);
+  };
+
+  const createTimestamp = (date: Date, timeString: string): string => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const timestamp = new Date(date);
+    timestamp.setHours(hours, minutes, 0, 0);
+    return timestamp.toISOString();
+  };
+
+  // Get initial time values, fallback to calculated times if not available
+  const getInitialStartTime = (): string => {
+    const clockIn = entry.clock_in_time || (entry as any).clockInTime;
+    if (clockIn) return getTimeFromTimestamp(clockIn);
+    // Fallback: assume 8-hour day ending at calculated end time
+    return '08:00';
+  };
+
+  const getInitialEndTime = (): string => {
+    const clockOut = entry.clock_out_time || (entry as any).clockOutTime;
+    if (clockOut) return getTimeFromTimestamp(clockOut);
+    // Fallback: calculate based on start time + hours worked
+    const startTime = getInitialStartTime();
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const totalMinutes = startHour * 60 + startMin + (entry.hours_worked * 60);
+    const endHour = Math.floor(totalMinutes / 60) % 24;
+    const endMin = totalMinutes % 60;
+    return `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
+  };
+
   const {
     register,
     handleSubmit,
@@ -57,7 +117,9 @@ export function TimeEntryEditModal({
     resolver: zodResolver(editTimeEntrySchema),
     defaultValues: {
       report_date: parseDateOnly(entry.report_date),
-      hours_worked: entry.hours_worked,
+      startTime: getInitialStartTime(),
+      endTime: getInitialEndTime(),
+      breakMinutes: Math.round(calculateBreakMinutes()),
       hourly_rate_snapshot: entry.hourly_rate_snapshot,
       work_performed: entry.work_performed,
       notes: entry.notes || '',
@@ -69,15 +131,25 @@ export function TimeEntryEditModal({
   const selectedDate = watch('report_date');
   const workOrderId = watch('work_order_id') || 'none';
   const projectId = watch('project_id') || 'none';
+  
+  const watchedValues = watch(['startTime', 'endTime', 'breakMinutes']);
+  const calculatedHours = calculateHours(
+    watchedValues[0], 
+    watchedValues[1], 
+    watchedValues[2] || 0
+  );
 
   const onSubmit = (data: EditTimeEntryForm) => {
     const updatedEntry: TimeEntry = {
       ...entry,
-      ...data,
       report_date: format(data.report_date, 'yyyy-MM-dd'),
+      hours_worked: calculatedHours,
+      hourly_rate_snapshot: data.hourly_rate_snapshot,
+      work_performed: data.work_performed,
+      notes: data.notes || '',
       work_order_id: data.work_order_id === 'none' ? null : data.work_order_id,
       project_id: data.project_id === 'none' ? null : data.project_id,
-      total_labor_cost: data.hours_worked * data.hourly_rate_snapshot,
+      total_labor_cost: calculatedHours * data.hourly_rate_snapshot,
       updated_at: new Date().toISOString(),
     };
     onSave(updatedEntry);
@@ -117,27 +189,12 @@ export function TimeEntryEditModal({
                         selected={selectedDate}
                         onSelect={(date) => setValue('report_date', date!)}
                         initialFocus
+                        className="p-3 pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
                   {errors.report_date && (
                     <p className="text-sm text-destructive">{errors.report_date.message}</p>
-                  )}
-                </div>
-
-                {/* Hours */}
-                <div className="space-y-2">
-                  <Label htmlFor="hours">Hours Worked</Label>
-                  <Input
-                    id="hours"
-                    type="number"
-                    step="0.25"
-                    min="0.25"
-                    max="24"
-                    {...register('hours_worked', { valueAsNumber: true })}
-                  />
-                  {errors.hours_worked && (
-                    <p className="text-sm text-destructive">{errors.hours_worked.message}</p>
                   )}
                 </div>
 
@@ -155,51 +212,108 @@ export function TimeEntryEditModal({
                     <p className="text-sm text-destructive">{errors.hourly_rate_snapshot.message}</p>
                   )}
                 </div>
+              </div>
 
-                {/* Work Item Selection */}
+              {/* Time Inputs */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Work Item</Label>
-                  <div className="space-y-2">
-                    <Select
-                      value={workOrderId}
-                      onValueChange={(value) => {
-                        setValue('work_order_id', value === 'none' ? '' : value);
-                        if (value && value !== 'none') setValue('project_id', 'none');
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select work order..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No work order</SelectItem>
-                        {workOrders.map((wo) => (
-                          <SelectItem key={wo.id} value={wo.id}>
-                            {wo.work_order_number} - {wo.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select
-                      value={projectId}
-                      onValueChange={(value) => {
-                        setValue('project_id', value === 'none' ? '' : value);
-                        if (value && value !== 'none') setValue('work_order_id', 'none');
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Or select project..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No project</SelectItem>
-                        {projects.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.project_number} - {project.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <Label>Start Time *</Label>
+                  <div className="relative">
+                    <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="time"
+                      {...register('startTime')}
+                      className={cn("pl-8", errors.startTime && "border-destructive")}
+                    />
                   </div>
+                  {errors.startTime && (
+                    <p className="text-sm text-destructive">{errors.startTime.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>End Time *</Label>
+                  <div className="relative">
+                    <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="time"
+                      {...register('endTime')}
+                      className={cn("pl-8", errors.endTime && "border-destructive")}
+                    />
+                  </div>
+                  {errors.endTime && (
+                    <p className="text-sm text-destructive">{errors.endTime.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Break (minutes)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    {...register('breakMinutes', { valueAsNumber: true })}
+                    className={errors.breakMinutes ? 'border-destructive' : ''}
+                  />
+                  {errors.breakMinutes && (
+                    <p className="text-sm text-destructive">{errors.breakMinutes.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Calculated Hours Display */}
+              <div className="bg-muted/50 p-3 rounded-md">
+                <div className="text-sm font-medium text-muted-foreground mb-1">Calculated Hours</div>
+                <div className="text-xl font-bold text-primary">
+                  {calculatedHours.toFixed(2)} hours
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Total: ${(calculatedHours * (watch('hourly_rate_snapshot') || 0)).toFixed(2)}
+                </div>
+              </div>
+
+              {/* Work Item Selection */}
+              <div className="space-y-2">
+                <Label>Work Item</Label>
+                <div className="space-y-2">
+                  <Select
+                    value={workOrderId}
+                    onValueChange={(value) => {
+                      setValue('work_order_id', value === 'none' ? '' : value);
+                      if (value && value !== 'none') setValue('project_id', 'none');
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select work order..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No work order</SelectItem>
+                      {workOrders.map((wo) => (
+                        <SelectItem key={wo.id} value={wo.id}>
+                          {wo.work_order_number} - {wo.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={projectId}
+                    onValueChange={(value) => {
+                      setValue('project_id', value === 'none' ? '' : value);
+                      if (value && value !== 'none') setValue('work_order_id', 'none');
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Or select project..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No project</SelectItem>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.project_number} - {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

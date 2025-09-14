@@ -23,6 +23,8 @@ export interface TimeEntry {
   materials_cost?: number;
   created_at: string;
   updated_at: string;
+  clock_in_time?: string | null;
+  clock_out_time?: string | null;
   employee: {
     id: string;
     first_name: string;
@@ -116,6 +118,8 @@ export function useTimeManagement(filters: TimeManagementFilters) {
           rejection_reason,
           created_at,
           updated_at,
+          clock_in_time,
+          clock_out_time,
           employee:profiles!employee_user_id(
             id,
             first_name,
