@@ -3,6 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Eye, FileText, Send, Download, Mail, DollarSign, ArrowUpDown, Copy, Trash2 } from 'lucide-react';
 import { InvoiceStatusBadge } from '@/components/admin/partner-billing/InvoiceStatusBadge';
 import { formatCurrency } from '@/utils/formatting';
@@ -13,6 +14,13 @@ import { Database } from '@/integrations/supabase/types';
 // Shared type for Partner Invoice
 export type PartnerInvoice = Database['public']['Tables']['partner_invoices']['Row'] & {
   partner_organization?: { name: string } | null;
+  work_orders?: Array<{
+    id: string;
+    work_order_number: string;
+    title: string;
+    amount: number;
+  }> | null;
+  work_orders_count?: number;
 };
 
 // Column metadata for visibility management
@@ -50,7 +58,7 @@ export const PARTNER_INVOICE_COLUMN_METADATA: Record<string, ColumnMetadata> = {
   work_orders_count: { 
     label: 'Work Orders', 
     description: 'Number of associated work orders',
-    defaultVisible: false 
+    defaultVisible: true 
   },
   actions: { 
     label: 'Actions', 
@@ -229,10 +237,48 @@ export const createPartnerInvoiceColumns = ({
     maxSize: 120,
     cell: ({ row }) => {
       const count = (row.original as any).work_orders_count || 0;
+      const workOrders = (row.original as any).work_orders || [];
+      
+      if (count === 0) {
+        return (
+          <Badge variant="outline" className="font-mono text-muted-foreground">
+            0
+          </Badge>
+        );
+      }
+
       return (
-        <Badge variant="secondary" className="font-mono">
-          {count}
-        </Badge>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="secondary" className="font-mono cursor-help">
+                {count}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-sm">
+              <div className="space-y-1">
+                <p className="font-medium text-xs mb-2">Associated Work Orders:</p>
+                {workOrders.slice(0, 5).map((wo: any) => (
+                  <div key={wo.work_order_id} className="text-xs">
+                    <div className="font-mono">{wo.work_order?.work_order_number}</div>
+                    <div className="text-muted-foreground truncate max-w-[200px]">
+                      {wo.work_order?.title}
+                    </div>
+                    <div className="font-medium">{formatCurrency(wo.amount)}</div>
+                    {workOrders.indexOf(wo) < workOrders.length - 1 && (
+                      <hr className="my-1 border-border" />
+                    )}
+                  </div>
+                ))}
+                {workOrders.length > 5 && (
+                  <div className="text-xs text-muted-foreground pt-1">
+                    +{workOrders.length - 5} more work orders
+                  </div>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     },
   },

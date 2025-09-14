@@ -4,9 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
+import { formatCurrency } from '@/utils/formatting';
 
 interface PartnerInvoice {
   id: string;
@@ -15,6 +19,16 @@ interface PartnerInvoice {
   due_date?: string | null;
   status: string;
   qb_invoice_number?: string | null;
+  work_orders?: Array<{
+    id: string;
+    work_order_id: string;
+    amount: number;
+    description?: string;
+    work_order?: {
+      work_order_number: string;
+      title: string;
+    };
+  }>;
 }
 
 interface EditPartnerInvoiceSheetProps {
@@ -32,6 +46,16 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
   const [qbInvoiceNumber, setQbInvoiceNumber] = useState('');
   const [status, setStatus] = useState('draft');
   const [isSaving, setIsSaving] = useState(false);
+  const [workOrders, setWorkOrders] = useState<Array<{
+    id: string;
+    work_order_id: string;
+    amount: number;
+    description?: string;
+    work_order?: {
+      work_order_number: string;
+      title: string;
+    };
+  }>>([]);
 
   useEffect(() => {
     if (!invoice) return;
@@ -40,6 +64,7 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
     setDueDate(invoice.due_date ? new Date(invoice.due_date).toISOString().slice(0, 10) : '');
     setQbInvoiceNumber(invoice.qb_invoice_number || '');
     setStatus(invoice.status || 'draft');
+    setWorkOrders(invoice.work_orders || []);
   }, [invoice]);
 
   const handleSave = async () => {
@@ -133,6 +158,42 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
               </SelectContent>
             </Select>
           </div>
+          
+          {workOrders.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Associated Work Orders</Label>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {workOrders.map((wo) => (
+                    <div key={wo.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-mono text-sm font-medium">
+                          {wo.work_order?.work_order_number}
+                        </div>
+                        <div className="text-sm text-muted-foreground truncate">
+                          {wo.work_order?.title}
+                        </div>
+                        {wo.description && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {wo.description}
+                          </div>
+                        )}
+                      </div>
+                      <div className="ml-4 text-right">
+                        <Badge variant="secondary" className="font-mono">
+                          {formatCurrency(wo.amount)}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Work order associations are managed when generating invoices.
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <SheetFooter className="mt-6 gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>

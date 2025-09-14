@@ -90,7 +90,49 @@ export const createBillColumns = ({
     header: 'Work Orders',
     cell: ({ row }) => {
       const count = row.original.workOrderCount || 0;
-      return <span className="text-sm">{count}</span>;
+      const workOrders = row.original.subcontractor_bill_work_orders || [];
+      
+      if (count === 0) {
+        return (
+          <Badge variant="outline" className="font-mono text-muted-foreground">
+            0
+          </Badge>
+        );
+      }
+
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="secondary" className="font-mono cursor-help">
+                {count}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-sm">
+              <div className="space-y-1">
+                <p className="font-medium text-xs mb-2">Associated Work Orders:</p>
+                {workOrders.slice(0, 5).map((wo: any, index: number) => (
+                  <div key={wo.work_order_id || index} className="text-xs">
+                    <div className="font-mono">{wo.work_orders?.work_order_number}</div>
+                    <div className="text-muted-foreground truncate max-w-[200px]">
+                      {wo.work_orders?.title}
+                    </div>
+                    <div className="font-medium">{formatCurrency(wo.amount)}</div>
+                    {index < Math.min(workOrders.length, 5) - 1 && (
+                      <hr className="my-1 border-border" />
+                    )}
+                  </div>
+                ))}
+                {workOrders.length > 5 && (
+                  <div className="text-xs text-muted-foreground pt-1">
+                    +{workOrders.length - 5} more work orders
+                  </div>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
     },
     enableHiding: false,
   },
