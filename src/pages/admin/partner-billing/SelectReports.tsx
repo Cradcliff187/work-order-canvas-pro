@@ -140,6 +140,52 @@ export default function SelectBills() {
   const employeeTimeEntries = partnerData?.employeeTimeEntries || [];
   const { mutate: generateInvoice, isPending: isGeneratingInvoice } = usePartnerInvoiceGeneration();
 
+  // Transform all billable items into unified format
+  const unifiedItems = useMemo(() => {
+    const items: UnifiedBillableItem[] = [];
+    
+    // Transform bills
+    bills?.forEach(bill => {
+      items.push({
+        id: bill.bill_id,
+        type: 'bill',
+        reference: bill.internal_bill_number,
+        description: bill.subcontractor_org_name,
+        date: bill.bill_date,
+        amount: bill.total_amount || 0,
+        originalData: bill
+      });
+    });
+    
+    // Transform internal reports
+    internalReports?.forEach(report => {
+      items.push({
+        id: report.id,
+        type: 'internal',
+        reference: report.work_order_number,
+        description: report.title,
+        date: '', // Internal reports don't have dates in current structure
+        amount: report.bill_amount || 0,
+        originalData: report
+      });
+    });
+    
+    // Transform employee time entries
+    employeeTimeEntries?.forEach(entry => {
+      items.push({
+        id: entry.id,
+        type: 'time',
+        reference: entry.work_order_number,
+        description: `${entry.employee_name} - ${entry.hours_worked}h`,
+        date: entry.report_date,
+        amount: entry.bill_amount || 0,
+        originalData: entry
+      });
+    });
+    
+    return items;
+  }, [bills, internalReports, employeeTimeEntries]);
+
   // Apply filters to bills with inline filtering logic
   const filteredBills = useMemo(() => {
     if (!bills) return [];
