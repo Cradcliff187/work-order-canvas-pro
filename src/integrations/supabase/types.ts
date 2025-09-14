@@ -828,6 +828,48 @@ export type Database = {
           },
         ]
       }
+      partner_invoice_work_orders: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          partner_invoice_id: string
+          work_order_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          partner_invoice_id: string
+          work_order_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          partner_invoice_id?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_partner_invoice_work_orders_invoice_id"
+            columns: ["partner_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_partner_invoice_work_orders_work_order_id"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_invoices: {
         Row: {
           created_at: string

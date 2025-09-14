@@ -47,10 +47,10 @@ export const PARTNER_INVOICE_COLUMN_METADATA: Record<string, ColumnMetadata> = {
     description: 'Total invoice amount',
     defaultVisible: true 
   },
-  status: { 
-    label: 'Status', 
-    description: 'Current invoice status',
-    defaultVisible: true 
+  work_orders_count: { 
+    label: 'Work Orders', 
+    description: 'Number of associated work orders',
+    defaultVisible: false 
   },
   actions: { 
     label: 'Actions', 
@@ -212,6 +212,29 @@ export const createPartnerInvoiceColumns = ({
       return <span className="font-medium">{formatCurrency(amount || 0)}</span>;
     },
     meta: { align: 'right' },
+  },
+  {
+    id: 'work_orders_count',
+    accessorFn: (row) => (row as any).work_orders_count || 0,
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+      >
+        Work Orders
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    maxSize: 120,
+    cell: ({ row }) => {
+      const count = (row.original as any).work_orders_count || 0;
+      return (
+        <Badge variant="secondary" className="font-mono">
+          {count}
+        </Badge>
+      );
+    },
   },
   {
     accessorKey: 'status',

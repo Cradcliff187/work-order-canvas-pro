@@ -13,12 +13,32 @@ export function usePartnerInvoices() {
             id,
             name,
             contact_email
+          ),
+          partner_invoice_work_orders(
+            id,
+            work_order_id,
+            amount,
+            description,
+            work_order:work_orders!work_order_id(
+              id,
+              work_order_number,
+              title,
+              store_location,
+              street_address,
+              city,
+              state,
+              description
+            )
           )
         `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      return (data || []).map(invoice => ({
+        ...invoice,
+        work_orders_count: invoice.partner_invoice_work_orders?.length || 0,
+        work_orders: invoice.partner_invoice_work_orders || []
+      }));
     }
   });
 }

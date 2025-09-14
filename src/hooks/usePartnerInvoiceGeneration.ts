@@ -133,9 +133,10 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
 
   // Create line items from both bills and employee reports
   const lineItems = [];
+  const workOrderAssociations = [];
   
-  // Add bill line items
-  selectedBills.forEach(bill => {
+  // Add bill line items and work order associations
+  for (const bill of selectedBills) {
     const cost = bill.total_amount || 0;
     const markupAmount = cost * (data.markupPercentage / 100);
     const totalAmount = cost + markupAmount;
@@ -146,9 +147,29 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       amount: totalAmount,
       description: `Bill ${bill.internal_bill_number}${bill.external_bill_number ? ` (${bill.external_bill_number})` : ''}`
     });
-  });
+
+    // Create work order associations from bills
+    const { data: billWorkOrders } = await supabase
+      .from('subcontractor_bill_work_orders')
+      .select('work_order_id, amount, description')
+      .eq('subcontractor_bill_id', bill.id);
+
+    if (billWorkOrders) {
+      billWorkOrders.forEach(billWO => {
+        const markupAmount = (billWO.amount || 0) * (data.markupPercentage / 100);
+        const totalWithMarkup = (billWO.amount || 0) + markupAmount;
+        
+        workOrderAssociations.push({
+          partner_invoice_id: partnerInvoice.id,
+          work_order_id: billWO.work_order_id,
+          amount: totalWithMarkup,
+          description: billWO.description || `Work order from bill ${bill.internal_bill_number}`
+        });
+      });
+    }
+  }
   
-  // Add internal reports to line items
+  // Add internal reports to line items and work order associations
   internalReports?.forEach(report => {
     const cost = report.bill_amount || 0;
     const markupAmount = cost * (data.markupPercentage / 100);
@@ -160,9 +181,17 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       amount: totalWithMarkup,
       description: `Internal Work - ${report.work_orders.work_order_number}: ${report.work_orders.title}`
     });
+
+    // Add work order association for internal reports
+    workOrderAssociations.push({
+      partner_invoice_id: partnerInvoice.id,
+      work_order_id: report.work_orders.id,
+      amount: totalWithMarkup,
+      description: `Internal Work - ${report.work_orders.work_order_number}: ${report.work_orders.title}`
+    });
   });
 
-  // Add employee time entries to line items
+  // Add employee time entries to line items and work order associations
   employeeTimeEntries?.forEach(entry => {
     const cost = (entry.hours_worked * entry.hourly_rate_snapshot) || 0;
     const markupAmount = cost * (data.markupPercentage / 100);
@@ -176,14 +205,34 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       amount: totalWithMarkup,
       description: `Employee Time - ${entry.work_orders.work_order_number}: ${employeeName} (${entry.hours_worked}h)`
     });
+
+    // Add work order association for employee time entries
+    workOrderAssociations.push({
+      partner_invoice_id: partnerInvoice.id,
+      work_order_id: entry.work_orders.id,
+      amount: totalWithMarkup,
+      description: `Employee Time - ${entry.work_orders.work_order_number}: ${employeeName} (${entry.hours_worked}h)`
+    });
   });
   
+  // Insert line items
   const { error: lineItemsError } = await supabase
     .from('partner_invoice_line_items')
     .insert(lineItems);
     
   if (lineItemsError) {
     throw new Error('Failed to create invoice line items');
+  }
+
+  // Insert work order associations
+  if (workOrderAssociations.length > 0) {
+    const { error: workOrdersError } = await supabase
+      .from('partner_invoice_work_orders')
+      .insert(workOrderAssociations);
+      
+    if (workOrdersError) {
+      throw new Error('Failed to create work order associations');
+    }
   }
 
 

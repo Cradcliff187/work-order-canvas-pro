@@ -50,6 +50,22 @@ interface PartnerInvoiceDetail {
       };
     } | null;
   }>;
+  partner_invoice_work_orders: Array<{
+    id: string;
+    work_order_id: string;
+    amount: number;
+    description?: string;
+    work_order: {
+      id: string;
+      work_order_number: string;
+      title: string;
+      store_location?: string;
+      street_address?: string;
+      city?: string;
+      state?: string;
+      description?: string;
+    };
+  }>;
 }
 
 async function fetchPartnerInvoiceDetail(invoiceId: string): Promise<PartnerInvoiceDetail> {
@@ -76,6 +92,22 @@ async function fetchPartnerInvoiceDetail(invoiceId: string): Promise<PartnerInvo
             work_order_number,
             title
           )
+        )
+      ),
+      partner_invoice_work_orders(
+        id,
+        work_order_id,
+        amount,
+        description,
+        work_order:work_orders!work_order_id(
+          id,
+          work_order_number,
+          title,
+          store_location,
+          street_address,
+          city,
+          state,
+          description
         )
       )
     `)
@@ -318,6 +350,111 @@ export default function PartnerInvoiceDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Associated Work Orders */}
+      {invoice.partner_invoice_work_orders && invoice.partner_invoice_work_orders.length > 0 && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Associated Work Orders
+                <Badge variant="secondary">{invoice.partner_invoice_work_orders.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Desktop Table View */}
+              <div className="hidden sm:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2 font-medium">Work Order #</th>
+                        <th className="text-left p-2 font-medium">Title</th>
+                        <th className="text-left p-2 font-medium">Location</th>
+                        <th className="text-left p-2 font-medium">Amount</th>
+                        <th className="text-left p-2 font-medium">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoice.partner_invoice_work_orders.map((item) => (
+                        <tr key={item.id} className="border-b">
+                          <td className="p-2 font-mono">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-mono text-primary"
+                              onClick={() => window.open(`/admin/work-orders/${item.work_order_id}`, '_blank')}
+                            >
+                              {item.work_order.work_order_number || item.work_order_id}
+                              <span className="ml-1 h-3 w-3">↗</span>
+                            </Button>
+                          </td>
+                          <td className="p-2 max-w-[200px]">
+                            <div className="truncate" title={item.work_order.title}>
+                              {item.work_order.title || 'Work Order'}
+                            </div>
+                          </td>
+                          <td className="p-2 max-w-[150px]">
+                            <div className="text-sm">
+                              {item.work_order.store_location && (
+                                <div className="font-medium">{item.work_order.store_location}</div>
+                              )}
+                              {(item.work_order.street_address || item.work_order.city) && (
+                                <div className="text-muted-foreground truncate">
+                                  {[item.work_order.street_address, item.work_order.city, item.work_order.state]
+                                    .filter(Boolean)
+                                    .join(', ')}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            {formatCurrency(Number(item.amount))}
+                          </td>
+                          <td className="p-2 max-w-[300px]">
+                            <div className="whitespace-pre-wrap break-words text-sm">
+                              {item.description || item.work_order.description?.trim() || '—'}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="block sm:hidden space-y-3">
+                {invoice.partner_invoice_work_orders.map((item) => (
+                  <Card key={item.id} className="p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto font-mono text-primary text-sm"
+                          onClick={() => window.open(`/admin/work-orders/${item.work_order_id}`, '_blank')}
+                        >
+                          {item.work_order.work_order_number || item.work_order_id}
+                          <span className="ml-1 h-3 w-3">↗</span>
+                        </Button>
+                        <span className="font-medium">{formatCurrency(Number(item.amount))}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{item.work_order.title}</p>
+                        {item.work_order.store_location && (
+                          <p className="text-sm text-muted-foreground">{item.work_order.store_location}</p>
+                        )}
+                      </div>
+                      {item.description && (
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Line Items */}
       <Card>
