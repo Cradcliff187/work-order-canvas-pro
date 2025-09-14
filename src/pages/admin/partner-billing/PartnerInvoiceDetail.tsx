@@ -55,7 +55,7 @@ interface PartnerInvoiceDetail {
     work_order_id: string;
     amount: number;
     description?: string;
-    work_order: {
+    work_orders: {
       id: string;
       work_order_number: string;
       title: string;
@@ -99,7 +99,7 @@ async function fetchPartnerInvoiceDetail(invoiceId: string): Promise<PartnerInvo
         work_order_id,
         amount,
         description,
-        work_order:work_orders!work_order_id(
+        work_orders:work_orders!work_order_id(
           id,
           work_order_number,
           title,
@@ -384,23 +384,23 @@ export default function PartnerInvoiceDetail() {
                               className="p-0 h-auto font-mono text-primary"
                               onClick={() => window.open(`/admin/work-orders/${item.work_order_id}`, '_blank')}
                             >
-                              {item.work_order.work_order_number || item.work_order_id}
+                              {item.work_orders.work_order_number || item.work_order_id}
                               <span className="ml-1 h-3 w-3">↗</span>
                             </Button>
                           </td>
                           <td className="p-2 max-w-[200px]">
-                            <div className="truncate" title={item.work_order.title}>
-                              {item.work_order.title || 'Work Order'}
+                            <div className="truncate" title={item.work_orders.title}>
+                              {item.work_orders.title || 'Work Order'}
                             </div>
                           </td>
                           <td className="p-2 max-w-[150px]">
                             <div className="text-sm">
-                              {item.work_order.store_location && (
-                                <div className="font-medium">{item.work_order.store_location}</div>
+                              {item.work_orders.store_location && (
+                                <div className="font-medium">{item.work_orders.store_location}</div>
                               )}
-                              {(item.work_order.street_address || item.work_order.city) && (
+                              {(item.work_orders.street_address || item.work_orders.city) && (
                                 <div className="text-muted-foreground truncate">
-                                  {[item.work_order.street_address, item.work_order.city, item.work_order.state]
+                                  {[item.work_orders.street_address, item.work_orders.city, item.work_orders.state]
                                     .filter(Boolean)
                                     .join(', ')}
                                 </div>
@@ -412,7 +412,7 @@ export default function PartnerInvoiceDetail() {
                           </td>
                           <td className="p-2 max-w-[300px]">
                             <div className="whitespace-pre-wrap break-words text-sm">
-                              {item.description || item.work_order.description?.trim() || '—'}
+                              {item.description || item.work_orders.description?.trim() || '—'}
                             </div>
                           </td>
                         </tr>
@@ -433,15 +433,15 @@ export default function PartnerInvoiceDetail() {
                           className="p-0 h-auto font-mono text-primary text-sm"
                           onClick={() => window.open(`/admin/work-orders/${item.work_order_id}`, '_blank')}
                         >
-                          {item.work_order.work_order_number || item.work_order_id}
+                          {item.work_orders.work_order_number || item.work_order_id}
                           <span className="ml-1 h-3 w-3">↗</span>
                         </Button>
                         <span className="font-medium">{formatCurrency(Number(item.amount))}</span>
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{item.work_order.title}</p>
-                        {item.work_order.store_location && (
-                          <p className="text-sm text-muted-foreground">{item.work_order.store_location}</p>
+                        <p className="font-medium text-sm">{item.work_orders.title}</p>
+                        {item.work_orders.store_location && (
+                          <p className="text-sm text-muted-foreground">{item.work_orders.store_location}</p>
                         )}
                       </div>
                       {item.description && (

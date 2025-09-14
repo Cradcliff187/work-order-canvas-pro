@@ -19,7 +19,7 @@ export function usePartnerInvoices() {
             work_order_id,
             amount,
             description,
-            work_order:work_orders!work_order_id(
+            work_orders:work_orders!work_order_id(
               id,
               work_order_number,
               title,

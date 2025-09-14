@@ -260,9 +260,9 @@ export const createPartnerInvoiceColumns = ({
                 <p className="font-medium text-xs mb-2">Associated Work Orders:</p>
                 {workOrders.slice(0, 5).map((wo: any) => (
                   <div key={wo.work_order_id} className="text-xs">
-                    <div className="font-mono">{wo.work_order?.work_order_number}</div>
+                    <div className="font-mono">{wo.work_orders?.work_order_number}</div>
                     <div className="text-muted-foreground truncate max-w-[200px]">
-                      {wo.work_order?.title}
+                      {wo.work_orders?.title}
                     </div>
                     <div className="font-medium">{formatCurrency(wo.amount)}</div>
                     {workOrders.indexOf(wo) < workOrders.length - 1 && (
