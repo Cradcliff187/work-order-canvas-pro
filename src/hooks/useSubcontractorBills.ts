@@ -172,13 +172,23 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
 
       if (error) throw error;
 
-      // Add work order count and attachment count for each bill
+      // Add work order details and attachment count for each bill
       const billsWithCounts = await Promise.all(
         (data || []).map(async (bill) => {
           const [workOrderResult, attachmentResult] = await Promise.all([
             supabase
               .from('subcontractor_bill_work_orders')
-              .select('*', { count: 'exact', head: true })
+              .select(`
+                id,
+                work_order_id,
+                amount,
+                description,
+                work_orders!subcontractor_bill_work_orders_work_order_id_fkey (
+                  id,
+                  work_order_number,
+                  title
+                )
+              `)
               .eq('subcontractor_bill_id', bill.id),
             supabase
               .from('subcontractor_bill_attachments')
@@ -188,8 +198,9 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
           
           return {
             ...bill,
-            workOrderCount: workOrderResult.count || 0,
-            attachmentCount: attachmentResult.count || 0
+            workOrderCount: workOrderResult.data?.length || 0,
+            attachmentCount: attachmentResult.count || 0,
+            subcontractor_bill_work_orders: workOrderResult.data || []
           };
         })
       );
