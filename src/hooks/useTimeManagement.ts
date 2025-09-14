@@ -537,7 +537,7 @@ export function useTimeManagement(filters: TimeManagementFilters) {
       : timeEntries;
 
     const csvData = entriesToExport.map(entry => ({
-      Date: format(new Date(entry.report_date), 'yyyy-MM-dd'),
+      Date: entry.report_date,
       Employee: `${entry.employee.first_name} ${entry.employee.last_name}`,
       'Work Order': entry.work_order?.work_order_number || '',
       Project: entry.project?.project_number || '',

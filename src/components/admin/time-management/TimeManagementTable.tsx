@@ -14,6 +14,7 @@ import { calculateWeeklyEntryOvertimeInfo } from '@/utils/overtimeCalculations';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { TablePagination } from '@/components/admin/shared/TablePagination';
+import { parseDateOnly } from '@/lib/utils/date';
 
 interface TimeManagementTableProps {
   entries: TimeEntry[];
@@ -125,11 +126,12 @@ export function TimeManagementTable({
       header: 'Date',
       cell: ({ row }) => {
         const entry = row.original;
+        const date = parseDateOnly(entry.report_date);
         return (
           <div className="flex flex-col">
-            <span>{format(new Date(entry.report_date), 'MMM d, yyyy')}</span>
+            <span>{format(date, 'MMM d, yyyy')}</span>
             <span className="text-xs text-muted-foreground">
-              {format(new Date(entry.report_date), 'EEEE')}
+              {format(date, 'EEEE')}
             </span>
           </div>
         );

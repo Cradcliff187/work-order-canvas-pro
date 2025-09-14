@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
+import { parseDateOnly } from '@/lib/utils/date';
 
 export interface WorkItemMetrics {
   lastWorked?: string;  // "2 days ago"
@@ -53,7 +54,7 @@ export function useWorkItemMetrics(workItemId: string, workItemType: 'work_order
       // Calculate metrics
       const totalHours = reports.reduce((sum, report) => sum + (Number(report.hours_worked) || 0), 0);
       const lastReport = reports[0];
-      const lastWorked = lastReport ? formatDistanceToNow(new Date(lastReport.report_date), { addSuffix: true }) : undefined;
+      const lastWorked = lastReport ? formatDistanceToNow(parseDateOnly(lastReport.report_date), { addSuffix: true }) : undefined;
       
       // Extract location (get most recent non-null location)
       const locationReport = reports.find(r => r.location_address);

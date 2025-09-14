@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { TimeEntry } from '@/hooks/useTimeManagement';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { parseDateOnly } from '@/lib/utils/date';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -134,7 +135,7 @@ export function MobileTimeEntryCard({
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3 flex-shrink-0" />
-                <span>{format(new Date(entry.report_date), 'MMM d, yyyy')}</span>
+                <span>{format(parseDateOnly(entry.report_date), 'MMM d, yyyy')}</span>
                 <span>•</span>
                 <span>{entry.hours_worked}h</span>
               </div>

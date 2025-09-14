@@ -1,6 +1,28 @@
 
+/**
+ * Parse a date-only string (YYYY-MM-DD) without timezone conversion.
+ * This prevents the date from shifting due to timezone offsets.
+ */
+export function parseDateOnly(dateString: string): Date {
+  if (!dateString) return new Date();
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
+ * Format a date-only string for display without timezone conversion.
+ */
+export function formatDateOnly(dateString: string, format?: string): string {
+  if (!dateString) return '';
+  const date = parseDateOnly(dateString);
+  return date.toLocaleDateString();
+}
+
 export function formatDate(date: string | Date): string {
   if (!date) return '';
+  if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return formatDateOnly(date);
+  }
   return new Date(date).toLocaleDateString();
 }
 

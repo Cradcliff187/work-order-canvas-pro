@@ -1,4 +1,5 @@
 import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { parseDateOnly } from '@/lib/utils/date';
 
 export interface TimeEntry {
   id: string;
@@ -71,7 +72,7 @@ export function groupTimeEntriesByEmployeeAndWeek(entries: TimeEntry[]): WeeklyH
     const weekKey = getWeekKey(entry.employee_user_id, entry.report_date);
     
     if (!weeklyGroups.has(weekKey)) {
-      const date = new Date(entry.report_date);
+      const date = parseDateOnly(entry.report_date);
       const weekStart = startOfWeek(date, { weekStartsOn: 0 });
       const weekEnd = endOfWeek(date, { weekStartsOn: 0 });
       
@@ -186,8 +187,8 @@ export function calculateWeeklyEntryOvertimeInfo(entries: TimeEntry[]): EntryWit
 
     // Sort entries chronologically within the week for "last hours after 40" allocation
     const sortedEntries = [...weeklyInfo.entries].sort((a, b) => {
-      const dateA = new Date(a.report_date);
-      const dateB = new Date(b.report_date);
+      const dateA = parseDateOnly(a.report_date);
+      const dateB = parseDateOnly(b.report_date);
       if (dateA.getTime() !== dateB.getTime()) {
         return dateA.getTime() - dateB.getTime();
       }

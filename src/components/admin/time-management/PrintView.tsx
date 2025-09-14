@@ -2,6 +2,7 @@ import React from 'react';
 import { format } from 'date-fns';
 import { TimeEntry } from '@/hooks/useTimeManagement';
 import { Badge } from '@/components/ui/badge';
+import { parseDateOnly } from '@/lib/utils/date';
 
 interface PrintViewProps {
   timeEntries: TimeEntry[];
@@ -197,7 +198,7 @@ export function PrintView({ timeEntries, summaryStats, filters }: PrintViewProps
             {timeEntries.map((entry, index) => (
               <tr key={entry.id} className={index > 0 && index % 20 === 0 ? 'page-break' : ''}>
                 <td className="whitespace-nowrap">
-                  {format(new Date(entry.report_date), 'MM/dd/yy')}
+                  {format(parseDateOnly(entry.report_date), 'MM/dd/yy')}
                 </td>
                 <td className="whitespace-nowrap">
                   {entry.employee.first_name} {entry.employee.last_name}

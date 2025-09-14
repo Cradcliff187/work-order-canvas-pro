@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { parseDateOnly } from '@/lib/utils/date';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -66,7 +67,7 @@ export default function EmployeeTimeReports() {
           <CardContent>
             <div className="text-2xl font-bold">
               {reports.filter(report => {
-                const reportMonth = new Date(report.report_date).getMonth();
+                const reportMonth = parseDateOnly(report.report_date).getMonth();
                 const currentMonth = new Date().getMonth();
                 return reportMonth === currentMonth;
               }).length}
@@ -181,7 +182,7 @@ export default function EmployeeTimeReports() {
                          }}
                        >
                         <TableCell>
-                          {format(new Date(report.report_date), "PP")}
+                          {format(parseDateOnly(report.report_date), "PP")}
                         </TableCell>
                          <TableCell>
                            <div>
@@ -229,7 +230,7 @@ export default function EmployeeTimeReports() {
                      }`}
                      status={
                        <div className="text-xs text-muted-foreground">
-                         {format(new Date(report.report_date), "PP")}
+                         {format(parseDateOnly(report.report_date), "PP")}
                        </div>
                      }
                      onClick={() => {

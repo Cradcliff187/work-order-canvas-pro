@@ -31,6 +31,7 @@ import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-drop
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { exportToCSV, ExportColumn } from '@/lib/utils/export';
 import { format } from 'date-fns';
+import { parseDateOnly } from '@/lib/utils/date';
 import { formatCurrency } from '@/utils/formatting';
 import { PartnerReadyBill, PartnerReadyInternalReport } from '@/hooks/usePartnerReadyBills';
 import { cn } from '@/lib/utils';
@@ -845,7 +846,7 @@ export default function SelectBills() {
                       </TableCell>
                       <TableCell>{entry.work_order_number}</TableCell>
                       <TableCell>{entry.employee_name}</TableCell>
-                      <TableCell>{format(new Date(entry.report_date), 'MMM d, yyyy')}</TableCell>
+                      <TableCell>{format(parseDateOnly(entry.report_date), 'MMM d, yyyy')}</TableCell>
                       <TableCell>{entry.hours_worked}h</TableCell>
                       <TableCell className="max-w-xs truncate">{entry.work_performed}</TableCell>
                       <TableCell className="text-right">

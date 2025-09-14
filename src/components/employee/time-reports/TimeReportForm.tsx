@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
+import { parseDateOnly } from '@/lib/utils/date';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -114,7 +115,7 @@ export function TimeReportForm({
       form.setValue("materialsUsed", editingReport.materials_used || "");
       form.setValue("hoursWorked", editingReport.hours_worked || 0);
       form.setValue("notes", editingReport.notes || "");
-      form.setValue("reportDate", new Date(editingReport.report_date));
+      form.setValue("reportDate", parseDateOnly(editingReport.report_date));
       
       // Extract times from clock_in_time and clock_out_time if available
       if (editingReport.clock_in_time) {

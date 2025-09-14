@@ -15,6 +15,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
+import { parseDateOnly } from '@/lib/utils/date';
 import { CalendarIcon, Clock, Plus, Edit, Trash2, FileUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -525,7 +526,7 @@ export default function AdminTimeEntry() {
                   {recentEntries?.map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell>
-                        {format(new Date(entry.report_date), 'MMM d, yyyy')}
+                        {format(parseDateOnly(entry.report_date), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">

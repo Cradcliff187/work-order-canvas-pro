@@ -15,6 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { TimeEntry, Employee, WorkOrder, Project } from '@/hooks/useTimeManagement';
 import { AuditLogDisplay } from './AuditLogDisplay';
+import { parseDateOnly } from '@/lib/utils/date';
 
 const editTimeEntrySchema = z.object({
   report_date: z.date({ required_error: 'Date is required' }),
@@ -55,7 +56,7 @@ export function TimeEntryEditModal({
   } = useForm<EditTimeEntryForm>({
     resolver: zodResolver(editTimeEntrySchema),
     defaultValues: {
-      report_date: new Date(entry.report_date),
+      report_date: parseDateOnly(entry.report_date),
       hours_worked: entry.hours_worked,
       hourly_rate_snapshot: entry.hourly_rate_snapshot,
       work_performed: entry.work_performed,
