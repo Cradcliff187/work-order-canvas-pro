@@ -23,6 +23,7 @@ import { useAdminTimeEntry } from '@/hooks/useAdminTimeEntry';
 
 import { ReceiptAttachmentSection } from '@/components/admin/ReceiptAttachmentSection';
 import { CSVImportModal } from '@/components/admin/CSVImportModal';
+import { AdminTimeEntryEditModal } from '@/components/admin/time-entry/AdminTimeEntryEditModal';
 
 const timeEntrySchema = z.object({
   employeeId: z.string().min(1, 'Employee is required'),
@@ -172,6 +173,29 @@ export default function AdminTimeEntry() {
     setShowEditModal(true);
   };
 
+  const handleSaveEdit = async (entryId: string, data: any) => {
+    try {
+      await updateTimeEntry.mutateAsync({ id: entryId, ...data });
+      setShowEditModal(false);
+      setEditingEntry(null);
+      toast({
+        title: "Success",
+        description: "Time entry updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error", 
+        description: "Failed to update time entry",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setShowEditModal(false);
+    setEditingEntry(null);
+  };
+
   const handleDelete = async (entryId: string) => {
     try {
       await deleteTimeEntry.mutateAsync(entryId);
@@ -298,15 +322,15 @@ export default function AdminTimeEntry() {
                         <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
                           Work Orders
                         </div>
-                        {workOrders.map((workOrder) => (
-                          <SelectItem key={workOrder.id} value={`wo_${workOrder.id}`}>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                {workOrder.work_order_number} - {workOrder.title}
-                                <Badge variant="secondary" className="text-xs">
-                                  {workOrder.status}
-                                </Badge>
-                              </div>
+                         {workOrders.map((workOrder) => (
+                           <SelectItem key={workOrder.id} value={`wo_${workOrder.id}`}>
+                             <div className="flex flex-col">
+                               <div className="flex items-center gap-2">
+                                 {workOrder.number} - {workOrder.title}
+                                 <Badge variant="secondary" className="text-xs">
+                                   {workOrder.status}
+                                 </Badge>
+                               </div>
                               {workOrder.store_location && (
                                 <div className="text-xs text-muted-foreground">
                                   {workOrder.store_location}
@@ -322,12 +346,12 @@ export default function AdminTimeEntry() {
                         <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
                           Projects
                         </div>
-                        {projects.map((project) => (
-                          <SelectItem key={project.id} value={`proj_${project.id}`}>
-                            <div className="flex flex-col">
-                              <div>
-                                {project.project_number} - {project.name}
-                              </div>
+                         {projects.map((project) => (
+                           <SelectItem key={project.id} value={`proj_${project.id}`}>
+                             <div className="flex flex-col">
+                               <div>
+                                 {project.number} - {project.name}
+                               </div>
                               {project.location_address && (
                                 <div className="text-xs text-muted-foreground">
                                   {project.location_address}
@@ -590,6 +614,20 @@ export default function AdminTimeEntry() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Modal */}
+      {showEditModal && editingEntry && (
+        <AdminTimeEntryEditModal
+          entry={editingEntry}
+          onSave={handleSaveEdit}
+          onCancel={handleCancelEdit}
+          employees={employees || []}
+          workOrders={workOrders || []}
+          projects={projects || []}
+          employeeReceipts={employeeReceipts || []}
+          isLoading={updateTimeEntry.isPending}
+        />
+      )}
 
       {/* CSV Import Modal */}
       <CSVImportModal

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-interface Employee {
+export interface Employee {
   id: string;
   first_name: string;
   last_name: string;
@@ -11,23 +11,23 @@ interface Employee {
   hourly_cost_rate: number | null;
 }
 
-interface WorkOrder {
+export interface WorkOrder {
   id: string;
-  work_order_number: string;
+  number: string;
   title: string;
   status: string;
   store_location?: string;
 }
 
-interface Project {
+export interface Project {
   id: string;
-  project_number: string;
+  number: string;
   name: string;
   status: string;
   location_address?: string;
 }
 
-interface TimeEntryData {
+export interface TimeEntryData {
   employee_user_id: string;
   work_order_id?: string;
   project_id?: string;
@@ -46,12 +46,17 @@ interface TimeEntryData {
   }[];
 }
 
-interface TimeEntry {
+export interface TimeEntry {
   id: string;
+  employee_user_id: string;
+  work_order_id: string | null;
+  project_id: string | null;
   report_date: string;
   hours_worked: number;
   total_labor_cost: number | null;
   work_performed: string;
+  clock_in_time: string | null;
+  clock_out_time: string | null;
   employee?: {
     first_name: string;
     last_name: string;
@@ -121,7 +126,11 @@ export function useAdminTimeEntry() {
         .order('work_order_number', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(wo => ({
+        ...wo,
+        number: wo.work_order_number
+      }));
     },
   });
 
@@ -142,7 +151,11 @@ export function useAdminTimeEntry() {
         .order('project_number', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(proj => ({
+        ...proj,
+        number: proj.project_number
+      }));
     },
   });
 
@@ -154,10 +167,15 @@ export function useAdminTimeEntry() {
         .from('employee_reports')
         .select(`
           id,
+          employee_user_id,
+          work_order_id,
+          project_id,
           report_date,
           hours_worked,
           total_labor_cost,
           work_performed,
+          clock_in_time,
+          clock_out_time,
           employee:profiles!employee_user_id(
             first_name,
             last_name,
