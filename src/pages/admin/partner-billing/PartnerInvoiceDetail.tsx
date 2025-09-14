@@ -246,6 +246,21 @@ export default function PartnerInvoiceDetail() {
             variant="outline"
             size="default"
           />
+          <PartnerInvoiceActions
+            invoice={{
+              id: invoice.id,
+              invoice_number: invoice.invoice_number,
+              status: invoice.status,
+              pdf_url: (invoice as any).pdf_url || null,
+              sent_at: invoice.sent_at,
+              partner_organization: invoice.partner_organization
+            }}
+            onStatusChange={() => {
+              queryClient.invalidateQueries({ queryKey: ['partner-invoice-detail', id] });
+              queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
+              refetch();
+            }}
+          />
           <TableActionsDropdown
             actions={[
               {

@@ -26,7 +26,7 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [status, setStatus] = useState('draft');
+  const [status, setStatus] = useState('pending_review');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
     setInvoiceNumber(invoice.invoice_number || '');
     setInvoiceDate(invoice.invoice_date ? new Date(invoice.invoice_date).toISOString().slice(0, 10) : '');
     setDueDate(invoice.due_date ? new Date(invoice.due_date).toISOString().slice(0, 10) : '');
-    setStatus(invoice.status || 'draft');
+    setStatus(invoice.status || 'pending_review');
   }, [invoice]);
 
   const handleSave = async () => {
@@ -87,7 +87,8 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm">
-              <option value="draft">Draft</option>
+              <option value="pending_review">Pending Review</option>
+              <option value="approved">Approved</option>
               <option value="sent">Sent</option>
               <option value="paid">Paid</option>
               <option value="cancelled">Cancelled</option>
