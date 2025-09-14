@@ -22,6 +22,11 @@ export const PARTNER_INVOICE_COLUMN_METADATA: Record<string, ColumnMetadata> = {
     description: 'Invoice number and details',
     defaultVisible: true 
   },
+  qb_invoice_number: { 
+    label: 'QB Invoice #', 
+    description: 'QuickBooks invoice number',
+    defaultVisible: false 
+  },
   partner_organization: { 
     label: 'Partner', 
     description: 'Partner organization',
@@ -107,6 +112,32 @@ export const createPartnerInvoiceColumns = ({
               <Copy className="h-3 w-3" />
             </Button>
           )}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: 'qb_invoice_number',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+        aria-label={`Sort by QB invoice number ${column.getIsSorted() === 'asc' ? 'descending' : 'ascending'}`}
+      >
+        QB Invoice #
+        <ArrowUpDown className="ml-2 h-4 w-4" aria-hidden="true" />
+      </Button>
+    ),
+    maxSize: 160,
+    enableResizing: false,
+    cell: ({ row }) => {
+      const qbNumber = row.getValue('qb_invoice_number') as string | null;
+      return (
+        <div className="flex items-center gap-2">
+          <div className="font-mono text-sm whitespace-nowrap text-muted-foreground">
+            {qbNumber || 'Not set'}
+          </div>
         </div>
       );
     },

@@ -14,6 +14,7 @@ interface PartnerInvoice {
   invoice_date: string;
   due_date?: string | null;
   status: string;
+  qb_invoice_number?: string | null;
 }
 
 interface EditPartnerInvoiceSheetProps {
@@ -28,6 +29,7 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [qbInvoiceNumber, setQbInvoiceNumber] = useState('');
   const [status, setStatus] = useState('draft');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -36,6 +38,7 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
     setInvoiceNumber(invoice.invoice_number || '');
     setInvoiceDate(invoice.invoice_date ? new Date(invoice.invoice_date).toISOString().slice(0, 10) : '');
     setDueDate(invoice.due_date ? new Date(invoice.due_date).toISOString().slice(0, 10) : '');
+    setQbInvoiceNumber(invoice.qb_invoice_number || '');
     setStatus(invoice.status || 'draft');
   }, [invoice]);
 
@@ -49,6 +52,7 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
           invoice_number: invoiceNumber || null,
           invoice_date: invoiceDate ? new Date(invoiceDate).toISOString() : null,
           due_date: dueDate ? new Date(dueDate).toISOString() : null,
+          qb_invoice_number: qbInvoiceNumber || null,
           status,
         })
         .eq('id', invoice.id);
@@ -75,6 +79,10 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
           <div className="space-y-2">
             <Label htmlFor="invoice_number">Invoice Number</Label>
             <Input id="invoice_number" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="qb_invoice_number">QB Invoice #</Label>
+            <Input id="qb_invoice_number" value={qbInvoiceNumber} onChange={(e) => setQbInvoiceNumber(e.target.value)} placeholder="Optional QuickBooks invoice number" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-2">

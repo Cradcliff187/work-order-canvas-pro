@@ -34,6 +34,7 @@ interface PartnerInvoiceDetail {
   markup_percentage: number;
   total_amount: number;
   status: string;
+  qb_invoice_number?: string | null;
   partner_organization: {
     name: string;
     contact_email: string;
@@ -57,6 +58,7 @@ async function fetchPartnerInvoiceDetail(invoiceId: string): Promise<PartnerInvo
     .select(`
       id,
       invoice_number,
+      qb_invoice_number,
       invoice_date,
       due_date,
       sent_at,
@@ -300,6 +302,9 @@ export default function PartnerInvoiceDetail() {
               <h3 className="font-medium text-sm text-muted-foreground mb-2">Invoice Details</h3>
               <div className="space-y-2">
                 <p><span className="font-medium">Invoice Number:</span> {invoice.invoice_number}</p>
+                {invoice.qb_invoice_number && (
+                  <p><span className="font-medium">QB Invoice #:</span> {invoice.qb_invoice_number}</p>
+                )}
                 <p><span className="font-medium">Invoice Date:</span> {format(new Date(invoice.invoice_date), 'PPP')}</p>
               </div>
             </div>

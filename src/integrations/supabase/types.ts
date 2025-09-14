@@ -841,6 +841,7 @@ export type Database = {
           payment_date: string | null
           payment_reference: string | null
           pdf_url: string | null
+          qb_invoice_number: string | null
           quickbooks_export_date: string | null
           sent_at: string | null
           status: string
@@ -860,6 +861,7 @@ export type Database = {
           payment_date?: string | null
           payment_reference?: string | null
           pdf_url?: string | null
+          qb_invoice_number?: string | null
           quickbooks_export_date?: string | null
           sent_at?: string | null
           status?: string
@@ -879,6 +881,7 @@ export type Database = {
           payment_date?: string | null
           payment_reference?: string | null
           pdf_url?: string | null
+          qb_invoice_number?: string | null
           quickbooks_export_date?: string | null
           sent_at?: string | null
           status?: string
