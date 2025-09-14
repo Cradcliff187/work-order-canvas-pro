@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, Clock, DollarSign, Users, Download, CheckCheck, Flag, Trash2, Edit, Settings, Printer } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Users, Download, CheckCheck, Flag, Trash2, Edit, Settings, Printer, Plus, FileUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useTimeManagement } from '@/hooks/useTimeManagement';
@@ -26,6 +26,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
+import { AdminTimeEntryCreateModal } from '@/components/admin/time-management/AdminTimeEntryCreateModal';
+import { CSVImportModal } from '@/components/admin/CSVImportModal';
 
 export default function AdminTimeManagement() {
   const { toast } = useToast();
@@ -37,6 +39,8 @@ export default function AdminTimeManagement() {
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   
   // Use standardized admin filters with persistence
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters(
@@ -330,6 +334,14 @@ export default function AdminTimeManagement() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button onClick={() => setShowImportModal(true)} variant="outline" size="sm">
+              <FileUp className="h-4 w-4 mr-2" />
+              Import CSV
+            </Button>
+            <Button onClick={() => setShowCreateModal(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Time Entry
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -447,6 +459,26 @@ export default function AdminTimeManagement() {
           projects={projects}
         />
       )}
+
+      {/* Time Entry Create Modal */}
+      <AdminTimeEntryCreateModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onSuccess={() => {
+          refetch();
+          setShowCreateModal(false);
+        }}
+      />
+
+      {/* CSV Import Modal */}
+      <CSVImportModal
+        open={showImportModal}
+        onOpenChange={setShowImportModal}
+        onSuccess={() => {
+          refetch();
+          setShowImportModal(false);
+        }}
+      />
 
       {/* Delete Confirmation Dialogs */}
       <DeleteConfirmationDialog
