@@ -25,7 +25,7 @@ import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useViewMode } from '@/hooks/useViewMode';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Eye, Download, X, Filter, Search, Settings, ChevronDown } from 'lucide-react';
+import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Eye, Download, X, Filter, Search, Settings, ChevronDown, Clock, FileText } from 'lucide-react';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
@@ -59,9 +59,8 @@ export default function SelectBills() {
     const v = localStorage.getItem('pb.selectedPartnerId');
     return v || undefined;
   });
-  const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(new Set());
-  const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
-  const [selectedEmployeeTimeIds, setSelectedEmployeeTimeIds] = useState<Set<string>>(new Set());
+  // Unified selection state
+  const [selectedUnifiedIds, setSelectedUnifiedIds] = useState<Set<string>>(new Set());
   const [markupPercentage, setMarkupPercentage] = useState<number>(() => {
     const v = localStorage.getItem('pb.markupPercentage');
     return v !== null ? Number(v) : 20;
@@ -186,45 +185,41 @@ export default function SelectBills() {
     return items;
   }, [bills, internalReports, employeeTimeEntries]);
 
-  // Apply filters to bills with inline filtering logic
-  const filteredBills = useMemo(() => {
-    if (!bills) return [];
-    
-    return bills.filter(bill => {
-      // Search filter
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        const matches = 
-          bill.internal_bill_number?.toLowerCase().includes(searchLower) ||
-          bill.external_bill_number?.toLowerCase().includes(searchLower) ||
-          bill.subcontractor_org_name?.toLowerCase().includes(searchLower) ||
-          bill.work_order_numbers?.some(woNum => woNum.toLowerCase().includes(searchLower));
-        if (!matches) return false;
-      }
-      
-      return true;
-    });
-  }, [bills, filters]);
+  // Apply filters to unified items
+  const filteredUnifiedItems = useMemo(() => {
+    let filtered = unifiedItems;
 
-  // Sort and paginate the filtered bills
-  const filteredAndSortedBills = useMemo(() => {
-    if (!filteredBills) return [];
+    if (filters.search?.trim()) {
+      const searchLower = filters.search.toLowerCase().trim();
+      filtered = filtered.filter(item =>
+        item.reference.toLowerCase().includes(searchLower) ||
+        item.description.toLowerCase().includes(searchLower) ||
+        item.type.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [unifiedItems, filters]);
+
+  // Sort and paginate the filtered unified items
+  const filteredAndSortedUnifiedItems = useMemo(() => {
+    if (!filteredUnifiedItems) return [];
     
-    const sorted = [...filteredBills].sort((a, b) => {
+    const sorted = [...filteredUnifiedItems].sort((a, b) => {
       let aVal: any, bVal: any;
       
       switch (sortKey) {
         case 'bill_number':
-          aVal = a.internal_bill_number || '';
-          bVal = b.internal_bill_number || '';
+          aVal = a.reference || '';
+          bVal = b.reference || '';
           break;
         case 'date':
-          aVal = new Date(a.bill_date);
-          bVal = new Date(b.bill_date);
+          aVal = a.date ? new Date(a.date) : new Date(0);
+          bVal = b.date ? new Date(b.date) : new Date(0);
           break;
         case 'amount':
-          aVal = a.total_amount || 0;
-          bVal = b.total_amount || 0;
+          aVal = a.amount || 0;
+          bVal = b.amount || 0;
           break;
         default:
           return 0;
@@ -236,67 +231,75 @@ export default function SelectBills() {
     });
     
     return sorted;
-  }, [filteredBills, sortKey, sortDir]);
+  }, [filteredUnifiedItems, sortKey, sortDir]);
 
-  // Create paginated bills for display
-  const paginatedBills = useMemo(() => {
+  // Create paginated unified items for display
+  const paginatedUnifiedItems = useMemo(() => {
     const startIndex = pagination.pageIndex * pagination.pageSize;
     const endIndex = startIndex + pagination.pageSize;
-    return filteredAndSortedBills.slice(startIndex, endIndex);
-  }, [filteredAndSortedBills, pagination]);
+    return filteredAndSortedUnifiedItems.slice(startIndex, endIndex);
+  }, [filteredAndSortedUnifiedItems, pagination]);
 
   // Mock table for pagination component
   const mockTable = {
-    getRowModel: () => ({ rows: paginatedBills.map((_, i) => ({ id: i })) }),
-    getFilteredRowModel: () => ({ rows: filteredAndSortedBills.map((_, i) => ({ id: i })) }),
+    getRowModel: () => ({ rows: paginatedUnifiedItems.map((_, i) => ({ id: i })) }),
+    getFilteredRowModel: () => ({ rows: filteredAndSortedUnifiedItems.map((_, i) => ({ id: i })) }),
     getState: () => ({ pagination }),
     setPageSize: (size: number) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
     previousPage: () => setPagination(prev => ({ ...prev, pageIndex: Math.max(0, prev.pageIndex - 1) })),
     nextPage: () => setPagination(prev => ({ 
       ...prev, 
-      pageIndex: Math.min(Math.ceil(filteredAndSortedBills.length / prev.pageSize) - 1, prev.pageIndex + 1) 
+      pageIndex: Math.min(Math.ceil(filteredAndSortedUnifiedItems.length / prev.pageSize) - 1, prev.pageIndex + 1) 
     })),
     getCanPreviousPage: () => pagination.pageIndex > 0,
-    getCanNextPage: () => (pagination.pageIndex + 1) * pagination.pageSize < filteredAndSortedBills.length,
-    getPageCount: () => Math.ceil(filteredAndSortedBills.length / pagination.pageSize)
+    getCanNextPage: () => (pagination.pageIndex + 1) * pagination.pageSize < filteredAndSortedUnifiedItems.length,
+    getPageCount: () => Math.ceil(filteredAndSortedUnifiedItems.length / pagination.pageSize)
   } as any;
 
-  // Calculate totals based on selected bills and reports
+  // Calculate totals from unified selection
   const calculations = useMemo(() => {
-    if (!filteredAndSortedBills && !internalReports && !employeeTimeEntries) return { 
-      subtotal: 0, markupAmount: 0, total: 0, selectedBills: [], selectedReports: [], selectedTimeEntries: [] 
-    };
+    const selectedItems = Array.from(selectedUnifiedIds).map(id => 
+      unifiedItems.find(item => item.id === id)
+    ).filter(Boolean);
     
-    const selectedBills = filteredAndSortedBills?.filter(bill => selectedBillIds.has(bill.bill_id)) || [];
-    const selectedReports = internalReports?.filter(report => selectedReportIds.has(report.id)) || [];
-    const selectedTimeEntries = employeeTimeEntries?.filter(entry => selectedEmployeeTimeIds.has(entry.id)) || [];
-    
-    const billsSubtotal = selectedBills.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
-    const reportsSubtotal = selectedReports.reduce((sum, report) => sum + (report.bill_amount || 0), 0);
-    const timeEntriesSubtotal = selectedTimeEntries.reduce((sum, entry) => sum + (entry.bill_amount || 0), 0);
-    const subtotal = billsSubtotal + reportsSubtotal + timeEntriesSubtotal;
+    const subtotal = selectedItems.reduce((sum, item) => sum + (item?.amount || 0), 0);
     const markupAmount = subtotal * (markupPercentage / 100);
     const total = subtotal + markupAmount;
     
-    return { subtotal, markupAmount, total, selectedBills, selectedReports, selectedTimeEntries };
-  }, [filteredAndSortedBills, selectedBillIds, internalReports, selectedReportIds, employeeTimeEntries, selectedEmployeeTimeIds, markupPercentage]);
+    return { subtotal, markupAmount, total, selectedItems };
+  }, [selectedUnifiedIds, unifiedItems, markupPercentage]);
 
-  const handleBillToggle = (billId: string, checked: boolean) => {
-    const newSet = new Set(selectedBillIds);
-    if (checked) {
-      newSet.add(billId);
-    } else {
-      newSet.delete(billId);
-    }
-    setSelectedBillIds(newSet);
+  // Unified selection handlers
+  const handleUnifiedItemToggle = (id: string, checked: boolean) => {
+    setSelectedUnifiedIds(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
   };
 
   const handleSelectAll = () => {
-    if (!filteredAndSortedBills) return;
-    if (selectedBillIds.size === filteredAndSortedBills.length) {
-      setSelectedBillIds(new Set());
+    if (!paginatedUnifiedItems) return;
+    const allCurrentItemsSelected = paginatedUnifiedItems.every(item => selectedUnifiedIds.has(item.id));
+    
+    if (allCurrentItemsSelected) {
+      // Deselect all current page items
+      paginatedUnifiedItems.forEach(item => {
+        setSelectedUnifiedIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(item.id);
+          return newSet;
+        });
+      });
     } else {
-      setSelectedBillIds(new Set(filteredAndSortedBills.map(b => b.bill_id)));
+      // Select all current page items
+      paginatedUnifiedItems.forEach(item => {
+        setSelectedUnifiedIds(prev => new Set(prev).add(item.id));
+      });
     }
   };
 
@@ -314,52 +317,48 @@ export default function SelectBills() {
 
   const handleExportSelected = (exportFormat: 'csv' | 'excel') => {
     try {
-      if (!bills || selectedBillIds.size === 0) return;
+      if (selectedUnifiedIds.size === 0) return;
 
-      const selectedBills = bills.filter(bill => selectedBillIds.has(bill.bill_id));
+      const selectedItems = Array.from(selectedUnifiedIds).map(id => 
+        unifiedItems.find(item => item.id === id)
+      ).filter(Boolean);
       
       // Prepare export data
-      const exportData = selectedBills.map(bill => ({
-        bill_number: bill.internal_bill_number,
-        external_bill_number: bill.external_bill_number || '-',
-        subcontractor: bill.subcontractor_org_name,
-        work_orders: bill.work_order_numbers.join(', '),
-        work_order_count: bill.work_order_count,
-        bill_date: format(new Date(bill.bill_date), 'yyyy-MM-dd'),
-        amount: bill.total_amount,
-        status: 'Approved'
+      const exportData = selectedItems.map(item => ({
+        type: item?.type === 'bill' ? 'Bill' : item?.type === 'internal' ? 'Internal' : 'Time',
+        reference: item?.reference,
+        description: item?.description,
+        date: item?.date ? format(new Date(item.date), 'yyyy-MM-dd') : 'N/A',
+        amount: item?.amount
       }));
 
       const columns: ExportColumn[] = [
-        { key: 'bill_number', label: 'Internal Bill #', type: 'string' },
-        { key: 'external_bill_number', label: 'External Bill #', type: 'string' },
-        { key: 'subcontractor', label: 'Subcontractor', type: 'string' },
-        { key: 'work_orders', label: 'Work Orders', type: 'string' },
-        { key: 'work_order_count', label: 'WO Count', type: 'number' },
-        { key: 'bill_date', label: 'Bill Date', type: 'string' },
-        { key: 'amount', label: 'Bill Amount', type: 'currency' },
-        { key: 'status', label: 'Status', type: 'string' }
+        { key: 'type', label: 'Type', type: 'string' },
+        { key: 'reference', label: 'Reference', type: 'string' },
+        { key: 'description', label: 'Description', type: 'string' },
+        { key: 'date', label: 'Date', type: 'string' },
+        { key: 'amount', label: 'Amount', type: 'currency' }
       ];
 
-      const baseFilename = `selected_bills_${format(new Date(), 'yyyy-MM-dd')}`;
+      const baseFilename = `selected_billable_items_${format(new Date(), 'yyyy-MM-dd')}`;
       const filename = exportFormat === 'csv' ? `${baseFilename}.csv` : `${baseFilename}.xlsx`;
       
       exportToCSV(exportData, columns, filename);
       toast({
         title: "Export Complete",
-        description: `${selectedBills.length} bills exported as ${exportFormat.toUpperCase()} successfully`,
+        description: `${selectedItems.length} items exported as ${exportFormat.toUpperCase()} successfully`,
       });
     } catch (error) {
       toast({
         title: "Export Failed",
-        description: "Failed to export selected bills",
+        description: "Failed to export selected items",
         variant: "destructive"
       });
     }
   };
 
   const handleGenerateInvoice = () => {
-    if (!selectedPartnerId || (selectedBillIds.size === 0 && selectedReportIds.size === 0 && selectedEmployeeTimeIds.size === 0)) return;
+    if (!selectedPartnerId || selectedUnifiedIds.size === 0) return;
     
     // Validate minimum invoice amount
     if (calculations.subtotal < 0.01) {
@@ -370,12 +369,34 @@ export default function SelectBills() {
       });
       return;
     }
+
+    // Extract IDs by type from unified selection
+    const billIds: string[] = [];
+    const reportIds: string[] = [];
+    const employeeTimeIds: string[] = [];
+
+    Array.from(selectedUnifiedIds).forEach(id => {
+      const item = unifiedItems.find(item => item.id === id);
+      if (item) {
+        switch (item.type) {
+          case 'bill':
+            billIds.push(id);
+            break;
+          case 'internal':
+            reportIds.push(id);
+            break;
+          case 'time':
+            employeeTimeIds.push(id);
+            break;
+        }
+      }
+    });
     
     generateInvoice({
       partnerOrganizationId: selectedPartnerId,
-      selectedBillIds: Array.from(selectedBillIds),
-      internalReportIds: Array.from(selectedReportIds),
-      employeeTimeIds: Array.from(selectedEmployeeTimeIds),
+      selectedBillIds: billIds,
+      internalReportIds: reportIds,
+      employeeTimeIds: employeeTimeIds,
       markupPercentage,
       subtotal: calculations.subtotal,
       totalAmount: calculations.total,
@@ -384,8 +405,7 @@ export default function SelectBills() {
     }, {
       onSuccess: (result) => {
         // Clear selection
-        setSelectedBillIds(new Set());
-        setSelectedReportIds(new Set());
+        setSelectedUnifiedIds(new Set());
         setShowConfirmDialog(false);
         // Navigate to invoice detail
         navigate(`/admin/partner-billing/invoices/${result.invoiceId}`);
@@ -396,7 +416,7 @@ export default function SelectBills() {
     });
   };
 
-  const totalApprovedBillAmount = bills?.reduce((sum, bill) => sum + (bill.total_amount || 0), 0) || 0;
+  const totalApprovedBillAmount = unifiedItems?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
 
   return (
     <TooltipProvider>
@@ -509,14 +529,14 @@ export default function SelectBills() {
           </Collapsible>
         )}
 
-        {/* Bills Display */}
+        {/* Unified Billable Items Display */}
         {selectedPartnerId && (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <FileBarChart className="w-5 h-5" />
-                  Approved Subcontractor Bills ({filteredAndSortedBills?.length || 0})
+                  Billable Items ({unifiedItems?.length || 0})
                 </CardTitle>
                 
                 {/* Integrated Control Bar */}
@@ -524,7 +544,7 @@ export default function SelectBills() {
                   <SmartSearchInput
                     value={filters.search || ''}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    placeholder="Search bills..."
+                    placeholder="Search items..."
                     className="w-64"
                   />
                   
@@ -534,28 +554,20 @@ export default function SelectBills() {
                     allowedModes={allowedModes}
                   />
                   
-                  <ColumnVisibilityDropdown
-                    columns={getAllColumns()}
-                    onToggleColumn={toggleColumn}
-                    onResetToDefaults={resetColumnDefaults}
-                    variant="outline"
-                    size="sm"
-                  />
-                  
-                  {filteredAndSortedBills && filteredAndSortedBills.length > 0 && (
+                  {filteredAndSortedUnifiedItems && filteredAndSortedUnifiedItems.length > 0 && (
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleSelectAll}
-                        disabled={!filteredAndSortedBills || filteredAndSortedBills.length === 0}
+                        disabled={!paginatedUnifiedItems || paginatedUnifiedItems.length === 0}
                       >
-                        {selectedBillIds.size === filteredAndSortedBills?.length ? 'Deselect All' : 'Select All'}
+                        {paginatedUnifiedItems?.every(item => selectedUnifiedIds.has(item.id)) ? 'Deselect All' : 'Select All'}
                       </Button>
-                      {selectedBillIds.size > 0 && (
+                      {selectedUnifiedIds.size > 0 && (
                         <ExportDropdown 
                           onExport={handleExportSelected} 
-                          disabled={selectedBillIds.size === 0}
+                          disabled={selectedUnifiedIds.size === 0}
                         />
                       )}
                     </div>
@@ -567,25 +579,25 @@ export default function SelectBills() {
               {billsError ? (
                 <EmptyState
                   icon={FileBarChart}
-                  title="Error loading bills"
-                  description="We couldn't load bills. Please try again."
+                  title="Error loading items"
+                  description="We couldn't load billable items. Please try again."
                   action={{ label: 'Retry', onClick: () => window.location.reload() }}
                 />
               ) : isLoadingBills ? (
-                <EnhancedTableSkeleton rows={5} columns={5} showHeader />
-              ) : !filteredAndSortedBills || filteredAndSortedBills.length === 0 ? (
+                <EnhancedTableSkeleton rows={5} columns={6} showHeader />
+              ) : !filteredAndSortedUnifiedItems || filteredAndSortedUnifiedItems.length === 0 ? (
                 filterCount > 0 ? (
                   <EmptyState
                     icon={Search}
-                    title="No matching bills"
-                    description="No bills match your current filters. Try adjusting your search criteria."
+                    title="No matching items"
+                    description="No items match your current filters. Try adjusting your search criteria."
                     action={{ label: 'Clear filters', onClick: clearFilters }}
                   />
                 ) : (
                   <EmptyState
                     icon={FileBarChart}
-                    title="No bills ready for invoicing"
-                    description="There are no approved subcontractor bills ready for partner invoicing for this organization."
+                    title="No items ready for invoicing"
+                    description="There are no billable items ready for partner invoicing for this organization."
                   />
                 )
               ) : (
@@ -599,117 +611,90 @@ export default function SelectBills() {
                             <TableRow>
                               <TableHead className="w-12">
                                 <Checkbox
-                                  checked={paginatedBills.length > 0 && paginatedBills.every(bill => selectedBillIds.has(bill.bill_id))}
+                                  checked={paginatedUnifiedItems.length > 0 && paginatedUnifiedItems.every(item => selectedUnifiedIds.has(item.id))}
                                   onCheckedChange={handleSelectAll}
-                                  aria-label="Select all visible bills"
+                                  aria-label="Select all visible items"
                                 />
                               </TableHead>
-                              {columnVisibility.bill_number && (
-                                <TableHead className="min-w-[120px] cursor-pointer" onClick={() => toggleSort('bill_number')}>
-                                  <div className="flex items-center gap-1">
-                                    Bill Number
-                                    {sortKey === 'bill_number' && (
-                                      sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                                    )}
-                                  </div>
-                                </TableHead>
-                              )}
-                              {columnVisibility.subcontractor && <TableHead className="min-w-[150px]">Subcontractor</TableHead>}
-                              {columnVisibility.work_orders && <TableHead className="min-w-[200px]">Work Orders</TableHead>}
-                              {columnVisibility.date && (
-                                <TableHead className="min-w-[120px] cursor-pointer" onClick={() => toggleSort('date')}>
-                                  <div className="flex items-center gap-1">
-                                    Bill Date
-                                    {sortKey === 'date' && (
-                                      sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                                    )}
-                                  </div>
-                                </TableHead>
-                              )}
-                              {columnVisibility.amount && (
-                                <TableHead className="min-w-[130px] cursor-pointer text-right" onClick={() => toggleSort('amount')}>
-                                  <div className="flex items-center justify-end gap-1">
-                                    Amount
-                                    {sortKey === 'amount' && (
-                                      sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                                    )}
-                                  </div>
-                                </TableHead>
-                              )}
+                              <TableHead className="min-w-[80px]">Type</TableHead>
+                              <TableHead className="min-w-[120px] cursor-pointer" onClick={() => toggleSort('bill_number')}>
+                                <div className="flex items-center gap-1">
+                                  Reference
+                                  {sortKey === 'bill_number' && (
+                                    sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                                  )}
+                                </div>
+                              </TableHead>
+                              <TableHead className="min-w-[200px]">Description</TableHead>
+                              <TableHead className="min-w-[120px] cursor-pointer" onClick={() => toggleSort('date')}>
+                                <div className="flex items-center gap-1">
+                                  Date
+                                  {sortKey === 'date' && (
+                                    sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                                  )}
+                                </div>
+                              </TableHead>
+                              <TableHead className="min-w-[130px] cursor-pointer text-right" onClick={() => toggleSort('amount')}>
+                                <div className="flex items-center justify-end gap-1">
+                                  Amount
+                                  {sortKey === 'amount' && (
+                                    sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                                  )}
+                                </div>
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {paginatedBills.map((bill) => {
-                              const isSelected = selectedBillIds.has(bill.bill_id);
+                            {paginatedUnifiedItems.map((item) => {
+                              const isSelected = selectedUnifiedIds.has(item.id);
                               
                               return (
                                 <TableRow 
-                                  key={bill.bill_id}
-                                  className={cn(isSelected && "bg-muted/50")}
+                                  key={item.id}
+                                  className={cn(
+                                    "cursor-pointer transition-colors hover:bg-muted/50",
+                                    isSelected && "bg-muted/50"
+                                  )}
+                                  onClick={() => handleUnifiedItemToggle(item.id, !isSelected)}
                                 >
-                                  <TableCell>
+                                  <TableCell onClick={(e) => e.stopPropagation()}>
                                     <Checkbox
                                       checked={isSelected}
-                                      onCheckedChange={(checked) => handleBillToggle(bill.bill_id, checked as boolean)}
-                                      aria-label={`Select bill ${bill.internal_bill_number}`}
+                                      onCheckedChange={(checked) => handleUnifiedItemToggle(item.id, checked as boolean)}
+                                      aria-label={`Select item ${item.reference}`}
                                     />
                                   </TableCell>
                                   
-                                  {columnVisibility.bill_number && (
-                                    <TableCell>
-                                      <div>
-                                        <div className="font-medium">{bill.internal_bill_number}</div>
-                                        {bill.external_bill_number && (
-                                          <div className="text-xs text-muted-foreground">
-                                            Ext: {bill.external_bill_number}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </TableCell>
-                                  )}
+                                  <TableCell>
+                                    <Badge 
+                                      className={cn(
+                                        "text-white",
+                                        item.type === 'bill' && "bg-blue-500 hover:bg-blue-600",
+                                        item.type === 'internal' && "bg-green-500 hover:bg-green-600",
+                                        item.type === 'time' && "bg-purple-500 hover:bg-purple-600"
+                                      )}
+                                    >
+                                      {item.type === 'bill' ? 'Bill' : item.type === 'internal' ? 'Internal' : 'Time'}
+                                    </Badge>
+                                  </TableCell>
                                   
-                                  {columnVisibility.subcontractor && (
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className="text-xs">
-                                          {bill.subcontractor_org_initials}
-                                        </Badge>
-                                        <span className="font-medium">{bill.subcontractor_org_name}</span>
-                                      </div>
-                                    </TableCell>
-                                  )}
+                                  <TableCell className="font-medium">
+                                    {item.reference}
+                                  </TableCell>
                                   
-                                  {columnVisibility.work_orders && (
-                                    <TableCell>
-                                      <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                          <Badge variant="secondary" className="text-xs">
-                                            {bill.work_order_count} WO{bill.work_order_count !== 1 ? 's' : ''}
-                                          </Badge>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          {bill.work_order_numbers.slice(0, 3).join(', ')}
-                                          {bill.work_order_numbers.length > 3 && ' +' + (bill.work_order_numbers.length - 3) + ' more'}
-                                        </div>
-                                      </div>
-                                    </TableCell>
-                                  )}
+                                  <TableCell>
+                                    <div className="max-w-[200px] truncate">
+                                      {item.description}
+                                    </div>
+                                  </TableCell>
                                   
-                                  {columnVisibility.date && (
-                                    <TableCell>
-                                      <span className="text-sm">
-                                        {format(new Date(bill.bill_date), 'MMM dd, yyyy')}
-                                      </span>
-                                    </TableCell>
-                                  )}
+                                  <TableCell>
+                                    {item.date ? format(new Date(item.date), 'MMM dd, yyyy') : 'N/A'}
+                                  </TableCell>
                                   
-                                  {columnVisibility.amount && (
-                                    <TableCell className="text-right">
-                                      <span className="font-medium">
-                                        {formatCurrency(bill.total_amount)}
-                                      </span>
-                                    </TableCell>
-                                  )}
+                                  <TableCell className="text-right font-medium">
+                                    {formatCurrency(item.amount)}
+                                  </TableCell>
                                 </TableRow>
                               );
                             })}
@@ -720,57 +705,44 @@ export default function SelectBills() {
                   ) : (
                     /* Card View */
                     <div className="space-y-4">
-                      {paginatedBills.map((bill) => {
-                        const isSelected = selectedBillIds.has(bill.bill_id);
+                      {paginatedUnifiedItems.map((item) => {
+                        const isSelected = selectedUnifiedIds.has(item.id);
                         
                         return (
                           <MobileTableCard 
-                            key={bill.bill_id}
+                            key={item.id}
                             selected={isSelected}
-        onSelect={(checked) => handleBillToggle(bill.bill_id, checked)}
+                            onSelect={(checked) => handleUnifiedItemToggle(item.id, checked)}
                           >
                             <div className="space-y-3">
                               <div className="flex items-start justify-between">
                                 <div>
-                                  <div className="font-medium">{bill.internal_bill_number}</div>
-                                  {bill.external_bill_number && (
-                                    <div className="text-xs text-muted-foreground">
-                                      External: {bill.external_bill_number}
-                                    </div>
-                                  )}
+                                  <div className="font-medium">{item.reference}</div>
                                 </div>
-                                <Badge variant="outline" className="text-xs">
-                                  {bill.subcontractor_org_initials}
+                                <Badge 
+                                  className={cn(
+                                    "text-white text-xs",
+                                    item.type === 'bill' && "bg-blue-500",
+                                    item.type === 'internal' && "bg-green-500",
+                                    item.type === 'time' && "bg-purple-500"
+                                  )}
+                                >
+                                  {item.type === 'bill' ? 'Bill' : item.type === 'internal' ? 'Internal' : 'Time'}
                                 </Badge>
                               </div>
                               
                               <div className="space-y-2">
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="text-muted-foreground">Subcontractor:</span>
-                                  <span>{bill.subcontractor_org_name}</span>
-                                </div>
-                                
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="text-muted-foreground">Work Orders:</span>
-                                  <Badge variant="secondary" className="text-xs">
-                                    {bill.work_order_count} WO{bill.work_order_count !== 1 ? 's' : ''}
-                                  </Badge>
-                                </div>
+                                <div className="text-sm truncate">{item.description}</div>
                                 
                                 <div className="flex items-center justify-between text-sm">
                                   <span className="text-muted-foreground">Date:</span>
-                                  <span>{format(new Date(bill.bill_date), 'MMM dd, yyyy')}</span>
+                                  <span>{item.date ? format(new Date(item.date), 'MMM dd, yyyy') : 'N/A'}</span>
                                 </div>
                                 
                                 <div className="flex items-center justify-between text-sm">
                                   <span className="text-muted-foreground">Amount:</span>
-                                  <span className="font-medium">{formatCurrency(bill.total_amount)}</span>
+                                  <span className="font-medium">{formatCurrency(item.amount)}</span>
                                 </div>
-                              </div>
-                              
-                              <div className="text-xs text-muted-foreground">
-                                Work Orders: {bill.work_order_numbers.slice(0, 2).join(', ')}
-                                {bill.work_order_numbers.length > 2 && ' +' + (bill.work_order_numbers.length - 2) + ' more'}
                               </div>
                             </div>
                           </MobileTableCard>
@@ -788,136 +760,8 @@ export default function SelectBills() {
           </Card>
         )}
 
-        {/* Internal Work Reports Display */}
-        {selectedPartnerId && internalReports && internalReports.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileBarChart className="w-5 h-5" />
-                Internal Work Completed ({internalReports?.length || 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox 
-                        checked={internalReports && selectedReportIds.size === internalReports.length && internalReports.length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            const allReportIds = internalReports?.map(r => r.id) || [];
-                            setSelectedReportIds(new Set(allReportIds));
-                          } else {
-                            setSelectedReportIds(new Set());
-                          }
-                        }}
-                      />
-                    </TableHead>
-                    <TableHead>Work Order</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Bill Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(internalReports || []).map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedReportIds.has(report.id)}
-                          onCheckedChange={(checked) => {
-                            const newSet = new Set(selectedReportIds);
-                            if (checked) {
-                              newSet.add(report.id);
-                            } else {
-                              newSet.delete(report.id);
-                            }
-                            setSelectedReportIds(newSet);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>{report.work_order_number}</TableCell>
-                      <TableCell>{report.title}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(report.bill_amount || 0)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Employee Time Entries Display */}
-        {selectedPartnerId && employeeTimeEntries && employeeTimeEntries.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Employee Time Entries ({employeeTimeEntries?.length || 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox 
-                        checked={employeeTimeEntries && selectedEmployeeTimeIds.size === employeeTimeEntries.length && employeeTimeEntries.length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            const allTimeIds = employeeTimeEntries?.map(e => e.id) || [];
-                            setSelectedEmployeeTimeIds(new Set(allTimeIds));
-                          } else {
-                            setSelectedEmployeeTimeIds(new Set());
-                          }
-                        }}
-                      />
-                    </TableHead>
-                    <TableHead>Work Order</TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Hours</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Bill Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(employeeTimeEntries || []).map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedEmployeeTimeIds.has(entry.id)}
-                          onCheckedChange={(checked) => {
-                            const newSet = new Set(selectedEmployeeTimeIds);
-                            if (checked) {
-                              newSet.add(entry.id);
-                            } else {
-                              newSet.delete(entry.id);
-                            }
-                            setSelectedEmployeeTimeIds(newSet);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>{entry.work_order_number}</TableCell>
-                      <TableCell>{entry.employee_name}</TableCell>
-                      <TableCell>{format(parseDateOnly(entry.report_date), 'MMM d, yyyy')}</TableCell>
-                      <TableCell>{entry.hours_worked}h</TableCell>
-                      <TableCell className="max-w-xs truncate">{entry.work_performed}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(entry.bill_amount || 0)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Selection Summary and Generate Invoice */}
-        {(selectedBillIds.size > 0 || selectedReportIds.size > 0 || selectedEmployeeTimeIds.size > 0) && (
+        {selectedUnifiedIds.size > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -929,7 +773,7 @@ export default function SelectBills() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold">{selectedBillIds.size + selectedReportIds.size + selectedEmployeeTimeIds.size}</div>
+                    <div className="text-2xl font-bold">{selectedUnifiedIds.size}</div>
                     <div className="text-sm text-muted-foreground">Selected Items</div>
                   </div>
                   <div className="text-center">
@@ -972,7 +816,7 @@ export default function SelectBills() {
                     <AlertDialogTrigger asChild>
                       <Button 
                         className="gap-2" 
-                        disabled={selectedBillIds.size === 0 && selectedReportIds.size === 0 && selectedEmployeeTimeIds.size === 0 || isGeneratingInvoice}
+                        disabled={selectedUnifiedIds.size === 0 || isGeneratingInvoice}
                       >
                         <Receipt className="h-4 w-4" />
                         Generate Partner Invoice
@@ -982,8 +826,7 @@ export default function SelectBills() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Generate Partner Invoice</AlertDialogTitle>
                         <AlertDialogDescription>
-                           This will create a new partner invoice for {selectedBillIds.size + selectedReportIds.size + selectedEmployeeTimeIds.size} selected item{(selectedBillIds.size + selectedReportIds.size + selectedEmployeeTimeIds.size) !== 1 ? 's' : ''} 
-                           ({selectedBillIds.size} bill{selectedBillIds.size !== 1 ? 's' : ''}, {selectedReportIds.size} report{selectedReportIds.size !== 1 ? 's' : ''}, and {selectedEmployeeTimeIds.size} employee time entr{selectedEmployeeTimeIds.size !== 1 ? 'ies' : 'y'})
+                           This will create a new partner invoice for {selectedUnifiedIds.size} selected item{selectedUnifiedIds.size !== 1 ? 's' : ''} 
                           totaling {formatCurrency(calculations.total)}. This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
