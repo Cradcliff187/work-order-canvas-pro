@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
@@ -71,6 +72,10 @@ export default function SelectBills() {
   
   // Filter states with standardized persistence
   const [isMarkupCollapsed, setIsMarkupCollapsed] = useState(true);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'bill' | 'internal' | 'time'>(() => {
+    const saved = localStorage.getItem('pb.typeFilter');
+    return (saved as 'all' | 'bill' | 'internal' | 'time') || 'all';
+  });
   
   // Use interface compatible with BillingFilters
   interface FilterValue {
@@ -185,9 +190,22 @@ export default function SelectBills() {
     return items;
   }, [bills, internalReports, employeeTimeEntries]);
 
+  // Calculate item counts by type
+  const typeCounts = useMemo(() => {
+    return unifiedItems.reduce((acc, item) => {
+      acc[item.type] = (acc[item.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [unifiedItems]);
+
   // Apply filters to unified items
   const filteredUnifiedItems = useMemo(() => {
     let filtered = unifiedItems;
+
+    // Apply type filter
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(item => item.type === typeFilter);
+    }
 
     if (filters.search?.trim()) {
       const searchLower = filters.search.toLowerCase().trim();
@@ -199,7 +217,7 @@ export default function SelectBills() {
     }
 
     return filtered;
-  }, [unifiedItems, filters]);
+  }, [unifiedItems, filters, typeFilter]);
 
   // Sort and paginate the filtered unified items
   const filteredAndSortedUnifiedItems = useMemo(() => {
@@ -314,6 +332,10 @@ export default function SelectBills() {
   useEffect(() => {
     localStorage.setItem('pb.markupPercentage', String(markupPercentage));
   }, [markupPercentage]);
+
+  useEffect(() => {
+    localStorage.setItem('pb.typeFilter', typeFilter);
+  }, [typeFilter]);
 
   const handleExportSelected = (exportFormat: 'csv' | 'excel') => {
     try {
@@ -576,6 +598,21 @@ export default function SelectBills() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Type Filter */}
+              <div className="mb-4">
+                <ToggleGroup 
+                  type="single" 
+                  value={typeFilter} 
+                  onValueChange={(value) => setTypeFilter(value as 'all' | 'bill' | 'internal' | 'time' || 'all')}
+                  className="justify-start"
+                >
+                  <ToggleGroupItem value="all">All ({unifiedItems.length})</ToggleGroupItem>
+                  <ToggleGroupItem value="bill">Bills ({typeCounts.bill || 0})</ToggleGroupItem>
+                  <ToggleGroupItem value="internal">Internal ({typeCounts.internal || 0})</ToggleGroupItem>
+                  <ToggleGroupItem value="time">Time ({typeCounts.time || 0})</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              
               {billsError ? (
                 <EmptyState
                   icon={FileBarChart}
