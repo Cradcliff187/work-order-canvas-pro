@@ -873,7 +873,7 @@ export default function SelectBills() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold">{selectedBillIds.size + selectedReportIds.size}</div>
+                    <div className="text-2xl font-bold">{selectedBillIds.size + selectedReportIds.size + selectedEmployeeTimeIds.size}</div>
                     <div className="text-sm text-muted-foreground">Selected Items</div>
                   </div>
                   <div className="text-center">
@@ -926,8 +926,8 @@ export default function SelectBills() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Generate Partner Invoice</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will create a new partner invoice for {selectedBillIds.size + selectedReportIds.size} selected item{(selectedBillIds.size + selectedReportIds.size) !== 1 ? 's' : ''} 
-                          ({selectedBillIds.size} bill{selectedBillIds.size !== 1 ? 's' : ''} and {selectedReportIds.size} report{selectedReportIds.size !== 1 ? 's' : ''}) 
+                           This will create a new partner invoice for {selectedBillIds.size + selectedReportIds.size + selectedEmployeeTimeIds.size} selected item{(selectedBillIds.size + selectedReportIds.size + selectedEmployeeTimeIds.size) !== 1 ? 's' : ''} 
+                           ({selectedBillIds.size} bill{selectedBillIds.size !== 1 ? 's' : ''}, {selectedReportIds.size} report{selectedReportIds.size !== 1 ? 's' : ''}, and {selectedEmployeeTimeIds.size} employee time entr{selectedEmployeeTimeIds.size !== 1 ? 'ies' : 'y'})
                           totaling {formatCurrency(calculations.total)}. This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
