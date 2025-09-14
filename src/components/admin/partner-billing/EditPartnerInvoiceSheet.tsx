@@ -3,8 +3,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 
 interface PartnerInvoice {
   id: string;
@@ -86,18 +88,51 @@ export const EditPartnerInvoiceSheet: React.FC<EditPartnerInvoiceSheetProps> = (
           </div>
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
-            <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm">
-              <option value="pending_review">Pending Review</option>
-              <option value="approved">Approved</option>
-              <option value="sent">Sent</option>
-              <option value="paid">Paid</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Select status">
+                  <div className="flex items-center gap-2">
+                    <InvoiceStatusBadge status={status} showIcon size="sm" />
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending_review">
+                  <div className="flex items-center gap-2">
+                    <InvoiceStatusBadge status="pending_review" showIcon size="sm" />
+                  </div>
+                </SelectItem>
+                <SelectItem value="approved">
+                  <div className="flex items-center gap-2">
+                    <InvoiceStatusBadge status="approved" showIcon size="sm" />
+                  </div>
+                </SelectItem>
+                <SelectItem value="sent">
+                  <div className="flex items-center gap-2">
+                    <InvoiceStatusBadge status="sent" showIcon size="sm" />
+                  </div>
+                </SelectItem>
+                <SelectItem value="paid">
+                  <div className="flex items-center gap-2">
+                    <InvoiceStatusBadge status="paid" showIcon size="sm" />
+                  </div>
+                </SelectItem>
+                <SelectItem value="cancelled">
+                  <div className="flex items-center gap-2">
+                    <InvoiceStatusBadge status="cancelled" showIcon size="sm" />
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-        <SheetFooter className="mt-6">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isSaving}>{isSaving ? 'Saving…' : 'Save changes'}</Button>
+        <SheetFooter className="mt-6 gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving} className="min-w-[120px]">
+            {isSaving ? 'Saving…' : 'Save changes'}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

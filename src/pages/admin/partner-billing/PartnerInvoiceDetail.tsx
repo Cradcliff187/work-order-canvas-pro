@@ -240,7 +240,7 @@ export default function PartnerInvoiceDetail() {
           Back to Invoices
         </Button>
         
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           <ExportDropdown 
             onExport={handleExport}
             variant="outline"
