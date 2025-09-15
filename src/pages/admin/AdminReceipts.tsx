@@ -1,87 +1,178 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ReceiptCard } from "@/components/receipts/ReceiptCard";
 import { useReceipts } from "@/hooks/useReceipts";
 import { useAdminReceipts } from "@/hooks/useAdminReceipts";
 import { AdminReceiptCreateModal } from "@/components/admin/AdminReceiptCreateModal";
-import { Search, Plus, Receipt as ReceiptIcon, DollarSign, FileText, AlertCircle, User, Settings } from "lucide-react";
+import { EnhancedReceiptsFilters, type EnhancedReceiptsFiltersValue } from "@/components/admin/receipts/EnhancedReceiptsFilters";
+import { Search, Plus, Receipt as ReceiptIcon, DollarSign, FileText, AlertCircle, User, Settings, CheckCircle2, Clock, XCircle, Download } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, isWithinInterval } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminReceipts() {
   const { receipts, deleteReceipt } = useReceipts();
   const { allReceipts } = useAdminReceipts();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [creatorFilter, setCreatorFilter] = useState("all");
+  const { toast } = useToast();
+  const [filters, setFilters] = useState<EnhancedReceiptsFiltersValue>({});
 
   // Use admin receipts data which includes creator info
   const receiptList = allReceipts.data || [];
 
-  // Filter receipts
-  const filteredReceipts = receiptList.filter((receipt) => {
-    const matchesSearch = 
-      receipt.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.receipt_work_orders.some(allocation => 
-        allocation.work_orders.work_order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        allocation.work_orders.title.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-    let matchesDate = true;
-    if (dateFilter !== "all") {
-      const receiptDate = new Date(receipt.receipt_date);
-      const now = new Date();
-      
-      switch (dateFilter) {
-        case "this-month":
-          matchesDate = receiptDate >= startOfMonth(now) && receiptDate <= endOfMonth(now);
-          break;
-        case "last-month":
-          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          matchesDate = receiptDate >= startOfMonth(lastMonth) && receiptDate <= endOfMonth(lastMonth);
-          break;
-        case "last-3-months":
-          const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-          matchesDate = receiptDate >= threeMonthsAgo;
-          break;
+  // Enhanced filtering logic
+  const filteredReceipts = useMemo(() => {
+    return receiptList.filter((receipt) => {
+      // Search filter
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const matchesSearch = 
+          receipt.vendor_name.toLowerCase().includes(searchLower) ||
+          receipt.description?.toLowerCase().includes(searchLower) ||
+          receipt.receipt_work_orders?.some(allocation => 
+            allocation.work_orders?.work_order_number.toLowerCase().includes(searchLower) ||
+            allocation.work_orders?.title.toLowerCase().includes(searchLower)
+          );
+        if (!matchesSearch) return false;
       }
-    }
 
-    let matchesCreator = true;
-    if (creatorFilter !== "all") {
-      const isAdminCreated = receipt.is_admin_entered;
-      matchesCreator = creatorFilter === "admin" ? isAdminCreated : !isAdminCreated;
-    }
+      // Date range filter
+      if (filters.dateRange?.from || filters.dateRange?.to) {
+        const receiptDate = new Date(receipt.receipt_date);
+        if (filters.dateRange.from && filters.dateRange.to) {
+          if (!isWithinInterval(receiptDate, { 
+            start: filters.dateRange.from, 
+            end: filters.dateRange.to 
+          })) return false;
+        } else if (filters.dateRange.from) {
+          if (receiptDate < filters.dateRange.from) return false;
+        } else if (filters.dateRange.to) {
+          if (receiptDate > filters.dateRange.to) return false;
+        }
+      }
 
-    return matchesSearch && matchesDate && matchesCreator;
-  });
+      // Status filter
+      if (filters.status && receipt.status !== filters.status) {
+        return false;
+      }
 
-  // Calculate summary stats
+      // Creator type filter
+      if (filters.creator_type) {
+        const isAdminCreated = receipt.is_admin_entered;
+        if (filters.creator_type === 'admin' && !isAdminCreated) return false;
+        if (filters.creator_type === 'employee' && isAdminCreated) return false;
+      }
+
+      // Vendor filter
+      if (filters.vendor && !receipt.vendor_name.toLowerCase().includes(filters.vendor.toLowerCase())) {
+        return false;
+      }
+
+      // Category filter
+      if (filters.category && receipt.category !== filters.category) {
+        return false;
+      }
+
+      // Amount range filter
+      if (filters.amount_min !== undefined && receipt.amount < filters.amount_min) {
+        return false;
+      }
+      if (filters.amount_max !== undefined && receipt.amount > filters.amount_max) {
+        return false;
+      }
+
+      // Allocation status filter
+      if (filters.allocation_status) {
+        const allocatedPercentage = receipt.allocation_percentage || 0;
+        switch (filters.allocation_status) {
+          case 'none':
+            if (allocatedPercentage > 0) return false;
+            break;
+          case 'partial':
+            if (allocatedPercentage === 0 || allocatedPercentage >= 100) return false;
+            break;
+          case 'full':
+            if (allocatedPercentage < 100) return false;
+            break;
+        }
+      }
+
+      // Has attachment filter
+      if (filters.has_attachment && !receipt.receipt_image_url) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [receiptList, filters]);
+
+  // Calculate enhanced summary stats
   const totalReceipts = receiptList.length;
   const adminCreatedReceipts = receiptList.filter(r => r.is_admin_entered).length;
   const employeeCreatedReceipts = totalReceipts - adminCreatedReceipts;
+  const pendingReceipts = receiptList.filter(r => r.status === 'submitted').length;
+  const approvedReceipts = receiptList.filter(r => r.status === 'approved').length;
+  const rejectedReceipts = receiptList.filter(r => r.status === 'rejected').length;
+  
   const totalAmount = receiptList.reduce((sum, receipt) => sum + receipt.amount, 0);
   const totalAllocated = receiptList.reduce((sum, receipt) => 
-    sum + receipt.receipt_work_orders.reduce((allocSum, allocation) => 
-      allocSum + allocation.allocated_amount, 0
-    ), 0
+    sum + (receipt.allocated_amount || 0), 0
   );
 
   const handleDelete = async (receiptId: string) => {
-    if (window.confirm("Are you sure you want to delete this receipt? This action cannot be undone.")) {
+    try {
       await deleteReceipt.mutateAsync(receiptId);
+      toast({
+        title: "Receipt Deleted",
+        description: "The receipt has been successfully deleted.",
+      });
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete the receipt. Please try again.",
+        variant: "destructive",
+      });
     }
+  };
+
+  const handleExport = () => {
+    // Export filtered receipts to CSV
+    const csvData = filteredReceipts.map(receipt => ({
+      'Receipt ID': receipt.id,
+      'Vendor': receipt.vendor_name,
+      'Amount': receipt.amount,
+      'Date': format(new Date(receipt.receipt_date), 'yyyy-MM-dd'),
+      'Status': receipt.status || 'submitted',
+      'Category': receipt.category || 'Other',
+      'Creator Type': receipt.is_admin_entered ? 'Admin' : 'Employee',
+      'Employee': receipt.employee_profile ? 
+        `${receipt.employee_profile.first_name} ${receipt.employee_profile.last_name}` : '',
+      'Allocated Amount': receipt.allocated_amount || 0,
+      'Allocation %': (receipt.allocation_percentage || 0).toFixed(1),
+      'Description': receipt.description || '',
+      'Notes': receipt.notes || ''
+    }));
+
+    const csvContent = [
+      Object.keys(csvData[0] || {}).join(','),
+      ...csvData.map(row => Object.values(row).map(value => 
+        typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value
+      ).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receipts-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export Complete",
+      description: `Exported ${filteredReceipts.length} receipts to CSV.`,
+    });
   };
 
   if (receipts.isLoading || allReceipts.isLoading) {
@@ -130,13 +221,13 @@ export default function AdminReceipts() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      {/* Enhanced Summary Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <ReceiptIcon className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Total Receipts</span>
+              <span className="text-sm font-medium">Total</span>
             </div>
             <p className="text-2xl font-bold mt-2">{totalReceipts}</p>
           </CardContent>
@@ -145,20 +236,30 @@ export default function AdminReceipts() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Settings className="h-4 w-4 text-blue-500" />
-              <span className="text-sm font-medium">Admin Created</span>
+              <Clock className="h-4 w-4 text-amber-500" />
+              <span className="text-sm font-medium">Pending</span>
             </div>
-            <p className="text-2xl font-bold mt-2 text-blue-600">{adminCreatedReceipts}</p>
+            <p className="text-2xl font-bold mt-2 text-amber-600">{pendingReceipts}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <User className="h-4 w-4 text-green-500" />
-              <span className="text-sm font-medium">Employee Created</span>
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium">Approved</span>
             </div>
-            <p className="text-2xl font-bold mt-2 text-green-600">{employeeCreatedReceipts}</p>
+            <p className="text-2xl font-bold mt-2 text-green-600">{approvedReceipts}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <XCircle className="h-4 w-4 text-red-500" />
+              <span className="text-sm font-medium">Rejected</span>
+            </div>
+            <p className="text-2xl font-bold mt-2 text-red-600">{rejectedReceipts}</p>
           </CardContent>
         </Card>
         
@@ -180,65 +281,62 @@ export default function AdminReceipts() {
             </div>
             <p className="text-2xl font-bold mt-2">${totalAllocated.toFixed(2)}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Unallocated: ${(totalAmount - totalAllocated).toFixed(2)}
+              {totalAmount > 0 ? ((totalAllocated / totalAmount) * 100).toFixed(1) : 0}% of total
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search receipts..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={dateFilter} onValueChange={setDateFilter}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by date" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All dates</SelectItem>
-            <SelectItem value="this-month">This month</SelectItem>
-            <SelectItem value="last-month">Last month</SelectItem>
-            <SelectItem value="last-3-months">Last 3 months</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={creatorFilter} onValueChange={setCreatorFilter}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by creator" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All creators</SelectItem>
-            <SelectItem value="admin">Admin created</SelectItem>
-            <SelectItem value="employee">Employee created</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Enhanced Filters */}
+      <EnhancedReceiptsFilters
+        value={filters}
+        onChange={setFilters}
+        onExport={filteredReceipts.length > 0 ? handleExport : undefined}
+      />
 
-      {/* Receipts List */}
+      {/* Enhanced Results Display */}
       <div className="space-y-4">
         {filteredReceipts.length === 0 ? (
           <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">
-              {searchTerm || dateFilter !== "all" || creatorFilter !== "all"
-                ? "No receipts match your search criteria."
-                : "No receipts found. Create your first receipt to get started."
-              }
+            <CardContent className="p-12 text-center">
+              <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+                <ReceiptIcon className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No Receipts Found</h3>
+              <p className="text-muted-foreground mb-6">
+                {Object.keys(filters).some(key => filters[key as keyof EnhancedReceiptsFiltersValue] !== undefined)
+                  ? "No receipts match your current filter criteria. Try adjusting your filters or clearing them to see more results."
+                  : "No receipts found. Create your first receipt to get started."
+                }
+              </p>
+              {Object.keys(filters).some(key => filters[key as keyof EnhancedReceiptsFiltersValue] !== undefined) && (
+                <Button variant="outline" onClick={() => setFilters({})}>
+                  Clear All Filters
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
-          filteredReceipts.map((receipt) => (
-            <ReceiptCard
-              key={receipt.id}
-              receipt={receipt}
-              onDelete={handleDelete}
-            />
-          ))
+          <>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {filteredReceipts.length} of {totalReceipts} receipts
+              </div>
+              {filteredReceipts.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  Total filtered amount: ${filteredReceipts.reduce((sum, r) => sum + r.amount, 0).toFixed(2)}
+                </div>
+              )}
+            </div>
+            
+            {filteredReceipts.map((receipt) => (
+              <ReceiptCard
+                key={receipt.id}
+                receipt={receipt}
+                onDelete={handleDelete}
+              />
+            ))}
+          </>
         )}
       </div>
     </div>

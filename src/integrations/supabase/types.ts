@@ -1342,7 +1342,13 @@ export type Database = {
       }
       receipts: {
         Row: {
+          allocated_amount: number | null
+          allocation_percentage: number | null
           amount: number
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          category: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -1354,13 +1360,21 @@ export type Database = {
           ocr_confidence: number | null
           receipt_date: string
           receipt_image_url: string | null
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["receipt_status"] | null
           subtotal: number | null
           tax_amount: number | null
           updated_at: string
           vendor_name: string
         }
         Insert: {
+          allocated_amount?: number | null
+          allocation_percentage?: number | null
           amount: number
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1372,13 +1386,21 @@ export type Database = {
           ocr_confidence?: number | null
           receipt_date: string
           receipt_image_url?: string | null
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["receipt_status"] | null
           subtotal?: number | null
           tax_amount?: number | null
           updated_at?: string
           vendor_name: string
         }
         Update: {
+          allocated_amount?: number | null
+          allocation_percentage?: number | null
           amount?: number
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1390,12 +1412,21 @@ export type Database = {
           ocr_confidence?: number | null
           receipt_date?: string
           receipt_image_url?: string | null
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["receipt_status"] | null
           subtotal?: number | null
           tax_amount?: number | null
           updated_at?: string
           vendor_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "receipts_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "receipts_created_by_fkey"
             columns: ["created_by"]
@@ -2929,6 +2960,7 @@ export type Database = {
         | "internal_work"
         | "employee_time"
         | "other"
+      receipt_status: "draft" | "submitted" | "approved" | "rejected"
       report_status: "submitted" | "reviewed" | "approved" | "rejected"
       work_order_priority: "standard" | "urgent"
       work_order_status:
@@ -3080,6 +3112,7 @@ export const Constants = {
         "employee_time",
         "other",
       ],
+      receipt_status: ["draft", "submitted", "approved", "rejected"],
       report_status: ["submitted", "reviewed", "approved", "rejected"],
       work_order_priority: ["standard", "urgent"],
       work_order_status: [

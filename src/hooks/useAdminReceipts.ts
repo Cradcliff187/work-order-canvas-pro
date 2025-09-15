@@ -13,12 +13,20 @@ export interface AdminCreateReceiptData {
   description?: string;
   receipt_date: string;
   notes?: string;
+  category?: string;
+  status?: 'draft' | 'submitted' | 'approved' | 'rejected';
   allocations: {
     work_order_id: string;
     allocated_amount: number;
     allocation_notes?: string;
   }[];
   receipt_image?: File;
+}
+
+export interface ReceiptApprovalData {
+  receiptId: string;
+  action: 'approve' | 'reject';
+  notes?: string;
 }
 
 export function useAdminReceipts() {
@@ -124,6 +132,8 @@ export function useAdminReceipts() {
             description: data.description,
             receipt_date: data.receipt_date,
             notes: data.notes,
+            category: data.category || 'Other',
+            status: data.status || 'approved', // Admin-created receipts are auto-approved
             created_by: profile.id,
             is_admin_entered: true,
           })
@@ -202,11 +212,55 @@ export function useAdminReceipts() {
     },
   });
 
+  // Approve or reject receipt
+  const approveReceipt = useMutation({
+    mutationFn: async ({ receiptId, action, notes }: ReceiptApprovalData) => {
+      if (!profile?.id) throw new Error("No admin profile found");
+
+      const updateData: any = {
+        approved_by: profile.id,
+        approved_at: new Date().toISOString(),
+      };
+
+      if (action === 'approve') {
+        updateData.status = 'approved';
+        updateData.approval_notes = notes;
+      } else {
+        updateData.status = 'rejected';
+        updateData.rejection_reason = notes;
+      }
+
+      const { error } = await supabase
+        .from("receipts")
+        .update(updateData)
+        .eq("id", receiptId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-receipts"] });
+      queryClient.invalidateQueries({ queryKey: ["receipts"] });
+      toast({
+        title: "Receipt Updated",
+        description: "Receipt status has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error("Receipt approval error:", error);
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Failed to update receipt status",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     allReceipts,
     employees,
     workOrders,
     createAdminReceipt,
+    approveReceipt,
     isUploading,
   };
 }
