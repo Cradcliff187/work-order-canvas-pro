@@ -260,7 +260,11 @@ export const AdminRoutes = () => (
     
     <Route path="/admin/receipts/upload" element={
       <ProtectedRoute requiredUserType="employee">
-        <Navigate to="/admin/finance/receipts" replace />
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            {React.createElement(lazy(() => import('@/pages/admin/AdminReceiptUpload')))}
+          </Suspense>
+        </AdminLayout>
       </ProtectedRoute>
     } />
 
