@@ -226,12 +226,19 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
 
   // Insert work order associations
   if (workOrderAssociations.length > 0) {
-    const { error: workOrdersError } = await supabase
-      .from('partner_invoice_work_orders')
-      .insert(workOrderAssociations);
-      
-    if (workOrdersError) {
-      throw new Error('Failed to create work order associations');
+    // Filter out any invalid entries
+    const validAssociations = workOrderAssociations.filter(
+      assoc => assoc.work_order_id && assoc.partner_invoice_id && assoc.amount
+    );
+    
+    if (validAssociations.length > 0) {
+      const { error: workOrdersError } = await supabase
+        .from('partner_invoice_work_orders')
+        .insert(validAssociations);
+        
+      if (workOrdersError) {
+        throw new Error('Failed to create work order associations');
+      }
     }
   }
 
