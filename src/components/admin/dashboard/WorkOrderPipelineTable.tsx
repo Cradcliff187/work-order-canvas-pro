@@ -86,6 +86,11 @@ export function WorkOrderPipelineTable({
       return 'report_pending';
     }
     
+    // If partner_bill_status='billed' → "Invoiced" (check this first to avoid incorrect "ready" status)
+    if (item.partner_bill_status === 'billed') {
+      return 'billed';
+    }
+    
     // Check if internal work with bill amount ready
     const isInternalWork = item.assigned_organization_type === 'internal';
     if (!item.invoice_status && !isInternalWork) {
@@ -104,18 +109,19 @@ export function WorkOrderPipelineTable({
       return 'bill_pending';
     }
     
-    // If partner_bill_status='billed' → "Invoiced"
-    if (item.partner_bill_status === 'billed') {
-      return 'billed';
-    }
-    
     // If bill approved & partner_bill_status='ready' → "Ready to Invoice"
     if (item.invoice_status === 'approved' && item.partner_bill_status === 'ready') {
       return 'ready';
     }
     
-    // Default fallback
-    return 'ready';
+    // Special case: If subcontractor bill is paid but partner_bill_status is still 'ready', 
+    // it's genuinely ready to be invoiced to partner
+    if (item.invoice_status === 'paid' && item.partner_bill_status === 'ready') {
+      return 'ready';
+    }
+    
+    // Default fallback - if we get here, work is done but status unclear
+    return item.partner_bill_status || 'ready';
   };
 
   const tableColumns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [

@@ -122,8 +122,20 @@ export default function BillingDashboard() {
         return false;
       }
       
-      if (filters.partner_billing_status?.length && !filters.partner_billing_status.includes(item.partner_bill_status)) {
-        return false;
+      if (filters.partner_billing_status?.length) {
+        // Use computed status instead of raw partner_bill_status for accurate filtering
+        const computedStatus = (() => {
+          if (item.status !== 'completed') return 'work_pending';
+          if (item.report_status !== 'approved') return 'report_pending';
+          if (item.partner_bill_status === 'billed') return 'billed';
+          if (item.invoice_status === 'submitted') return 'bill_pending';
+          if ((item.invoice_status === 'approved' || item.invoice_status === 'paid') && item.partner_bill_status === 'ready') return 'ready';
+          return item.partner_bill_status || 'ready';
+        })();
+        
+        if (!filters.partner_billing_status.includes(computedStatus)) {
+          return false;
+        }
       }
       
       if (filters.report_status?.length && !filters.report_status.includes(item.report_status)) {
