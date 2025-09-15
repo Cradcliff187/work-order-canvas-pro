@@ -145,7 +145,8 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       partner_invoice_id: partnerInvoice.id,
       work_order_report_id: null, // Bills don't have specific work order reports
       amount: totalAmount,
-      description: `Bill ${bill.internal_bill_number}${bill.external_bill_number ? ` (${bill.external_bill_number})` : ''}`
+      description: `Bill ${bill.internal_bill_number}${bill.external_bill_number ? ` (${bill.external_bill_number})` : ''}`,
+      source_type: 'subcontractor_bill'
     });
 
     // Create work order associations from bills
@@ -179,7 +180,8 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       partner_invoice_id: partnerInvoice.id,
       work_order_report_id: report.id,
       amount: totalWithMarkup,
-      description: `Internal Work - ${report.work_orders.work_order_number}: ${report.work_orders.title}`
+      description: `Internal Work - ${report.work_orders.work_order_number}: ${report.work_orders.title}`,
+      source_type: 'internal_work'
     });
 
     // Add work order association for internal reports
@@ -203,7 +205,8 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       partner_invoice_id: partnerInvoice.id,
       work_order_report_id: null, // Employee time entries don't link to work_order_reports
       amount: totalWithMarkup,
-      description: `Employee Time - ${entry.work_orders.work_order_number}: ${employeeName} (${entry.hours_worked}h)`
+      description: `Employee Time - ${entry.work_orders.work_order_number}: ${employeeName} (${entry.hours_worked}h)`,
+      source_type: 'employee_time'
     });
 
     // Add work order association for employee time entries

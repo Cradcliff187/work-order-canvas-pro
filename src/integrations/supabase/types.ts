@@ -793,6 +793,9 @@ export type Database = {
           description: string | null
           id: string
           partner_invoice_id: string
+          source_type:
+            | Database["public"]["Enums"]["partner_invoice_line_item_source_type"]
+            | null
           work_order_report_id: string | null
         }
         Insert: {
@@ -801,6 +804,9 @@ export type Database = {
           description?: string | null
           id?: string
           partner_invoice_id: string
+          source_type?:
+            | Database["public"]["Enums"]["partner_invoice_line_item_source_type"]
+            | null
           work_order_report_id?: string | null
         }
         Update: {
@@ -809,6 +815,9 @@ export type Database = {
           description?: string | null
           id?: string
           partner_invoice_id?: string
+          source_type?:
+            | Database["public"]["Enums"]["partner_invoice_line_item_source_type"]
+            | null
           work_order_report_id?: string | null
         }
         Relationships: [
@@ -2902,6 +2911,11 @@ export type Database = {
       file_type: "photo" | "invoice" | "document"
       organization_role: "owner" | "admin" | "manager" | "employee" | "member"
       organization_type: "partner" | "subcontractor" | "internal"
+      partner_invoice_line_item_source_type:
+        | "subcontractor_bill"
+        | "internal_work"
+        | "employee_time"
+        | "other"
       report_status: "submitted" | "reviewed" | "approved" | "rejected"
       work_order_priority: "standard" | "urgent"
       work_order_status:
@@ -3047,6 +3061,12 @@ export const Constants = {
       file_type: ["photo", "invoice", "document"],
       organization_role: ["owner", "admin", "manager", "employee", "member"],
       organization_type: ["partner", "subcontractor", "internal"],
+      partner_invoice_line_item_source_type: [
+        "subcontractor_bill",
+        "internal_work",
+        "employee_time",
+        "other",
+      ],
       report_status: ["submitted", "reviewed", "approved", "rejected"],
       work_order_priority: ["standard", "urgent"],
       work_order_status: [

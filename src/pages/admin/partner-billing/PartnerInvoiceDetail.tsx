@@ -43,6 +43,7 @@ interface PartnerInvoiceDetail {
     id: string;
     amount: number;
     description: string;
+    source_type?: string | null;
     work_order_report?: {
       work_order: {
         work_order_number: string;
@@ -87,6 +88,7 @@ async function fetchPartnerInvoiceDetail(invoiceId: string): Promise<PartnerInvo
         id,
         amount,
         description,
+        source_type,
         work_order_report:work_order_reports(
           work_order:work_orders(
             work_order_number,
@@ -131,27 +133,39 @@ function usePartnerInvoiceDetail(invoiceId: string) {
 
 // Helper function to determine line item source type
 function getLineItemSourceType(item: PartnerInvoiceDetail['line_items'][0]): string {
-  // If it has a work order report, it's from internal work
+  // Use the database source_type if available
+  if (item.source_type) {
+    switch (item.source_type) {
+      case 'subcontractor_bill':
+        return 'Subcontractor Bill';
+      case 'internal_work':
+        return 'Internal Work';
+      case 'employee_time':
+        return 'Employee Time Entry';
+      case 'other':
+        return 'Other';
+      default:
+        return 'Line Item';
+    }
+  }
+  
+  // Fallback to pattern-based detection for existing records
   if (item.work_order_report) {
     return 'Internal Work';
   }
   
-  // Check description patterns to infer source type
   const description = item.description?.toLowerCase() || '';
   
-  // Subcontractor bill patterns
   if (description.includes('bill') || description.includes('inv-') || 
       description.includes('subcontractor') || description.includes('contractor')) {
     return 'Subcontractor Bill';
   }
   
-  // Employee time entry patterns
   if (description.includes('time') || description.includes('hours') || 
       description.includes('labor') || description.includes('employee')) {
     return 'Employee Time Entry';
   }
   
-  // Default fallback
   return 'Line Item';
 }
 
