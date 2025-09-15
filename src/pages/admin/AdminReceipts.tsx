@@ -13,8 +13,8 @@ import { format, isWithinInterval } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminReceipts() {
-  const { receipts, deleteReceipt } = useReceipts();
-  const { allReceipts } = useAdminReceipts();
+  const { receipts } = useReceipts();
+  const { allReceipts, deleteAdminReceipt } = useAdminReceipts();
   const { toast } = useToast();
   const [filters, setFilters] = useState<EnhancedReceiptsFiltersValue>({});
 
@@ -122,17 +122,10 @@ export default function AdminReceipts() {
 
   const handleDelete = async (receiptId: string) => {
     try {
-      await deleteReceipt.mutateAsync(receiptId);
-      toast({
-        title: "Receipt Deleted",
-        description: "The receipt has been successfully deleted.",
-      });
+      await deleteAdminReceipt.mutateAsync(receiptId);
     } catch (error) {
-      toast({
-        title: "Delete Failed",
-        description: "Failed to delete the receipt. Please try again.",
-        variant: "destructive",
-      });
+      // Error handling is done in the mutation's onError callback
+      console.error("Delete failed:", error);
     }
   };
 

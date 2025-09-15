@@ -247,12 +247,89 @@ export function useAdminReceipts() {
     },
   });
 
+  // Delete admin receipt
+  const deleteAdminReceipt = useMutation({
+    mutationFn: async (receiptId: string) => {
+      if (!profile?.id) throw new Error("No admin profile found");
+
+      // Delete receipt line items first
+      const { error: lineItemsError } = await supabase
+        .from("receipt_line_items")
+        .delete()
+        .eq("receipt_id", receiptId);
+
+      if (lineItemsError) throw lineItemsError;
+
+      // Delete receipt work order allocations
+      const { error: allocationError } = await supabase
+        .from("receipt_work_orders")
+        .delete()
+        .eq("receipt_id", receiptId);
+
+      if (allocationError) throw allocationError;
+
+      // Delete any time entry allocations
+      const { error: timeEntryError } = await supabase
+        .from("receipt_time_entries")
+        .delete()
+        .eq("receipt_id", receiptId);
+
+      if (timeEntryError) throw timeEntryError;
+
+      // Get receipt to delete image
+      const { data: receipt } = await supabase
+        .from("receipts")
+        .select("receipt_image_url")
+        .eq("id", receiptId)
+        .single();
+
+      // Delete image from storage if exists
+      if (receipt?.receipt_image_url) {
+        const { error: storageError } = await supabase.storage
+          .from("work-order-attachments")
+          .remove([receipt.receipt_image_url]);
+        
+        // Log storage error but don't fail the deletion
+        if (storageError) {
+          console.warn("Failed to delete receipt image:", storageError);
+        }
+      }
+
+      // Finally, delete the receipt record
+      const { error: receiptError } = await supabase
+        .from("receipts")
+        .delete()
+        .eq("id", receiptId);
+
+      if (receiptError) throw receiptError;
+
+      return receiptId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-receipts"] });
+      queryClient.invalidateQueries({ queryKey: ["receipts"] });
+      toast({
+        title: "Receipt Deleted",
+        description: "Receipt and all related records have been successfully deleted.",
+      });
+    },
+    onError: (error) => {
+      console.error("Admin receipt deletion error:", error);
+      toast({
+        title: "Delete Failed",
+        description: error instanceof Error ? error.message : "Failed to delete receipt",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     allReceipts,
     employees,
     workOrders, // For legacy compatibility
     createAdminReceipt,
     approveReceipt,
+    deleteAdminReceipt,
     isUploading,
   };
 }
