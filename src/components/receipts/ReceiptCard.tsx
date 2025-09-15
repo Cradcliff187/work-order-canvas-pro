@@ -2,9 +2,10 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Trash2, FileImage, DollarSign, Calendar, Building, User, Shield } from "lucide-react";
+import { Eye, Trash2, FileImage, DollarSign, Calendar, Building, User, Shield, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { AdminReceiptEditModal } from "@/components/admin/AdminReceiptEditModal";
 
 interface ReceiptCardProps {
   receipt: {
@@ -32,6 +33,7 @@ interface ReceiptCardProps {
     };
     receipt_work_orders: Array<{
       id: string;
+      work_order_id: string;
       allocated_amount: number;
       allocation_notes?: string;
       work_orders: {
@@ -114,6 +116,18 @@ export function ReceiptCard({ receipt, onDelete }: ReceiptCardProps) {
                   <FileImage className="h-4 w-4" />
                 </Button>
               )}
+              <AdminReceiptEditModal 
+                receipt={receipt as any}
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    title="Edit receipt"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                }
+              />
               <Button
                 variant="outline"
                 size="sm"
