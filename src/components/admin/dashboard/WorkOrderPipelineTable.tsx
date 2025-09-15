@@ -272,6 +272,11 @@ export function WorkOrderPipelineTable({
       cell: ({ row }) => {
         const item = row.original;
         
+        // Check if this is internal work - no subcontractor billing applies
+        if (item.assigned_organization_type === 'internal') {
+          return <span className="text-muted-foreground">-</span>;
+        }
+        
         const getBillStatus = () => {
           if (!item.invoice_status) return 'not_billed';
           
