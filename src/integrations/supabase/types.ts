@@ -2511,6 +2511,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      fix_legacy_big_boy_bills: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       fix_work_order_sequence_numbers: {
         Args: Record<PropertyKey, never>
         Returns: Json
