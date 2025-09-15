@@ -633,7 +633,7 @@ export default function SelectBills() {
                 ) : (
                   <EmptyState
                     icon={FileBarChart}
-                    title="No items ready for invoicing"
+                    title="No items ready to invoice"
                     description="There are no billable items ready for partner invoicing for this organization."
                   />
                 )

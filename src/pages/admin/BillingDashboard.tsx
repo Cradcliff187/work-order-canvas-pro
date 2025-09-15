@@ -239,7 +239,7 @@ export default function BillingDashboard() {
     },
     {
       icon: CheckCircle,
-      label: 'Ready to Bill Partners',
+      label: 'Ready to Invoice Partners',
       value: formatCurrency(billsTotal + internalTotal),
       subtitle: `${bills.length} bills, ${internalReports.length} internal reports`,
       variant: 'success'
