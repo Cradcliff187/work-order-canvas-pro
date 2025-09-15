@@ -315,9 +315,24 @@ export function useAdminReceipts() {
     },
     onError: (error) => {
       console.error("Admin receipt deletion error:", error);
+      
+      let errorMessage = "Failed to delete receipt";
+      if (error instanceof Error) {
+        // Handle specific database constraint errors
+        if (error.message.includes("violates not-null constraint")) {
+          errorMessage = "Database constraint error occurred. Please try again.";
+        } else if (error.message.includes("violates row-level security policy")) {
+          errorMessage = "You don't have permission to delete this receipt.";
+        } else if (error.message.includes("foreign key")) {
+          errorMessage = "Cannot delete receipt - it has dependent records.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Delete Failed",
-        description: error instanceof Error ? error.message : "Failed to delete receipt",
+        description: errorMessage,
         variant: "destructive",
       });
     },
