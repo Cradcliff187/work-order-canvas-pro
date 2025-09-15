@@ -37,7 +37,7 @@ export function useWorkOrderProjectSearch(searchTerm: string) {
             status,
             organizations!organization_id(name, initials)
           `)
-          .limit(25);
+          .limit(50);
 
         if (debouncedSearch) {
           const searchPattern = `%${debouncedSearch.trim()}%`;
@@ -63,7 +63,7 @@ export function useWorkOrderProjectSearch(searchTerm: string) {
           })));
         }
 
-        // Search projects
+        // Search projects - removed status filter to show all projects
         let projectQuery = supabase
           .from('projects')
           .select(`
@@ -74,8 +74,7 @@ export function useWorkOrderProjectSearch(searchTerm: string) {
             status,
             organizations!organization_id(name, initials)
           `)
-          .eq('status', 'active')
-          .limit(25);
+          .limit(50);
 
         if (debouncedSearch) {
           const searchPattern = `%${debouncedSearch.trim()}%`;
@@ -120,4 +119,65 @@ export function useWorkOrderProjectSearch(searchTerm: string) {
   }, [debouncedSearch]);
 
   return { items, loading };
+}
+
+// Helper function to fetch a single item by ID and type
+export async function fetchItemById(id: string, type: 'work_order' | 'project'): Promise<WorkOrderProjectItem | null> {
+  try {
+    if (type === 'work_order') {
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select(`
+          id,
+          work_order_number,
+          title,
+          store_location,
+          status,
+          organizations!organization_id(name, initials)
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id,
+        type: 'work_order',
+        number: data.work_order_number,
+        title: data.title || '',
+        location: data.store_location || undefined,
+        organization_name: data.organizations?.name,
+        organization_initials: data.organizations?.initials,
+        status: data.status,
+      };
+    } else {
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          id,
+          project_number,
+          name,
+          location_address,
+          status,
+          organizations!organization_id(name, initials)
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id,
+        type: 'project',
+        number: data.project_number || data.name,
+        title: data.name || '',
+        location: data.location_address || undefined,
+        organization_name: data.organizations?.name,
+        organization_initials: data.organizations?.initials,
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching item by ID:', error);
+    return null;
+  }
 }

@@ -133,14 +133,25 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
     }
 
     try {
-      // For now, we'll assume all allocations are work orders 
-      // This will need to be improved to handle the type properly
-      const transformedAllocations = data.allocations.map(allocation => ({
-        work_order_id: allocation.work_order_project_id,
-        project_id: undefined, // Will be handled by the backend based on the ID
-        allocated_amount: allocation.allocated_amount,
-        allocation_notes: allocation.allocation_notes,
-      }));
+      // Transform allocations to handle typed values (wo:uuid or proj:uuid)
+      const transformedAllocations = data.allocations.map(allocation => {
+        const typedValue = allocation.work_order_project_id;
+        let work_order_id = null;
+        let project_id = null;
+        
+        if (typedValue?.startsWith('wo:')) {
+          work_order_id = typedValue.slice(3);
+        } else if (typedValue?.startsWith('proj:')) {
+          project_id = typedValue.slice(5);
+        }
+        
+        return {
+          work_order_id,
+          project_id,
+          allocated_amount: allocation.allocated_amount,
+          allocation_notes: allocation.allocation_notes,
+        };
+      });
 
       await createAdminReceipt.mutateAsync({
         employee_user_id: data.employee_user_id === "__none__" ? undefined : data.employee_user_id,
