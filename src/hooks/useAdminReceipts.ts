@@ -16,7 +16,8 @@ export interface AdminCreateReceiptData {
   category?: string;
   status?: 'draft' | 'submitted' | 'approved' | 'rejected';
   allocations: {
-    work_order_id: string;
+    work_order_id?: string;
+    project_id?: string;
     allocated_amount: number;
     allocation_notes?: string;
   }[];
@@ -89,7 +90,7 @@ export function useAdminReceipts() {
     },
   });
 
-  // Get all work orders for allocation
+  // Get all work orders for allocation (expanded)
   const workOrders = useQuery({
     queryKey: ["admin-work-orders"],
     queryFn: async () => {
@@ -103,10 +104,31 @@ export function useAdminReceipts() {
           status,
           organizations!organization_id(name, initials)
         `)
-        .in("status", ["assigned", "in_progress", "received"])
-        .order("work_order_number", { ascending: false })
-        .limit(100);
+        .order("work_order_number", { ascending: false });
       
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Get all projects for allocation  
+  const projects = useQuery({
+    queryKey: ["admin-projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select(`
+          id,
+          project_number,
+          name,
+          location_address,
+          status,
+          organization_id,
+          organizations!organization_id(name, initials)
+        `)
+        .eq("status", "active")
+        .order("project_number", { ascending: false });
+        
       if (error) throw error;
       return data || [];
     },
@@ -172,13 +194,13 @@ export function useAdminReceipts() {
         }
 
         if (data.allocations.length === 0) {
-          throw new Error("At least one work order allocation is required");
+          throw new Error("At least one work order or project allocation is required");
         }
 
         // Create allocation records
         const allocations = data.allocations.map(allocation => ({
           receipt_id: receipt.id,
-          work_order_id: allocation.work_order_id,
+          work_order_id: allocation.work_order_id || null,
           allocated_amount: allocation.allocated_amount,
           allocation_notes: allocation.allocation_notes,
         }));
@@ -259,6 +281,7 @@ export function useAdminReceipts() {
     allReceipts,
     employees,
     workOrders,
+    projects,
     createAdminReceipt,
     approveReceipt,
     isUploading,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,14 +20,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { EmployeeCombobox } from './EmployeeCombobox';
+import { WorkOrderProjectCombobox, WorkOrderProjectItem } from './WorkOrderProjectCombobox';
 import {
   Form,
   FormControl,
@@ -38,16 +32,20 @@ import {
 } from '@/components/ui/form';
 
 import { useAdminReceipts, type AdminCreateReceiptData } from '@/hooks/useAdminReceipts';
+import { useToast } from '@/hooks/use-toast';
 
 const receiptSchema = z.object({
   employee_user_id: z.string().optional(),
   vendor_name: z.string().min(1, 'Vendor name is required'),
   amount: z.number().min(0.01, 'Amount must be greater than 0'),
+  subtotal: z.number().optional(),
+  tax_amount: z.number().optional(),
   description: z.string().optional(),
   receipt_date: z.string().min(1, 'Receipt date is required'),
   notes: z.string().optional(),
+  category: z.string().optional(),
   allocations: z.array(z.object({
-    work_order_id: z.string().min(1, 'Work order is required'),
+    work_order_project_id: z.string().min(1, 'Work order or project is required'),
     allocated_amount: z.number().min(0.01, 'Amount must be greater than 0'),
     allocation_notes: z.string().optional(),
   })).min(1, 'At least one allocation is required'),
@@ -62,18 +60,56 @@ interface AdminReceiptCreateModalProps {
 export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProps) {
   const [open, setOpen] = useState(false);
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
+  const { toast } = useToast();
   
-  const { employees, workOrders, createAdminReceipt, isUploading } = useAdminReceipts();
+  const { employees, workOrders, projects, createAdminReceipt, isUploading } = useAdminReceipts();
+
+  // Transform work orders and projects into a unified format
+  const workOrderProjectItems: WorkOrderProjectItem[] = useMemo(() => {
+    const workOrderItems: WorkOrderProjectItem[] = (workOrders.data || []).map(wo => ({
+      id: wo.id,
+      type: 'work_order' as const,
+      number: wo.work_order_number,
+      title: wo.title,
+      location: wo.store_location,
+      organization_name: wo.organizations?.name,
+      organization_initials: wo.organizations?.initials,
+      status: wo.status,
+    }));
+
+    const projectItems: WorkOrderProjectItem[] = (projects.data || []).map(project => ({
+      id: project.id,
+      type: 'project' as const,
+      number: project.project_number || `P-${project.id.slice(0, 8)}`,
+      title: project.name,
+      location: project.location_address,
+      organization_name: project.organizations?.name,
+      organization_initials: project.organizations?.initials,
+    }));
+
+    return [...workOrderItems, ...projectItems];
+  }, [workOrders.data, projects.data]);
+
+  const employeesList = employees.data || [];
+  const isLoading = workOrders.isLoading || projects.isLoading || employees.isLoading;
 
   const form = useForm<ReceiptFormData>({
     resolver: zodResolver(receiptSchema),
     defaultValues: {
+      employee_user_id: '',
       vendor_name: '',
       amount: 0,
+      subtotal: 0,
+      tax_amount: 0,
       description: '',
       receipt_date: format(new Date(), 'yyyy-MM-dd'),
       notes: '',
-      allocations: [{ work_order_id: '', allocated_amount: 0, allocation_notes: '' }],
+      category: 'Other',
+      allocations: [{
+        work_order_project_id: "",
+        allocated_amount: 0,
+        allocation_notes: "",
+      }],
     },
   });
 
@@ -87,7 +123,7 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
     const currentAllocations = form.getValues('allocations');
     form.setValue('allocations', [
       ...currentAllocations,
-      { work_order_id: '', allocated_amount: remainingAmount > 0 ? remainingAmount : 0, allocation_notes: '' }
+      { work_order_project_id: '', allocated_amount: remainingAmount > 0 ? remainingAmount : 0, allocation_notes: '' }
     ]);
   };
 
@@ -106,41 +142,59 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
   };
 
   const onSubmit = async (data: ReceiptFormData) => {
-    const receiptData: AdminCreateReceiptData = {
-      employee_user_id: data.employee_user_id,
-      vendor_name: data.vendor_name,
-      amount: data.amount,
-      description: data.description,
-      receipt_date: data.receipt_date,
-      notes: data.notes,
-      allocations: data.allocations.map(allocation => ({
-        work_order_id: allocation.work_order_id,
-        allocated_amount: allocation.allocated_amount,
-        allocation_notes: allocation.allocation_notes,
-      })),
-      receipt_image: receiptImage || undefined,
-    };
+    // Validate that total allocated equals receipt amount
+    const totalAllocated = data.allocations.reduce((sum, allocation) => sum + allocation.allocated_amount, 0);
+    if (Math.abs(totalAllocated - data.amount) > 0.01) {
+      toast({
+        title: "Allocation Error",
+        description: `Total allocated (${totalAllocated.toFixed(2)}) must equal receipt amount (${data.amount.toFixed(2)})`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      await createAdminReceipt.mutateAsync(receiptData);
+      // Transform allocations to separate work orders and projects
+      const transformedAllocations = data.allocations.map(allocation => {
+        const item = workOrderProjectItems.find(item => item.id === allocation.work_order_project_id);
+        return {
+          work_order_id: item?.type === 'work_order' ? allocation.work_order_project_id : undefined,
+          project_id: item?.type === 'project' ? allocation.work_order_project_id : undefined,
+          allocated_amount: allocation.allocated_amount,
+          allocation_notes: allocation.allocation_notes,
+        };
+      });
+
+      await createAdminReceipt.mutateAsync({
+        employee_user_id: data.employee_user_id === "__none__" ? undefined : data.employee_user_id,
+        vendor_name: data.vendor_name,
+        amount: data.amount,
+        subtotal: data.subtotal,
+        tax_amount: data.tax_amount,
+        description: data.description,
+        receipt_date: data.receipt_date,
+        notes: data.notes,
+        category: data.category,
+        status: 'approved',
+        allocations: transformedAllocations,
+        receipt_image: receiptImage || undefined,
+      });
+
+      setOpen(false);
       form.reset();
       setReceiptImage(null);
-      setOpen(false);
     } catch (error) {
-      // Error is handled by the mutation
+      console.error("Form submission error:", error);
     }
   };
-
-  const employeesList = employees.data || [];
-  const workOrdersList = workOrders.data || [];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
           <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Receipt
+            <Plus className="mr-2 h-4 w-4" />
+            Create Receipt
           </Button>
         )}
       </DialogTrigger>
@@ -151,21 +205,15 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
             Create Admin Receipt
           </DialogTitle>
           <DialogDescription>
-            Create a receipt on behalf of an employee or directly for work orders.
+            Create a receipt entry for an employee and allocate expenses to work orders and projects.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[70vh] pr-4">
+        <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              
               {/* Basic Receipt Information */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Receipt className="h-4 w-4" />
-                  Receipt Details
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -174,7 +222,7 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
                       <FormItem>
                         <FormLabel>Vendor Name *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Home Depot, Lowes, etc." {...field} />
+                          <Input placeholder="Home Depot, Lowe's, etc." {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -273,12 +321,12 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
 
               <Separator />
 
-              {/* Work Order Allocations */}
+              {/* Work Order & Project Allocations */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Building className="h-4 w-4" />
-                    Work Order Allocations
+                    Work Order & Project Allocations
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Badge variant={Math.abs(remainingAmount) < 0.01 ? 'default' : 'destructive'}>
@@ -309,24 +357,19 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField
                         control={form.control}
-                        name={`allocations.${index}.work_order_id`}
+                        name={`allocations.${index}.work_order_project_id`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Work Order *</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select work order" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {workOrdersList.map((wo) => (
-                                  <SelectItem key={wo.id} value={wo.id}>
-                                    {wo.work_order_number} - {wo.title}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <FormLabel>Work Order / Project *</FormLabel>
+                            <FormControl>
+                              <WorkOrderProjectCombobox
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Search work orders and projects..."
+                                items={workOrderProjectItems}
+                                loading={isLoading}
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -406,8 +449,8 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
                 )}
               />
 
-              {/* Submit Buttons */}
-              <div className="flex justify-end gap-3 pt-4">
+              {/* Footer Actions */}
+              <div className="flex items-center gap-3 pt-4 border-t">
                 <Button
                   type="button"
                   variant="outline"
@@ -418,9 +461,17 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isUploading || Math.abs(remainingAmount) > 0.01}
+                  disabled={Math.abs(remainingAmount) > 0.01 || isUploading}
+                  className="flex items-center gap-2"
                 >
-                  {isUploading ? 'Creating...' : 'Create Receipt'}
+                  {isUploading ? (
+                    "Creating..."
+                  ) : (
+                    <>
+                      <Receipt className="h-4 w-4" />
+                      Create Receipt
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
