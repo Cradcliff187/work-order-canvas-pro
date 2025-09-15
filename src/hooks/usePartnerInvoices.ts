@@ -66,41 +66,27 @@ export function usePartnerInvoices() {
       
       if (error) throw error;
       return (data || []).map(invoice => {
-        // Collect work orders from all sources
+        // Combine work orders from all sources
         const directWorkOrders = invoice.partner_invoice_work_orders || [];
-        const reportWorkOrders = (invoice.work_order_reports || [])
-          .filter(report => report.work_orders)
-          .map(report => ({
-            ...report,
-            work_order_id: report.work_order_id,
-            amount: report.bill_amount,
-            description: `Report: ${report.work_orders.title}`,
-            work_orders: report.work_orders
-          }));
-        const employeeWorkOrders = (invoice.employee_reports || [])
-          .filter(report => report.work_orders)
-          .map(report => ({
-            ...report,
-            work_order_id: report.work_order_id,
-            amount: (report.hours_worked || 0) * (report.hourly_rate_snapshot || 0),
-            description: `Employee Time: ${report.hours_worked}h @ $${report.hourly_rate_snapshot}/h`,
-            work_orders: report.work_orders
-          }));
+        const reportWorkOrders = (invoice.work_order_reports || []).map(report => ({
+          work_order_id: report.work_order_id,
+          work_orders: report.work_orders,
+          amount: report.bill_amount * (1 + (invoice.markup_percentage || 0) / 100),
+          description: `From report`
+        }));
+        const employeeWorkOrders = (invoice.employee_reports || []).map(emp => ({
+          work_order_id: emp.work_order_id,
+          work_orders: emp.work_orders,
+          amount: (emp.hours_worked * emp.hourly_rate_snapshot) * (1 + (invoice.markup_percentage || 0) / 100),
+          description: `Employee time`
+        }));
 
-        // Combine and deduplicate by work_order_id
         const allWorkOrders = [...directWorkOrders, ...reportWorkOrders, ...employeeWorkOrders];
-        const uniqueWorkOrders = allWorkOrders.reduce((acc, current) => {
-          const existing = acc.find(wo => wo.work_order_id === current.work_order_id);
-          if (!existing) {
-            acc.push(current);
-          }
-          return acc;
-        }, []);
 
         return {
           ...invoice,
-          work_orders_count: uniqueWorkOrders.length,
-          work_orders: uniqueWorkOrders
+          work_orders_count: allWorkOrders.length,
+          work_orders: allWorkOrders
         };
       });
     }
