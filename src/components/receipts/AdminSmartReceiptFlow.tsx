@@ -122,7 +122,7 @@ export function AdminSmartReceiptFlow() {
   const form = useForm<AdminReceiptFormData>({
     resolver: zodResolver(adminReceiptSchema),
     defaultValues: {
-      employee_user_id: "",
+      employee_user_id: undefined,
       vendor_name: "",
       amount: 0,
       description: "",
@@ -317,14 +317,14 @@ export function AdminSmartReceiptFlow() {
         </CardHeader>
         <CardContent>
           <Select 
-            value={form.watch('employee_user_id') || ''} 
-            onValueChange={(value) => form.setValue('employee_user_id', value)}
+            value={form.watch('employee_user_id') ?? '__none__'} 
+            onValueChange={(value) => form.setValue('employee_user_id', value === '__none__' ? undefined : value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select employee (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No specific employee</SelectItem>
+              <SelectItem value="__none__">No specific employee</SelectItem>
               {employees.data?.map((employee) => (
                 <SelectItem key={employee.id} value={employee.id}>
                   {employee.first_name} {employee.last_name} ({employee.email})
