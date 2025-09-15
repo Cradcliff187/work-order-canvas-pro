@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SmartReceiptFlow } from '@/components/receipts/SmartReceiptFlow';
+import { AdminSmartReceiptFlow } from '@/components/receipts/AdminSmartReceiptFlow';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -33,9 +33,9 @@ export default function AdminReceiptUpload() {
         </CardHeader>
       </Card>
 
-      {/* Admin context wrapper - SmartReceiptFlow handles all the upload/OCR logic */}
+      {/* Admin context wrapper - AdminSmartReceiptFlow handles admin-specific upload/OCR logic */}
       <div className="admin-receipt-upload-context">
-        <SmartReceiptFlow />
+        <AdminSmartReceiptFlow />
       </div>
     </div>
   );
