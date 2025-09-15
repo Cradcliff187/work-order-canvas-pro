@@ -23,9 +23,9 @@ import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { format } from "date-fns";
 import type { OCRResult } from '@/types/receipt';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "lucide-react";
+import { EmployeeCombobox } from "@/components/admin/EmployeeCombobox";
 
 // Section Components
 import { ReceiptOCRSection } from "./sections/ReceiptOCRSection";
@@ -316,22 +316,13 @@ export function AdminSmartReceiptFlow() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Select 
-            value={form.watch('employee_user_id') ?? '__none__'} 
-            onValueChange={(value) => form.setValue('employee_user_id', value === '__none__' ? undefined : value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select employee (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">No specific employee</SelectItem>
-              {employees.data?.map((employee) => (
-                <SelectItem key={employee.id} value={employee.id}>
-                  {employee.first_name} {employee.last_name} ({employee.email})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <EmployeeCombobox
+            value={form.watch('employee_user_id')}
+            onChange={(value) => form.setValue('employee_user_id', value)}
+            placeholder="Select employee (optional)"
+            employees={employees.data || []}
+            loading={employees.isLoading}
+          />
         </CardContent>
       </Card>
 

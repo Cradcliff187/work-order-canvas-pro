@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { EmployeeCombobox } from './EmployeeCombobox';
 import {
   Form,
   FormControl,
@@ -206,28 +207,16 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
                     name="employee_user_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>
-                          <User className="h-4 w-4 inline mr-1" />
-                          Employee (Optional)
-                        </FormLabel>
-                        <Select 
-                          onValueChange={(val) => field.onChange(val === '__none__' ? undefined : val)} 
-                          value={field.value ?? '__none__'}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select employee or leave blank" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="__none__">No specific employee</SelectItem>
-                            {employeesList.map((employee) => (
-                              <SelectItem key={employee.id} value={employee.id}>
-                                {employee.first_name} {employee.last_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Employee (Optional)</FormLabel>
+                        <FormControl>
+                          <EmployeeCombobox
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select employee or leave blank"
+                            employees={employeesList}
+                            loading={employees.isLoading}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
