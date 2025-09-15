@@ -260,11 +260,7 @@ export const AdminRoutes = () => (
     
     <Route path="/admin/receipts/upload" element={
       <ProtectedRoute requiredUserType="employee">
-        <AdminLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            <SmartReceiptFlow />
-          </Suspense>
-        </AdminLayout>
+        <Navigate to="/admin/finance/receipts" replace />
       </ProtectedRoute>
     } />
 
