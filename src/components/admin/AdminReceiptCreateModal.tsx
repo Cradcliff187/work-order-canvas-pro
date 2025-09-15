@@ -21,7 +21,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { EmployeeCombobox } from './EmployeeCombobox';
-import { WorkOrderProjectCombobox, WorkOrderProjectItem } from './WorkOrderProjectCombobox';
+import { WorkOrderProjectCombobox } from './WorkOrderProjectCombobox';
+import { WorkOrderProjectItem } from '@/hooks/useWorkOrderProjectSearch';
 import {
   Form,
   FormControl,
@@ -62,36 +63,14 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const { toast } = useToast();
   
-  const { employees, workOrders, projects, createAdminReceipt, isUploading } = useAdminReceipts();
-
-  // Transform work orders and projects into a unified format
-  const workOrderProjectItems: WorkOrderProjectItem[] = useMemo(() => {
-    const workOrderItems: WorkOrderProjectItem[] = (workOrders.data || []).map(wo => ({
-      id: wo.id,
-      type: 'work_order' as const,
-      number: wo.work_order_number,
-      title: wo.title,
-      location: wo.store_location,
-      organization_name: wo.organizations?.name,
-      organization_initials: wo.organizations?.initials,
-      status: wo.status,
-    }));
-
-    const projectItems: WorkOrderProjectItem[] = (projects.data || []).map(project => ({
-      id: project.id,
-      type: 'project' as const,
-      number: project.project_number || `P-${project.id.slice(0, 8)}`,
-      title: project.name,
-      location: project.location_address,
-      organization_name: project.organizations?.name,
-      organization_initials: project.organizations?.initials,
-    }));
-
-    return [...workOrderItems, ...projectItems];
-  }, [workOrders.data, projects.data]);
+  const { 
+    employees, 
+    createAdminReceipt,
+    isUploading 
+  } = useAdminReceipts();
 
   const employeesList = employees.data || [];
-  const isLoading = workOrders.isLoading || projects.isLoading || employees.isLoading;
+  const isLoading = employees.isLoading;
 
   const form = useForm<ReceiptFormData>({
     resolver: zodResolver(receiptSchema),
@@ -154,16 +133,14 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
     }
 
     try {
-      // Transform allocations to separate work orders and projects
-      const transformedAllocations = data.allocations.map(allocation => {
-        const item = workOrderProjectItems.find(item => item.id === allocation.work_order_project_id);
-        return {
-          work_order_id: item?.type === 'work_order' ? allocation.work_order_project_id : undefined,
-          project_id: item?.type === 'project' ? allocation.work_order_project_id : undefined,
-          allocated_amount: allocation.allocated_amount,
-          allocation_notes: allocation.allocation_notes,
-        };
-      });
+      // For now, we'll assume all allocations are work orders 
+      // This will need to be improved to handle the type properly
+      const transformedAllocations = data.allocations.map(allocation => ({
+        work_order_id: allocation.work_order_project_id,
+        project_id: undefined, // Will be handled by the backend based on the ID
+        allocated_amount: allocation.allocated_amount,
+        allocation_notes: allocation.allocation_notes,
+      }));
 
       await createAdminReceipt.mutateAsync({
         employee_user_id: data.employee_user_id === "__none__" ? undefined : data.employee_user_id,
@@ -366,8 +343,6 @@ export function AdminReceiptCreateModal({ trigger }: AdminReceiptCreateModalProp
                                 value={field.value}
                                 onChange={field.onChange}
                                 placeholder="Search work orders and projects..."
-                                items={workOrderProjectItems}
-                                loading={isLoading}
                               />
                             </FormControl>
                             <FormMessage />

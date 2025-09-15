@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { WorkOrderProjectCombobox } from '@/components/admin/WorkOrderProjectCombobox';
 import { useAdminReceipts } from '@/hooks/useAdminReceipts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,7 +83,7 @@ export function AdminReceiptEditModal({ receipt, trigger }: AdminReceiptEditModa
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const { employees, workOrders } = useAdminReceipts();
+  const { employees } = useAdminReceipts();
 
   const form = useForm<EditReceiptFormData>({
     resolver: zodResolver(editReceiptSchema),
@@ -401,24 +402,14 @@ export function AdminReceiptEditModal({ receipt, trigger }: AdminReceiptEditModa
                         name={`allocations.${index}.work_order_id`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Work Order</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select work order" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {workOrders.data?.map((workOrder) => (
-                                  <SelectItem key={workOrder.id} value={workOrder.id}>
-                                    {workOrder.work_order_number} - {workOrder.title}
-                                    {workOrder.organizations?.name && (
-                                      <span className="text-muted-foreground"> ({workOrder.organizations.name})</span>
-                                    )}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <FormLabel>Work Order / Project</FormLabel>
+                            <FormControl>
+                              <WorkOrderProjectCombobox
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Search work orders and projects..."
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}

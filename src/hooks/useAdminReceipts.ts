@@ -90,51 +90,21 @@ export function useAdminReceipts() {
     },
   });
 
-  // Get all work orders for allocation (expanded)
+
+  // Get all work orders for allocation (minimal for legacy compatibility)
   const workOrders = useQuery({
-    queryKey: ["admin-work-orders"],
+    queryKey: ["admin-legacy-work-orders"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("work_orders")
-        .select(`
-          id, 
-          work_order_number, 
-          title, 
-          store_location, 
-          status,
-          organizations!organization_id(name, initials)
-        `)
+        .select(`id, work_order_number, title, status`)
+        .limit(100)
         .order("work_order_number", { ascending: false });
       
       if (error) throw error;
       return data || [];
     },
   });
-
-  // Get all projects for allocation  
-  const projects = useQuery({
-    queryKey: ["admin-projects"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("projects")
-        .select(`
-          id,
-          project_number,
-          name,
-          location_address,
-          status,
-          organization_id,
-          organizations!organization_id(name, initials)
-        `)
-        .eq("status", "active")
-        .order("project_number", { ascending: false });
-        
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Admin create receipt mutation
   const createAdminReceipt = useMutation({
     mutationFn: async (data: AdminCreateReceiptData) => {
       if (!profile?.id) throw new Error("No admin profile found");
@@ -280,8 +250,7 @@ export function useAdminReceipts() {
   return {
     allReceipts,
     employees,
-    workOrders,
-    projects,
+    workOrders, // For legacy compatibility
     createAdminReceipt,
     approveReceipt,
     isUploading,
