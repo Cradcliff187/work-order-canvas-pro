@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ReceiptCard } from "@/components/receipts/ReceiptCard";
 import { useReceipts } from "@/hooks/useReceipts";
+import { useAdminReceipts } from "@/hooks/useAdminReceipts";
+import { AdminReceiptCreateModal } from "@/components/admin/AdminReceiptCreateModal";
 import { Search, Plus, Receipt as ReceiptIcon, DollarSign, FileText, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -18,10 +20,12 @@ import { format, startOfMonth, endOfMonth } from "date-fns";
 
 export default function ReceiptHistory() {
   const { receipts, deleteReceipt } = useReceipts();
+  const { allReceipts } = useAdminReceipts();
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
 
-  const receiptList = receipts.data || [];
+  // Use admin receipts data which includes creator info
+  const receiptList = allReceipts.data || [];
 
   // Filter receipts
   const filteredReceipts = receiptList.filter((receipt) => {
@@ -71,7 +75,7 @@ export default function ReceiptHistory() {
     }
   };
 
-  if (receipts.isLoading) {
+  if (receipts.isLoading || allReceipts.isLoading) {
     return (
       <div className="space-y-6">
         <div className="h-8 bg-muted rounded animate-pulse" />
@@ -96,12 +100,22 @@ export default function ReceiptHistory() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">Receipt History</h1>
-        <Link to="/admin/receipts/upload">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Upload Receipt
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <AdminReceiptCreateModal 
+            trigger={
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Receipt
+              </Button>
+            }
+          />
+          <Link to="/admin/receipts/upload">
+            <Button variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Upload Receipt
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Summary Cards */}

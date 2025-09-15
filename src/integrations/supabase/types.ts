@@ -1344,9 +1344,11 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          created_by: string | null
           description: string | null
           employee_user_id: string
           id: string
+          is_admin_entered: boolean | null
           line_items_extracted: boolean | null
           notes: string | null
           ocr_confidence: number | null
@@ -1360,9 +1362,11 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          created_by?: string | null
           description?: string | null
           employee_user_id: string
           id?: string
+          is_admin_entered?: boolean | null
           line_items_extracted?: boolean | null
           notes?: string | null
           ocr_confidence?: number | null
@@ -1376,9 +1380,11 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          created_by?: string | null
           description?: string | null
           employee_user_id?: string
           id?: string
+          is_admin_entered?: boolean | null
           line_items_extracted?: boolean | null
           notes?: string | null
           ocr_confidence?: number | null
@@ -1390,6 +1396,13 @@ export type Database = {
           vendor_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "receipts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "receipts_employee_user_id_fkey"
             columns: ["employee_user_id"]

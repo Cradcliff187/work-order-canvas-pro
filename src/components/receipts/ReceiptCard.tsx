@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Trash2, FileImage, DollarSign, Calendar, Building } from "lucide-react";
+import { Eye, Trash2, FileImage, DollarSign, Calendar, Building, User, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,6 +16,20 @@ interface ReceiptCardProps {
     receipt_image_url?: string;
     notes?: string;
     created_at: string;
+    is_admin_entered?: boolean;
+    created_by?: string;
+    created_by_profile?: {
+      id: string;
+      first_name: string;
+      last_name: string;
+      email: string;
+    };
+    employee_profile?: {
+      id: string;
+      first_name: string;
+      last_name: string;
+      email: string;
+    };
     receipt_work_orders: Array<{
       id: string;
       allocated_amount: number;
@@ -57,7 +71,15 @@ export function ReceiptCard({ receipt, onDelete }: ReceiptCardProps) {
           {/* Header */}
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <h3 className="font-semibold text-lg">{receipt.vendor_name}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-lg">{receipt.vendor_name}</h3>
+                {receipt.is_admin_entered && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Admin
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
@@ -67,7 +89,18 @@ export function ReceiptCard({ receipt, onDelete }: ReceiptCardProps) {
                   <DollarSign className="h-4 w-4" />
                   ${receipt.amount.toFixed(2)}
                 </div>
+                {receipt.employee_profile && (
+                  <div className="flex items-center gap-1">
+                    <User className="h-4 w-4" />
+                    {receipt.employee_profile.first_name} {receipt.employee_profile.last_name}
+                  </div>
+                )}
               </div>
+              {receipt.is_admin_entered && receipt.created_by_profile && (
+                <div className="text-xs text-muted-foreground">
+                  Created by: {receipt.created_by_profile.first_name} {receipt.created_by_profile.last_name}
+                </div>
+              )}
             </div>
             
             <div className="flex items-center space-x-2">

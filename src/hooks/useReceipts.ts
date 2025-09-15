@@ -86,6 +86,18 @@ export function useReceipts() {
         .from("receipts")
         .select(`
           *,
+          created_by_profile:profiles!created_by(
+            id,
+            first_name,
+            last_name,
+            email
+          ),
+          employee_profile:profiles!employee_user_id(
+            id,
+            first_name,
+            last_name,
+            email
+          ),
           receipt_work_orders!inner(
             *,
             work_orders!inner(
@@ -195,6 +207,8 @@ export function useReceipts() {
             description: data.description,
             receipt_date: data.receipt_date,
             notes: data.notes,
+            created_by: profile.id,
+            is_admin_entered: false,
           })
           .select()
           .single();
@@ -282,7 +296,7 @@ export function useReceipts() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["receipts"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-receipts"] });
       toast({
         title: "Receipt Created",
         description: "Receipt has been successfully uploaded and allocated.",
