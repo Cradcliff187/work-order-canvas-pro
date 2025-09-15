@@ -116,10 +116,27 @@ export function PartnerInvoicesTable({
   const filteredData = useMemo(() => {
     if (!searchTerm) return data;
     
-    return data.filter(invoice => 
-      invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.partner_organization?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return data.filter(invoice => {
+      const searchLower = searchTerm.toLowerCase();
+      
+      // Search basic invoice fields
+      const basicMatch = 
+        invoice.invoice_number?.toLowerCase().includes(searchLower) ||
+        invoice.partner_organization?.name?.toLowerCase().includes(searchLower);
+      
+      // Search work order details from all sources
+      const workOrderMatch = invoice.work_orders?.some(wo => 
+        wo.work_orders?.work_order_number?.toLowerCase().includes(searchLower) ||
+        wo.work_orders?.title?.toLowerCase().includes(searchLower) ||
+        wo.work_orders?.store_location?.toLowerCase().includes(searchLower) ||
+        wo.work_orders?.street_address?.toLowerCase().includes(searchLower) ||
+        wo.work_orders?.city?.toLowerCase().includes(searchLower) ||
+        wo.work_orders?.state?.toLowerCase().includes(searchLower) ||
+        wo.work_orders?.description?.toLowerCase().includes(searchLower)
+      );
+      
+      return basicMatch || workOrderMatch;
+    });
   }, [data, searchTerm]);
 
   // Initialize table
