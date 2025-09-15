@@ -129,6 +129,32 @@ function usePartnerInvoiceDetail(invoiceId: string) {
   });
 }
 
+// Helper function to determine line item source type
+function getLineItemSourceType(item: PartnerInvoiceDetail['line_items'][0]): string {
+  // If it has a work order report, it's from internal work
+  if (item.work_order_report) {
+    return 'Internal Work';
+  }
+  
+  // Check description patterns to infer source type
+  const description = item.description?.toLowerCase() || '';
+  
+  // Subcontractor bill patterns
+  if (description.includes('bill') || description.includes('inv-') || 
+      description.includes('subcontractor') || description.includes('contractor')) {
+    return 'Subcontractor Bill';
+  }
+  
+  // Employee time entry patterns
+  if (description.includes('time') || description.includes('hours') || 
+      description.includes('labor') || description.includes('employee')) {
+    return 'Employee Time Entry';
+  }
+  
+  // Default fallback
+  return 'Line Item';
+}
+
 export default function PartnerInvoiceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -155,7 +181,7 @@ export default function PartnerInvoiceDetail() {
         invoice_number: invoice.invoice_number,
         invoice_date: format(new Date(invoice.invoice_date), 'MM/dd/yyyy'),
         work_order_number: item.work_order_report?.work_order?.work_order_number || 'N/A',
-        description: item.description || item.work_order_report?.work_order?.title || 'Employee Time Entry',
+        description: item.description || item.work_order_report?.work_order?.title || getLineItemSourceType(item),
         amount: item.amount
       }));
 
@@ -481,7 +507,7 @@ export default function PartnerInvoiceDetail() {
                         </>
                       ) : (
                         <span className="font-medium text-muted-foreground">
-                          Employee Time Entry
+                          {getLineItemSourceType(item)}
                         </span>
                       )}
                     </div>
