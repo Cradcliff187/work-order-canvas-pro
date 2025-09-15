@@ -72,7 +72,7 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
       subcontractor_organization_id
     `)
     .in('id', data.selectedBillIds)
-    .eq('status', 'approved');
+    .in('status', ['approved', 'paid']);
     
   if (billsError || !selectedBills) {
     throw new Error('Failed to fetch selected bills');
