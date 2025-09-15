@@ -267,6 +267,16 @@ export const AdminRoutes = () => (
         </AdminLayout>
       </ProtectedRoute>
     } />
+
+    <Route path="/admin/receipts" element={
+      <ProtectedRoute requiredUserType="employee">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <AdminReceipts />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
     
     <Route path="/admin/profile" element={
       <ProtectedRoute requiredUserType="employee">
@@ -340,7 +350,7 @@ export const AdminRoutes = () => (
     } />
     
     <Route path="/admin/finance/receipts" element={
-      <ProtectedRoute requiredUserType="admin">
+      <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminReceipts />
