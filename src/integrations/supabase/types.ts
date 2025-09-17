@@ -2960,6 +2960,15 @@ export type Database = {
         | "internal_work"
         | "employee_time"
         | "other"
+      project_status:
+        | "draft"
+        | "quoted"
+        | "approved"
+        | "active"
+        | "in_progress"
+        | "on_hold"
+        | "completed"
+        | "cancelled"
       receipt_status: "draft" | "submitted" | "approved" | "rejected"
       report_status: "submitted" | "reviewed" | "approved" | "rejected"
       work_order_priority: "standard" | "urgent"
@@ -3111,6 +3120,16 @@ export const Constants = {
         "internal_work",
         "employee_time",
         "other",
+      ],
+      project_status: [
+        "draft",
+        "quoted",
+        "approved",
+        "active",
+        "in_progress",
+        "on_hold",
+        "completed",
+        "cancelled",
       ],
       receipt_status: ["draft", "submitted", "approved", "rejected"],
       report_status: ["submitted", "reviewed", "approved", "rejected"],
