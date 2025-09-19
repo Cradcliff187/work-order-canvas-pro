@@ -2758,7 +2758,7 @@ export type Database = {
           subcontractor_organization_id: string
           total_amount: number
           work_order_count: number
-          work_order_numbers: string[]
+          work_orders: Json
         }[]
       }
       get_profile_id_direct: {

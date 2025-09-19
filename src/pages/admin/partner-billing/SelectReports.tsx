@@ -171,11 +171,11 @@ export default function SelectBills() {
     
     // Transform bills
     bills?.forEach(bill => {
-      // Map work order numbers from bill to work order objects
-      const workOrders = bill.work_order_numbers?.map((number, index) => ({
-        id: `wo-${bill.bill_id}-${index}`, // Generate ID for now, could be improved with actual work order IDs
-        number,
-        title: undefined // Bills don't have individual work order titles in current structure
+      // Map work orders from bill to work order objects
+      const workOrders = bill.work_orders?.map((wo) => ({
+        id: wo.id,
+        number: wo.work_order_number,
+        title: wo.title // Now we have titles from the RPC
       })) || [];
 
       items.push({

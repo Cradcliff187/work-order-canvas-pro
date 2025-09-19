@@ -1,6 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export interface WorkOrder {
+  id: string;
+  work_order_number: string;
+  title: string;
+  reference: string;
+}
+
 export interface PartnerReadyBill {
   bill_id: string;
   internal_bill_number: string;
@@ -11,7 +18,7 @@ export interface PartnerReadyBill {
   subcontractor_org_name: string;
   subcontractor_org_initials: string;
   work_order_count: number;
-  work_order_numbers: string[];
+  work_orders: WorkOrder[];
 }
 
 export interface PartnerReadyInternalReport {
@@ -142,7 +149,10 @@ export const usePartnerReadyBills = (partnerOrgId?: string) => {
       }));
 
       return {
-        bills: bills || [],
+        bills: (bills || []).map(bill => ({
+          ...bill,
+          work_orders: (Array.isArray(bill.work_orders) ? bill.work_orders : []) as unknown as WorkOrder[]
+        })),
         internalReports: transformedReports,
         employeeTimeEntries: transformedTimeEntries
       };

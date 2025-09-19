@@ -18,7 +18,7 @@ export function usePartnerInvoicingFilters(
           bill.internal_bill_number,
           bill.external_bill_number,
           bill.subcontractor_org_name,
-          ...bill.work_order_numbers,
+          ...bill.work_orders.map(wo => wo.work_order_number),
         ].filter(Boolean).join(' ').toLowerCase();
 
         if (!searchFields.includes(searchTerm)) {
