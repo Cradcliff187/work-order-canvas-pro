@@ -796,6 +796,7 @@ export type Database = {
           source_type:
             | Database["public"]["Enums"]["partner_invoice_line_item_source_type"]
             | null
+          work_order_id: string | null
           work_order_report_id: string | null
         }
         Insert: {
@@ -807,6 +808,7 @@ export type Database = {
           source_type?:
             | Database["public"]["Enums"]["partner_invoice_line_item_source_type"]
             | null
+          work_order_id?: string | null
           work_order_report_id?: string | null
         }
         Update: {
@@ -818,6 +820,7 @@ export type Database = {
           source_type?:
             | Database["public"]["Enums"]["partner_invoice_line_item_source_type"]
             | null
+          work_order_id?: string | null
           work_order_report_id?: string | null
         }
         Relationships: [
@@ -826,6 +829,13 @@ export type Database = {
             columns: ["partner_invoice_id"]
             isOneToOne: false
             referencedRelation: "partner_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_invoice_line_items_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
           {
@@ -2380,6 +2390,83 @@ export type Database = {
       }
     }
     Views: {
+      partner_invoice_line_items_with_reference: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          partner_invoice_id: string | null
+          source_type:
+            | Database["public"]["Enums"]["partner_invoice_line_item_source_type"]
+            | null
+          work_order_id: string | null
+          work_order_number: string | null
+          work_order_reference: string | null
+          work_order_report_id: string | null
+          work_order_title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_invoice_line_items_partner_invoice_id_fkey"
+            columns: ["partner_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_invoice_line_items_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_invoice_line_items_work_order_report_id_fkey"
+            columns: ["work_order_report_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subcontractor_bill_work_orders_with_reference: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          subcontractor_bill_id: string | null
+          work_order_id: string | null
+          work_order_number: string | null
+          work_order_reference: string | null
+          work_order_report_id: string | null
+          work_order_title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcontractor_bill_work_orders_bill_id_fkey"
+            columns: ["subcontractor_bill_id"]
+            isOneToOne: false
+            referencedRelation: "subcontractor_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subcontractor_bill_work_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subcontractor_bill_work_orders_work_order_report_id_fkey"
+            columns: ["work_order_report_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unified_messages: {
         Row: {
           attachment_ids: string[] | null
@@ -2756,6 +2843,10 @@ export type Database = {
       }
       get_work_order_id_from_path: {
         Args: { file_path: string }
+        Returns: string
+      }
+      get_work_order_reference: {
+        Args: { p_work_order_id: string }
         Returns: string
       }
       get_work_order_threads_overview: {
