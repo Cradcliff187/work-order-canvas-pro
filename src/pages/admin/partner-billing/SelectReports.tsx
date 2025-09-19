@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +36,7 @@ import { parseDateOnly } from '@/lib/utils/date';
 import { formatCurrency } from '@/utils/formatting';
 import { PartnerReadyBill, PartnerReadyInternalReport } from '@/hooks/usePartnerReadyBills';
 import { cn } from '@/lib/utils';
+import { getWorkOrderReference, getWorkOrderDisplay } from '@/utils/workOrderUtils';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -52,6 +53,11 @@ interface UnifiedBillableItem {
   description: string;
   date: string;
   amount: number;
+  workOrders: Array<{
+    id: string;
+    number: string;
+    title?: string;
+  }>;
   originalData: any;
 }
 
@@ -69,6 +75,21 @@ export default function SelectBills() {
   const [invoiceDate, setInvoiceDate] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'));
   const [dueDate, setDueDate] = useState<string | ''>('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  
+  // Expandable row state
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  
+  const toggleRowExpansion = (itemId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
   
   // Filter states with standardized persistence
   const [isMarkupCollapsed, setIsMarkupCollapsed] = useState(true);
@@ -150,6 +171,13 @@ export default function SelectBills() {
     
     // Transform bills
     bills?.forEach(bill => {
+      // Map work order numbers from bill to work order objects
+      const workOrders = bill.work_order_numbers?.map((number, index) => ({
+        id: `wo-${bill.bill_id}-${index}`, // Generate ID for now, could be improved with actual work order IDs
+        number,
+        title: undefined // Bills don't have individual work order titles in current structure
+      })) || [];
+
       items.push({
         id: bill.bill_id,
         type: 'bill',
@@ -157,12 +185,19 @@ export default function SelectBills() {
         description: bill.subcontractor_org_name,
         date: bill.bill_date,
         amount: bill.total_amount || 0,
+        workOrders,
         originalData: bill
       });
     });
     
     // Transform internal reports
     internalReports?.forEach(report => {
+      const workOrders = [{
+        id: report.work_order_id,
+        number: report.work_order_number,
+        title: report.title
+      }];
+
       items.push({
         id: report.id,
         type: 'internal',
@@ -170,12 +205,19 @@ export default function SelectBills() {
         description: report.title,
         date: '', // Internal reports don't have dates in current structure
         amount: report.bill_amount || 0,
+        workOrders,
         originalData: report
       });
     });
     
     // Transform employee time entries
     employeeTimeEntries?.forEach(entry => {
+      const workOrders = [{
+        id: entry.work_order_id,
+        number: entry.work_order_number,
+        title: entry.title
+      }];
+
       items.push({
         id: entry.id,
         type: 'time',
@@ -183,6 +225,7 @@ export default function SelectBills() {
         description: `${entry.employee_name} - ${entry.hours_worked}h`,
         date: entry.report_date,
         amount: entry.bill_amount || 0,
+        workOrders,
         originalData: entry
       });
     });
@@ -212,7 +255,8 @@ export default function SelectBills() {
       filtered = filtered.filter(item =>
         item.reference.toLowerCase().includes(searchLower) ||
         item.description.toLowerCase().includes(searchLower) ||
-        item.type.toLowerCase().includes(searchLower)
+        item.type.toLowerCase().includes(searchLower) ||
+        item.workOrders.some(wo => wo.number.toLowerCase().includes(searchLower) || wo.title?.toLowerCase().includes(searchLower))
       );
     }
 
@@ -284,7 +328,29 @@ export default function SelectBills() {
     const markupAmount = subtotal * (markupPercentage / 100);
     const total = subtotal + markupAmount;
     
-    return { subtotal, markupAmount, total, selectedItems };
+    // Calculate unique work orders from selected items
+    const workOrdersMap = new Map();
+    selectedItems.forEach(item => {
+      item?.workOrders.forEach(wo => {
+        if (!workOrdersMap.has(wo.id)) {
+          workOrdersMap.set(wo.id, {
+            id: wo.id,
+            number: wo.number,
+            title: wo.title,
+            reference: getWorkOrderReference(wo.number, wo.number, wo.id),
+            itemCount: 0,
+            totalAmount: 0
+          });
+        }
+        const woSummary = workOrdersMap.get(wo.id);
+        woSummary.itemCount += 1;
+        woSummary.totalAmount += item.amount;
+      });
+    });
+    
+    const uniqueWorkOrders = Array.from(workOrdersMap.values());
+    
+    return { subtotal, markupAmount, total, selectedItems, uniqueWorkOrders };
   }, [selectedItemIds, unifiedItems, markupPercentage]);
 
   // Unified selection handlers
@@ -663,6 +729,7 @@ export default function SelectBills() {
                                 </div>
                               </TableHead>
                               <TableHead className="min-w-[200px]">Description</TableHead>
+                              <TableHead className="min-w-[150px]">Work Orders</TableHead>
                               <TableHead className="min-w-[120px] cursor-pointer" onClick={() => toggleSort('date')}>
                                 <div className="flex items-center gap-1">
                                   Date
@@ -679,60 +746,136 @@ export default function SelectBills() {
                                   )}
                                 </div>
                               </TableHead>
+                              <TableHead className="w-12">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => {
+                                    const allExpanded = paginatedUnifiedItems.every(item => expandedRows.has(item.id));
+                                    if (allExpanded) {
+                                      setExpandedRows(new Set());
+                                    } else {
+                                      setExpandedRows(new Set(paginatedUnifiedItems.map(item => item.id)));
+                                    }
+                                  }}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {paginatedUnifiedItems.map((item) => {
                               const isSelected = selectedItemIds.has(item.id);
+                              const isExpanded = expandedRows.has(item.id);
                               
                               return (
-                                <TableRow 
-                                  key={item.id}
-                                  className={cn(
-                                    "cursor-pointer transition-colors hover:bg-muted/50",
-                                    isSelected && "bg-muted/50"
+                                <React.Fragment key={item.id}>
+                                  <TableRow 
+                                    className={cn(
+                                      "cursor-pointer transition-colors hover:bg-muted/50",
+                                      isSelected && "bg-muted/50"
+                                    )}
+                                    onClick={() => handleUnifiedItemToggle(item.id, !isSelected)}
+                                  >
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={(checked) => handleUnifiedItemToggle(item.id, checked as boolean)}
+                                        aria-label={`Select item ${item.reference}`}
+                                      />
+                                    </TableCell>
+                                    
+                                    <TableCell>
+                                      <Badge 
+                                        className={cn(
+                                          "text-white",
+                                          item.type === 'bill' && "bg-blue-500 hover:bg-blue-600",
+                                          item.type === 'internal' && "bg-green-500 hover:bg-green-600",
+                                          item.type === 'time' && "bg-purple-500 hover:bg-purple-600"
+                                        )}
+                                      >
+                                        {item.type === 'bill' ? 'Bill' : item.type === 'internal' ? 'Internal' : 'Time'}
+                                      </Badge>
+                                    </TableCell>
+                                    
+                                    <TableCell className="font-medium">
+                                      {item.reference}
+                                    </TableCell>
+                                    
+                                    <TableCell>
+                                      <div className="max-w-[200px] truncate">
+                                        {item.description}
+                                      </div>
+                                    </TableCell>
+                                    
+                                    <TableCell>
+                                      <div className="space-y-1">
+                                        {item.workOrders.slice(0, 2).map((wo, index) => (
+                                          <Badge key={index} variant="outline" className="text-xs">
+                                            {getWorkOrderReference(wo.number, wo.number, wo.id)}
+                                          </Badge>
+                                        ))}
+                                        {item.workOrders.length > 2 && (
+                                          <Badge variant="outline" className="text-xs">
+                                            +{item.workOrders.length - 2} more
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    
+                                    <TableCell>
+                                      {item.date ? format(new Date(item.date), 'MMM dd, yyyy') : 'N/A'}
+                                    </TableCell>
+                                    
+                                    <TableCell className="text-right font-medium">
+                                      {formatCurrency(item.amount)}
+                                    </TableCell>
+                                    
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0"
+                                        onClick={() => toggleRowExpansion(item.id)}
+                                      >
+                                        <ChevronDown className={cn(
+                                          "h-3 w-3 transition-transform",
+                                          isExpanded && "rotate-180"
+                                        )} />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                  
+                                  {/* Expanded Row Content */}
+                                  {isExpanded && (
+                                    <TableRow>
+                                      <TableCell colSpan={8} className="bg-muted/25">
+                                        <div className="py-4 space-y-3">
+                                          <h4 className="font-medium text-sm">Work Order Details</h4>
+                                          <div className="grid gap-2">
+                                            {item.workOrders.map((wo, index) => (
+                                              <div key={index} className="flex items-center justify-between p-2 bg-background rounded border">
+                                                <div>
+                                                  <div className="font-medium text-sm">
+                                                    {getWorkOrderDisplay(wo.number, wo.number, wo.id, wo.title)}
+                                                  </div>
+                                                  {wo.title && (
+                                                    <div className="text-xs text-muted-foreground">{wo.title}</div>
+                                                  )}
+                                                </div>
+                                                <Badge variant="outline" className="text-xs">
+                                                  ID: {wo.id}
+                                                </Badge>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
                                   )}
-                                  onClick={() => handleUnifiedItemToggle(item.id, !isSelected)}
-                                >
-                                  <TableCell onClick={(e) => e.stopPropagation()}>
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={(checked) => handleUnifiedItemToggle(item.id, checked as boolean)}
-                                      aria-label={`Select item ${item.reference}`}
-                                    />
-                                  </TableCell>
-                                  
-                                  <TableCell>
-                                    <Badge 
-                                      className={cn(
-                                        "text-white",
-                                        item.type === 'bill' && "bg-blue-500 hover:bg-blue-600",
-                                        item.type === 'internal' && "bg-green-500 hover:bg-green-600",
-                                        item.type === 'time' && "bg-purple-500 hover:bg-purple-600"
-                                      )}
-                                    >
-                                      {item.type === 'bill' ? 'Bill' : item.type === 'internal' ? 'Internal' : 'Time'}
-                                    </Badge>
-                                  </TableCell>
-                                  
-                                  <TableCell className="font-medium">
-                                    {item.reference}
-                                  </TableCell>
-                                  
-                                  <TableCell>
-                                    <div className="max-w-[200px] truncate">
-                                      {item.description}
-                                    </div>
-                                  </TableCell>
-                                  
-                                  <TableCell>
-                                    {item.date ? format(new Date(item.date), 'MMM dd, yyyy') : 'N/A'}
-                                  </TableCell>
-                                  
-                                  <TableCell className="text-right font-medium">
-                                    {formatCurrency(item.amount)}
-                                  </TableCell>
-                                </TableRow>
+                                </React.Fragment>
                               );
                             })}
                           </TableBody>
@@ -772,6 +915,22 @@ export default function SelectBills() {
                                 <div className="text-sm truncate">{item.description}</div>
                                 
                                 <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Work Orders:</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {item.workOrders.slice(0, 2).map((wo, index) => (
+                                      <Badge key={index} variant="outline" className="text-xs">
+                                        {getWorkOrderReference(wo.number, wo.number, wo.id)}
+                                      </Badge>
+                                    ))}
+                                    {item.workOrders.length > 2 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{item.workOrders.length - 2}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center justify-between text-sm">
                                   <span className="text-muted-foreground">Date:</span>
                                   <span>{item.date ? format(new Date(item.date), 'MMM dd, yyyy') : 'N/A'}</span>
                                 </div>
@@ -799,89 +958,135 @@ export default function SelectBills() {
 
         {/* Selection Summary and Generate Invoice */}
         {selectedItemIds.size > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckSquare className="w-5 h-5" />
-                Invoice Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{selectedItemIds.size}</div>
-                    <div className="text-sm text-muted-foreground">Selected Items</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{formatCurrency(calculations.subtotal)}</div>
-                    <div className="text-sm text-muted-foreground">Subtotal</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{formatCurrency(calculations.markupAmount)}</div>
-                    <div className="text-sm text-muted-foreground">Markup ({markupPercentage}%)</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{formatCurrency(calculations.total)}</div>
-                    <div className="text-sm text-muted-foreground">Total Amount</div>
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: Work Orders Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Work Orders Included ({calculations.uniqueWorkOrders.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {calculations.uniqueWorkOrders.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No work orders selected
+                    </div>
+                  ) : (
+                    calculations.uniqueWorkOrders.map((wo) => (
+                      <div key={wo.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">
+                            {getWorkOrderDisplay(wo.number, wo.number, wo.id, wo.title)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {wo.itemCount} billable item{wo.itemCount !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium text-sm">{formatCurrency(wo.totalAmount)}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor="invoiceDate">Invoice Date</Label>
-                    <Input
-                      id="invoiceDate"
-                      type="date"
-                      value={invoiceDate}
-                      onChange={(e) => setInvoiceDate(e.target.value)}
-                    />
+              </CardContent>
+            </Card>
+            
+            {/* Right: Invoice Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckSquare className="w-5 h-5" />
+                  Invoice Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{selectedItemIds.size}</div>
+                      <div className="text-sm text-muted-foreground">Selected Items</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{calculations.uniqueWorkOrders.length}</div>
+                      <div className="text-sm text-muted-foreground">Work Orders</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{formatCurrency(calculations.subtotal)}</div>
+                      <div className="text-sm text-muted-foreground">Subtotal</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{formatCurrency(calculations.markupAmount)}</div>
+                      <div className="text-sm text-muted-foreground">Markup ({markupPercentage}%)</div>
+                    </div>
                   </div>
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor="dueDate">Due Date (Optional)</Label>
-                    <Input
-                      id="dueDate"
-                      type="date"
-                      value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                    />
+                  
+                  <div className="border-t pt-4">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-primary">{formatCurrency(calculations.total)}</div>
+                      <div className="text-sm text-muted-foreground">Total Invoice Amount</div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex justify-end">
-                  <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        className="gap-2" 
-                        disabled={selectedItemIds.size === 0 || isGeneratingInvoice}
-                      >
-                        <Receipt className="h-4 w-4" />
-                        Generate Partner Invoice
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Generate Partner Invoice</AlertDialogTitle>
-                        <AlertDialogDescription>
-                           This will create a new partner invoice for {selectedItemIds.size} selected item{selectedItemIds.size !== 1 ? 's' : ''} 
-                          totaling {formatCurrency(calculations.total)}. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={handleGenerateInvoice}
-                          disabled={isGeneratingInvoice}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="invoiceDate">Invoice Date</Label>
+                      <Input
+                        id="invoiceDate"
+                        type="date"
+                        value={invoiceDate}
+                        onChange={(e) => setInvoiceDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="dueDate">Due Date (Optional)</Label>
+                      <Input
+                        id="dueDate"
+                        type="date"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          className="gap-2" 
+                          disabled={selectedItemIds.size === 0 || isGeneratingInvoice}
                         >
-                          {isGeneratingInvoice ? 'Generating...' : 'Generate Invoice'}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          <Receipt className="h-4 w-4" />
+                          Generate Partner Invoice
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Generate Partner Invoice</AlertDialogTitle>
+                          <AlertDialogDescription>
+                             This will create a new partner invoice for {selectedItemIds.size} selected item{selectedItemIds.size !== 1 ? 's' : ''} 
+                            across {calculations.uniqueWorkOrders.length} work order{calculations.uniqueWorkOrders.length !== 1 ? 's' : ''}, 
+                            totaling {formatCurrency(calculations.total)}. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={handleGenerateInvoice}
+                            disabled={isGeneratingInvoice}
+                          >
+                            {isGeneratingInvoice ? 'Generating...' : 'Generate Invoice'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </main>
     </TooltipProvider>
