@@ -811,18 +811,47 @@ export default function SelectBills() {
                                     </TableCell>
                                     
                                     <TableCell>
-                                      <div className="space-y-1">
-                                        {item.workOrders.slice(0, 2).map((wo, index) => (
-                                          <Badge key={index} variant="outline" className="text-xs">
-                                            {getWorkOrderReference(wo.number, wo.number, wo.id)}
-                                          </Badge>
-                                        ))}
-                                        {item.workOrders.length > 2 && (
-                                          <Badge variant="outline" className="text-xs">
-                                            +{item.workOrders.length - 2} more
-                                          </Badge>
-                                        )}
-                                      </div>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Badge 
+                                              variant="secondary" 
+                                              className="cursor-help text-xs"
+                                            >
+                                              {item.workOrders.length}
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="left" className="max-w-xs">
+                                            <div>
+                                              <p className="font-medium mb-2">Associated Work Orders:</p>
+                                              <div className="space-y-1 text-sm">
+                                                {item.workOrders.slice(0, 5).map((wo, index) => (
+                                                  <div key={index} className="flex flex-col">
+                                                    <span className="font-medium">
+                                                      {getWorkOrderReference(wo.number, wo.number, wo.id)}
+                                                    </span>
+                                                    {wo.title && (
+                                                      <span className="text-muted-foreground text-xs truncate">
+                                                        {wo.title}
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                ))}
+                                                {item.workOrders.length > 5 && (
+                                                  <div className="text-muted-foreground text-xs italic">
+                                                    ...and {item.workOrders.length - 5} more
+                                                  </div>
+                                                )}
+                                                {item.workOrders.length === 0 && (
+                                                  <span className="text-muted-foreground text-xs">
+                                                    No work orders associated
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     </TableCell>
                                     
                                     <TableCell>
@@ -916,18 +945,47 @@ export default function SelectBills() {
                                 
                                 <div className="flex items-center justify-between text-sm">
                                   <span className="text-muted-foreground">Work Orders:</span>
-                                  <div className="flex flex-wrap gap-1">
-                                    {item.workOrders.slice(0, 2).map((wo, index) => (
-                                      <Badge key={index} variant="outline" className="text-xs">
-                                        {getWorkOrderReference(wo.number, wo.number, wo.id)}
-                                      </Badge>
-                                    ))}
-                                    {item.workOrders.length > 2 && (
-                                      <Badge variant="outline" className="text-xs">
-                                        +{item.workOrders.length - 2}
-                                      </Badge>
-                                    )}
-                                  </div>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge 
+                                          variant="secondary" 
+                                          className="cursor-help text-xs"
+                                        >
+                                          {item.workOrders.length}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left" className="max-w-xs">
+                                        <div>
+                                          <p className="font-medium mb-2">Associated Work Orders:</p>
+                                          <div className="space-y-1 text-sm">
+                                            {item.workOrders.slice(0, 5).map((wo, index) => (
+                                              <div key={index} className="flex flex-col">
+                                                <span className="font-medium">
+                                                  {getWorkOrderReference(wo.number, wo.number, wo.id)}
+                                                </span>
+                                                {wo.title && (
+                                                  <span className="text-muted-foreground text-xs truncate">
+                                                    {wo.title}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            ))}
+                                            {item.workOrders.length > 5 && (
+                                              <div className="text-muted-foreground text-xs italic">
+                                                ...and {item.workOrders.length - 5} more
+                                              </div>
+                                            )}
+                                            {item.workOrders.length === 0 && (
+                                              <span className="text-muted-foreground text-xs">
+                                                No work orders associated
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </div>
                                 
                                 <div className="flex items-center justify-between text-sm">
