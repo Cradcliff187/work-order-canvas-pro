@@ -60,6 +60,9 @@ export interface SubcontractorBill {
     work_order_id: string;
     amount: number;
     description?: string;
+    work_order_reference?: string; // New standardized reference
+    work_order_number?: string;
+    work_order_title?: string;
     work_orders?: {
       id: string;
       work_order_number: string;
@@ -177,17 +180,15 @@ export const useSubcontractorBills = (filters: SubcontractorBillFilters = {}) =>
         (data || []).map(async (bill) => {
           const [workOrderResult, attachmentResult] = await Promise.all([
             supabase
-              .from('subcontractor_bill_work_orders')
+              .from('subcontractor_bill_work_orders_with_reference')
               .select(`
                 id,
                 work_order_id,
                 amount,
                 description,
-                work_orders!subcontractor_bill_work_orders_work_order_id_fkey (
-                  id,
-                  work_order_number,
-                  title
-                )
+                work_order_reference,
+                work_order_number,
+                work_order_title
               `)
               .eq('subcontractor_bill_id', bill.id),
             supabase
