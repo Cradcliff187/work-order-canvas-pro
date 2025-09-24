@@ -28,6 +28,7 @@ import {
   FileText, 
   Paperclip,
   DollarSign,
+  Receipt,
   Clock,
   Phone,
   Mail,
@@ -479,10 +480,14 @@ export default function AdminWorkOrderDetail() {
       {/* Tabs for detailed sections */}
       <Tabs defaultValue="details" className="space-y-6">
         <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
-          <TabsList className="inline-flex min-w-max lg:grid lg:grid-cols-6">
+          <TabsList className="inline-flex min-w-max lg:grid lg:grid-cols-7">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="estimates">Estimates</TabsTrigger>
+            <TabsTrigger value="billing">
+              <Receipt className="h-4 w-4 mr-2" />
+              Billing
+            </TabsTrigger>
             <TabsTrigger value="attachments">Attachments</TabsTrigger>
             <TabsTrigger value="messages">
               <MessageCircle className="h-4 w-4 mr-2" />
@@ -1097,6 +1102,97 @@ export default function AdminWorkOrderDetail() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="billing">
+          <div className="space-y-6">
+            {/* Show billing information only if data exists */}
+            {(workOrder.subcontractor_bills?.length > 0 || workOrder.partner_invoices?.length > 0) ? (
+              <>
+                {/* Subcontractor Bills */}
+                {workOrder.subcontractor_bills?.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Receipt className="h-5 w-5" />
+                        Subcontractor Bills
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {workOrder.subcontractor_bills.map((bill) => (
+                          <div key={bill.id} className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">Bill #{bill.internal_bill_number}</p>
+                                {bill.external_bill_number && (
+                                  <p className="text-sm text-muted-foreground">
+                                    Vendor Bill: {bill.external_bill_number}
+                                  </p>
+                                )}
+                              </div>
+                              <Badge variant={bill.status === 'paid' ? 'default' : 'secondary'}>
+                                {bill.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-mono text-lg">
+                                ${bill.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Partner Invoices */}
+                {workOrder.partner_invoices?.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Partner Invoices
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {workOrder.partner_invoices.map((invoice) => (
+                          <div key={invoice.id} className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">Invoice #{invoice.invoice_number}</p>
+                                {invoice.qb_invoice_number && (
+                                  <p className="text-sm text-muted-foreground">
+                                    QB Invoice: {invoice.qb_invoice_number}
+                                  </p>
+                                )}
+                              </div>
+                              <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'}>
+                                {invoice.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Billing Information</h3>
+                  <p className="text-muted-foreground">
+                    No subcontractor bills or partner invoices are associated with this work order yet.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="attachments">
