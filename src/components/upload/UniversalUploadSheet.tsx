@@ -402,6 +402,8 @@ export function UniversalUploadSheet({
           )}
           role="dialog"
           aria-label="File upload options"
+          aria-labelledby="upload-sheet-title"
+          aria-describedby="upload-sheet-description"
         >
           {/* Mobile handle bar */}
           {isMobile && (

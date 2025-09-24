@@ -257,7 +257,7 @@ export default function SubmitBill() {
       }));
 
       await submitSubcontractorBill({
-        external_bill_number: formData.externalInvoiceNumber || undefined,
+        external_bill_number: formData.externalInvoiceNumber || null,
         total_amount: totalAmount,
         work_orders: workOrdersData,
         attachments: files.length > 0 ? files : undefined,
