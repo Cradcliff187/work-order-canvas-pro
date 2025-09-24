@@ -206,6 +206,35 @@ export default function SubmitBill() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
+    // Debug logging - see what we're actually submitting
+    console.log('Form submission data:', {
+      externalInvoiceNumber: formData.externalInvoiceNumber,
+      externalInvoiceNumberLength: formData.externalInvoiceNumber?.length,
+      externalInvoiceNumberTrimmed: formData.externalInvoiceNumber?.trim(),
+      isAdminMode,
+      selectedOrganizationId: formData.selectedOrganizationId,
+    });
+    
+    // Client-side validation for external bill number
+    if (!formData.externalInvoiceNumber || !formData.externalInvoiceNumber.trim()) {
+      toast({
+        title: "External bill number required",
+        description: "Please enter an external bill number for your submission.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Admin mode specific validation
+    if (isAdminMode && !formData.selectedOrganizationId) {
+      toast({
+        title: "Organization required",
+        description: "Please select a subcontractor organization.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (selectedWorkOrderIds.length === 0) {
       toast({
         title: "No work orders selected",
@@ -257,7 +286,7 @@ export default function SubmitBill() {
       }));
 
       await submitSubcontractorBill({
-        external_bill_number: formData.externalInvoiceNumber || null,
+        external_bill_number: formData.externalInvoiceNumber.trim(),
         total_amount: totalAmount,
         work_orders: workOrdersData,
         attachments: files.length > 0 ? files : undefined,
@@ -485,25 +514,29 @@ export default function SubmitBill() {
                 <FileText className="h-4 w-4 mr-2 inline" />
                 Bill Details
               </h3>
-              <p className="text-sm text-muted-foreground">
-                Enter your external bill number and related identifiers (optional)
-              </p>
+               <p className="text-sm text-muted-foreground">
+                 Enter your external bill number and related identifiers
+               </p>
             </div>
             <StandardFormLayout.FieldGroup>
               <Card>
                 <CardContent className="pt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="externalInvoiceNumber">External Bill Number</Label>
+                      <Label htmlFor="externalInvoiceNumber">
+                        External Bill Number
+                        <span className="text-destructive ml-1">*</span>
+                      </Label>
                       <Input
                         id="externalInvoiceNumber"
                         placeholder="BILL-2024-001"
                         value={formData.externalInvoiceNumber}
                         onChange={(e) => setFormData(prev => ({ ...prev, externalInvoiceNumber: e.target.value }))}
                         className="min-h-[44px] px-4 py-3"
+                        required
                       />
                       <p className="text-xs text-muted-foreground">
-                        Optional: Your own bill number for reference
+                        Required: Your bill number for this submission
                       </p>
                     </div>
 

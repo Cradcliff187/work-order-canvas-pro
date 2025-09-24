@@ -80,7 +80,7 @@ export const useSubcontractorBillSubmission = () => {
 
       // Prepare bill data
       const billData = {
-        external_bill_number: data.external_bill_number || null,
+        external_bill_number: data.external_bill_number,
         total_amount: data.total_amount,
         bill_date: toDateOnlyString(data.bill_date) || new Date().toISOString().split('T')[0],
         due_date: toDateOnlyString(data.due_date) || null,
@@ -93,6 +93,16 @@ export const useSubcontractorBillSubmission = () => {
         subcontractor_organization_id: data.subcontractor_organization_id || userOrg.organization_id,
         internal_bill_number: '', // Will be set by trigger
       };
+
+      // Debug logging - see what we're submitting to database
+      console.log('Submitting bill to database:', {
+        external_bill_number: billData.external_bill_number,
+        external_bill_number_length: billData.external_bill_number?.length,
+        external_bill_number_type: typeof billData.external_bill_number,
+        subcontractor_organization_id: billData.subcontractor_organization_id,
+        total_amount: billData.total_amount,
+        work_orders_count: data.work_orders?.length
+      });
 
       // Insert bill
       const { data: bill, error: billError } = await supabase
