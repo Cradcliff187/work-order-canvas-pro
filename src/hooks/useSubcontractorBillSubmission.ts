@@ -64,6 +64,20 @@ export const useSubcontractorBillSubmission = () => {
         throw new Error('User organization not found');
       }
 
+      // Validate subcontractor organization if provided (admin mode)
+      if (data.subcontractor_organization_id) {
+        const { data: selectedOrg, error: orgValidationError } = await supabase
+          .from('organizations')
+          .select('id, organization_type')
+          .eq('id', data.subcontractor_organization_id)
+          .eq('organization_type', 'subcontractor')
+          .single();
+
+        if (orgValidationError || !selectedOrg) {
+          throw new Error('Invalid subcontractor organization selected');
+        }
+      }
+
       // Prepare bill data
       const billData = {
         external_bill_number: data.external_bill_number || null,
@@ -76,7 +90,7 @@ export const useSubcontractorBillSubmission = () => {
         status: 'submitted',
         submitted_at: new Date().toISOString(),
         submitted_by: profile.id,
-        subcontractor_organization_id: userOrg.organization_id,
+        subcontractor_organization_id: data.subcontractor_organization_id || userOrg.organization_id,
         internal_bill_number: '', // Will be set by trigger
       };
 
