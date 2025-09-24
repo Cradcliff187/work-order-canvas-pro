@@ -95,6 +95,19 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
       organization_type: string;
     } | null;
   }>;
+  subcontractor_bills?: Array<{
+    id: string;
+    internal_bill_number: string;
+    external_bill_number: string | null;
+    status: string;
+    amount: number;
+  }>;
+  partner_invoices?: Array<{
+    id: string;
+    invoice_number: string;
+    qb_invoice_number: string | null;
+    status: string;
+  }>;
   location_contact_name?: string | null;
   location_contact_phone?: string | null;
   location_contact_email?: string | null;
@@ -148,7 +161,7 @@ export function useWorkOrderDetail(id: string) {
       if (!workOrderData) return null;
 
       // Separate queries for one-to-many relationships
-      const [reportsResult, attachmentsResult, assignmentsResult] = await Promise.all([
+      const [reportsResult, attachmentsResult, assignmentsResult, subcontractorBillsResult, partnerInvoicesResult] = await Promise.all([
         // Work order reports
         supabase
           .from('work_order_reports')
@@ -232,6 +245,33 @@ export function useWorkOrderDetail(id: string) {
               organization_type
             )
           `)
+          .eq('work_order_id', id),
+
+        // Subcontractor bills
+        supabase
+          .from('subcontractor_bill_work_orders')
+          .select(`
+            amount,
+            subcontractor_bills!inner(
+              id,
+              internal_bill_number,
+              external_bill_number,
+              status
+            )
+          `)
+          .eq('work_order_id', id),
+
+        // Partner invoices (from line items)
+        supabase
+          .from('partner_invoice_line_items')
+          .select(`
+            partner_invoices!inner(
+              id,
+              invoice_number,
+              qb_invoice_number,
+              status
+            )
+          `)
           .eq('work_order_id', id)
       ]);
 
@@ -250,6 +290,14 @@ export function useWorkOrderDetail(id: string) {
         console.error('❌ Assignments query error:', assignmentsResult.error);
         throw assignmentsResult.error;
       }
+      if (subcontractorBillsResult.error) {
+        console.error('❌ Subcontractor bills query error:', subcontractorBillsResult.error);
+        throw subcontractorBillsResult.error;
+      }
+      if (partnerInvoicesResult.error) {
+        console.error('❌ Partner invoices query error:', partnerInvoicesResult.error);
+        throw partnerInvoicesResult.error;
+      }
 
       // Get location contact information if available
       let locationContact = null;
@@ -264,12 +312,30 @@ export function useWorkOrderDetail(id: string) {
         locationContact = locationData;
       }
 
+      // Process billing data
+      const subcontractorBills = (subcontractorBillsResult.data || []).map(item => ({
+        id: item.subcontractor_bills.id,
+        internal_bill_number: item.subcontractor_bills.internal_bill_number,
+        external_bill_number: item.subcontractor_bills.external_bill_number,
+        status: item.subcontractor_bills.status,
+        amount: item.amount
+      }));
+
+      const partnerInvoices = (partnerInvoicesResult.data || []).map(item => ({
+        id: item.partner_invoices.id,
+        invoice_number: item.partner_invoices.invoice_number,
+        qb_invoice_number: item.partner_invoices.qb_invoice_number,
+        status: item.partner_invoices.status
+      }));
+
       // Combine all data maintaining the original structure
       return {
         ...workOrderData,
         work_order_reports: reportsResult.data || [],
         work_order_attachments: attachmentsResult.data || [],
         work_order_assignments: assignmentsResult.data || [],
+        subcontractor_bills: subcontractorBills,
+        partner_invoices: partnerInvoices,
         location_contact_name: locationContact?.contact_name,
         location_contact_phone: locationContact?.contact_phone,
         location_contact_email: locationContact?.contact_email,

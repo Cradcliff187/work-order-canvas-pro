@@ -13,7 +13,9 @@ import {
   Mail,
   Edit,
   Eye,
-  ExternalLink
+  ExternalLink,
+  Receipt,
+  DollarSign
 } from 'lucide-react';
 import { WorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { format } from 'date-fns';
@@ -258,6 +260,83 @@ export function WorkOrderDetailPanel({
             ))}
             {workOrder.work_order_reports.length > 3 && (
               <p className="text-muted-foreground">+{workOrder.work_order_reports.length - 3} more reports</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Billing Information */}
+      {((workOrder.subcontractor_bills && workOrder.subcontractor_bills.length > 0) || 
+        (workOrder.partner_invoices && workOrder.partner_invoices.length > 0)) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Billing Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-xs">
+            {/* Subcontractor Bills */}
+            {workOrder.subcontractor_bills && workOrder.subcontractor_bills.length > 0 && (
+              <div>
+                <label className="font-medium text-muted-foreground flex items-center gap-1">
+                  <Receipt className="h-2 w-2" />
+                  Subcontractor Bills
+                </label>
+                <div className="space-y-2 mt-1">
+                  {workOrder.subcontractor_bills.map((bill) => (
+                    <div key={bill.id} className="border rounded p-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-foreground">
+                            Internal: {bill.internal_bill_number}
+                          </p>
+                          {bill.external_bill_number && (
+                            <p className="text-foreground">
+                              Vendor Bill #: {bill.external_bill_number}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="text-[10px] h-4">
+                          {bill.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Partner Invoices */}
+            {workOrder.partner_invoices && workOrder.partner_invoices.length > 0 && (
+              <div>
+                {workOrder.subcontractor_bills && workOrder.subcontractor_bills.length > 0 && <Separator />}
+                <label className="font-medium text-muted-foreground flex items-center gap-1">
+                  <FileText className="h-2 w-2" />
+                  Partner Invoices
+                </label>
+                <div className="space-y-2 mt-1">
+                  {workOrder.partner_invoices.map((invoice) => (
+                    <div key={invoice.id} className="border rounded p-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-foreground">
+                            Invoice #: {invoice.invoice_number}
+                          </p>
+                          {invoice.qb_invoice_number && (
+                            <p className="text-foreground">
+                              QB Invoice #: {invoice.qb_invoice_number}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="text-[10px] h-4">
+                          {invoice.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
