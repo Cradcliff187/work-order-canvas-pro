@@ -276,6 +276,9 @@ export function useWorkOrderDetail(id: string) {
       ]);
 
       // Relationship queries executed
+      console.log('🔍 DEBUG: Billing query results:');
+      console.log('📊 Subcontractor bills result:', subcontractorBillsResult.data);
+      console.log('📊 Partner invoices result:', partnerInvoicesResult.data);
 
       // Check for errors in the relationship queries
       if (reportsResult.error) {
@@ -327,6 +330,10 @@ export function useWorkOrderDetail(id: string) {
         qb_invoice_number: item.partner_invoices.qb_invoice_number,
         status: item.partner_invoices.status
       }));
+
+      console.log('🔍 DEBUG: Processed billing data:');
+      console.log('💰 Subcontractor bills:', subcontractorBills);
+      console.log('💰 Partner invoices:', partnerInvoices);
 
       // Combine all data maintaining the original structure
       return {

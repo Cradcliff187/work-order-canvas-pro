@@ -37,6 +37,10 @@ export function WorkOrderDetailPanel({
   onViewFull,
   showActionButtons = true 
 }: WorkOrderDetailPanelProps) {
+  console.log('🔍 DEBUG: WorkOrderDetailPanel received workOrder:', workOrder);
+  console.log('🔍 DEBUG: Billing data in workOrder:');
+  console.log('💰 subcontractor_bills:', workOrder.subcontractor_bills);
+  console.log('💰 partner_invoices:', workOrder.partner_invoices);
   const formatDate = (date: string | null) => {
     if (!date) return 'N/A';
     return format(new Date(date), 'MMM dd, yyyy');
