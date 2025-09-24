@@ -103,6 +103,7 @@ export interface WorkOrder {
   organizations: WorkOrderOrganization | null;
   trades: WorkOrderTrade | null;
   attachment_count?: number;
+  subcontractor_bill_count?: number;
   work_order_assignments?: Array<{
     id: string;
     assigned_to: string;
@@ -160,6 +161,7 @@ export function useWorkOrders(
           organizations!organization_id(id, name, contact_email, organization_type),
           trades!trade_id(id, name),
           work_order_attachments(count),
+          subcontractor_bills(count),
           work_order_assignments(
             id,
             assigned_to,
@@ -370,6 +372,7 @@ export function useWorkOrders(
         const transformedData = (data || []).map((wo: any) => ({
           ...wo,
           attachment_count: wo.work_order_attachments?.[0]?.count || 0,
+          subcontractor_bill_count: wo.subcontractor_bills?.[0]?.count || 0,
           // Ensure all fields are properly typed (set null if undefined)
           subcontractor_bill_amount: wo.subcontractor_bill_amount ?? null,
           // Ensure all estimate fields are properly typed (set null if undefined)

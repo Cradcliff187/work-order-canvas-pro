@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
-import { Eye, Edit, Trash2, UserPlus, MapPin, Copy, Paperclip, ArrowUpDown, Flame } from 'lucide-react';
+import { Eye, Edit, Trash2, UserPlus, MapPin, Copy, Paperclip, ArrowUpDown, Flame, Receipt } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 import { WorkOrder } from '@/hooks/useWorkOrders';
@@ -113,6 +113,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
     cell: ({ row }) => {
       const number = row.getValue('work_order_number') as string;
       const attachmentCount = row.original.attachment_count || 0;
+      const billCount = row.original.subcontractor_bill_count || 0;
       return (
         <div className="flex items-center gap-2">
           <div className="font-mono text-sm whitespace-nowrap">
@@ -130,6 +131,23 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
                 <span className="text-xs font-mono">{attachmentCount}</span>
               )}
             </div>
+          )}
+          {billCount > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1 text-emerald-600/70">
+                    <Receipt className="h-3 w-3" />
+                    {billCount > 1 && (
+                      <span className="text-xs font-mono">{billCount}</span>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{billCount} subcontractor bill{billCount !== 1 ? 's' : ''}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           {number && (
             <Button
