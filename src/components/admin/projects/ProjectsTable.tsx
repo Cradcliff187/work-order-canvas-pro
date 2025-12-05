@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
@@ -27,6 +27,7 @@ import { FolderKanban, Search, Plus } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Project } from '@/hooks/useProjects';
 import { createProjectColumns } from './ProjectColumns';
+import { CompactProjectFilters, ProjectFiltersValue } from './CompactProjectFilters';
 
 interface ProjectsTableProps {
   data: Project[];
@@ -35,6 +36,9 @@ interface ProjectsTableProps {
   onEdit: (project: Project) => void;
   onDelete: (project: Project) => void;
   onCreateProject: () => void;
+  filters: ProjectFiltersValue;
+  onFiltersChange: (filters: ProjectFiltersValue) => void;
+  onFiltersClear: () => void;
 }
 
 export function ProjectsTable({
@@ -44,6 +48,9 @@ export function ProjectsTable({
   onEdit,
   onDelete,
   onCreateProject,
+  filters,
+  onFiltersChange,
+  onFiltersClear,
 }: ProjectsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -52,8 +59,14 @@ export function ProjectsTable({
 
   const columns = createProjectColumns({ onEdit, onDelete });
 
+  // Apply status filter to data
+  const filteredData = useMemo(() => {
+    if (!filters.status?.length) return data;
+    return data.filter(project => filters.status?.includes(project.status || ''));
+  }, [data, filters.status]);
+
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -71,7 +84,6 @@ export function ProjectsTable({
 
   const handleExport = (format: 'csv' | 'excel') => {
     console.log(`Exporting ${format} format...`);
-    // Export functionality to be implemented
   };
 
   if (isMobile) {
@@ -87,19 +99,27 @@ export function ProjectsTable({
             </Button>
           </div>
           
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search projects..."
-              value={globalFilter ?? ''}
-              onChange={(event) => setGlobalFilter(String(event.target.value))}
-              className="pl-9"
+          {/* Mobile Search + Filter Row */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search projects..."
+                value={globalFilter ?? ''}
+                onChange={(event) => setGlobalFilter(String(event.target.value))}
+                className="pl-9"
+              />
+            </div>
+            <CompactProjectFilters
+              value={filters}
+              onChange={onFiltersChange}
+              onClear={onFiltersClear}
             />
           </div>
         </div>
 
         {/* Mobile Cards */}
-        {data.length === 0 ? (
+        {filteredData.length === 0 ? (
           <EmptyTableState
             icon={FolderKanban}
             title="No projects found"
@@ -112,7 +132,18 @@ export function ProjectsTable({
           />
         ) : (
           <div className="space-y-3">
-            {data.map((project) => (
+            {filteredData
+              .filter(project => {
+                if (!globalFilter) return true;
+                const search = globalFilter.toLowerCase();
+                return (
+                  project.name?.toLowerCase().includes(search) ||
+                  project.project_number?.toLowerCase().includes(search) ||
+                  project.location_address?.toLowerCase().includes(search) ||
+                  project.description?.toLowerCase().includes(search)
+                );
+              })
+              .map((project) => (
               <Card key={project.id} className="p-4">
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
@@ -185,7 +216,7 @@ export function ProjectsTable({
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search + Filters */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -196,8 +227,13 @@ export function ProjectsTable({
             className="pl-9"
           />
         </div>
+        <CompactProjectFilters
+          value={filters}
+          onChange={onFiltersChange}
+          onClear={onFiltersClear}
+        />
         <div className="text-sm text-muted-foreground">
-          {totalCount} total projects
+          {filteredData.length} of {totalCount} projects
         </div>
       </div>
 
@@ -258,7 +294,7 @@ export function ProjectsTable({
       </Card>
 
       {/* Pagination */}
-      {data.length > 0 && (
+      {filteredData.length > 0 && (
         <div className="flex items-center justify-between space-x-2 py-4">
           <div className="text-sm text-muted-foreground">
             Showing {table.getFilteredRowModel().rows.length} of {totalCount} projects

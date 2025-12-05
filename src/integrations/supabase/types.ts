@@ -431,7 +431,7 @@ export type Database = {
           project_id: string | null
           rejection_reason: string | null
           report_date: string
-          search_vector: unknown | null
+          search_vector: unknown
           total_labor_cost: number | null
           updated_at: string
           work_order_id: string | null
@@ -463,7 +463,7 @@ export type Database = {
           project_id?: string | null
           rejection_reason?: string | null
           report_date: string
-          search_vector?: unknown | null
+          search_vector?: unknown
           total_labor_cost?: number | null
           updated_at?: string
           work_order_id?: string | null
@@ -495,7 +495,7 @@ export type Database = {
           project_id?: string | null
           rejection_reason?: string | null
           report_date?: string
-          search_vector?: unknown | null
+          search_vector?: unknown
           total_labor_cost?: number | null
           updated_at?: string
           work_order_id?: string | null
@@ -741,7 +741,7 @@ export type Database = {
           created_at: string
           id: string
           invoice_id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_values: Json | null
           old_values: Json | null
           user_agent: string | null
@@ -752,7 +752,7 @@ export type Database = {
           created_at?: string
           id?: string
           invoice_id: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           user_agent?: string | null
@@ -763,7 +763,7 @@ export type Database = {
           created_at?: string
           id?: string
           invoice_id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           user_agent?: string | null
@@ -1741,7 +1741,7 @@ export type Database = {
           changed_by: string | null
           created_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_values: Json | null
           old_values: Json | null
           time_entry_id: string
@@ -1752,7 +1752,7 @@ export type Database = {
           changed_by?: string | null
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           time_entry_id: string
@@ -1763,7 +1763,7 @@ export type Database = {
           changed_by?: string | null
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           time_entry_id?: string
@@ -2509,18 +2509,9 @@ export type Database = {
       }
     }
     Functions: {
-      auth_is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      auth_profile_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      auth_profile_id_safe: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      auth_is_admin: { Args: never; Returns: boolean }
+      auth_profile_id: { Args: never; Returns: string }
+      auth_profile_id_safe: { Args: never; Returns: string }
       auth_user_assigned_to_work_order: {
         Args: { work_order_id: string }
         Returns: boolean
@@ -2533,26 +2524,20 @@ export type Database = {
         Args: { assignment_id: string }
         Returns: boolean
       }
-      auth_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      auth_user_id: { Args: never; Returns: string }
       auth_user_organization_assignments: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           work_order_id: string
         }[]
       }
       auth_user_organizations: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           organization_id: string
         }[]
       }
-      auth_user_type: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      auth_user_type: { Args: never; Returns: string }
       calculate_completion_time_by_trade: {
         Args: { end_date?: string; start_date?: string }
         Returns: {
@@ -2575,14 +2560,8 @@ export type Database = {
         }
         Returns: undefined
       }
-      can_manage_work_orders: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      can_view_financial_data: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      can_manage_work_orders: { Args: never; Returns: boolean }
+      can_view_financial_data: { Args: never; Returns: boolean }
       check_assignment_completion_status: {
         Args: { work_order_id: string }
         Returns: boolean
@@ -2591,18 +2570,9 @@ export type Database = {
         Args: { work_order_id: string }
         Returns: Json
       }
-      check_email_queue_health: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      clear_test_data: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      complete_test_environment_setup: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      check_email_queue_health: { Args: never; Returns: undefined }
+      clear_test_data: { Args: never; Returns: Json }
+      complete_test_environment_setup: { Args: never; Returns: Json }
       create_direct_conversation: {
         Args: { p_other_user_id: string }
         Returns: string
@@ -2618,14 +2588,8 @@ export type Database = {
         }
         Returns: Json
       }
-      debug_auth_state: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      debug_session_context: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      debug_auth_state: { Args: never; Returns: Json }
+      debug_session_context: { Args: never; Returns: Json }
       debug_upload_attempt: {
         Args: { p_uploaded_by_user_id: string; p_work_order_id: string }
         Returns: {
@@ -2639,34 +2603,15 @@ export type Database = {
         Args: { p_email?: string; p_user_id?: string }
         Returns: Json
       }
-      ensure_single_organization_assignment: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      fix_existing_test_user_organizations: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      fix_existing_work_order_numbers: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      fix_legacy_big_boy_bills: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      fix_work_order_sequence_numbers: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      force_jwt_sync_for_current_user: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      generate_internal_bill_number: {
-        Args: Record<PropertyKey, never> | { org_id: string }
-        Returns: string
-      }
+      ensure_single_organization_assignment: { Args: never; Returns: Json }
+      fix_existing_test_user_organizations: { Args: never; Returns: Json }
+      fix_existing_work_order_numbers: { Args: never; Returns: Json }
+      fix_legacy_big_boy_bills: { Args: never; Returns: Json }
+      fix_work_order_sequence_numbers: { Args: never; Returns: Json }
+      force_jwt_sync_for_current_user: { Args: never; Returns: Json }
+      generate_internal_bill_number:
+        | { Args: { org_id: string }; Returns: string }
+        | { Args: never; Returns: string }
       generate_next_location_number: {
         Args: { org_id: string }
         Returns: string
@@ -2675,10 +2620,7 @@ export type Database = {
         Args: { partner_org_id: string }
         Returns: string
       }
-      generate_work_order_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_work_order_number: { Args: never; Returns: string }
       generate_work_order_number_per_location: {
         Args: { location_code: string; org_id: string }
         Returns: string
@@ -2702,7 +2644,7 @@ export type Database = {
         }[]
       }
       get_conversations_overview: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           conversation_id: string
           conversation_type: Database["public"]["Enums"]["conversation_type"]
@@ -2715,18 +2657,9 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_current_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_profile_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_type: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_current_user_id: { Args: never; Returns: string }
+      get_current_user_profile_id: { Args: never; Returns: string }
+      get_current_user_type: { Args: never; Returns: string }
       get_employee_dashboard_data: {
         Args: {
           p_employee_id: string
@@ -2761,12 +2694,9 @@ export type Database = {
           work_orders: Json
         }[]
       }
-      get_profile_id_direct: {
-        Args: { p_user_id: string }
-        Returns: string
-      }
+      get_profile_id_direct: { Args: { p_user_id: string }; Returns: string }
       get_unread_message_counts: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           unread_count: number
           work_order_id: string
@@ -2788,7 +2718,7 @@ export type Database = {
         Returns: string[]
       }
       get_user_org_type: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: Database["public"]["Enums"]["organization_type"]
       }
       get_user_organization_ids_direct: {
@@ -2797,10 +2727,7 @@ export type Database = {
           organization_id: string
         }[]
       }
-      get_user_organization_ids_safe: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
+      get_user_organization_ids_safe: { Args: never; Returns: string[] }
       get_user_organizations: {
         Args: { profile_uuid: string }
         Returns: {
@@ -2816,7 +2743,7 @@ export type Database = {
         }[]
       }
       get_user_organizations_with_roles: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           organization_id: string
           organization_type: Database["public"]["Enums"]["organization_type"]
@@ -2867,14 +2794,8 @@ export type Database = {
         }
         Returns: boolean
       }
-      initialize_all_user_jwt_metadata: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      is_admin: {
-        Args: { p_user_id: string }
-        Returns: boolean
-      }
+      initialize_all_user_jwt_metadata: { Args: never; Returns: Json }
+      is_admin: { Args: { p_user_id: string }; Returns: boolean }
       is_valid_transition: {
         Args: {
           p_from_status: Database["public"]["Enums"]["work_order_status"]
@@ -2882,24 +2803,12 @@ export type Database = {
         }
         Returns: boolean
       }
-      jwt_is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      jwt_organization_ids: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
-      jwt_profile_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      jwt_profile_id_safe: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      jwt_is_admin: { Args: never; Returns: boolean }
+      jwt_organization_ids: { Args: never; Returns: string[] }
+      jwt_profile_id: { Args: never; Returns: string }
+      jwt_profile_id_safe: { Args: never; Returns: string }
       list_dm_candidates: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           email: string
           first_name: string
@@ -2915,26 +2824,17 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: boolean
       }
-      monitor_email_queue: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      monitor_email_queue: { Args: never; Returns: Json }
       preview_work_order_number_per_location: {
         Args: { location_code: string; org_id: string }
         Returns: string
       }
-      process_email_queue: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      process_email_queue: { Args: never; Returns: Json }
       queue_partner_invoice_email: {
         Args: { invoice_id: string }
         Returns: Json
       }
-      refresh_analytics_views: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      refresh_analytics_views: { Args: never; Returns: undefined }
       search_employee_reports: {
         Args: { filters?: Json; search_query: string }
         Returns: {
@@ -2946,18 +2846,14 @@ export type Database = {
           work_performed: string
         }[]
       }
-      seed_test_data: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      seed_test_data: { Args: never; Returns: Json }
       set_manual_completion_block: {
         Args: { blocked?: boolean; work_order_id: string }
         Returns: undefined
       }
-      setup_bulletproof_test_data: {
-        Args: Record<PropertyKey, never> | { admin_user_id?: string }
-        Returns: Json
-      }
+      setup_bulletproof_test_data:
+        | { Args: never; Returns: Json }
+        | { Args: { admin_user_id?: string }; Returns: Json }
       sync_user_auth_metadata: {
         Args: { target_user_id?: string }
         Returns: Json
@@ -2966,26 +2862,26 @@ export type Database = {
         Args: { target_user_id?: string }
         Returns: Json
       }
-      test_auth_context: {
-        Args: Record<PropertyKey, never> | { user_uuid: string }
-        Returns: {
-          auth_uid: string
-          org_count: number
-          profile_found: boolean
-        }[]
-      }
-      test_auth_system: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      test_basic_db_operations: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      test_ocr_functionality: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      test_auth_context:
+        | {
+            Args: never
+            Returns: {
+              auth_profile_id: string
+              auth_uid: string
+              is_authenticated: boolean
+            }[]
+          }
+        | {
+            Args: { user_uuid: string }
+            Returns: {
+              auth_uid: string
+              org_count: number
+              profile_found: boolean
+            }[]
+          }
+      test_auth_system: { Args: never; Returns: Json }
+      test_basic_db_operations: { Args: never; Returns: Json }
+      test_ocr_functionality: { Args: never; Returns: Json }
       test_rls_for_user: {
         Args: { test_email: string }
         Returns: {
@@ -2996,14 +2892,8 @@ export type Database = {
           user_type: string
         }[]
       }
-      test_user_creation: {
-        Args: { test_email?: string }
-        Returns: Json
-      }
-      test_work_order_transitions: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      test_user_creation: { Args: { test_email?: string }; Returns: Json }
+      test_work_order_transitions: { Args: never; Returns: Json }
       transition_work_order_status: {
         Args: {
           new_status: Database["public"]["Enums"]["work_order_status"]
@@ -3013,10 +2903,7 @@ export type Database = {
         }
         Returns: Json
       }
-      trigger_jwt_metadata_sync: {
-        Args: { p_user_id?: string }
-        Returns: Json
-      }
+      trigger_jwt_metadata_sync: { Args: { p_user_id?: string }; Returns: Json }
       trigger_send_email: {
         Args: { record_id: string; record_type: string; template_name: string }
         Returns: undefined
@@ -3025,18 +2912,12 @@ export type Database = {
         Args: { user1_id: string; user2_id: string }
         Returns: boolean
       }
-      validate_security_setup: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      validate_security_setup: { Args: never; Returns: Json }
       validate_user_organization_assignment: {
         Args: { p_organization_id: string; p_user_id: string }
         Returns: boolean
       }
-      verify_test_environment_status: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      verify_test_environment_status: { Args: never; Returns: Json }
     }
     Enums: {
       approval_status: "pending" | "approved" | "rejected" | "flagged"
