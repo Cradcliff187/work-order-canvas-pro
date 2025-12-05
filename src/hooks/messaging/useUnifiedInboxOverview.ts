@@ -18,8 +18,8 @@ export function useUnifiedInboxOverview() {
     queryFn: async (): Promise<ConversationSummary[]> => {
       // Run both RPCs in parallel
       const [convRes, woRes] = await Promise.all([
-        supabase.rpc('get_conversations_overview', {}),
-        supabase.rpc('get_work_order_threads_overview', {}),
+        supabase.rpc('get_conversations_overview'),
+        supabase.rpc('get_work_order_threads_overview'),
       ]);
 
       if (convRes.error) {

@@ -25,7 +25,7 @@ export function useConversationsOverview() {
   return useQuery({
     queryKey: ['conversations-overview'],
     queryFn: async (): Promise<ConversationSummary[]> => {
-      const { data, error } = await supabase.rpc('get_conversations_overview', {});
+      const { data, error } = await supabase.rpc('get_conversations_overview');
       if (error) {
         console.error('[useConversationsOverview] RPC error:', error);
         throw error;

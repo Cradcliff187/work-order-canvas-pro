@@ -26,13 +26,7 @@ export function useListDmCandidates(options: ListDmCandidatesOptions = {}) {
   return useQuery({
     queryKey: ['dm-candidates', options],
     queryFn: async (): Promise<DmCandidate[]> => {
-      const payload = {
-        search: options.search ?? null,
-        work_order_id: options.work_order_id ?? null,
-        limit: options.limit ?? 50,
-      };
-
-      const { data, error } = await supabase.rpc('list_dm_candidates', payload as any);
+      const { data, error } = await supabase.rpc('list_dm_candidates');
       if (error) {
         console.error('[useListDmCandidates] RPC error:', error);
         throw error;
