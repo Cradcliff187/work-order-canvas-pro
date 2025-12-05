@@ -14,6 +14,12 @@ import { ProjectsTable } from '@/components/admin/projects/ProjectsTable';
 import { CreateProjectModal } from '@/components/admin/projects/CreateProjectModal';
 import { EditProjectModal } from '@/components/admin/projects/EditProjectModal';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAdminFilters } from '@/hooks/useAdminFilters';
+import { ProjectFiltersValue } from '@/components/admin/projects/CompactProjectFilters';
+
+const initialFilters: ProjectFiltersValue = {
+  status: [],
+};
 
 export default function Projects() {
   const [pagination, setPagination] = useState({
@@ -22,7 +28,11 @@ export default function Projects() {
   });
   
   const [sorting, setSorting] = useState<Array<{ id: string; desc: boolean }>>([]);
-  const [filters, setFilters] = useState({});
+  
+  const { filters, setFilters, clearFilters } = useAdminFilters<ProjectFiltersValue>(
+    'admin-projects-filters-v2',
+    initialFilters
+  );
   
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -30,7 +40,7 @@ export default function Projects() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
-  const { data, isLoading, isError } = useProjects(pagination, { sortBy: sorting }, filters);
+  const { data, isLoading, isError } = useProjects(pagination, { sortBy: sorting }, {});
   const deleteProject = useDeleteProject();
 
   const handleEdit = (project: Project) => {
@@ -72,6 +82,9 @@ export default function Projects() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onCreateProject={() => setCreateModalOpen(true)}
+        filters={filters}
+        onFiltersChange={setFilters}
+        onFiltersClear={clearFilters}
       />
 
       <CreateProjectModal
